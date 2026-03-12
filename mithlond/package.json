@@ -1,0 +1,19 @@
+{
+  "name": "mithlond-bsky",
+  "version": "0.1.0",
+  "description": "Mithlond Bluesky queue and interaction sync",
+  "scripts": {
+    "build": "tsc",
+    "post": "node dist/post.js",
+    "post:dry": "DRY_RUN=true node dist/post.js",
+    "pull": "node dist/pull.js"
+  },
+  "dependencies": {
+    "@atproto/api": "^0.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  }
+}
