@@ -1,0 +1,71 @@
+name: Scrape Data Sources
+
+on:
+  schedule:
+    # Every Sunday at 06:00 UTC
+    - cron: '0 6 * * 0'
+  workflow_dispatch:
+    inputs:
+      source_id:
+        description: 'Run only this source ID (leave blank for all)'
+        required: false
+        default: ''
+      cadence:
+        description: 'Filter by cadence: once | weekly | monthly (leave blank for all)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Dry run (print, do not fetch)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: scrape/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r scrape/requirements.txt
+
+      - name: Ensure data directories exist
+        run: |
+          mkdir -p data/scc
+          touch data/.gitkeep
+
+      - name: Run fetcher
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.source_id }}" ]; then
+            ARGS="$ARGS --id ${{ github.event.inputs.source_id }}"
+          fi
+          if [ -n "${{ github.event.inputs.cadence }}" ]; then
+            ARGS="$ARGS --cadence ${{ github.event.inputs.cadence }}"
+          fi
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry-run"
+          fi
+          python3 scrape/fetch.py $ARGS
+
+      - name: Commit data
+        run: |
+          git config user.name "mithlond-bot"
+          git config user.email "bot@mithlond.research"
+          git add data/
+          git diff --staged --quiet && echo "No new data." || (
+            git commit -m "data: scrape run $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push
+          )

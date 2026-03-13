@@ -1,0 +1,100 @@
+# Mithlond Scrape Queue
+# Sources blocked by Claude's egress proxy — fetched by GitHub Actions from GitHub infra.
+#
+# Types:
+#   socrata   — Socrata Open Data API (JSON)
+#   scc_case  — SCC docket case page → extract + download all PDFs
+#   http      — Direct HTTP GET (JSON or binary)
+
+sources:
+
+  # ── Norfolk Open Data (Socrata: data.norfolk.gov) ─────────────────────────
+  # Dataset IDs verified from public endpoints and github.com/spenc2kw/Norfolk-Open-Data
+
+  - id: norfolk-permits
+    type: socrata
+    host: data.norfolk.gov
+    dataset_id: fahm-yuh4
+    # https://data.norfolk.gov/Permits/Permits/fahm-yuh4
+    params:
+      $limit: 5000
+      $order: issued_date DESC
+    output: data/norfolk-permits.json
+    cadence: weekly
+    notes: >
+      Norfolk DSC permits: building, plumbing, electrical, mechanical, fire,
+      amusement, elevator, CO, zoning. Filter in analysis for generator,
+      electrical service >1MW, commercial new construction in industrial zones.
+      Primary proxy signal for data center infrastructure buildout.
+
+  - id: norfolk-epermits-all
+    type: socrata
+    host: data.norfolk.gov
+    dataset_id: 938w-ijmq
+    # https://data.norfolk.gov/EPERMITS/EPERMITS-All/a2dw-8ht5
+    params:
+      $limit: 5000
+      $order: issued_date DESC
+    output: data/norfolk-epermits.json
+    cadence: weekly
+    notes: >
+      Broader ePERMITS dataset — all permit transactions and inspections from
+      ePERMITS system (July 1, 2016+). Updated daily. Secondary signal layer.
+
+  - id: norfolk-right-of-way-permits
+    type: socrata
+    host: data.norfolk.gov
+    dataset_id: mi4h-8pn3
+    # Right of Way permits — excavations, installations, lane closures
+    params:
+      $limit: 2000
+      $order: issue_date DESC
+    output: data/norfolk-row-permits.json
+    cadence: weekly
+    notes: >
+      ROW excavation permits signal underground conduit/fiber runs.
+      Useful for mapping cable routing from existing data hosting corridor
+      at Norfolk Industrial Park (3800 Village Ave) toward fiber ring.
+
+  # ── Virginia DEQ Air Permits ───────────────────────────────────────────────
+  - id: deq-data-center-air-permits
+    type: http
+    url: https://www.deq.virginia.gov/home/showpublisheddocument/25282
+    output: data/deq-air-permit-table.xlsx
+    cadence: monthly
+    notes: >
+      DEQ issued air permits for data centers — full Excel table.
+      Last known state (Jan 29, 2026): Tidewater = 1 entry (Sentara, 2015).
+      Northern VA = 155+. Monitor for Hampton Roads entries.
+      Zero new HR entries = pre-buildout confirmed. New entry = breaking signal.
+
+  # ── SCC Docket Cases ──────────────────────────────────────────────────────
+  # SCC docket search: https://scc.virginia.gov/docketsearch
+  # Robots.txt blocked Claude's proxy. GitHub Actions fetches freely.
+
+  - id: scc-pur-2024-00184
+    type: scc_case
+    case_number: PUR-2024-00184
+    output_dir: data/scc/PUR-2024-00184
+    cadence: once
+    notes: >
+      Appalachian Voices testimony on data center energy demand.
+      Load growth analysis, critique of Dominion IRP projections.
+
+  - id: scc-pur-2025-00058
+    type: scc_case
+    case_number: PUR-2025-00058
+    output_dir: data/scc/PUR-2025-00058
+    cadence: once
+    notes: >
+      Consumer Counsel brief on Dominion interconnect queue.
+      Documents 20-year wait times for >100MW customers.
+
+  - id: scc-pur-2025-00014
+    type: scc_case
+    case_number: PUR-2025-00014
+    output_dir: data/scc/PUR-2025-00014
+    cadence: once
+    notes: >
+      Dominion 2025 IRP docket. Load forecasts, capacity queue,
+      Hampton Roads capacity planning. Highest priority.
