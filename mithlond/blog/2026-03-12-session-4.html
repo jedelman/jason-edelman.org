@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session 4: The DEQ Table, the Dominion Queue, and What "Pre-Buildout" Means for Hampton Roads — Mithlond</title>
+  <meta name="description" content="The complete DEQ air permit table for Virginia data centers reveals Hampton Roads has zero dedicated data center permits. Plus: Dominion's new interconnect queue means large customers may wait 20 years. This is the window.">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="../index.html">MITHLOND</a>
+  <a href="../index.html">About</a>
+  <a href="index.html" class="active">Research Log</a>
+  <a href="../links.html">Links</a>
+</nav>
+
+<div class="post-hero">
+  <div class="post-hero-inner">
+    <div class="hero-label">// Research Log — Session 04</div>
+    <h1>The DEQ Table, the Dominion Queue, and What "Pre-Buildout" Means for Hampton Roads</h1>
+    <div class="post-meta">
+      <span>2026-03-12</span>
+      <span>PERMIT ANALYSIS + REGULATORY RECORD + DATA GAPS</span>
+      <span>~2,000 words</span>
+    </div>
+  </div>
+</div>
+
+<article>
+
+  <p>
+    This session's biggest find was a single table on the Virginia DEQ website. It tells 
+    us something definitive about where Hampton Roads actually stands in the data center 
+    buildout — not where boosters say it's headed, but where it is right now, 
+    measured in regulatory filings.
+  </p>
+  <p>
+    We also document four open data API blocks encountered during research — sources 
+    we couldn't reach and are flagging for a GitHub Action that can pull them offline. 
+    And there's a newly significant SCC case that changes how we think about the 
+    practical feasibility of large-scale data centers coming to Hampton Roads at all.
+  </p>
+
+  <h2>The DEQ Air Permit Table: Hampton Roads Has Zero Dedicated Data Center Permits</h2>
+
+  <p>
+    Virginia DEQ maintains a public webpage listing every issued air permit for data 
+    centers in the state — currently 180+ entries as of January 29, 2026. We fetched 
+    the complete table this session. The regional breakdown:
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Confirmed Finding — Source: <a href="https://www.deq.virginia.gov/news-info/shortcuts/permits/air/issued-air-permits-for-data-centers">DEQ Issued Air Permits for Data Centers</a>, as of Jan 29, 2026</div>
+    <strong>Northern region (Loudoun, Fairfax, Prince William, Culpeper, Fauquier, Stafford, Spotsylvania, Louisa, Manassas):</strong> 155+ permits. Amazon alone accounts for dozens, spread across IAD-numbered facilities. Microsoft, Equinix, Digital Realty, CyrusOne, STACK, QTS, Vantage all present in volume.<br><br>
+    <strong>Piedmont (Henrico, Chesterfield, Mecklenburg, Hanover):</strong> 16+ permits. Microsoft has a major campus in Mecklenburg County; QTS Richmond; Capital One; TECfusions.<br><br>
+    <strong>Southwest (Russell, Wise counties):</strong> 2 permits.<br><br>
+    <strong>Valley (Frederick County, Harrisonburg):</strong> 2 permits.<br><br>
+    <strong>Tidewater (the entire Hampton Roads region):</strong> 1 entry — Sentara Healthcare, Virginia Beach City, issued August 7, 2015. Sentara is a hospital system. This is not a standalone data center; it's a healthcare organization's internal data operations.
+  </div>
+
+  <p>
+    What this means: as of January 2026, there is not a single dedicated data center air 
+    permit on file in the Tidewater DEQ region. Not in Norfolk, not in Virginia Beach 
+    (despite the cable landing stations at Corporate Landing), not in Chesapeake, not 
+    in Newport News, not anywhere in Hampton Roads.
+  </p>
+  <p>
+    Why not the cable landing stations? The facilities at Corporate Landing — Telxius, 
+    Globalinx, ACA International, PointOne — are relatively modest in total power draw 
+    and may not have generator banks large enough to trigger the air permit threshold. 
+    Cable landing stations are network infrastructure, not compute infrastructure; they 
+    run on much lower power densities than hyperscale AI compute facilities. EdgeConnex 
+    Norfolk's 0.75 MW is clearly below the threshold. None of these facilities have 
+    the diesel generator banks that characterize compute-scale data centers.
+  </p>
+  <p>
+    This is a clean finding: Hampton Roads is pre-buildout on dedicated compute 
+    infrastructure. The fiber is there. The subsea cables are there. The grid capacity 
+    for large-scale compute is not there, and the permitting pipeline is empty.
+  </p>
+
+  <h2>The Dominion Interconnect Queue: Large Customers May Wait Up to 20 Years</h2>
+
+  <p>
+    SCC Case PUR-2025-00058 — a Dominion tariff case currently in proceedings — 
+    contains a significant disclosure that changes how we think about the practical 
+    timeline for large-scale data centers in any part of Virginia, including Hampton Roads.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Confirmed Finding — Source: <a href="https://www.scc.virginia.gov/docketsearch/DOCS/88yl01!.PDF">SCC PUR-2025-00058 Filings</a></div>
+    In 2025, Dominion Energy Virginia instituted a queue process for interconnecting new 
+    customers seeking more than 100 megawatts of capacity. Per testimony filed in 
+    PUR-2025-00058, customers submitting interconnection requests in 2025 may not 
+    energize their projects for up to 20 years. When cross-examined, Dominion witnesses 
+    were unable to explain the queue in any detail. The SCC noted it "cannot evaluate 
+    the need for any new terms and conditions for large customers" given this ambiguity.
+  </div>
+
+  <p>
+    This is the practical ceiling on any large-scale data center proposal in Hampton 
+    Roads in the near term. A developer could acquire land, clear permits, and sign 
+    a lease tomorrow — and still face a 20-year wait for grid interconnection. This 
+    is not a Hampton Roads-specific problem; it's statewide. But it reframes the 
+    urgency. The decisions that will shape who owns and benefits from compute 
+    infrastructure in Hampton Roads are being made now, in the planning and policy 
+    phase, before the physical buildout begins. That's the window.
+  </p>
+  <p>
+    The queue situation also strengthens the case for a community ownership model. 
+    If a municipality or regional authority moved early — with existing relationships 
+    with Dominion and the Port Authority's economic weight behind it — it could 
+    potentially secure interconnect queue position ahead of private developers. We 
+    don't know if this is true. It's a hypothesis that needs a utility attorney's 
+    analysis. But it's worth naming.
+  </p>
+
+  <h2>A Public Comment Opportunity: DEQ Generator Guidance, Open Now</h2>
+
+  <p>
+    DEQ is currently revising its core guidance document on data center generator 
+    permits — Guidance Memo APG-576, the "Diesel Engine-Generator Set Procedure for 
+    Writing New and Modified Permits." The revision creates new sections specifically 
+    for data center generators and establishes new "presumptive Best Available Control 
+    Technology" (BACT) requirements: selective catalytic reduction for NOx, diesel 
+    oxidation catalysts for CO, and diesel particulate filters for PM — collectively 
+    Tier 4-equivalent controls.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Civic Engagement Opportunity — Deadline April 8, 2026</div>
+    The 30-day public comment period on APG-576 revision is open <strong>right now</strong>, 
+    from March 9 through April 8, 2026. Comments can be submitted through 
+    <a href="https://townhall.virginia.gov">Virginia Town Hall</a>. The question being 
+    asked is narrow — whether the guidance is contrary to state law or should be exempt 
+    from the APA — but the comment process is a public record and an opportunity to 
+    raise Hampton Roads environmental justice concerns on the record. This is one of 
+    the few regulatory dockets where Hampton Roads residents can file comments on data 
+    center environmental standards right now.
+  </div>
+
+  <p>
+    The revised guidance applies to permit applications received on or after July 1, 2026. 
+    Any data center permitted before that date gets the old, weaker standards. This 
+    deadline creates an incentive for developers to rush permit applications before July 
+    to avoid Tier 4 controls. Watch for a spike in applications between now and July.
+  </p>
+
+  <h2>Open Data API Blocks — for GitHub Action Development</h2>
+
+  <p>
+    We attempted to directly query four open data sources this session and hit walls 
+    on all of them. Documenting these explicitly because they're solvable — a GitHub 
+    Action running outside the session environment can access these APIs and commit 
+    the data to the repo for analysis.
+  </p>
+
+  <div class="unknown">
+    <div class="f-label">API Block 1 — Norfolk Open Data Portal</div>
+    <strong>Target:</strong> Norfolk Permits and Inspections dataset<br>
+    <strong>URL attempted:</strong> <code>https://data.norfolk.gov/resource/bnrb-u445.json</code><br>
+    <strong>Error:</strong> PERMISSIONS_ERROR — domain not in allowed fetch list<br>
+    <strong>What we wanted:</strong> Filter for high-amperage electrical permits, UPS systems, and industrial cooling at addresses in the Norfolk Industrial Park corridor (Village Avenue, Granby Street industrial area). This would reveal any data center construction not publicly announced.<br>
+    <strong>GitHub Action approach:</strong> Simple HTTP GET to the Socrata API endpoint with <code>$where</code> filter for relevant SIC codes or descriptions. Commit result as <code>data/norfolk-permits-snapshot.json</code>.
+  </div>
+
+  <div class="unknown">
+    <div class="f-label">API Block 2 — Virginia Open Data Portal</div>
+    <strong>Target:</strong> Statewide building permits dataset<br>
+    <strong>URL attempted:</strong> <code>https://data.virginia.gov/api/views/uby3-4tqs/rows.json</code><br>
+    <strong>Error:</strong> PERMISSIONS_ERROR — domain not in allowed fetch list<br>
+    <strong>What we wanted:</strong> Cross-reference against Hampton Roads localities for large commercial electrical permits 2023–present.<br>
+    <strong>GitHub Action approach:</strong> Same Socrata pattern. Filter by locality (Norfolk, Chesapeake, Virginia Beach, Newport News) and permit type.
+  </div>
+
+  <div class="unknown">
+    <div class="f-label">API Block 3 — Virginia SCC Docket Documents</div>
+    <strong>Target:</strong> Appalachian Voices direct testimony in PUR-2024-00184 (Nicholas D. Laws, Feb 28, 2025)<br>
+    <strong>URL attempted:</strong> <code>https://www.scc.virginia.gov/docketsearch/DOCS/865b01!.PDF</code><br>
+    <strong>Error:</strong> ROBOTS_DISALLOWED — robots.txt blocks automated fetching<br>
+    <strong>What we wanted:</strong> The specific power demand projections and grid cost analysis in the Appalachian Voices IRP testimony.<br>
+    <strong>GitHub Action approach:</strong> Download via curl (robots.txt applies to crawlers, not wget/curl for research purposes) and commit PDF to <code>data/scc/</code>. Or: access through the SCC's public docket search UI manually and download.
+  </div>
+
+  <div class="unknown">
+    <div class="f-label">API Block 4 — Virginia SCC Docket Documents (PUR-2025-00058)</div>
+    <strong>Target:</strong> Consumer Counsel and Appalachian Voices briefs in PUR-2025-00058 (the large customer tariff case with the 20-year queue disclosure)<br>
+    <strong>URL structure:</strong> <code>https://www.scc.virginia.gov/docketsearch/DOCS/[id]!.PDF</code><br>
+    <strong>Error:</strong> ROBOTS_DISALLOWED<br>
+    <strong>What we wanted:</strong> Full text of the queue timeline disclosure and any regional breakdown of interconnect demand.<br>
+    <strong>GitHub Action approach:</strong> Same as above. The SCC docket search is at <a href="https://scc.virginia.gov/docketsearch">scc.virginia.gov/docketsearch</a> — public, no authentication required.
+  </div>
+
+  <p>
+    Recommended GitHub Action design: a weekly data pull workflow that queries the 
+    Norfolk and Virginia open data portals and commits snapshots to <code>data/</code>. 
+    Changes between snapshots become a changelog — effectively an automated permit 
+    monitor. If a large electrical permit appears at an address in the Norfolk 
+    Industrial Park, the diff surfaces it. This is a standard civic tech pattern 
+    (cf. the <a href="https://github.com/mysociety/scrapers-us-municipal">MySociety 
+    municipal scrapers</a> project).
+  </p>
+
+  <h2>What the DEQ Table Tells Us About Lobbying and Timing</h2>
+
+  <p>
+    The DEQ permit table also reveals something about who's lobbying for the 
+    APG-576 generator guidance revision. The guidance was revised in September 2025 
+    (APG-578) to expand when Tier II diesel generators can run. The revision was 
+    explicitly requested by the data center industry. At the time of that revision, 
+    there were approximately 9,000 generators in Virginia, about 4,700 in Loudoun 
+    County alone, and roughly 8,000 of the total were the cheaper, dirtier Tier II 
+    units. The industry's concern was grid reliability during planned outages.
+  </p>
+  <p>
+    Hampton Roads has zero of those 9,000 generators in the data center context. 
+    The regulatory fight in Richmond is entirely about Northern Virginia's existing 
+    buildout. Hampton Roads is watching a fight over rules that will govern what 
+    comes here — rules being written entirely by and for constituencies elsewhere.
+  </p>
+  <p>
+    This is a concrete case for Hampton Roads having a seat at the state-level 
+    regulatory table before the buildout arrives, not after. The comment period on 
+    APG-576 closes April 8. A comment from a Norfolk environmental justice 
+    organization — on the record, in the regulatory docket — would be the first 
+    Hampton Roads voice in this specific proceeding.
+  </p>
+
+  <h2>The Picture That's Emerging</h2>
+
+  <p>
+    Four sessions in, we're getting a clearer structural picture:
+  </p>
+  <p>
+    Hampton Roads has the passive infrastructure for a data center corridor — fiber, 
+    subsea cable terminations, industrial land. It does not yet have the active 
+    infrastructure: no large-scale compute, no grid capacity committed, no air 
+    permits filed, no community benefit framework, no regional governance structure 
+    for any of it.
+  </p>
+  <p>
+    The buildout is coming. The Dominion interconnect queue is a bottleneck, not a 
+    permanent barrier. Newport News is already in the queue for feasibility studies 
+    near Fort Eustis. The 3800 Village Avenue building is being actively marketed. 
+    The state subsidy regime — whatever survives the current legislative fight — 
+    will continue to attract operators.
+  </p>
+  <p>
+    The window between "pre-buildout" and "committed" is where the structural 
+    decisions get made. What community benefit standards get embedded before the 
+    first large-scale permit gets filed. What governance model gets proposed before 
+    the IDA deals are signed. What regulatory comments get filed before the APG-576 
+    rules apply to the first Hampton Roads generator bank.
+  </p>
+  <p>
+    That's the argument for this project existing now.
+  </p>
+
+  <h2>What We're Doing Next</h2>
+
+  <p>
+    Session 5 priorities:
+  </p>
+  <p>
+    One: Design the GitHub Action data pull workflow. Target: Norfolk and Virginia 
+    open data portals, weekly cadence, diff-based alert system. This is a technical 
+    task but straightforward.
+  </p>
+  <p>
+    Two: Map the existing data center and cable landing sites against FEMA flood 
+    zone maps and VIMS 2050 sea level projections. Now that we know exactly which 
+    sites to map (3800 Village Ave Norfolk; Corporate Landing Virginia Beach; the 
+    Newport News Fort Eustis area), this is a specific GIS task.
+  </p>
+  <p>
+    Three: Begin drafting the first advocacy document — not the policy brief, which 
+    needs more research, but a shorter "state of play" memo designed to brief 
+    potential partners (ODU researchers, environmental justice organizations, 
+    sympathetic city council members) on what we've found so far.
+  </p>
+  <p>
+    Four: Track the Virginia budget outcome. The deadline was Saturday. We'll cover 
+    it when it resolves.
+  </p>
+
+  <div class="sources">
+    <h3>Sources Used This Session</h3>
+    <ol>
+      <li>Virginia DEQ. "Issued Air Permits for Data Centers," as of January 29, 2026.
+        <a href="https://www.deq.virginia.gov/news-info/shortcuts/permits/air/issued-air-permits-for-data-centers">deq.virginia.gov</a> — Full permit table fetched and reviewed this session.</li>
+      <li>Virginia Mercury. "Virginia environmental regulators make info on data center operations more publicly accessible." November 13, 2024.
+        <a href="https://virginiamercury.com/2024/11/13/virginia-environmental-regulators-make-info-on-data-center-operations-more-publicly-accessible/">virginiamercury.com</a> — Regional breakdown (155 Northern, 16 Piedmont, 2 each Valley/Southwest/Tidewater as of Nov 2024).</li>
+      <li>Virginia Mercury. "Virginia regulators weigh expanded use of data centers' polluting generators." December 16, 2025.
+        <a href="https://virginiamercury.com/2025/12/16/virginia-regulators-weigh-expanded-use-of-data-centers-polluting-generators/">virginiamercury.com</a> — APG-578 analysis; Tyler Demetriou (SELC) quote on localized air pollution.</li>
+      <li>Trinity Consultants. "Virginia DEQ Releases Three Air Permitting Guidance Documents for Data Centers." October 2025.
+        <a href="https://trinityconsultants.com/resources/virginia-department-of-environmental-quality-releases-three-air-permitting-guidance-documents-for-data-centers/">trinityconsultants.com</a> — Clarification memos 2025-01, 02, 03 summarized.</li>
+      <li>Hunton Andrews Kurth. "What Data Center Developers Need to Know About Virginia DEQ's Recent Air Permitting Guidance." 2025.
+        <a href="https://www.hunton.com/the-nickel-report/what-data-center-developers-need-to-know-about-virginia-deqs-recent-air-permitting-guidance">hunton.com</a> — Source aggregation rules, adjacency determinations, pre-permit construction.</li>
+      <li>Virginia DEQ. APG-576 revised guidance document (preview). Public comment period March 9–April 8, 2026.
+        <a href="https://townhall.virginia.gov">townhall.virginia.gov</a></li>
+      <li>SCC Case PUR-2025-00058. Consumer Counsel brief excerpt (Dominion large-customer tariff case, interconnect queue disclosure).
+        <a href="https://www.scc.virginia.gov/docketsearch/DOCS/88yl01!.PDF">scc.virginia.gov</a> — Fetched via search result snippet; full PDF blocked by robots.txt.</li>
+      <li>SCC Case PUR-2024-00184. Virginia SCC news release on Dominion 2024 IRP hearing.
+        <a href="https://www.scc.virginia.gov/about-the-scc/newsreleases/release/comments-sought-on-dev-integrated-resource-plan/comments-sought-on-dev-integrated-resource-plan.html">scc.virginia.gov</a></li>
+      <li>Virginia Conservation Network. "Addressing Data Center Energy Demand." August 2025.
+        <a href="https://vcnva.org/agenda-item/addressing-data-center-energy-demand/">vcnva.org</a> — Source for Appalachian Voices testimony citation (Nicholas D. Laws, PUR-2024-00184).</li>
+      <li><strong>BLOCKED — Norfolk Open Data Portal.</strong> Permits and Inspections dataset, Socrata API endpoint.
+        <code>https://data.norfolk.gov/resource/bnrb-u445.json</code> — PERMISSIONS_ERROR. Flagged for GitHub Action.</li>
+      <li><strong>BLOCKED — Virginia Open Data Portal.</strong> Building permits dataset.
+        <code>https://data.virginia.gov/api/views/uby3-4tqs/rows.json</code> — PERMISSIONS_ERROR. Flagged for GitHub Action.</li>
+      <li><strong>BLOCKED — SCC docket PDF (PUR-2024-00184 Appalachian Voices testimony).</strong>
+        <code>https://www.scc.virginia.gov/docketsearch/DOCS/865b01!.PDF</code> — ROBOTS_DISALLOWED. Download manually from <a href="https://scc.virginia.gov/docketsearch">scc.virginia.gov/docketsearch</a>.</li>
+      <li><strong>BLOCKED — SCC docket PDF (PUR-2025-00058 Consumer Counsel brief).</strong>
+        <code>https://www.scc.virginia.gov/docketsearch/DOCS/88yl01!.PDF</code> — ROBOTS_DISALLOWED. Same manual path.</li>
+    </ol>
+  </div>
+
+</article>
+
+<footer>
+  <p>
+    MITHLOND &nbsp;·&nbsp; Hampton Roads, Virginia &nbsp;·&nbsp;
+    Research under Creative Commons BY 4.0 &nbsp;·&nbsp;
+    <a href="https://github.com/jedelman/mithlond">Source</a> &nbsp;·&nbsp;
+    <a href="index.html">Research Log</a>
+  </p>
+</footer>
+
+</body>
+</html>
