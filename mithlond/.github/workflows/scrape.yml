@@ -11,7 +11,7 @@ on:
         required: false
         default: ''
       cadence:
-        description: 'Filter by cadence: once | weekly | monthly (leave blank for all)'
+        description: 'Filter by cadence: once | weekly | monthly (blank = all)'
         required: false
         default: ''
       dry_run:
@@ -38,13 +38,14 @@ jobs:
           cache: 'pip'
           cache-dependency-path: scrape/requirements.txt
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: pip install -r scrape/requirements.txt
 
+      - name: Install Playwright browsers
+        run: playwright install chromium --with-deps
+
       - name: Ensure data directories exist
-        run: |
-          mkdir -p data/scc
-          touch data/.gitkeep
+        run: mkdir -p data/scc
 
       - name: Run fetcher
         run: |

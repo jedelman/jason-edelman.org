@@ -3,13 +3,14 @@
 #
 # Types:
 #   socrata   — Socrata Open Data API (JSON)
-#   scc_case  — SCC docket case page → extract + download all PDFs
+#   scc_case  — SCC docket case page → render JS + extract + download all PDFs
 #   http      — Direct HTTP GET (JSON or binary)
 
 sources:
 
   # ── Norfolk Open Data (Socrata: data.norfolk.gov) ─────────────────────────
-  # Dataset IDs verified from public endpoints and github.com/spenc2kw/Norfolk-Open-Data
+  # Note: $order param omitted — field names unknown without live schema inspection.
+  # Records come back in default order; sort/filter in analysis.
 
   - id: norfolk-permits
     type: socrata
@@ -18,28 +19,13 @@ sources:
     # https://data.norfolk.gov/Permits/Permits/fahm-yuh4
     params:
       $limit: 5000
-      $order: issued_date DESC
     output: data/norfolk-permits.json
     cadence: weekly
     notes: >
-      Norfolk DSC permits: building, plumbing, electrical, mechanical, fire,
-      amusement, elevator, CO, zoning. Filter in analysis for generator,
-      electrical service >1MW, commercial new construction in industrial zones.
-      Primary proxy signal for data center infrastructure buildout.
-
-  - id: norfolk-epermits-all
-    type: socrata
-    host: data.norfolk.gov
-    dataset_id: 938w-ijmq
-    # https://data.norfolk.gov/EPERMITS/EPERMITS-All/a2dw-8ht5
-    params:
-      $limit: 5000
-      $order: issued_date DESC
-    output: data/norfolk-epermits.json
-    cadence: weekly
-    notes: >
-      Broader ePERMITS dataset — all permit transactions and inspections from
-      ePERMITS system (July 1, 2016+). Updated daily. Secondary signal layer.
+      Norfolk DSC permits: building, plumbing, electrical, mechanical, fire.
+      Filter in analysis for generator, electrical service >1MW, commercial
+      new construction in industrial zones. 400 error on previous run was
+      caused by incorrect $order field name — removed.
 
   - id: norfolk-right-of-way-permits
     type: socrata
@@ -48,29 +34,29 @@ sources:
     # Right of Way permits — excavations, installations, lane closures
     params:
       $limit: 2000
-      $order: issue_date DESC
     output: data/norfolk-row-permits.json
     cadence: weekly
     notes: >
       ROW excavation permits signal underground conduit/fiber runs.
-      Useful for mapping cable routing from existing data hosting corridor
-      at Norfolk Industrial Park (3800 Village Ave) toward fiber ring.
+      Useful for mapping cable routing from Norfolk Industrial Park
+      (3800 Village Ave) toward fiber ring.
 
   # ── Virginia DEQ Air Permits ───────────────────────────────────────────────
   - id: deq-data-center-air-permits
-    type: http
-    url: https://www.deq.virginia.gov/home/showpublisheddocument/25282
+    type: deq_permit_table
+    # The direct showpublisheddocument URL 403s even from GH Actions.
+    # Fetch the page that links to it and follow the download link.
+    index_url: https://www.deq.virginia.gov/news-info/shortcuts/permits/air/issued-air-permits-for-data-centers
     output: data/deq-air-permit-table.xlsx
     cadence: monthly
     notes: >
       DEQ issued air permits for data centers — full Excel table.
       Last known state (Jan 29, 2026): Tidewater = 1 entry (Sentara, 2015).
       Northern VA = 155+. Monitor for Hampton Roads entries.
-      Zero new HR entries = pre-buildout confirmed. New entry = breaking signal.
 
   # ── SCC Docket Cases ──────────────────────────────────────────────────────
-  # SCC docket search: https://scc.virginia.gov/docketsearch
-  # Robots.txt blocked Claude's proxy. GitHub Actions fetches freely.
+  # SCC docket is a JS SPA — docs don't appear in static HTML.
+  # Fetcher uses Playwright (headless Chromium) to render and extract links.
 
   - id: scc-pur-2024-00184
     type: scc_case
@@ -78,8 +64,22 @@ sources:
     output_dir: data/scc/PUR-2024-00184
     cadence: once
     notes: >
-      Appalachian Voices testimony on data center energy demand.
-      Load growth analysis, critique of Dominion IRP projections.
+      Dominion Energy Virginia 2024 IRP filing. Public witness April 14 2025.
+      Appalachian Voices, Sierra Club, Clean Virginia all filed testimony here.
+      Contains load growth projections, data center demand analysis,
+      critique of Dominion's interconnect assumptions. Key Mithlond source.
+
+  - id: scc-pur-2024-00144
+    type: scc_case
+    case_number: PUR-2024-00144
+    output_dir: data/scc/PUR-2024-00144
+    cadence: once
+    notes: >
+      "Ex Parte: Electric Utilities and Data Center Load Growth" — SCC-initiated
+      technical conference Dec 16 2024. Amazon, Old Dominion Electric Coop,
+      and others filed post-conference comments Jan 2025. Highest priority:
+      this is the SCC directly grappling with data center demand. Not in
+      original queue — added after case number correction.
 
   - id: scc-pur-2025-00058
     type: scc_case
@@ -87,14 +87,8 @@ sources:
     output_dir: data/scc/PUR-2025-00058
     cadence: once
     notes: >
-      Consumer Counsel brief on Dominion interconnect queue.
-      Documents 20-year wait times for >100MW customers.
-
-  - id: scc-pur-2025-00014
-    type: scc_case
-    case_number: PUR-2025-00014
-    output_dir: data/scc/PUR-2025-00014
-    cadence: once
-    notes: >
-      Dominion 2025 IRP docket. Load forecasts, capacity queue,
-      Hampton Roads capacity planning. Highest priority.
+      Dominion 2025 biennial rate review. Final Order Nov 25 2025.
+      Key outcome: new GS-5 rate class for customers >25MW (effective Jan 1 2027);
+      large customers must pay 85% contracted distribution/transmission demand,
+      60% generation demand. Rejected $822M base rate increase, approved $565.7M.
+      Consumer Counsel interconnect queue brief filed here.
