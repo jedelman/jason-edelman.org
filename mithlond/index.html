@@ -10,8 +10,9 @@
 <body>
 
 <nav>
-  <a class="nav-brand" href="index.html">MITHLOND</a>
+  <a class="nav-brand" href="index.html"><img src="assets/logo.jpg" alt="" style="width:26px;height:26px;object-fit:contain;margin-right:8px;vertical-align:middle;border-radius:50%;"/>MITHLOND</a>
   <a href="index.html" class="active">About</a>
+  <a href="index.html#briefs">Briefs</a>
   <a href="blog/index.html">Research Log</a>
   <a href="links.html">Links</a>
 </nav>
@@ -180,6 +181,57 @@
         projections? This is a GIS task we haven't completed yet.</span>
       </li>
     </ul>
+  </section>
+
+  <section id="briefs">
+    <h2>Policy Briefs</h2>
+    <p style="margin-bottom:1.5rem;">
+      Short documents for decision-makers — elected officials, city staff, community organizations. 
+      Updated as research develops. Treat all drafts as working documents, not final positions.
+    </p>
+
+    <!-- FEATURED BRIEF — update this block when a new brief supersedes it -->
+    <div style="
+      background: var(--deep);
+      border-left: 4px solid var(--signal);
+      padding: 1.4rem 1.6rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1.5rem;
+    ">
+      <div>
+        <div style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--signal);margin-bottom:0.4rem;">
+          Policy Brief &nbsp;·&nbsp; March 2025 &nbsp;·&nbsp; v1 Draft &nbsp;·&nbsp; For Discussion
+        </div>
+        <div style="font-family:var(--serif);font-size:1.1rem;font-weight:600;color:var(--mist);margin-bottom:0.4rem;">
+          Downtown Data Centers: A New Tool for Economic Development
+        </div>
+        <div style="font-family:var(--serif);font-size:0.85rem;color:var(--fog);line-height:1.55;">
+          How Hampton Roads cities can use their relationship with Dominion Energy to attract 
+          colocation operators into vacant downtown office buildings — no new construction required. 
+          Prepared for elected officials.
+        </div>
+      </div>
+      <a href="briefs/downtown-data-centers-v1.html" style="
+        font-family:var(--mono);
+        font-size:0.75rem;
+        letter-spacing:0.08em;
+        text-transform:uppercase;
+        color:var(--signal);
+        text-decoration:none;
+        border:1px solid var(--signal);
+        padding:0.5rem 1rem;
+        white-space:nowrap;
+        flex-shrink:0;
+      ">Read Brief →</a>
+    </div>
+
+    <!-- ADD NEW BRIEFS ABOVE THIS LINE — copy the block above, update content and href -->
+    <!-- MAINTAINER NOTE: Each new brief = new block above + update href + update date tag -->
+    <!-- When a brief is superseded, move it to the archive list below and update featured block -->
+
   </section>
 
   <section>
