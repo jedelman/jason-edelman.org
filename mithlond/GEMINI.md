@@ -21,12 +21,14 @@ Research Logs (Google Doc): https://docs.google.com/document/d/1IlkgmarullMJWUDU
 
 ## Two-Agent Architecture
 
-| Agent | Role | Output Surface |
-|-------|------|----------------|
-| **Gemini (you)** | Research sprints, web fetch, synthesis of public records | Mithlond Research Logs Google Doc |
-| **Claude** | Fact-flagging, synthesis, GitHub commits, policy artifacts | GitHub repo (blog/, briefs/, data/) |
+| Agent | Role | Writes to |
+|-------|------|-----------|
+| **Gemini (you)** | Research sprints, web fetch, public records synthesis | `research/findings/`, `research/TASKS.md` |
+| **Claude** | Fact-flagging, verification, policy artifact production | `blog/`, `briefs/`, `data/`, `research/TASKS.md` |
 
-Jason handles copy-paste between your output and the Research Logs doc. You do not push to GitHub directly. Write for an auditor, not a reader — Claude reviews before anything enters the public record.
+**Both agents push directly to GitHub.** No Drive, no copy-paste, no intermediary.
+
+Write for an auditor, not a reader. Claude reviews your findings before anything is promoted to the public record (`blog/` or `briefs/`). Your job ends at `research/findings/`.
 
 ---
 
@@ -39,30 +41,55 @@ Jason handles copy-paste between your output and the Research Logs doc. You do n
 
 ---
 
-## Output Format — Research Log Entry
+## Workflow — How to Submit a Finding
 
-Use one entry per distinct finding. Do not bundle unrelated findings.
+**1. Write your finding** using the template at `research/FINDING_TEMPLATE.md`.  
+Save it as `research/findings/YYYY-MM-DD-<task-id>-<slug>.md`.  
+Example: `research/findings/2026-03-16-A1-dominion-gs4-rates.md`
 
+**2. Update `research/TASKS.md`** — change the task status to `DONE` and add the filename in the Finding column.
+
+**3. Commit and push both files together.**  
 ```
-## Research Log Entry
+git add research/findings/YYYY-MM-DD-<slug>.md research/TASKS.md
+git commit -m "findings: A1 — Dominion GS-4 rate schedule"
+git push origin main
+```
+
+**4. Claude picks it up** on the next session, reviews, promotes verified content to `blog/` or `briefs/`, and updates the finding's `claude-review` field.
+
+One file per task ID. If a task yields multiple distinct findings, use separate files with a suffix: `A1a`, `A1b`.
+
+---
+
+## Finding Format
+
+```markdown
+## Finding: [Task ID] — [Short title]
 **Date:** YYYY-MM-DD
+**Agent:** Gemini
+**Task:** [ID from TASKS.md]
 **Track:** [A / B / C / D / E]
 **Status:** VERIFIED | UNVERIFIED | PARTIAL
 
-### Finding
-[1–3 sentences. What was found.]
+### What Was Found
+[1–3 sentences. Concrete. No filler.]
 
 ### Source
-[Specific URL, document number, or "interpolated from X" if inferred.]
+[Direct URL or document reference. "interpolated from X" if inferred.]
 
 ### Verification Status
-[What is confirmed vs. what needs ground-truth check before policy use.]
+[What is confirmed vs. what still needs ground-truth before policy use.]
 
 ### Implications for Mithlond
 [How this affects the policy brief, open letter, or a specific track.]
 
 ### Open Questions
-[What this finding raises that still needs research.]
+[What this raises that still needs research. Flag follow-on task IDs if known.]
+
+---
+claude-review: pending
+promoted-to: —
 ```
 
 ---
@@ -151,52 +178,13 @@ Use one entry per distinct finding. Do not bundle unrelated findings.
 
 ---
 
-## Current Task Queue
+## Task Queue
 
-Tasks in priority order. Complete one track at a time. Output each finding as a Research Log Entry.
+See `research/TASKS.md` for the canonical task list with current status.
 
-### High Priority
+Tasks are organized by track (A–E) plus a Blocked section for endpoints that require native fetch. Update status in TASKS.md when you complete a task — don't just drop a finding file without updating the tracker.
 
-**[A1] Dominion GS-4 Rate Schedule**
-Fetch current Schedule GS-4 (Primary Voltage) from dominionenergy.com or SCC filings. Extract demand charge per kW, energy rate, and any relevant riders. Goal: replace the UNVERIFIED "$10k/year per 500kW" figure with actual numbers.
-
-**[B1] Norfolk GIS — Brambleton Substation**
-Confirm Parcel ID 04337700 is Brambleton Substation via Norfolk's GIS portal (norfolk.gov/gis or norfolk-gis.maps.arcgis.com). Also check zoning and ownership record.
-
-**[B2] 440 Monticello Ave Verification**
-Search LoopNet, CoStar (public-facing), and Norfolk City Assessor's real estate records for 440 Monticello Ave. Confirm: ownership/REO status, lease rate, floor plate sizes, assessed value.
-
-**[C1] DEQ APG-576 Outcome**
-Check DEQ website for final outcome of the APG-576 comment period (closed April 8, 2026 or possibly still open). What BACT was adopted? Did any Hampton Roads organizations file comments?
-URL: https://www.deq.virginia.gov and https://townhall.virginia.gov
-
-**[C2] Virginia Budget / DCRSUT Status**
-Search for current status of Virginia data center tax exemption (DCRSUT) after the March 14 budget deadline. Did the General Assembly pass a budget in special session? Did the Senate-passed sunset language survive?
-
-### Medium Priority
-
-**[E1] Louise Lucas Briefing Memo — Research Support**
-Pull publicly available information on Sen. Louise Lucas's committee assignments, recent statements on economic development or data centers, and any relevant bills she has sponsored or opposed in the 2025-2026 session.
-
-**[B3] Additional Building Candidates**
-Identify 1–2 additional downtown Norfolk buildings beyond 440 Monticello and Dominion Tower that could support 5,000–15,000 sqft modular colocation. Criteria: (1) vacancy rate >30%, (2) proximity to fiber (SNA ring), (3) not in a FEMA AE flood zone, (4) structural load capacity plausible (industrial or Class A office).
-
-**[D1] Active Hampton Roads Data Center Operators**
-Who currently operates at 3800 Village Ave and Corporate Landing? Any announced expansions or new entrants since late 2024? Check LoopNet, Cushman & Wakefield Thalhimer listings, Norfolk/Virginia Beach EDA press releases.
-
-**[A2] SNA Regional Connectivity Ring Status**
-Confirm current completion status of the SNA RCR. Primary source: southsidenetwork.com or Virginia Business / local press. Is the "80% complete" figure current and sourced?
-
-### Lower Priority (research support only)
-
-**[C3] SNA Comprehensive Agreement**
-Locate the actual SNA Comprehensive Agreement (the document governing SNA operations and member rights). Confirm whether Article VIII contains open access language, and if so, what it says exactly.
-
-**[C4] BVU Authority Enabling Legislation**
-Pull the Virginia enabling act for BVU Authority (Bristol). Identify the statutory provisions that allow it to operate broadband as a public utility. This is the legal template for a Hampton Roads Compute Authority.
-
-**[D2] FEMA Flood Zone Status for Key Sites**
-Check FEMA FIRM maps for: 3800 Village Ave, 440 Monticello Ave, Dominion Tower address. Report flood zone designation (AE, X, etc.) and base flood elevation.
+**Current priority order:** A1, B1, C2, C1, A2, B2, E1 — then the rest of the queue.
 
 ---
 
@@ -236,4 +224,4 @@ If you can fetch these, do so and structure as Research Log Entries.
 
 ---
 
-*This file is maintained by Claude. Last updated: 2026-03-15.*
+*This file is maintained by Claude. Last updated: 2026-03-15. Task list: research/TASKS.md*
