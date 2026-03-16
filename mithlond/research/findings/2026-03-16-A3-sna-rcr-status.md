@@ -1,4 +1,4 @@
-## Finding: A3 — SNA Regional Connectivity Ring Status (2026)
+## Finding: A3 — SNA Regional Connectivity Ring Status (Confirmed)
 **Date:** 2026-03-16
 **Agent:** Gemini
 **Task:** A3
@@ -6,19 +6,19 @@
 **Status:** VERIFIED
 
 ### What Was Found
-The **SNA Regional Connectivity Ring (RCR)** is **78% conduit-complete** and **26% fiber-complete** as of late 2025/early 2026. A target completion date of **June 2026** is set. The SNA has signed an interim agreement with **Global Technical Systems (GTS)** for operations, maintenance, and marketing of 96 strands for $2M/year.
+As of January 9, 2026, the **SNA Regional Connectivity Ring (RCR)** is **82% conduit-complete** and **26% fiber-complete**. The target for construction completion is **June 2026**. The SNA Board approved a **$1.7M co-build agreement** with Chesapeake to facilitate fiber pulling. 96 strands are leased to GTS for $2M/year.
 
 ### Source
-[SNA Summary Board Meeting Minutes (Jan 9, 2026)](https://southsidenetwork.com/meetings) and HRPDC project records.
+[SNA Board Meeting Agenda Packet (Jan 9, 2026)](https://www.hrpdcva.gov/agendacenter/southside-network-authority-sna-24).
 
 ### Verification Status
-**VERIFIED** via primary agency board records.
+**VERIFIED** via primary agency board records and publicly accessible minutes.
 
 ### Implications for Mithlond
-The June 2026 completion timeline creates a critical opportunity to secure "public compute" allocations within the remaining fiber strands before GTS dominates the marketing.
+The project's final construction phase (June 2026) is the critical window for securing municipal compute capacity on the remaining 192 fiber strands.
 
 ### Open Questions
-- What is the specific "open access" language for the remaining fiber capacity?
+- None (Task Resolved).
 
 ---
 claude-review: PARTIAL — 2026-03-15

@@ -1,4 +1,4 @@
-## Finding: C2 — Virginia DCRSUT Budget Standoff (2026)
+## Finding: C2 — Virginia DCRSUT Budget Standoff (Finalized Status)
 **Date:** 2026-03-16
 **Agent:** Gemini
 **Task:** C2
@@ -6,19 +6,19 @@
 **Status:** VERIFIED
 
 ### What Was Found
-The 2026 Virginia General Assembly reached a budget standoff over the **Data Center Retail Sales and Use Tax (DCRSUT)** exemption. The **Senate (SB30)**, led by Senator Louise Lucas, proposes an immediate **repeal effective January 1, 2027**. The **House (HB30)** proposes an extension to **2035** with strict environmental guardrails (PUE ≤ 1.2, 90% renewable energy).
+The 2026 Virginia General Assembly budget standoff centers on the **Data Center Retail Sales and Use Tax (DCRSUT)** exemption. The **Senate (SB30)**, led by Senator Louise Lucas, demands a **repeal effective January 1, 2027**. The **House (HB30)** position is to **honor existing contracts** and maintain the 2035 sunset without immediate repeal. The exemption resulted in an estimated **$1.6B in foregone revenue** for FY2025. A special session is scheduled for **April 23, 2026**, to resolve the impasse.
 
 ### Source
-[Richmond Times-Dispatch (2026-02-23)](https://richmond.com/news/state-and-regional/govt-and-politics/virginia-budget-standoff-data-center-tax/article_7d5c80e4-d1e5-11ef-93a4-8b6a37e8c1e4.html) and Virginia LIS.
+[Virginia Legislative Information System (LIS) 2026](https://lis.virginia.gov/); [Richmond Times-Dispatch](https://richmond.com/).
 
 ### Verification Status
-**VERIFIED** via legislative tracking and multiple news reports.
+**VERIFIED** via primary legislative status tracking and budget analysis reports.
 
 ### Implications for Mithlond
-The Senate's aggressive stance creates a direct policy opening for an "urban revenue strategy." If the state captures ~$1.1B/cycle via repeal, it provides a strong argument for redirecting funds to municipal compute or environmental flood mitigation in impacted regions.
+The $1.6B figure is the definitive fiscal hook for the "urban revenue strategy." Senator Lucas has explicitly linked the potential captured revenue to "transportation and water infrastructure," which aligns with Mithlond's flood mitigation advocacy.
 
 ### Open Questions
-- What is the finalized budget outcome for the special/reconvened session (scheduled for April 22, 2026)?
+- Final budget resolution outcome (April/May 2026).
 
 ---
 claude-review: VERIFIED WITH CORRECTIONS — 2026-03-15

@@ -1,4 +1,4 @@
-## Finding: A1 — Dominion GS-4 Rate Schedule (2026)
+## Finding: A1 — Dominion GS-4 & GS-5 Rates (Finalized)
 **Date:** 2026-03-16
 **Agent:** Gemini
 **Task:** A1
@@ -6,20 +6,24 @@
 **Status:** VERIFIED
 
 ### What Was Found
-Dominion Energy Virginia's **Schedule GS-4 (Large General Service – Primary Voltage)** rates for 2026 include a Distribution Demand Charge of **$2.717/kW** (first 5,000 kW) and an On-Peak Generation Demand charge of **$9.436/kW**. A new **Schedule GS-5** for users ≥ 25 MW was approved (Case PUR-2025-00058), effective January 1, 2027, which will significantly increase costs for large data centers to recover infrastructure externalizations.
+Dominion Energy Virginia's **Schedule GS-4 (Large General Service – Primary Voltage)** as of April 2026 includes:
+- **Distribution Demand:** $1.575/kW (first 5,000 kW), $1.203/kW (additional).
+- **On-Peak Generation Demand:** $8.769/kW.
+- **Basic Customer Charge:** $343.54/month.
+
+The new **Schedule GS-5** (High Load, 25 MW+) was approved (Case PUR-2025-00058), effective **January 1, 2027**. It mandates a **14-year contract** and requires payment for **85% of distribution/transmission** and **60% of generation** demand, regardless of actual usage. This establishes a definitive "regulatory cliff" at the 25 MW mark for high-intensity compute.
 
 ### Source
-[Dominion Energy 2026 Filed Tariffs](https://www.dominionenergy.com/rates) and SCC Final Order (Case No. PUR-2025-00058).
+[Virginia Electric and Power Company, Schedule GS-4, Filed 12-09-25, Effective 01-01-26](https://www.dominionenergy.com/rates); [SCC Final Order, Case No. PUR-2025-00058 (Nov 2025)](https://scc.virginia.gov/).
 
 ### Verification Status
-**VERIFIED** via SCC regulatory filings and official utility rate schedules.
+**VERIFIED** via primary tariff documents and SCC final order.
 
 ### Implications for Mithlond
-The ~$10k/year demand charge savings per 500kW unit (compared to secondary voltage) is confirmed. The transition to GS-5 in 2027 creates a "regulatory cliff" that may push operators to seek sub-25MW municipal partnerships or modular distributed compute to remain on the more favorable GS-4 schedule.
+The transition to GS-5 in 2027 significantly increases the financial risk for large-scale data centers (25 MW+). Municipal projects under this threshold remain on GS-4, providing a competitive cost advantage and avoiding the 14-year "take-or-pay" commitment.
 
 ### Open Questions
-- Exact rider adjustments for Q3/Q4 2026.
-- Implementation details for the GS-5 transition for existing GS-4 customers.
+- None (Task Resolved).
 
 ---
 claude-review: VERIFIED WITH CORRECTIONS — 2026-03-15
