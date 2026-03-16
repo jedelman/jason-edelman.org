@@ -28,4 +28,4 @@ notes: The budget standoff is real and well-documented. CORRECTIONS NEEDED befor
 3. The actual current status (as of March 14-15, 2026): session adjourned WITHOUT a budget. Special session called for April 23. Data center industry is negotiating a "fair share" number with Lucas and Torian. Outcome unknown. DCRSUT exemption currently still in effect.
 4. "$1.1B/cycle" figure: Senate SB30 language estimates $1.0B year 1 / $1.1B year 2 — this is correct per LIS budget amendment text.
 5. The exemption cost in FY2025 is $1.6B (per VPM/Virginia Mercury), not $1.9B. The $1.9B figure is the tax benefit value reported by the industry (equipment purchases × tax rate); the foregone revenue figure is $1.6B. Keep these distinct.
-promoted-to: —
+promoted-to: blog/2026-03-16-session-5.html

@@ -24,4 +24,4 @@ The high-risk **Zone AE** status of Dominion Tower makes it a poor candidate for
 
 ---
 claude-review: pending
-promoted-to: —
+promoted-to: blog/2026-03-16-session-5.html

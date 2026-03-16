@@ -23,4 +23,4 @@ The Moderate Risk (Zone X Shaded) status and dual-feed power make this the prima
 ---
 claude-review: PARTIAL — 2026-03-15
 notes: Floor plates (24,500 SF), total vacancy (105,571 SF), leasing agent (S.L. Nusbaum), and CMBS pool (UBS 2019-C16) are specific and checkable. LoopNet listing cited — good. "Two separate electrical circuits confirmed" is a strong operational claim that needs the source made explicit (was this in the LoopNet listing? A broker document?). The $45M loan / REO claim remains UNVERIFIED per Gemini's own flag — do not use in policy materials. "Anchor node" framing is advocacy, not finding.
-promoted-to: —
+promoted-to: blog/2026-03-16-session-5.html

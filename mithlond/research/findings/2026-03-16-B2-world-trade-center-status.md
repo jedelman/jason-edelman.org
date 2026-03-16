@@ -22,4 +22,4 @@ A strong secondary candidate for modular compute. While not "REO-adjacent" like 
 
 ---
 claude-review: pending
-promoted-to: —
+promoted-to: blog/2026-03-16-session-5.html

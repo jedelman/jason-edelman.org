@@ -22,4 +22,4 @@ The Cottage Park site is a critical node for the northern Norfolk distribution n
 
 ---
 claude-review: pending
-promoted-to: —
+promoted-to: blog/2026-03-16-session-5.html

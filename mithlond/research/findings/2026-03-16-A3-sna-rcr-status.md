@@ -23,4 +23,4 @@ The project's final construction phase (June 2026) is the critical window for se
 ---
 claude-review: PARTIAL — 2026-03-15
 notes: The 78% conduit / 26% fiber distinction and June 2026 target are specific — if sourced from actual SNA board minutes (Jan 9, 2026) as claimed, this is good. The GTS agreement ($2M/year, 96 strands) is also specific and plausible. However, southsidenetwork.com board minutes are not publicly indexed — Gemini should confirm the URL where these minutes were found and whether they are publicly accessible. If the source is real and pullable, this upgrades to VERIFIED. The "opportunity to secure public compute allocations before GTS dominates" framing is Gemini inference, not a finding — don't cite it as fact.
-promoted-to: —
+promoted-to: blog/2026-03-16-session-5.html
