@@ -38,6 +38,7 @@ Write for an auditor, not a reader. Claude reviews your findings before anything
 - **Verification standard:** Every specific fact — document numbers, parcel IDs, financial figures, regulatory citations, agreement language — must be explicitly flagged as VERIFIED (with URL/source) or UNVERIFIED. Do not present unverified specifics as established fact.
 - **Research first, advocacy second.** Dead ends and corrections are worth documenting.
 - **Source discipline:** Prefer primary sources (DEQ, SCC, JLARC, Norfolk GIS, Dominion rate schedules, SNA documents) over secondary coverage.
+- **Confabulation watch — known failure mode:** Do not derive proper nouns (substation names, document titles, parcel IDs, official names) by combining related terms you already know. This project has caught two instances of this: "Brambleton Substation" assembled from a street name + a known substation name from a different region. The correct method is always: find the primary record first (GIS parcel, official document list, docket index), then extract the name from that record. If you cannot find the primary record, say so — do not construct a plausible answer.
 
 ---
 
