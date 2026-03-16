@@ -432,3 +432,91 @@ hr.rule-heavy { border: none; border-top: 2px solid var(--ink); margin: 3rem 0; 
 
 ins { text-decoration: none; background: rgba(var(--gold-rgb),0.2); padding: 0 2px; }
 del { text-decoration: line-through; color: rgba(var(--ink-rgb),0.4); }
+
+/* ── Print ── */
+@media print {
+  :root {
+    --ink:        #000;
+    --ink-rgb:    0,0,0;
+    --paper:      #fff;
+    --paper-mid:  #f5f5f5;
+    --paper-dark: #ebebeb;
+    --gold:       #000;
+    --gold-dim:   #000;
+    --gold-warm:  #555;
+    --rule:       rgba(0,0,0,0.2);
+    --rule-strong:rgba(0,0,0,0.5);
+  }
+
+  header, nav, footer { display: none !important; }
+
+  body {
+    font-size: 11pt;
+    line-height: 1.6;
+    background: #fff;
+    color: #000;
+  }
+
+  .container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* Zine cover: keep black background, reduce padding */
+  .zine-cover {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 1.5rem;
+    page-break-after: always;
+  }
+
+  .zine-cover .zine-title {
+    color: #b07c2a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .zine-section {
+    page-break-inside: avoid;
+  }
+
+  .zine-number {
+    font-size: 4rem;
+  }
+
+  /* Callout boxes: keep dark background for print emphasis */
+  .callout {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    page-break-inside: avoid;
+  }
+
+  .demand-box {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    page-break-inside: avoid;
+  }
+
+  /* Comparison grid: keep for print */
+  .compare {
+    page-break-inside: avoid;
+  }
+
+  h1, h2, h3 { page-break-after: avoid; }
+  p { orphans: 3; widows: 3; }
+
+  a { color: #000; text-decoration: none; }
+
+  /* Hide screen-only elements */
+  .hero-label::before { display: none; }
+  .section-label::after { display: none; }
+
+  /* Print attribution line */
+  .zine-body::after { display: none; }
+}

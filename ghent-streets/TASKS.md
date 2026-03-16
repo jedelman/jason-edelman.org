@@ -15,8 +15,8 @@ Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings �
 ## Site Infrastructure
 
 - [ ] Enable GitHub Pages: Settings → Pages → Branch: main, root /
-- [ ] Add OG meta tags to all pages (title, description, image) for social sharing
-- [ ] Add favicon (simple amber-gold SVG — street grid or stylized G)
+- [x] Add OG meta tags to all pages (title, description, image) for social sharing
+- [x] Add favicon (simple amber-gold SVG — street grid)
 - [x] Create about.html — Jason's board history, why this matters, campaign context
 - [x] Create get-involved.html — show up at hearings, write letters, print zines, contact
 - [x] Wire get-involved.html into nav and homepage CTAs
@@ -33,7 +33,7 @@ Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings �
 - [ ] Revenue model: property tax uplift, sales tax (~1%), BPOL (~$0.20/$100 gross receipts)
   - Conservative scenario: 15 activations; aggressive: 40
 - [ ] Compare: Colley Ave assessed values before/after PCO if data is available
-- [ ] Draft policy/brief-02.html
+- [x] Draft policy/brief-02.html — published; needs parcel data reconciliation from Norfolk AIR before official use
 
 ### Brief No. 3: The ARB and Commercial Use
 - [ ] Research Virginia Code § 15.2-2306 (ARB enabling statute — scope of authority)
@@ -85,9 +85,9 @@ Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings �
 
 ## Design / Dev
 
-- [ ] Print CSS for zines (@media print — hide nav/header/footer, full-width body)
+- [x] Print CSS for zines (@media print — hide nav/header/footer, full-width body, preserve dark callout boxes)
 - [ ] Accessibility pass: alt text, color contrast check on amber-gold
-- [ ] Add canonical link tags
+- [x] Add canonical link tags
 
 ---
 
