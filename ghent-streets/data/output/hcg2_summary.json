@@ -1,0 +1,104 @@
+{
+  "total_parcels_ghent": 3138,
+  "parcels_by_use": {
+    "Single Family - Detached": 1141,
+    "Condominium": 915,
+    "Single Family - Attached": 390,
+    "Duplex": 143,
+    "Apartment": 140,
+    "Vacant Land": 117,
+    "Non-Taxable": 109,
+    "Commercial": 84,
+    "Fourplex": 46,
+    "Triplex": 39,
+    "Co-op": 9,
+    "Residential Outbuilding": 4,
+    "Industrial": 1
+  },
+  "parcels_by_planning_district": {
+    "PD 64 - GHENT": 945,
+    "PD 61 - WEST GHENT": 891,
+    "PD 62 - NORTH GHENT": 779,
+    "PD 63 - EAST GHENT": 523
+  },
+  "assessed_values_ghent": {
+    "total": 3359240700,
+    "mean": 1070504.0,
+    "median": 461400.0,
+    "residential_count": 2450,
+    "residential_mean_av": 456372.0,
+    "apartment_count": 140,
+    "apartment_mean_av": 1683524.0,
+    "commercial_count": 84,
+    "commercial_mean_av": 823858.0
+  },
+  "yoy_fy25_to_fy26": {
+    "matched_parcels": 29189,
+    "median_change_dollars": 13800.0,
+    "median_change_pct": 6.43,
+    "mean_change_pct": 8.63,
+    "total_appreciation": 485389500
+  },
+  "colley_pco": {
+    "total_parcels": 229,
+    "commercial_count": 106,
+    "commercial_mean_av": 2787206.0,
+    "residential_count": 64,
+    "residential_mean_av": 218633.0,
+    "apartment_count": 6,
+    "use_breakdown": {
+      "Commercial": 106
+    }
+  },
+  "commercial_premium": {
+    "ghent_residential_mean_av": 456372.0,
+    "ghent_commercial_mean_av": 823858.0,
+    "colley_commercial_mean_av": 2787206.0,
+    "colley_vs_ghent_res_premium_pct": 510.7
+  },
+  "revenue_projections": {
+    "conservative": {
+      "activations": 15,
+      "av_uplift_per_parcel_assumed": 100000,
+      "property_tax": 18750.0,
+      "meals_tax": 182000.0,
+      "sales_tax": 6000.0,
+      "bpol": 5680.0,
+      "adjacent_residential_uplift": 14262.0,
+      "total_annual_revenue": 226692.0
+    },
+    "aggressive": {
+      "activations": 40,
+      "av_uplift_per_parcel_assumed": 200000,
+      "property_tax": 100000.0,
+      "meals_tax": 455000.0,
+      "sales_tax": 18000.0,
+      "bpol": 14880.0,
+      "adjacent_residential_uplift": 14262.0,
+      "total_annual_revenue": 602142.0
+    }
+  },
+  "activatable_parcel_proxy": {
+    "pd64_total": 945,
+    "pd64_non_commercial": 932,
+    "pd64_small_urban_lots_with_structure": 817
+  },
+  "pd64_detail": {
+    "total_parcels": 945,
+    "total_assessed_value": 2146886100,
+    "mean_assessed_value": 2271837.0,
+    "use_breakdown": {
+      "Single Family - Detached": 280,
+      "Single Family - Attached": 218,
+      "Condominium": 195,
+      "Apartment": 70,
+      "Non-Taxable": 48,
+      "Duplex": 40,
+      "Vacant Land": 37,
+      "Fourplex": 24,
+      "Triplex": 18,
+      "Commercial": 13,
+      "Residential Outbuilding": 2
+    }
+  }
+}
