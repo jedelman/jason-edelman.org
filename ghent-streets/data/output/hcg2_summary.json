@@ -100,5 +100,125 @@
       "Commercial": 13,
       "Residential Outbuilding": 2
     }
+  },
+  "colley_multiyear": {
+    "commercial_trend": {
+      "2021": {
+        "median_av": 415100,
+        "mean_av": 590472,
+        "count": 106
+      },
+      "2023": {
+        "median_av": 425500,
+        "mean_av": 651486,
+        "count": 105
+      },
+      "2024": {
+        "median_av": 477900,
+        "mean_av": 2553087,
+        "count": 106
+      },
+      "2025": {
+        "median_av": 478200,
+        "mean_av": 2631160,
+        "count": 106
+      },
+      "2026": {
+        "median_av": 491700,
+        "mean_av": 2787206,
+        "count": 106
+      }
+    },
+    "residential_trend": {
+      "2021": {
+        "median_av": 141350,
+        "mean_av": 151020,
+        "count": 82
+      },
+      "2022": {
+        "median_av": 147300,
+        "mean_av": 162662,
+        "count": 60
+      },
+      "2023": {
+        "median_av": 156600,
+        "mean_av": 183286,
+        "count": 64
+      },
+      "2024": {
+        "median_av": 161200,
+        "mean_av": 191581,
+        "count": 64
+      },
+      "2025": {
+        "median_av": 170500,
+        "mean_av": 203681,
+        "count": 64
+      },
+      "2026": {
+        "median_av": 180300,
+        "mean_av": 218633,
+        "count": 64
+      }
+    }
+  },
+  "zoning_permits": {
+    "total": 151,
+    "by_status": {
+      "Expired": 62,
+      "Issued": 29,
+      "Finaled": 29,
+      "Cancelled": 16,
+      "Pending": 11,
+      "Abandoned": 2,
+      "Authorized": 1,
+      "Reviews in progress": 1
+    },
+    "by_use_type": {
+      "Commercial": 78,
+      "One/Two Family Dwelling": 59,
+      "Multi Family Dwelling": 8
+    }
+  },
+  "colonial_ave": {
+    "total_parcels": 113,
+    "commercial_count": 5,
+    "commercial_mean_av": 424060.0,
+    "commercial_median_av": 494600.0,
+    "residential_count": 92,
+    "residential_mean_av": 506296.0,
+    "residential_median_av": 487050.0,
+    "notable_parcels": [
+      {
+        "address": "701 Colonial Ave",
+        "class": "447 Com 1 & 2 Sty Office Bldg",
+        "owner": "Smith, Randall W",
+        "av": 526500
+      },
+      {
+        "address": "608 Colonial Ave",
+        "class": "423 General Commercial",
+        "owner": "Talmudical Academy Of Norfolk, Inc",
+        "av": 516000
+      },
+      {
+        "address": "1115 Colonial Ave",
+        "class": "428 Com Convenience Mkt",
+        "owner": "Niki Investments, Lp",
+        "av": 494600
+      },
+      {
+        "address": "1101 Colonial Ave",
+        "class": "429 Com Other Retail Bldg",
+        "owner": "Nero, James Jr & Carol T, Trustees",
+        "av": 376200
+      },
+      {
+        "address": "617 Colonial Ave",
+        "class": "447 Com 1 & 2 Sty Office Bldg",
+        "owner": "Karakla, Danette",
+        "av": 207000
+      }
+    ]
   }
 }
