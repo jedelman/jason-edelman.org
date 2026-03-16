@@ -26,14 +26,15 @@ Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings �
 
 ## Policy Track
 
-### Brief No. 2: Economic Projections
-- [ ] Pull HC-G2 parcel data from Norfolk AIR (https://norfolk.gov/air) or GIS
-  - Count parcels with ground-floor street frontage
-  - Estimate activatable commercial SF (15–20% conversion, ~1,000 sq ft avg)
-- [ ] Revenue model: property tax uplift, sales tax (~1%), BPOL (~$0.20/$100 gross receipts)
-  - Conservative scenario: 15 activations; aggressive: 40
-- [ ] Compare: Colley Ave assessed values before/after PCO if data is available
-- [x] Draft policy/brief-02.html — published; needs parcel data reconciliation from Norfolk AIR before official use
+### Brief No. 2: Economic Projections — COMPLETE (v2.0 March 2026)
+- [x] Pull HC-G2 parcel data via Socrata API (data.norfolk.gov) — 945 parcels PD64, 13 commercial (1.4%)
+- [x] Revenue model with real assessed values — conservative $227K/yr, aggressive $602K/yr
+- [x] Colley multi-year trend FY21–FY26 — commercial +18.5%, residential +27.6%
+- [x] Colonial Ave AV inversion — existing commercial mean $424K < residential mean $506K
+- [x] CUP barrier permit data — 151 Ghent zoning permits, 52% never completed
+- [x] Data pipeline: data/scripts/fetch.py, fetch_extended.py, analyze.py, analyze_extended.py
+- [ ] Pre-PCO Colley baseline (FY18–FY20) — would strengthen before/after argument
+- [ ] Lot-size-normalized 7-Eleven / Harris Teeter vs adjacent residential comparison
 
 ### Brief No. 3: The ARB and Commercial Use
 - [ ] Research Virginia Code § 15.2-2306 (ARB enabling statute — scope of authority)
@@ -73,13 +74,16 @@ Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings �
 
 ---
 
-## Data Needed
+## Data Needed / Future Analysis
 
-- [ ] Full HC-G2 parcel data: count, acreage, street frontage (Norfolk AIR or GIS)
-- [ ] Assessed values of commercial parcels on Colley Ave (Norfolk AIR)
-- [ ] CUP applications filed in HC-G2, last 5 years (FOIA if not public)
-- [ ] Complete list of nonconforming commercial uses in HC-G2
+- [x] HC-G2 parcel data (via Socrata API, PD 64 proxy): 945 parcels, 13 commercial (1.4%)
+- [x] Colley Ave assessed values FY21–FY26 (six assessment datasets via API)
+- [x] Ghent permits dataset (fahm-yuh4): 151 zoning permits, 52% never completed
+- [ ] Pre-PCO Colley baseline: FY18–FY20 assessment datasets (if available on data.norfolk.gov)
+- [ ] CUP-specific permit isolation within HC-G2 parcel boundary (requires GIS zoning shapefile)
+- [ ] Complete list of nonconforming commercial uses in HC-G2 (FOIA or GIS query)
 - [ ] plaNorfolk2030 full text — Land Use Strategies chapter
+- [ ] Interactive visualizations — data ready in data/output/ CSVs; see memory/project_viz_opportunity.md
 
 ---
 
