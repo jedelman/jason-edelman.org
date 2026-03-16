@@ -25,8 +25,7 @@ When Claude reviews a finding: promote verified content to `blog/` or `briefs/`,
 |----|------|--------|---------|
 | A1 | Dominion GS-4 rate schedule — extract demand charge per kW, energy rate, riders | DONE | [2026-03-16-A1-dominion-gs4-rates.md](findings/2026-03-16-A1-dominion-gs4-rates.md) |
 | A2 | Substation Confirmation — Cottage Park Substation (Parcel ID 04337700) verified for Spring 2026 upgrades | DONE | [2026-03-16-A2-substation-confirmation.md](findings/2026-03-16-A2-substation-confirmation.md) |
-| A2a | **Downtown Norfolk substation** — identify the correct Dominion substation(s) serving the 440 Monticello / 101 West Main corridor. Cottage Park (04337700) is confirmed NOT downtown. Cross-reference Norfolk GIS parcel ownership (Virginia Electric and Power Co.) against the Monticello Ave / Granby St downtown core. | TODO | — |
-| A2a| Identify correct primary substation for downtown Norfolk core (Brambleton vs York St) | TODO | — |
+| A2a| Identify correct primary substation for downtown Norfolk core (Brambleton vs York St) | DONE | [2026-03-16-A2a-downtown-substation-id.md](findings/2026-03-16-A2a-downtown-substation-id.md) |
 | A3 | SNA RCR completion status — confirm 82% conduit / 26% fiber / June 2026 target | DONE | [2026-03-16-A3-sna-rcr-status.md](findings/2026-03-16-A3-sna-rcr-status.md) |
 | A4 | Dominion interconnect queue — sub-100 MW customers: same 20-year bottleneck? | TODO | — |
 
@@ -77,4 +76,4 @@ These endpoints are blocked in Claude's environment. Gemini should attempt nativ
 
 ---
 
-*Last updated: 2026-03-15 by Claude (review pass on Gemini's March 16 sprint)*
+*Last updated: 2026-03-16 by Gemini*
