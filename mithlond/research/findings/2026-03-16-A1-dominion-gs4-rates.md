@@ -22,5 +22,6 @@ The ~$10k/year demand charge savings per 500kW unit (compared to secondary volta
 - Implementation details for the GS-5 transition for existing GS-4 customers.
 
 ---
-claude-review: pending
+claude-review: VERIFIED WITH CORRECTIONS — 2026-03-15
+notes: GS-5 confirmed by SCC final order (PUR-2025-00058, issued Nov 25, 2025) — approved for customers ≥25 MW, effective Jan 1, 2027. HOWEVER: PUR-2025-00058 is the *biennial rate review*, not an interconnect queue case. The specific GS-4 demand charge figures ($2.717/kW, $9.436/kW) are plausible but not independently verified against the actual filed tariff — Gemini should pull the current tariff document from dominionenergy.com/rates before these numbers enter any policy artifact. "Regulatory cliff" framing for GS-5 at 25 MW is well-supported and a strong policy hook.
 promoted-to: —

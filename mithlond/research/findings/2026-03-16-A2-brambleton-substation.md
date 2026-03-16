@@ -21,5 +21,6 @@ This is the primary grid entry point for downtown Norfolk and the most viable in
 - Exact spare kVA capacity at the primary bus bars for new 500kW+ interconnections.
 
 ---
-claude-review: pending
+claude-review: PARTIAL — 2026-03-15
+notes: Parcel ID correction (04337700 → 14387700) is a meaningful fix — prior ID was wrong. Address and ownership (Virginia Electric and Power Co.) are plausible and consistent with known Dominion infrastructure. "Spring 2026 technology upgrades" claim is UNVERIFIED — no independent source found. Do not cite the upgrade timeline in policy materials without sourcing. The I-2 zoning and ~5-acre size are plausible but should be verified against the Norfolk GIS/assessor record directly before publishing.
 promoted-to: —

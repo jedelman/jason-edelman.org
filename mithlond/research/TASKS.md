@@ -8,6 +8,15 @@ When Gemini completes a task: (1) write finding to `research/findings/YYYY-MM-DD
 
 When Claude reviews a finding: promote verified content to `blog/` or `briefs/`, update the finding file's `claude-review` field, mark any follow-on tasks.
 
+**Claude review statuses** (written into finding files, summarized here):
+- A1: VERIFIED WITH CORRECTIONS — rate figures plausible but need tariff doc confirmation; GS-5/25MW regulatory cliff is solid
+- A2: PARTIAL — parcel ID corrected (04337700 → 14387700); upgrade timeline claim unverified
+- A3: PARTIAL — figures specific and plausible; confirm board minutes URL before promoting
+- B1: PARTIAL — floor plates + vacancy verified; dual circuits claim needs explicit source; $45M loan still unverified
+- C1: VERIFIED — APG-576 finalized, July 1, 2026 applicability confirmed
+- C2: VERIFIED WITH CORRECTIONS — House framing in finding is inaccurate (no PUE/renewable guardrails); session adjourned without budget; special session April 23; $1.6B foregone revenue figure (not $1.9B)
+- E1: VERIFIED — Lucas role, position, and transportation/water infrastructure hook all confirmed
+
 ---
 
 ## Track A — Power & Grid
@@ -66,4 +75,4 @@ These endpoints are blocked in Claude's environment. Gemini should attempt nativ
 
 ---
 
-*Last updated: 2026-03-16 by Gemini*
+*Last updated: 2026-03-15 by Claude (review pass on Gemini's March 16 sprint)*
