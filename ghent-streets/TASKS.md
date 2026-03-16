@@ -17,9 +17,9 @@ Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings �
 - [ ] Enable GitHub Pages: Settings → Pages → Branch: main, root /
 - [ ] Add OG meta tags to all pages (title, description, image) for social sharing
 - [ ] Add favicon (simple amber-gold SVG — street grid or stylized G)
-- [ ] Create about.html — Jason's board history, why this matters, campaign context
-- [ ] Create get-involved.html — show up at hearings, write letters, print zines, contact
-- [ ] Wire get-involved.html into nav and homepage CTAs
+- [x] Create about.html — Jason's board history, why this matters, campaign context
+- [x] Create get-involved.html — show up at hearings, write letters, print zines, contact
+- [x] Wire get-involved.html into nav and homepage CTAs
 - [ ] Verify all internal links are relative and resolve correctly
 
 ---
@@ -54,7 +54,7 @@ Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings �
 
 ## Zine Track
 
-- [ ] Zine No. 2: "A Tale of Two Streets" — Colonial (HC-G2) vs. Colley (PCO), same city different rules
+- [x] Zine No. 2: "A Tale of Two Streets" — Colonial (HC-G2) vs. Colley (PCO), same city different rules
 - [ ] Zine No. 3: "Your Neighborhood Is Worth More Than This" — economic argument, plain language
 - [ ] **Printable PDF of Zine No. 1** — high priority for door-to-door
   - Letter/A4 format, half-sheet booklet fold (8 pages)

@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zine No. 2: A Tale of Two Streets — Ghent Streets</title>
+  <meta name="description" content="Colonial Avenue vs. Colley Avenue. Same city, same era, same kind of neighborhood. Wildly different streets. The only difference is a three-letter overlay: PCO." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <style>
+    .zine-section {
+      padding: 2.5rem 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .zine-number {
+      font-family: var(--display);
+      font-size: clamp(5rem, 18vw, 12rem);
+      font-weight: 700;
+      color: var(--paper-dark);
+      line-height: 1;
+      float: left;
+      margin-right: 1rem;
+      margin-top: -0.2em;
+      line-height: 0.85;
+    }
+    .zine-q {
+      font-family: var(--display);
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 600;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      color: var(--ink);
+    }
+    .big-answer {
+      font-size: 1.1rem;
+      line-height: 1.8;
+    }
+    .callout {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      font-family: var(--display);
+      font-size: clamp(1.3rem, 3vw, 1.8rem);
+      font-style: italic;
+      line-height: 1.3;
+    }
+    .callout em { color: var(--gold-warm); font-style: normal; }
+
+    /* Two-column comparison */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      margin: 2rem 0;
+      border: 1px solid var(--rule-strong);
+    }
+    .compare-col {
+      padding: 1.5rem;
+    }
+    .compare-col:first-child {
+      border-right: 1px solid var(--rule-strong);
+    }
+    .compare-col .compare-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      display: block;
+      margin-bottom: 0.75rem;
+    }
+    .compare-col h3 {
+      font-family: var(--display);
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 0 0 1rem;
+    }
+    .compare-col ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.92rem;
+      line-height: 2;
+    }
+    .compare-col ul li::before {
+      content: "— ";
+      color: var(--gold);
+      font-family: var(--mono);
+    }
+    .compare-col.dead h3 { color: rgba(var(--ink-rgb), 0.45); }
+    .compare-col.alive h3 { color: var(--gold-dim); }
+    @media (max-width: 520px) {
+      .compare { grid-template-columns: 1fr; }
+      .compare-col:first-child { border-right: none; border-bottom: 1px solid var(--rule-strong); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a class="site-name" href="/">Ghent <span>Streets</span></a>
+    <span class="issue-line">Norfolk, Virginia · HC-G2 Campaign</span>
+  </div>
+  <div class="container">
+    <nav>
+      <a href="/">Home</a>
+      <a href="../blog/">Blog</a>
+      <a href="../policy/">Policy</a>
+      <a href="../zines/" class="active">Zines</a>
+      <a href="../about.html">About</a>
+      <a href="../get-involved.html">Get Involved</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Zine Cover -->
+<div class="zine-cover">
+  <div class="container">
+    <p style="font-family:var(--mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,232,216,0.5);margin-bottom:1rem;">Zine No. 2</p>
+    <p class="zine-title">A Tale of<br>Two Streets</p>
+    <p style="font-size:1.1rem;color:rgba(240,232,216,0.75);max-width:500px;margin-top:1.5rem;line-height:1.65;">Colonial Avenue vs. Colley Avenue. Same city. Same era. Same kind of neighborhood. The difference is three letters: P — C — O.</p>
+    <p style="font-family:var(--mono);font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;color:rgba(240,232,216,0.4);margin-top:2rem;">Ghent Streets · Norfolk, Virginia · HC-G2 · Free to print and share</p>
+  </div>
+</div>
+
+<div class="container" style="padding-top:1rem;">
+
+  <div class="zine-section">
+    <div class="zine-number">1</div>
+    <div class="zine-body">
+      <p class="zine-q">Two streets. One city. One alive, one dead. Why?</p>
+      <p class="big-answer">Take a walk down Colonial Avenue in Ghent. Beautiful houses. Mature trees. Short blocks. Sidewalks wide enough for two people to pass comfortably. It has every physical feature of a neighborhood street that should be teeming with life. At 7pm on a Friday, it is quiet. Not peaceful quiet — empty quiet. The lights are on inside the houses and the sidewalk belongs to no one.</p>
+      <p class="big-answer">Now drive five minutes to Colley Avenue. Same city. Same era of construction. Same dense residential neighborhood surrounding a commercial corridor. Colley on a Friday evening is a different world: restaurants full, bars lit up, people sitting outside, foot traffic, the low-grade noise of a place that is actually being used.</p>
+      <p class="big-answer">The buildings didn't make this difference. The people didn't make this difference. <strong>The zoning code made this difference.</strong> And once you understand that, you understand that it can be changed.</p>
+    </div>
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">2</div>
+    <div class="zine-body">
+      <p class="zine-q">What does Colley have that Colonial doesn't?</p>
+      <p class="big-answer">Colley Avenue has a Pedestrian Commercial Overlay — a PCO. It's an addition to the base zoning that says: on this street, ground-floor commercial uses are permitted by right. You want to open a café? Open a café. A wine bar? A wine bar. A bookstore? A bookstore. No special permission required. You find a space, you sign a lease, you open.</p>
+      <p class="big-answer">Colonial Avenue is in HC-G2. There is no PCO. Ground-floor commercial uses require a Conditional Use Permit. A CUP means a $5,000 application fee, a six-month review process, a public hearing, and a vote by the full City Council. If one council member has a bad day or a neighbor objects, it can be denied.</p>
+      <p class="big-answer">That's the whole difference. Not the architecture. Not the people. Not the neighborhood character. A three-letter designation in a table in the city code.</p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="compare-col dead">
+      <span class="compare-label">Colonial Avenue · HC-G2</span>
+      <h3>No commercial life by right</h3>
+      <ul>
+        <li>Retail: Conditional Use Permit required</li>
+        <li>Restaurant: Conditional Use Permit required</li>
+        <li>Café: Conditional Use Permit required</li>
+        <li>Personal services: Conditional Use Permit required</li>
+        <li>$5,000 fee + six months + public hearing</li>
+        <li>Council can say no for any reason</li>
+        <li>Result: two nonconforming corporate stores</li>
+      </ul>
+    </div>
+    <div class="compare-col alive">
+      <span class="compare-label">Colley Avenue · PCO</span>
+      <h3>Commercial life by right</h3>
+      <ul>
+        <li>Retail: permitted, no application required</li>
+        <li>Restaurant: permitted, no application required</li>
+        <li>Café: permitted, no application required</li>
+        <li>Personal services: permitted, no application required</li>
+        <li>Performance standards manage scale and hours</li>
+        <li>ARB reviews exterior changes as always</li>
+        <li>Result: a living street</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">3</div>
+    <div class="zine-body">
+      <p class="zine-q">But didn't the PCO change Colley's character?</p>
+      <p class="big-answer">Drive down Colley and look at it. The Craftsman bungalows behind the storefronts are still there. The tree canopy is still there. The front porches, the corner houses, the neighborhood feel — all of it is intact. Nobody tore down Victorian houses to build a strip mall because the PCO was adopted.</p>
+      <p class="big-answer">What changed is that the ground floors of buildings along the commercial corridor were activated. The storefronts that were previously vacant or used for storage became restaurants and shops. The parking lots didn't multiply. The traffic didn't transform. The neighborhood absorbed its commercial life the way dense neighborhoods are supposed to: quietly, at human scale, one business at a time.</p>
+      <p class="big-answer">That's exactly what would happen on Colonial. Not a transformation — an activation. The bones are there. The foot traffic potential is there. The residents who want to walk somewhere are there. The only missing piece is legal permission.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    The PCO on Colley didn't change what Colley looks like. It changed what Colley <em>is</em> — a street people actually use.
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">4</div>
+    <div class="zine-body">
+      <p class="zine-q">What about the historic designation? Doesn't that protect Ghent from commercial overdevelopment?</p>
+      <p class="big-answer">HC-G2 has real architectural protections that are not touched by this proposal. The Architectural Review Board reviews any exterior change to a building — paint colors, window replacements, additions, signage, awnings. Those standards stay. Any business that opens on Colonial will still need ARB approval for anything that alters the building's appearance.</p>
+      <p class="big-answer">What the proposal changes is the use classification — whether a business can operate inside an existing building without physically altering it. A coffee shop in an existing ground-floor space changes nothing about the historic fabric. The ARB governs what things look like. This is about what things are allowed to be.</p>
+      <p class="big-answer">Richmond's Fan District — another dense Victorian residential neighborhood with strong historic protections — has both. The historic character is intact. The ground floors are alive. There's no contradiction between the two.</p>
+    </div>
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">5</div>
+    <div class="zine-body">
+      <p class="zine-q">What about the unhoused people who use those vacant spots now?</p>
+      <p class="big-answer">This is worth being honest about. Dead storefronts and vacant lots in HC-G2 do serve as resting spots for people with nowhere else to go. If those spaces activate, some of that use will be displaced. That's real.</p>
+      <p class="big-answer">But the underlying cause of that concentration is not the vacancy — it's the lack of services and housing for people who need them. And active streets are safer and more supportive of everyone than empty ones. The research on this is consistent: street activity, eyes on the sidewalk, and commercial presence reduce harm. Emptiness concentrates it.</p>
+      <p class="big-answer">The answer to the homelessness crisis in Ghent is housing and services, not preserved vacancy. This campaign doesn't solve that problem — but activating the street doesn't make it worse.</p>
+    </div>
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">6</div>
+    <div class="zine-body">
+      <p class="zine-q">So what are we asking the city to do?</p>
+      <p class="big-answer">We're asking the City of Norfolk to amend Table 3.6.11 of the Zoning Ordinance — the table that governs what's permitted in HC-G2 — to allow neighborhood-scale retail uses by right on ground floors of parcels with street frontage. Not a new overlay, not a new district. A change to a table in a document that already exists.</p>
+      <p class="big-answer">The language already exists in the PCO sections of the code. The process — ARB recommendation, Planning Commission hearing, City Council vote — is the normal text amendment process. We are not asking for anything extraordinary. We are asking Norfolk to apply to Colonial Avenue what it already applies to Colley Avenue.</p>
+      <p class="big-answer">That's it. One table. One change. One street that finally works the way it was designed to.</p>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-bottom: 3rem;">
+    Same city. Same tools. Norfolk already knows how to do this.<br>
+    <em>We're just asking them to do it here.</em>
+  </div>
+
+  <div style="padding: 2rem 0 3rem; border-top: 2px solid var(--ink);">
+    <p style="font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:rgba(var(--ink-rgb),0.45);margin-bottom:1.5rem;">What You Can Do</p>
+    <p class="big-answer"><strong>Show up.</strong> When the application is filed, there will be a public hearing at the ARB and another at the Planning Commission. Your presence matters more than you think.</p>
+    <p class="big-answer"><strong>Write a letter.</strong> Contact your City Council member (Superward 6) and tell them what you want on your street. One paragraph. Your name and address. Done.</p>
+    <p class="big-answer"><strong>Share this.</strong> Print more copies of this zine. Leave them at the library, the coffee shop you had to drive to, the neighbor's mailbox. The more people who understand this, the harder it is to ignore.</p>
+    <p class="big-answer"><strong>Go to <a href="../get-involved.html">ghentstreets.com/get-involved</a></strong> for a letter template, hearing dates, and contacts.</p>
+    <p style="font-family:var(--mono);font-size:0.62rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);margin-top:2rem;">This zine is free to print and distribute. No permission needed. Print 10 copies or 1,000.</p>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  <div class="container">
+    <div class="footer-note">
+      <p>Ghent Streets is a community advocacy campaign for zoning reform in Norfolk, Virginia.<br>
+      Not affiliated with the City of Norfolk or any official body.</p>
+    </div>
+    <div class="footer-note" style="text-align:right;">
+      <p>HC-G2 · Norfolk Zoning Ordinance § 3.6<br>
+      plaNorfolk2030 · Land Use Strategies</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
