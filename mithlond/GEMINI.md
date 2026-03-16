@@ -35,10 +35,77 @@ Write for an auditor, not a reader. Claude reviews your findings before anything
 ## Standards
 
 - **Anti-slop, pro-reality.** No filler, no hedging theater.
-- **Verification standard:** Every specific fact — document numbers, parcel IDs, financial figures, regulatory citations, agreement language — must be explicitly flagged as VERIFIED (with URL/source) or UNVERIFIED. Do not present unverified specifics as established fact.
-- **Research first, advocacy second.** Dead ends and corrections are worth documenting.
-- **Source discipline:** Prefer primary sources (DEQ, SCC, JLARC, Norfolk GIS, Dominion rate schedules, SNA documents) over secondary coverage.
-- **Confabulation watch — known failure mode:** Do not derive proper nouns (substation names, document titles, parcel IDs, official names) by combining related terms you already know. This project has caught two instances of this: "Brambleton Substation" assembled from a street name + a known substation name from a different region. The correct method is always: find the primary record first (GIS parcel, official document list, docket index), then extract the name from that record. If you cannot find the primary record, say so — do not construct a plausible answer.
+- **Research first, advocacy second.** Dead ends and corrections are worth documenting. "I couldn't find this" is a complete, useful finding.
+- **Source discipline:** Prefer primary sources (DEQ, SCC, JLARC, Norfolk GIS, Dominion rate schedules, SNA documents) over secondary coverage. When you use a secondary source, say so.
+- **Every specific fact must carry a status label.** See Verification Protocol below.
+
+---
+
+## Verification Protocol — Full Specification
+
+### The Prime Directive
+**If you cannot find the primary record, say so. Do not construct a plausible answer.**
+
+A plausible answer is not an answer. "I couldn't find this" is a complete, useful finding. A fabricated-but-plausible answer is a liability that corrupts the policy record.
+
+---
+
+### Tier 1: Zero Tolerance (Never Infer, Always Verify)
+These categories have caused real damage on this project and elsewhere. For each one, the **only acceptable method** is: find the primary record, extract the value, cite it.
+
+| Category | Why It Fails | Correct Method |
+|----------|-------------|----------------|
+| **Proper nouns** (substation names, building names, agency names, program names) | LLMs assemble plausible names from related terms. "Brambleton Substation" was fabricated from a street name + a known substation pattern. | Pull GIS record, official document, or agency index. Name comes from the record. |
+| **Case/docket numbers** (SCC, FERC, EPA, court filings) | Numbers look authoritative. Made-up numbers pass casual inspection. | Find the docket index first. Confirm the number resolves to the correct case before using it. |
+| **Statute/code citations** (Va. Code §, DCRSUT, IDA provisions) | Wrong section numbers look identical to correct ones. | Pull from law.lis.virginia.gov or the JLARC document. Quote directly. |
+| **Financial figures** (tax expenditure, subsidy amounts, rate schedules) | Round numbers get rounded further; timeframes drift. | Cite the specific JLARC table, Dominion rate schedule, or budget document. Include fiscal year. |
+| **Parcel IDs and addresses** | GIS typos propagate. Nearby-but-wrong parcels exist. | Confirm via Norfolk GIS parcel lookup. Record the link. |
+| **Dates and deadlines** (permit comment periods, legislative effective dates) | These change. Stale dates create false urgency or missed windows. | Pull directly from the agency notice. Note the date you retrieved it. |
+
+---
+
+### Tier 2: Status Labels — Required on Every Specific Fact
+
+- **VERIFIED:** You found the primary source, it says what you say it says, and you linked it.
+- **UNVERIFIED:** You have a credible secondary source but have not confirmed against primary. Use this — it's honest and useful.
+- **INFERRED:** You derived this from related sources. Explain the logic. Claude will assess whether the inference is sound before promotion.
+- **BLOCKED:** You attempted to retrieve this and could not (403, paywalled, SPA, etc.). Describe what you tried.
+
+Do not use "likely," "appears to be," or "suggests" without attaching one of these labels. Hedged language without a status label is slop.
+
+---
+
+### Tier 3: Conflict Protocol
+
+If two sources give different values for the same fact:
+1. **Do not average or pick the more favorable one.**
+2. Record both, with both sources.
+3. Label the finding CONFLICT and describe what differs.
+4. Flag for Claude review — conflicts often reveal important distinctions (different fiscal years, different definitions, different geographic scope).
+
+---
+
+### Known Hallucination Failure Modes — This Domain
+
+These have appeared in AI-assisted policy research. Watch for them:
+
+1. **Fabricated legislation:** Bills that don't exist, or real bill numbers attached to wrong content. Verify via Virginia Legislative Information System (lis.virginia.gov), not search snippets.
+2. **Invented regulatory proceedings:** SCC/EPA cases that sound plausible but don't appear in docket indices. Always confirm via the docket search UI before citing.
+3. **Stale status presented as current:** A permit "pending" in 2024 may have been denied, withdrawn, or never filed. Pull current status.
+4. **Secondary source laundering:** An article cites a study; you cite the article as if you've seen the study. If you haven't read the primary, label it UNVERIFIED and provide the chain: [source you read] → [source they claim].
+5. **Name conflation:** Two real entities with similar names treated as one. When a proper noun appears in multiple contexts, confirm you're tracking the same entity throughout.
+
+---
+
+### What "Write for an Auditor" Means
+
+Every finding should be reproducible by someone with no prior knowledge of this project:
+- URL is live and resolves to the document you describe
+- The quoted or paraphrased language appears on that page
+- The document is what you say it is (not a secondary reference to it)
+- The date and version are specified
+
+If a finding can't pass that test, it's not ready. Label it UNVERIFIED and document what you tried.
 
 ---
 
@@ -225,4 +292,4 @@ If you can fetch these, do so and structure as Research Log Entries.
 
 ---
 
-*This file is maintained by Claude. Last updated: 2026-03-15. Task list: research/TASKS.md*
+*This file is maintained by Claude. Last updated: 2026-03-16. Task list: research/TASKS.md*
