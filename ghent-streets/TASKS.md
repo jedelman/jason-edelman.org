@@ -1,75 +1,111 @@
-# Ghent Streets — Task Tracker
+# Ghent Zoning Reform — TASKS.md
 
-## Status: LAUNCHED — initial site live
-
----
-
-## Done
-
-- [x] Site architecture: index, blog/, policy/, zines/, assets/css/
-- [x] Shared CSS design system (amber-gold variant of power-explained)
-- [x] Homepage with stats, demand box, nav, card grid
-- [x] Policy Brief No. 1: full amendment proposal, language, performance standards, process, objections
-- [x] Policy index page
-- [x] Zine No. 1: "Why Is Your Street Dead?" — 7-question plain-language explainer
-- [x] Zines index page
-- [x] Blog post 1: "How Norfolk's Zoning Code Kills Street Life" — close reading of Table 3.6.11
-- [x] Blog post 2: "The PCO Model" — precedent argument
-- [x] Blog post 3: "Dead Streets and Displacement" — equity argument
-- [x] Blog index page
-- [x] README.md
-- [x] TASKS.md
-- [x] GitHub Pages config
+Campaign site for HC-G2 zoning text amendment in Norfolk, Virginia.
+Repo: https://github.com/jedelman/ghent-zoning-reform
+Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings → Pages → Branch: main, root /)
 
 ---
 
-## Up Next — Critical Path
+## Immediate: Before Any Public Use
 
-### Policy
-- [ ] Policy Brief No. 2: Economic Projections
-  - Parcel count in HC-G2 with ground-floor street frontage
-  - Estimate activatable SF (assume 20% conversion, 1,000 avg sq ft)
-  - Revenue model: sales tax + BPOL + property value uplift
-  - Comp: Colley Ave assessed values before/after PCO (data from Norfolk AIR)
-- [ ] Policy Brief No. 3: The ARB and Commercial Use
-  - Review ARB enabling statute (Virginia Code § 15.2-2306)
-  - Case studies: Alexandria, Richmond, Charlottesville mixed-use historic districts
-  - Show how use change ≠ physical alteration for ARB purposes
-
-### Zines
-- [ ] Zine No. 2: "A Tale of Two Streets" (Colonial vs. Colley, same city different rules)
-- [ ] Zine No. 3: "Your Neighborhood Is Worth More Than This" (economic argument, accessible)
-- [ ] Printable PDF version of Zine No. 1 (A4/Letter, designed to fold to half-sheet)
-
-### Blog
-- [ ] Campaign update: "How to File a Text Amendment Application in Norfolk" (process walkthrough)
-- [ ] Interview post: residents on what they want on their street
-- [ ] Post: "plaNorfolk2030 Already Supports This" — plan consistency deep dive
-
-### Site
-- [ ] About/Contact page (who is behind this campaign)
-- [ ] How to Get Involved page (show up, write letters, coalition building)
-- [ ] Meta tags / OG images for social sharing
-- [ ] favicon
+- [ ] **Verify Table 3.6.11** — policy/brief-01.html uses reconstructed amendment language based on confirmed table structure but unverified cell values. Pull the real table from https://www.norfolkva.gov/norfolkzoningordinance/ (browser only — robots.txt blocks fetchers). Reconcile exact use category names and current P/C/blank status for the HC-G2 column. Update brief-01.html amendment table to match real ordinance language precisely.
 
 ---
 
-## Political / Operational
+## Site Infrastructure
 
-- [ ] File text amendment application with Norfolk Dept. of City Planning
-  - Contact: Jeremy Sharp (757) 439-4833 · jeremy.sharp@norfolk.gov
-  - Confirm current fee schedule
-- [ ] Request ARB agenda slot — identify next available meeting
+- [ ] Enable GitHub Pages: Settings → Pages → Branch: main, root /
+- [ ] Add OG meta tags to all pages (title, description, image) for social sharing
+- [ ] Add favicon (simple amber-gold SVG — street grid or stylized G)
+- [ ] Create about.html — Jason's board history, why this matters, campaign context
+- [ ] Create get-involved.html — show up at hearings, write letters, print zines, contact
+- [ ] Wire get-involved.html into nav and homepage CTAs
+- [ ] Verify all internal links are relative and resolve correctly
+
+---
+
+## Policy Track
+
+### Brief No. 2: Economic Projections
+- [ ] Pull HC-G2 parcel data from Norfolk AIR (https://norfolk.gov/air) or GIS
+  - Count parcels with ground-floor street frontage
+  - Estimate activatable commercial SF (15–20% conversion, ~1,000 sq ft avg)
+- [ ] Revenue model: property tax uplift, sales tax (~1%), BPOL (~$0.20/$100 gross receipts)
+  - Conservative scenario: 15 activations; aggressive: 40
+- [ ] Compare: Colley Ave assessed values before/after PCO if data is available
+- [ ] Draft policy/brief-02.html
+
+### Brief No. 3: The ARB and Commercial Use
+- [ ] Research Virginia Code § 15.2-2306 (ARB enabling statute — scope of authority)
+- [ ] Confirm legally: ARB reviews physical alterations, not change-of-use alone
+- [ ] Case studies: Alexandria Old Town, Richmond Fan District, Charlottesville Downtown
+- [ ] Draft policy/brief-03.html
+
+---
+
+## Blog Track
+
+- [ ] "How to File a Text Amendment Application in Norfolk" — process walkthrough for activists
+- [ ] "plaNorfolk2030 Already Supports This" — pull actual plan text, map to this proposal
+- [ ] "What HC-G1 Can Teach HC-G2" — compare the two Ghent sub-districts
+- [ ] Interview post: residents on what they want (quotes from Jason)
+
+---
+
+## Zine Track
+
+- [ ] Zine No. 2: "A Tale of Two Streets" — Colonial (HC-G2) vs. Colley (PCO), same city different rules
+- [ ] Zine No. 3: "Your Neighborhood Is Worth More Than This" — economic argument, plain language
+- [ ] **Printable PDF of Zine No. 1** — high priority for door-to-door
+  - Letter/A4 format, half-sheet booklet fold (8 pages)
+  - Print run target: 300 copies
+
+---
+
+## Political / Operational (Jason-led)
+
+- [ ] File text amendment application — Jeremy Sharp, (757) 439-4833, jeremy.sharp@norfolk.gov
+- [ ] Request ARB agenda slot (30–45 days lead time)
 - [ ] Contact Ghent Civic League — present campaign, request endorsement
-- [ ] Identify sympathetic Council member(s) to co-sponsor or champion
-- [ ] Draft form letter template for neighbor emails to Council
-- [ ] Print run of Zine No. 1 (300 copies, door-to-door in HC-G2)
+- [ ] Identify sympathetic Council member (Superward 6 covers Ghent)
+- [ ] Draft template neighbor letter for get-involved.html
+- [ ] Plan door-to-door zine distribution in HC-G2
 
 ---
 
 ## Data Needed
 
-- [ ] Full HC-G2 parcel data from Norfolk AIR or GIS (count, acreage, frontage)
-- [ ] Current assessed values of commercial parcels in PCO-Colley for comparison
-- [ ] Number of current CUP applications filed in HC-G2 in last 5 years (FOIA if needed)
-- [ ] Any existing nonconforming commercial uses in HC-G2 beyond 7-Eleven and Harris Teeter
+- [ ] Full HC-G2 parcel data: count, acreage, street frontage (Norfolk AIR or GIS)
+- [ ] Assessed values of commercial parcels on Colley Ave (Norfolk AIR)
+- [ ] CUP applications filed in HC-G2, last 5 years (FOIA if not public)
+- [ ] Complete list of nonconforming commercial uses in HC-G2
+- [ ] plaNorfolk2030 full text — Land Use Strategies chapter
+
+---
+
+## Design / Dev
+
+- [ ] Print CSS for zines (@media print — hide nav/header/footer, full-width body)
+- [ ] Accessibility pass: alt text, color contrast check on amber-gold
+- [ ] Add canonical link tags
+
+---
+
+## Content Rules (preserve across sessions)
+
+- **Policy briefs:** cite zoning code sections precisely, use ordinance terminology, anticipate objections
+- **Blog:** full argument, named sources, footnotes as superscripts (power-explained pattern)
+- **Zines:** eighth-grade reading level, no unexplained jargon, explicitly licensed for free printing
+- **Design:** amber-gold (#b07c2a), warm paper (#f3ede0), Cormorant Garamond / Lora / DM Mono
+- **Links:** all internal links relative only
+- **Index:** keep index.html current when adding any new piece
+
+---
+
+## Key References
+
+- Planning staff: Jeremy Sharp, (757) 439-4833, jeremy.sharp@norfolk.gov
+- Norfolk Zoning Ordinance: https://www.norfolkva.gov/norfolkzoningordinance/
+- Norfolk AIR (parcel/GIS data): https://norfolk.gov/air
+- Key ordinance sections: Table 3.6.11 (HC uses), Table 3.9.21 (PCO uses), § 3.6, § 3.9
+- Amendment process: Norfolk Zoning Procedures Manual (Dec. 2023), Section 3.3(B)
