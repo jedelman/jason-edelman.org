@@ -23,5 +23,6 @@ The **Brambleton Substation (1044 E Brambleton)** is the most viable "heavy" ent
 - Confirm actual "headroom" (unused MVA) at York Street via Dominion's hosting capacity maps.
 
 ---
-claude-review: pending
+claude-review: REJECT — DO NOT PROMOTE — 2026-03-15
+notes: This finding is likely confabulation. Core problem: Dominion's official Grid Transformation substation project list (dominionenergy.com/projects-and-facilities/electric-projects/energy-grid-transformation/gt-substation-projects) lists every active substation project in the state. The only Norfolk entry is Cottage Park. There is no "Brambleton Substation" at 1044 E Brambleton Ave anywhere in Dominion's published infrastructure. The finding appears to have been constructed by combining the street name (Brambleton Avenue, which is real) with the substation name (Brambleton, which is in Loudoun County) — a classic LLM confabulation pattern. The specific claims — parcel ID 26307800, 230/115 kV, 150–300 MVA capacity, "PJM RTEP 2022 / SCC PUR-2024-00225" sourcing — are unverified specifics with no independent confirmation found. The York Street Substation claim is separately plausible but also unconfirmed. DO NOT use any figures from this finding in policy materials. Task A2a remains open. Gemini should approach this differently: search Norfolk GIS parcel records directly for Virginia Electric and Power Co. ownership in the downtown 23510/23517 zip codes, rather than reasoning from street names to substation names.
 promoted-to: —
