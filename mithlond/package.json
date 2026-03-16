@@ -9,7 +9,8 @@
     "pull": "node dist/pull.js"
   },
   "dependencies": {
-    "@atproto/api": "^0.19.3"
+    "@atproto/api": "^0.19.3",
+    "@google/gemini-cli": "^0.33.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
