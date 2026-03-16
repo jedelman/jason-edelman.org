@@ -25,7 +25,7 @@ When Claude reviews a finding: promote verified content to `blog/` or `briefs/`,
 |----|------|--------|---------|
 | A1 | Dominion GS-4 rate schedule — extract demand charge per kW, energy rate, riders | DONE | [2026-03-16-A1-dominion-gs4-rates.md](findings/2026-03-16-A1-dominion-gs4-rates.md) |
 | A2 | Substation Confirmation — Cottage Park Substation (Parcel ID 04337700) verified for Spring 2026 upgrades | DONE | [2026-03-16-A2-substation-confirmation.md](findings/2026-03-16-A2-substation-confirmation.md) |
-| A2a| Identify correct primary substation for downtown Norfolk core | BLOCKED — DO NOT RETRY VIA WEB SEARCH | Two consecutive confabulated attempts. Dominion does not publish a distribution substation directory. Norfolk GIS (air.norfolk.gov) requires interactive browser session — not web-fetchable. **Resolution paths: (1) Jason manually queries air.norfolk.gov for "Virginia Electric and Power" parcels in 23510/23517, or (2) contact Dominion economic development team directly.** See both A2a finding files for full rejection notes. |
+| A2a| Identify correct primary substation for downtown Norfolk core | BLOCKED — USE MCP TOOL | Two prior web-search attempts confabulated. **Use `norfolk_search_property` MCP tool: query `owner_name="VIRGINIA ELECTRIC"` with `zip_code="23510"` then `"23517"`. Report all matching parcels with address, parcel_id, and assessed_value. Do not infer substation names — extract them from the parcel records.** See mcp/MCP_SETUP.md. |
 | A3 | SNA RCR completion status — confirm 82% conduit / 26% fiber / June 2026 target | DONE | [2026-03-16-A3-sna-rcr-status.md](findings/2026-03-16-A3-sna-rcr-status.md) |
 | A4 | Dominion interconnect queue — sub-100 MW customers: same 20-year bottleneck? | DONE | [2026-03-16-A4-dominion-interconnect-small-gen.md](findings/2026-03-16-A4-dominion-interconnect-small-gen.md) |
 
@@ -65,14 +65,15 @@ When Claude reviews a finding: promote verified content to `blog/` or `briefs/`,
 
 ## Blocked / Needs Offline Fetch
 
-These endpoints are blocked in Claude's environment. Gemini should attempt native fetch:
+These endpoints are blocked in Claude's environment. **X1 and X2 are now accessible via the Norfolk OpenGov MCP server (`mcp/norfolk_mcp.py`).** SCC PDFs remain blocked for both agents.
 
-| ID | Endpoint | Notes |
-|----|----------|-------|
-| X1 | data.norfolk.gov/resource/bnrb-u445.json | Socrata permits API; filter on permit type for generators/data centers |
-| X2 | data.virginia.gov | Statewide permits |
-| X3 | scc.virginia.gov — PUR-2024-00184 | Appalachian Voices testimony PDF |
-| X4 | scc.virginia.gov — PUR-2025-00058 | Consumer Counsel brief PDF |
+| ID | Endpoint | Status | Notes |
+|----|----------|--------|-------|
+| X1 | data.norfolk.gov/resource/bnrb-u445.json | **UNBLOCKED — use `norfolk_search_permits`** | See mcp/MCP_SETUP.md |
+| X1b | data.norfolk.gov/resource/m5ya-5grb.json | **UNBLOCKED — use `norfolk_search_property`** | Key tool for A2a substation lookup |
+| X2 | data.virginia.gov | BLOCKED — not yet covered | Statewide permits; future MCP tool |
+| X3 | scc.virginia.gov — PUR-2024-00184 | BLOCKED — robots.txt | Download manually from scc.virginia.gov/docketsearch |
+| X4 | scc.virginia.gov — PUR-2025-00058 | BLOCKED — robots.txt | Download manually from scc.virginia.gov/docketsearch |
 
 ---
 
