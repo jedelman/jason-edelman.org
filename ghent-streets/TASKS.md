@@ -26,23 +26,23 @@ These are factual or legal claims that could be disproved in the room and damage
 
 ## HIGH PRIORITY: Data and Argument Refinement
 
-- [ ] **Fix Brief 02 section numbering** — There is a "IV." and a "IV-B." with no "IV-A." heading. The Colley appreciation table section should be labeled "IV-A. Colley Ave Appreciation Trend: FY2021–FY2026" explicitly. Ref section calls it "Section IV-A" — the heading needs to match.
+- [x] **Fix Brief 02 section numbering** — Added "IV-A." prefix to appreciation trend section heading.
 
-- [ ] **Fix stale link in Brief 01** — The cross-link card at the bottom of brief-01.html says "Policy Brief · No. 2 — Coming Soon." Brief 02 is published. Remove "Coming Soon."
+- [x] **Fix stale link in Brief 01** — Removed "Coming Soon", updated card title to match published Brief 02 title.
 
-- [ ] **Reconcile Colley residential parcel count** — Brief 02 body says "64 total [residential parcels]." References section says "~114 residential." Determine which is right (64 may be SFD/townhouse only; 114 may include apartments). Add a clarifying note in the references or fix the body text. These cannot both appear in the same document.
+- [x] **Reconcile Colley residential parcel count** — Data confirms 64 is correct (FY22–FY26 all show 64). References section was wrong (said ~114). Fixed references to say ~64, with note that FY21 showed 82 (likely a reclassification event). Body text was already correct.
 
-- [ ] **Show the $3.36 billion calculation** — This number appears once in the final paragraph of Brief 02 with no source. Add a references footnote: total assessed value of PD 64 parcels × [n parcels] from the FY2026 dataset. If the math doesn't support $3.36B, correct the figure.
+- [x] **Show the $3.36 billion calculation** — Confirmed from data: $3,359,240,700 total AV across all Ghent PD 61-64 (3,138 parcels). Added references footnote citing the source dataset and calculation.
 
-- [ ] **Explain or remove the 817 "activatable proxy" stat** — The stat block shows 817 parcels as "small urban lots with structure (activatable proxy)" but the text never defines what makes a parcel qualify. Either define the threshold in a footnote (e.g., "lots under X sq ft with a structure classified as residential or commercial, excluding multi-family over Y units") or remove the stat if it can't be defended.
+- [x] **Explain or remove the 817 "activatable proxy" stat** — Added definition in source note: PD 64 parcels, not commercial, acreage < 0.25, improvement value > $0. From analyze.py lines 213-218.
 
-- [ ] **Rewrite Section IV-B (permit data) with honest framing** — The current text overclaims. "Expired" permits are not operators who gave up after CUP approval. Revise to say: the permit expiration data shows that a majority of zoning permits on these streets never reach final completion — which may reflect the friction of the CUP process, the economics of conversion, or both. Remove the claim "operators go through the process, get approval, and then give up before opening" unless it can be supported by permit type analysis showing these are specifically use/CUP permits rather than building/renovation permits. Consider labeling this section as suggestive rather than conclusive.
+- [x] **Rewrite Section IV-B (permit data) with honest framing** — Rewrote section. Removed overclaim about "operators giving up after approval." Added explicit note on what this data can and cannot establish. Section now labeled "suggests" rather than "proves." Added pointer to Section VI for the further analysis needed to isolate CUP-specific data.
 
-- [ ] **Revise or remove the Richmond Fan District comparison** — The Fan District's active commercial life (Carytown, West Main) is on explicitly commercial-zoned streets that *border* the residential grid, not within it. The residential streets of the Fan are not commercially activated. Either replace with a more accurate example (Alexandria Old Town? Georgetown?) or rephrase: "the Fan District demonstrates that a thriving residential neighborhood can coexist with active commercial corridors immediately adjacent" — which is actually the PCO model, not the table amendment model.
+- [x] **Revise or remove the Richmond Fan District comparison** — Removed the Fan District example from Zine 02. Replaced with a general claim about Virginia and national historic districts showing that architectural protection and active ground floors are compatible. Avoids the inaccuracy without requiring a verified substitute example.
 
-- [ ] **Soften the unhoused argument or cut it** — Zine 1 (section 5) and Zine 2 (section 5) use unhoused concentration as an argument for retail activation. Zine 2 acknowledges "some of that use will be displaced." Together these read as displacement-as-benefit. Either (a) reframe entirely around "active streets are safer for everyone including people without housing" and drop the displacement implication, or (b) cut the homeless reference from the zines entirely and keep only the urbanist safety argument in the policy brief where it can be properly caveated.
+- [x] **Soften the unhoused argument** — Rewrote both zine sections. Zine 2 section 5: removed "some of that use will be displaced. That's real." and reframed entirely around active streets = safer for everyone. Changed question heading to avoid framing around displacement. Zine 1 section 5: removed "unhoused individuals concentrate" framing; reframed as eyes-on-the-street safety argument for everyone.
 
-- [ ] **Address the "market demand vs. zoning barrier" counter-argument explicitly** — Brief 01 section IX has four objections/responses but none addresses: "If there's demand, operators will use the CUP process." This is the strongest opposing argument. Add a response that either (a) cites identified operators blocked by CUP, or (b) argues from revealed preference data (where did Ghent-adjacent operators actually locate, and why?), or (c) acknowledges that market analysis would strengthen the case and that's a task for the full application.
+- [x] **Address the "market demand vs. zoning barrier" counter-argument** — Added fifth objection/response to Brief 01 Section IX. Response uses: (a) revealed preference — operators aren't using the CUP at scale; (b) the capital screen argument — CUP filters independent operators, not corporate ones; (c) operator pipeline gap acknowledged honestly; (d) asymmetry argument — if demand doesn't exist, removing the CUP requirement costs nothing; if it does, the upside is fully documented.
 
 ---
 
@@ -65,18 +65,18 @@ These are factual or legal claims that could be disproved in the room and damage
 ## Policy Track
 
 ### Brief No. 2 — Refinement Pass (see above for specifics)
-- [ ] Fix section IV-A heading (missing)
-- [ ] Fix stale Brief 01 cross-link
-- [ ] Reconcile Colley residential count (64 vs 114)
-- [ ] Show $3.36B calculation or correct figure
-- [ ] Explain 817 activatable proxy threshold
-- [ ] Rewrite IV-B permit section with honest framing
+- [x] Fix section IV-A heading (missing)
+- [x] Fix stale Brief 01 cross-link
+- [x] Reconcile Colley residential count (64 vs 114)
+- [x] Show $3.36B calculation or correct figure
+- [x] Explain 817 activatable proxy threshold
+- [x] Rewrite IV-B permit section with honest framing
 - [ ] Pre-PCO Colley data (FY18–FY20) — strongest available upgrade
 
 ### Brief No. 1 — Refinement Pass
 - [ ] Verify Table 3.6.11 real cell values (see BLOCKING above)
-- [ ] Add response to "operators would just use the CUP if demand existed"
-- [ ] Replace Richmond Fan District example with accurate comparable
+- [x] Add response to "operators would just use the CUP if demand existed"
+- [x] Replace Richmond Fan District example with accurate comparable (in Zine 02)
 - [ ] Confirm blank cell = prohibited in general provisions; cite the specific provision
 - [ ] Replace/verify ULI citation (see BLOCKING above)
 - [ ] Consistent CUP fee ($1,500 vs $5,000) — use verified figure
@@ -97,15 +97,16 @@ These are factual or legal claims that could be disproved in the room and damage
 - [ ] "What HC-G1 Can Teach HC-G2" — compare the two Ghent sub-districts; what uses does HC-G1 permit that HC-G2 doesn't?
 - [ ] Interview post: residents and operators on what they want (quotes from Jason's network)
 - [ ] Fix the Colley PCO origin story — was it commercially active before the overlay? (informs the pco-precedent.html blog post)
+- [ ] **"Carytown and Colonial: A Tale of Two Cities"** — Research sprint. Carytown (Richmond, VA) as an out-of-city comparison: dense historic residential neighborhood with active street-level commercial. Research needed: Carytown's zoning designation, whether commercial uses are by-right or overlay, Richmond historic district rules, assessed value data if available. Do NOT write until research is done. Relevant to the "historic districts can support commercial life" argument and the Fan District gap left by Zine 02 section 3 revision.
 
 ---
 
 ## Zine Track
 
 - [x] Zine No. 2: "A Tale of Two Streets"
-- [ ] Zine No. 1: Rewrite section 5 (unhoused argument) — see HIGH PRIORITY above
-- [ ] Zine No. 2: Rewrite section 3 (Richmond Fan District) — see HIGH PRIORITY above
-- [ ] Zine No. 3: "Your Neighborhood Is Worth More Than This" — economic argument, plain language
+- [x] Zine No. 1: Rewrite section 5 (unhoused argument) — done
+- [x] Zine No. 2: Rewrite section 3 (Richmond Fan District) — done; also rewrote section 5 (unhoused)
+- [x] Zine No. 3: "Your Neighborhood Is Worth More Than This" — economic argument, plain language
 - [ ] **Printable PDF of Zine No. 1** — high priority for door-to-door
   - Letter/A4 format, half-sheet booklet fold (8 pages)
   - Print run target: 300 copies

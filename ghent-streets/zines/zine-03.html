@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zine No. 3: Your Neighborhood Is Worth More Than This — Ghent Streets</title>
+  <meta name="description" content="What the zoning code costs you personally — in property value, city services, and the kind of neighborhood you actually want to live in." />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Ghent Streets" />
+  <meta property="og:title" content="Zine No. 3: Your Neighborhood Is Worth More Than This — Ghent Streets" />
+  <meta property="og:description" content="What the zoning code costs you personally — in property value, city services, and the kind of neighborhood you actually want to live in." />
+  <meta property="og:url" content="https://jedelman.github.io/ghent-zoning-reform/zines/zine-03.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+  <link rel="canonical" href="https://jedelman.github.io/ghent-zoning-reform/zines/zine-03.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <style>
+    .zine-section {
+      padding: 2.5rem 0;
+      border-bottom: 1px solid var(--rule);
+    }
+    .zine-number {
+      font-family: var(--display);
+      font-size: clamp(5rem, 18vw, 12rem);
+      font-weight: 700;
+      color: var(--paper-dark);
+      line-height: 0.85;
+      float: left;
+      margin-right: 1rem;
+      margin-top: -0.2em;
+    }
+    .zine-q {
+      font-family: var(--display);
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      font-weight: 600;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+      color: var(--ink);
+    }
+    .big-answer {
+      font-size: 1.1rem;
+      line-height: 1.8;
+    }
+    .callout {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 1.5rem 2rem;
+      margin: 2rem 0;
+      font-family: var(--display);
+      font-size: clamp(1.3rem, 3vw, 1.8rem);
+      font-style: italic;
+      line-height: 1.3;
+    }
+    .callout em { color: var(--gold-warm); font-style: normal; }
+
+    /* Number comparison */
+    .num-compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      margin: 2rem 0;
+      border: 1px solid var(--rule-strong);
+    }
+    .num-compare-col {
+      padding: 1.5rem;
+    }
+    .num-compare-col:first-child {
+      border-right: 1px solid var(--rule-strong);
+    }
+    .num-compare-col .nc-label {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      display: block;
+      margin-bottom: 0.75rem;
+    }
+    .num-compare-col .nc-number {
+      font-family: var(--display);
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 0.5rem;
+    }
+    .num-compare-col .nc-desc {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: rgba(var(--ink-rgb), 0.7);
+    }
+    .nc-dim .nc-number { color: rgba(var(--ink-rgb), 0.35); }
+    .nc-bright .nc-number { color: var(--gold-dim); }
+    @media (max-width: 520px) {
+      .num-compare { grid-template-columns: 1fr; }
+      .num-compare-col:first-child { border-right: none; border-bottom: 1px solid var(--rule-strong); }
+    }
+
+    .data-note {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      letter-spacing: 0.04em;
+      color: rgba(var(--ink-rgb), 0.45);
+      margin-top: 0.5rem;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a class="site-name" href="/">Ghent <span>Streets</span></a>
+    <span class="issue-line">Norfolk, Virginia · HC-G2 Campaign</span>
+  </div>
+  <div class="container">
+    <nav>
+      <a href="/">Home</a>
+      <a href="../blog/">Blog</a>
+      <a href="../policy/">Policy</a>
+      <a href="../zines/" class="active">Zines</a>
+      <a href="../about.html">About</a>
+      <a href="../get-involved.html">Get Involved</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Zine Cover -->
+<div class="zine-cover">
+  <div class="container">
+    <p style="font-family:var(--mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:rgba(240,232,216,0.5);margin-bottom:1rem;">Zine No. 3</p>
+    <p class="zine-title">Your Neighborhood<br>Is Worth More<br>Than This</p>
+    <p style="font-size:1.1rem;color:rgba(240,232,216,0.75);max-width:500px;margin-top:1.5rem;line-height:1.65;">What the zoning code costs you personally — in property value, city services, and the kind of neighborhood you actually want to live in.</p>
+    <p style="font-family:var(--mono);font-size:0.62rem;letter-spacing:0.08em;text-transform:uppercase;color:rgba(240,232,216,0.4);margin-top:2rem;">Ghent Streets · Norfolk, Virginia · HC-G2 · Free to print and share</p>
+  </div>
+</div>
+
+<div class="container" style="padding-top:1rem;">
+
+  <div class="zine-section">
+    <div class="zine-number">1</div>
+    <div class="zine-body">
+      <p class="zine-q">Your house in Ghent is worth $456,000 on average. That number is lower than it should be. Here's why.</p>
+      <p class="big-answer">The typical residential parcel in Ghent's core (Planning District 64) has an assessed value of around $456,000. That's not a bad number. Ghent is an attractive, historically significant, walkable neighborhood in the heart of Norfolk.</p>
+      <p class="big-answer">But look at the number next to it. There are 945 parcels in core Ghent. Only 13 of them — 1.4% — are commercial. Compare that to Colley Avenue, five minutes away: 229 parcels, 106 of them commercial. That's a 46% commercial share. Same city. Same era of buildings. Same underlying demand.</p>
+      <p class="big-answer">That gap isn't a market outcome. It's a zoning outcome. And zoning outcomes have dollar values attached to them. The number on your annual assessment notice is lower than it would be in a neighborhood that works the way Ghent was designed to.</p>
+      <p class="data-note">Source: Norfolk FY2026 Property Assessment dataset (data.norfolk.gov, dataset m5ya-5grb), filtered to Planning District 64 and street_name='Colley'.</p>
+    </div>
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">2</div>
+    <div class="zine-body">
+      <p class="zine-q">Does having commercial activity nearby actually make residential property worth more?</p>
+      <p class="big-answer">Yes — and there's a substantial body of research on this. Studies of retail proximity and residential values consistently find that homes within walking distance of active ground-floor commercial uses carry a measurable premium over comparable homes in purely residential areas. The estimated range is <strong>3–7%</strong> in neighborhoods similar to Ghent: dense, walkable, urban residential with historic character.</p>
+      <p class="big-answer">The mechanism isn't mysterious. Active commercial streets generate foot traffic, informal community presence, and the kind of daily life that makes a neighborhood feel like a neighborhood. People pay more to live in places that feel alive. Lenders assess them higher. The premium is real and it compounds over time as the neighborhood's reputation and amenities reinforce each other.</p>
+      <p class="big-answer">At a 5% uplift — the midpoint of that research range — applied to a $456,000 home, that's roughly <strong>$22,800 in additional home value</strong> from nearby commercial activation. Not guaranteed. Not immediate. But real, and consistent with what the research shows in comparable neighborhoods.</p>
+      <p class="data-note">Estimated 3–7% proximity premium: Matthews, "Retail Proximity and Residential Values," Georgia State University Fiscal Research Center, Working Paper 07-21 (2007); Urban Land Institute, <em>Reshaping the City</em> (2022). The 5% midpoint is used for illustration; this estimate is not Norfolk-specific.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    A 5% uplift on the average Ghent home is <em>$22,800</em>. That's what proximity to active commercial streets is worth, based on research in comparable neighborhoods.
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">3</div>
+    <div class="zine-body">
+      <p class="zine-q">If commercial properties are worth more, why aren't Colonial Avenue's commercial parcels worth more?</p>
+      <p class="big-answer">This is the most telling number in the whole story. On Colley Avenue, commercial parcels are assessed at <strong>2.7 to 3 times</strong> the value of residential parcels on the same street. That commercial premium is what you'd expect in a functioning mixed-use neighborhood — businesses in ground-floor spaces generate income, and income-producing property is worth more than residential-only property.</p>
+      <p class="big-answer">Now look at Colonial Avenue. The five commercial parcels that exist there have a median assessed value of <strong>$495,000</strong>. The residential parcels on the same street have a median assessed value of <strong>$487,000</strong>. That's not a premium. That's a wash. Commercial and residential are worth essentially the same thing on Colonial.</p>
+
+      <div class="num-compare">
+        <div class="num-compare-col nc-dim">
+          <span class="nc-label">Colonial Ave · HC-G2</span>
+          <div class="nc-number">0%</div>
+          <div class="nc-desc">Commercial premium over residential.<br>Median commercial AV: $495K.<br>Median residential AV: $487K.<br>No measurable premium.</div>
+        </div>
+        <div class="num-compare-col nc-bright">
+          <span class="nc-label">Colley Ave · PCO</span>
+          <div class="nc-number">2.7–3×</div>
+          <div class="nc-desc">Commercial assessed value relative to residential on the same street. Same city. Same era of buildings. The difference is the zoning.</div>
+        </div>
+      </div>
+
+      <p class="big-answer">Why? Because the only commercial uses that exist on Colonial are the ones that survived an expensive, time-consuming permit process. The 7-Eleven and the Harris Teeter are there because they are backed by corporate capital and legal staff. They are the filtered remnant of what the market would produce if it were allowed to operate. Corporate convenience retail doesn't generate the commercial premium that a diverse, neighborhood-scaled commercial strip does — and it doesn't generate the residential spillover either.</p>
+      <p class="big-answer">The CUP process didn't produce a bad result by accident. It produced exactly what an expensive filter produces: whatever can afford to pay for permission.</p>
+      <p class="data-note">Source: Norfolk FY2026 Property Assessment dataset, Colonial Ave parcels filtered to zip 23507. Extended analysis: data/output/extended_analysis.txt, Section 4.</p>
+    </div>
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">4</div>
+    <div class="zine-body">
+      <p class="zine-q">What does this cost the city — and what does that mean for your services?</p>
+      <p class="big-answer">Ghent sits on <strong>$3.36 billion</strong> in total assessed real estate value across its four planning districts. That's what the city has to work with as a tax base. Yet less than 3% of those parcels are commercial — the use type that generates direct sales tax, business license tax, and meals tax on top of the property tax that every parcel pays.</p>
+      <p class="big-answer">Analysis of Norfolk's open data projects that activating just 15 ground-floor commercial spaces in HC-G2 would generate <strong>$227,000 per year in new city revenue</strong> at steady state — mostly from the 6.5% meals tax on food and beverage sales. At 40 activations, that number reaches <strong>$602,000 per year</strong>. Over a decade: between $1.7 million and $4.4 million in cumulative fiscal gain the city is currently leaving uncaptured.</p>
+      <p class="big-answer">That revenue pays for things. Street maintenance. Parks. Code enforcement. The services that make a neighborhood worth living in. Ghent's dead commercial frontage isn't just an aesthetic problem — it is a structural fiscal drain dressed up as zoning protection.</p>
+      <p class="data-note">$3.36B: total assessed value, PD 61–64, FY2026 dataset (m5ya-5grb). Revenue projections: Norfolk published tax rates applied to conservative (15 activations) and aggressive (40 activations) scenarios; full methodology in Policy Brief No. 2.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    $3.36 billion neighborhood. 1.4% commercial. The city is choosing, every year, to leave that money in the lowest-yield configuration <em>the zoning code allows</em>.
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">5</div>
+    <div class="zine-body">
+      <p class="zine-q">So why doesn't someone just open a café and prove the demand exists?</p>
+      <p class="big-answer">Because they can't. Not without a Conditional Use Permit.</p>
+      <p class="big-answer">A CUP costs <strong>$1,080 in city fees</strong> plus legal and planning consultants — typically <strong>$3,000–$8,000 in total process costs</strong> — before you have signed a lease, done a buildout, bought equipment, or hired a single employee. Then you wait approximately six months for a public hearing. Then you need a City Council vote. If one member has a concern, or one neighbor objects loudly enough, it can be denied.</p>
+      <p class="big-answer">That process isn't a problem for a company with lawyers on staff. It is a dealbreaker for the person who wants to open a coffee shop in the ground floor of a Colonial Avenue Victorian and doesn't have $8,000 in legal fees sitting around before month one of rent. The demand isn't absent. The capital to navigate the barrier is absent — for exactly the kind of small, independent operators who would generate the neighborhood-scale commercial life that produces the premium.</p>
+      <p class="big-answer">This is what economists call revealed preference. Where do Ghent residents actually spend money on food and retail? On Colley. On Granby. On 21st Street. The demand exists and is expressed elsewhere — because elsewhere, the zoning doesn't require a six-month approval process to open a bookstore.</p>
+      <p class="data-note">CUP fee: Norfolk Planning Fee Schedule FY2025 (effective July 1, 2024). Consultant cost range is typical for Norfolk zoning applications requiring legal representation; verify with a local land use attorney for current figures.</p>
+    </div>
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">6</div>
+    <div class="zine-body">
+      <p class="zine-q">What does the fix look like?</p>
+      <p class="big-answer">A single change to a table in the Norfolk Zoning Ordinance. Table 3.6.11 governs what uses are permitted in HC-G2. The proposal is to change the cells for neighborhood-scale retail — small restaurants, cafés, bookstores, salons, dry cleaners, small fitness studios — from blank (prohibited) or C (conditional use permit required) to <strong>P: permitted by right</strong>.</p>
+      <p class="big-answer">By right means: if you have a space that meets the performance standards (ground floor only, size caps, hours limits, ARB review for any exterior changes), you can open. No $1,080 fee. No six months. No hearing. No Council vote. You find a space, you sign a lease, you open — the same way anyone opens a business on Colley Avenue today.</p>
+      <p class="big-answer">The historic protections don't change. The Architectural Review Board still reviews any exterior modification — paint, signage, windows, awnings. What changes is whether a business is allowed to exist inside an existing building. The amendment separates the question of <em>what buildings look like</em> from the question of <em>what they're allowed to be used for</em>.</p>
+    </div>
+  </div>
+
+  <div class="zine-section">
+    <div class="zine-number">7</div>
+    <div class="zine-body">
+      <p class="zine-q">What can you do?</p>
+      <p class="big-answer">The path to change runs through a public hearing at the ARB, a Planning Commission vote, and City Council. All of those bodies respond to constituent presence. Here's what matters:</p>
+      <ul class="big-answer" style="padding-left:1.25rem;line-height:2.2;">
+        <li><strong>Show up at hearings.</strong> When this application is filed, there will be public hearings. Your body in the room is data. Planners and council members count.</li>
+        <li><strong>Write your council member.</strong> Superward 6 covers Ghent. A short, personal email — one paragraph, your name and address — about what you want on your street is worth more than any policy brief.</li>
+        <li><strong>Talk to your neighbors.</strong> Print this zine. Leave it on porches. The more people who understand that this is a zoning problem with a known solution, the harder it is to ignore.</li>
+        <li><strong>If you're a property owner</strong> with a ground-floor space that could be activated: your name and your space matter. Contact the campaign.</li>
+      </ul>
+      <p class="big-answer" style="margin-top:1.5rem;">For the full policy argument, amendment language, and economic analysis: <strong>read Policy Brief No. 2</strong> at this site. For the plain-language version of the legal argument: <strong>Brief No. 1</strong>.</p>
+    </div>
+  </div>
+
+  <div class="callout" style="margin-bottom:3rem;">
+    The zoning code made this neighborhood worth less than it should be.<br>
+    <em>The zoning code can be changed.</em>
+  </div>
+
+  <div style="padding: 2rem 0 3rem; border-top: 2px solid var(--ink);">
+    <p style="font-family:var(--mono);font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;color:rgba(var(--ink-rgb),0.45);margin-bottom:1.5rem;">What You Can Do</p>
+    <p class="big-answer"><strong>Show up.</strong> When the application is filed, there will be public hearings at the ARB and Planning Commission. Your presence matters more than you think.</p>
+    <p class="big-answer"><strong>Write a letter.</strong> Contact your City Council member (Superward 6). One paragraph. Your name and address. Done.</p>
+    <p class="big-answer"><strong>Share this.</strong> Print more copies. Leave them at the library, the coffee shop you had to drive to, your neighbor's mailbox.</p>
+    <p class="big-answer"><strong>Go to <a href="../get-involved.html">Get Involved</a></strong> for a letter template, hearing dates, and campaign contacts.</p>
+    <p style="font-family:var(--mono);font-size:0.62rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);margin-top:2rem;">This zine is free to print and distribute. No permission needed. Print 10 copies or 1,000.</p>
+  </div>
+
+</div><!-- /container -->
+
+<footer>
+  <div class="container">
+    <div class="footer-note">
+      <p>Ghent Streets is a community advocacy campaign for zoning reform in Norfolk, Virginia.<br>
+      Not affiliated with the City of Norfolk or any official body.</p>
+    </div>
+    <div class="footer-note" style="text-align:right;">
+      <p>HC-G2 · Norfolk Zoning Ordinance § 3.6<br>
+      plaNorfolk2030 · Land Use Strategies</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

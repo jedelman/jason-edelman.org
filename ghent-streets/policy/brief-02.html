@@ -146,7 +146,8 @@
       </div>
     </div>
 
-    <p style="font-size:0.82rem;color:rgba(var(--ink-rgb),0.55);font-family:var(--mono);">Source: Norfolk FY2026 Property Assessment dataset (data.norfolk.gov, updated March 2026), filtered to Planning District 64. The activation range (15–40) represents a 5-year trajectory. Year-one activations under the conservative scenario: 3–5.</p>
+    <p style="font-size:0.82rem;color:rgba(var(--ink-rgb),0.55);font-family:var(--mono);">Source: Norfolk FY2026 Property Assessment dataset (data.norfolk.gov, updated March 2026), filtered to Planning District 64. The activation range (15–40) represents a 5-year trajectory. Year-one activations under the conservative scenario: 3–5.<br>
+    <em>817 "activatable proxy" definition:</em> Parcels within PD 64 not currently classified as commercial/office/retail/restaurant, with lot size under 0.25 acres and improvement value greater than $0 (i.e., a structure is present). This excludes vacant land, large multi-family complexes, and existing commercial parcels. It is a proxy for ground floors that could physically host a commercial use — not a prediction of how many will activate.</p>
 
     <hr class="rule" />
 
@@ -247,6 +248,7 @@
     <hr class="rule" />
 
     <h4>IV. The Comparable: Colley Avenue PCO</h4>
+    <!-- Section IV-A and IV-B are subsections of IV -->
     <p>The Colley Avenue PCO is the most relevant Norfolk precedent — and the FY2026 assessment data provides a real baseline for comparison. Colley Avenue has <strong>229 total parcels</strong>, of which <strong>106 are classified as commercial</strong> (46% commercial share, vs. 1.4% in core Ghent). The distribution of commercial uses on Colley maps almost exactly to the mix of businesses we would expect to activate in HC-G2:</p>
 
     <table class="model-table">
@@ -263,7 +265,7 @@
     <p>The <strong>418 Retail/Apartment Over</strong> class — buildings with residential units above ground-floor retail — is the most direct analog to what HC-G2 ground-floor activation would produce. The six small-lot examples on Colley (under $1M, 0.06–0.09 acres) have a mean AV of $347K. These are the buildings most comparable to what a converted Victorian ground floor would become.</p>
     <p>Colley's residential parcels (64 total) have a mean AV of $219K — significantly lower than Ghent's residential mean of $456K. This reflects Ghent's stronger underlying residential market, which means the <em>increment</em> of commercial value added by activation is proportionally larger in Ghent.</p>
 
-    <h4>Colley Ave Appreciation Trend: FY2021–FY2026</h4>
+    <h4>IV-A. Colley Ave Appreciation Trend: FY2021–FY2026</h4>
     <p>Multi-year assessment data allows a direct before/after look at value trajectories on the PCO corridor:</p>
 
     <table class="model-table">
@@ -291,8 +293,8 @@
 
     <hr class="rule" />
 
-    <h4>IV-B. The CUP Barrier: What the Permit Data Shows</h4>
-    <p>Norfolk's open data portal includes a Permits dataset covering all zoning permits filed in the city. Querying for zoning permits on Ghent's primary streets (Colonial Ave, Mowbray Arch, Westover Ave, Pembroke Ave, and others) reveals <strong>151 zoning permits</strong> on record. Their disposition tells the story of the CUP system's practical effect:</p>
+    <h4>IV-B. The CUP Barrier: What the Permit Data Suggests</h4>
+    <p>Norfolk's open data portal includes a Permits dataset covering all zoning permits filed in the city. Querying for zoning permits on Ghent's primary streets (Colonial Ave, Mowbray Arch, Westover Ave, Pembroke Ave, and others) reveals <strong>151 zoning permits</strong> on record. Their disposition is notable:</p>
 
     <table class="model-table">
       <thead><tr><th>Permit Status</th><th class="num">Count</th><th class="num">Share</th></tr></thead>
@@ -306,8 +308,9 @@
       </tbody>
     </table>
 
-    <p>More than half of all zoning permit applications in Ghent expire or are cancelled before the use is ever established. This is the CUP barrier in the data: operators go through the process, get approval, and then give up before opening — because the combination of legal costs, timeline uncertainty, and buildout risk makes the economics unworkable. The operators who make it through are, almost by selection, corporate-backed uses with lawyers and capital reserves. That is why the only retail that survives on Colonial is a 7-Eleven and a Harris Teeter.</p>
-    <p>Of the commercial permits that were submitted, 78 were classified as Commercial use class. That is 78 businesses that tried to establish in the Ghent corridor and 52% of which never opened. By-right permitting does not just lower the barrier for new entrants — it removes the attrition that the current system generates.</p>
+    <p>More than half of all zoning permit applications on these Ghent streets expire or are cancelled before the underlying project reaches final completion. "Expired" means the permit was approved and issued, but the work was never finished and the permit lapsed. "Cancelled" means the application was withdrawn before approval.</p>
+    <p><strong>What this data can and cannot say:</strong> This dataset covers all zoning permit types — building permits, renovation permits, and use/change-of-occupancy permits alike. It is not possible from this query alone to isolate specifically CUP applications for commercial uses from building permits for residential renovations. Of the 151 permits, 86 have a Commercial use class, but this field describes the intended use of the property, not the permit type. A further query isolating permit type to use permits or change-of-occupancy permits, cross-referenced with HC-G2 parcel addresses, would be needed to derive a specifically CUP-related incompletion rate — and that analysis is identified as a priority in Section VI.</p>
+    <p>What the aggregate data does show is that permit attrition in Ghent is high. Whether that attrition is attributable primarily to the CUP process, to construction economics, to financing difficulty, or to other factors cannot be determined from this dataset alone. The figure is suggestive, not conclusive. The structural argument — that the CUP process imposes costs that reduce commercial activity below what the market would otherwise produce — rests on the fee and timeline evidence, not on this permit data.</p>
 
     <hr class="rule" />
 
@@ -398,7 +401,10 @@
       YEAR-OVER-YEAR: Median FY25→FY26 appreciation in Ghent zip codes (23507, 23517): +6.4% (+$13,800 median dollar change). Source: cross-join of FY25 (g7sg-tivf) and FY26 (m5ya-5grb) assessment datasets by GPIN.
     </p>
     <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
-      MULTI-YEAR COLLEY TREND (Section IV-A): Six Norfolk Property Assessment datasets, FY2021–FY2026 (dataset IDs: 8bfx-a5g8, 7tu9-2ytx, yvpm-8aid, 9gmp-9x4c, g7sg-tivf, m5ya-5grb), all filtered to street_name='Colley'. Commercial median AV: $267K (FY21) → $317K (FY26), +18.5%. Residential median AV: $204K (FY21) → $260K (FY26), +27.6%. Parcel counts stable at ~106 commercial, ~114 residential. PCO adopted pre-FY2021; trend data begins post-adoption.
+      $3.36 BILLION FIGURE (Section VII): Total assessed value of all parcels in Ghent planning districts PD 61–64 combined (3,138 parcels), as of the FY2026 assessment dataset (m5ya-5grb): $3,359,240,700. This is the aggregate taxable wealth of the neighborhood that the city's current zoning leaves in the lowest-yield land-use configuration. Source: data/output/hcg2_analysis.txt, Section 2.
+    </p>
+    <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
+      MULTI-YEAR COLLEY TREND (Section IV-A): Six Norfolk Property Assessment datasets, FY2021–FY2026 (dataset IDs: 8bfx-a5g8, 7tu9-2ytx, yvpm-8aid, 9gmp-9x4c, g7sg-tivf, m5ya-5grb), all filtered to street_name='Colley'. Commercial median AV: $415K (FY21) → $491K (FY26), +18.5%. Residential median AV: $141K (FY21) → $180K (FY26), +27.6%. Commercial parcel count: stable at ~106. Residential parcel count: 82 in FY2021, dropping to 64 from FY2022 onward (likely reflects a reclassification event in the assessment database; FY22–FY26 are consistent at 64). The body text uses the FY2026 figure of 64 residential parcels. PCO adopted pre-FY2021; trend data begins post-adoption.
     </p>
     <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
       PERMIT DATA (Section IV-B): Norfolk Permits dataset (data.norfolk.gov, dataset ID fahm-yuh4). Query: type='Zoning', address matching Ghent street patterns (Colonial, Mowbray, Westover, Pembroke, Graydon, Boissevain, Spotswood). Result: 151 permits. Status breakdown: 62 Expired (41%), 29 Issued (19%), 29 Finaled (19%), 16 Cancelled (11%), 15 Pending/other (10%). Never-completed (Expired + Cancelled): 78 (52%).
