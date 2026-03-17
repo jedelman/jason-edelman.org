@@ -39,6 +39,7 @@ These rules apply to ALL changes made by Claude in this repo. They are not optio
 - LinkedIn: https://www.linkedin.com/in/jason-edelman-168b1370
 - GitHub: https://github.com/jedelman
 - Bluesky: https://bsky.app/profile/jason-edelman.org
+- Substack: https://edelmanja.substack.com/
 
 ---
 
