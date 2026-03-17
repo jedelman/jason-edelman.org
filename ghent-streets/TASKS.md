@@ -10,17 +10,17 @@ Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings �
 
 These are factual or legal claims that could be disproved in the room and damage credibility.
 
-- [ ] **Verify "blank cell = prohibited"** — The entire campaign rests on the claim that blank cells in Table 3.6.11 mean prohibited. Verify this against the Norfolk Zoning Ordinance general provisions (Article 1 or § 1.3 / § 1.4). If Norfolk has a default rule ("any use not listed is prohibited") cite it explicitly in Brief 01. If blank means something else, the argument changes.
+- [x] **Verify "blank cell = prohibited"** — CONFIRMED. Verbatim table key in every Norfolk use table: "P = PERMITTED BY RIGHT / C = ALLOWED ONLY WITH APPROVAL OF A CONDITIONAL USE PERMIT / BLANK CELL = PROHIBITED." Confirmed in two official City Council ordinance amendment PDFs (ADU amendment, self-storage amendment). Cited verbatim in Brief 01 Section I. Source: data/sources/norfolk-zoning-amendment-adu-2023.pdf
 
-- [ ] **Verify 7-Eleven and Harris Teeter are actually nonconforming** — The 2018 ordinance replaced the old code. Did both stores open before 2018? Harris Teeter at 1320 Colonial Ave may have a knowable opening date. If either opened post-2018 via CUP, they are conditionally permitted uses, not nonconforming — and that changes (a) the "only corporate retail survives the CUP" argument, and (b) whether the CUP can actually produce outcomes we endorse. Verify against city permit records or property history.
+- [ ] **Verify 7-Eleven and Harris Teeter are actually nonconforming** — Not yet verified. Until confirmed, do not assert "nonconforming use" as fact in public materials. Check city permit records or call planning dept.
 
-- [ ] **Find or replace the ULI citation** — "Urban Land Institute, *Ground Floor Activation and Property Value*, 2021" cannot be confirmed as a real ULI publication. Either locate the actual report (ULI.org document search) and verify the 5% residential uplift figure comes from it, or replace with a verifiable citation (Lincoln Institute of Land Policy, NLIHC, academic literature on commercial ground-floor activation and adjacent residential AV). Do not leave a potentially fabricated citation in a document going before a Planning Commission.
+- [x] **Find or replace the ULI citation** — "Ground Floor Activation and Property Value, 2021" does not exist. Replaced in Brief 02 with: ULI *Reshaping the City* (2022) + Matthews Georgia State working paper (2007). Adjacent residential uplift footnote updated to "estimated 3–7%" with honest caveat. Source: data/sources/SOURCES.md
 
-- [ ] **Verify plaNorfolk2030 quotes** — Brief 01 section VII contains three provisions attributed to plaNorfolk2030, one in direct quotation marks ("activating ground floors in historic districts to support neighborhood vitality while preserving architectural character"). Locate the actual plan text and confirm these are accurate. If they're paraphrases, remove the quotation marks. Planning staff will have the document.
+- [x] **Verify plaNorfolk2030 quotes** — Full plan text downloaded and extracted (data/sources/planorfolk2030-comprehensive-plan.txt). Results: Phrase 1 (LU1.2 "development regulations...quality built environment") CONFIRMED verbatim. Phrase 2 ("activating ground floors in historic districts...") NOT IN DOCUMENT — removed. Brief 01 Section VII rebuilt with 5 real verbatim citations (LU1.2, LU1.2.5, N3.1.6, N5.1.2(b), N5.1.12). Note: plaNorfolk2030 superseded by NFK2050 (2025) — check NFK2050 for updated language.
 
-- [ ] **Verify the CUP fee range** — Zines consistently say "$5,000+"; Brief 01 says "$1,500–$5,000." Pull Norfolk's actual fee schedule (Planning Department fee schedule, norfolk.gov or by calling Jeremy Sharp). Use the real number. If it's $1,500 for most residential-district CUPs, the "$5,000+" claim is vulnerable. If it's higher, document it.
+- [x] **Verify the CUP fee range** — CONFIRMED from fee schedule (data/sources/norfolk-planning-fee-schedule-fy2025.pdf, effective July 1, 2024). CUP: **$1,080**. Text amendment: **$915**. All "$5,000+" references updated site-wide to "$1,080 city fee + legal consultants ($3K–$8K typical total)."
 
-- [ ] **Verify Table 3.6.11 actual current cell values** — Brief 01 uses a reconstructed amendment table. Pull the real table from norfolkva.gov/norfolkzoningordinance/ (browser only). Confirm which uses are blank vs. C vs. P in the current HC-G2 column. Update the amendment language table to match exactly.
+- [ ] **Verify Table 3.6.11 actual current cell values** — Still needed. Requires browser access to norfolkva.gov/norfolkzoningordinance/. Cannot be automated (JS-rendered site).
 
 ---
 
