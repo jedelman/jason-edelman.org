@@ -1,0 +1,132 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:       #0f0f0f;
+  --surface:  #1a1a1a;
+  --border:   #2a2a2a;
+  --text:     #e0e0e0;
+  --muted:    #888;
+  --accent:   #5fa86e;
+  --link:     #7ec9a0;
+  --link-hover: #b2dfc0;
+  --max-w:    640px;
+  --gap:      2.5rem;
+}
+
+html {
+  font-size: 17px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.7;
+  padding: 3rem 1.25rem 5rem;
+}
+
+main {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* Header */
+header h1 {
+  font-size: 2rem;
+  font-weight: normal;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.tagline {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+}
+
+/* Sections */
+section h2 {
+  font-size: 0.7rem;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 1.25rem;
+}
+
+#about p {
+  color: var(--text);
+}
+
+/* Projects */
+.projects {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.projects li {
+  padding: 1.25rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.projects li a {
+  text-decoration: none;
+}
+
+.projects li h3 {
+  font-size: 1rem;
+  font-weight: normal;
+  color: var(--link);
+  margin-bottom: 0.5rem;
+  transition: color 0.15s;
+}
+
+.projects li a:hover h3 {
+  color: var(--link-hover);
+}
+
+.projects li p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Links */
+.links {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.links a {
+  color: var(--link);
+  text-decoration: none;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 0.875rem;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.links a:hover {
+  color: var(--link-hover);
+  border-bottom-color: var(--link-hover);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  html { font-size: 16px; }
+  header h1 { font-size: 1.6rem; }
+}
