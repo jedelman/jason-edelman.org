@@ -30,10 +30,53 @@ These rules apply to ALL changes made by Claude in this repo. They are not optio
 
 ---
 
-## Project links (fill in as confirmed)
-- power-explained: <!-- TODO: confirm URL -->
-- mithlond: <!-- TODO: confirm URL -->
-- ghent-zoning-reform: <!-- TODO: confirm URL -->
+## Project links
+- power-explained: https://power-explained.jason-edelman.org/ — repo: <!-- TODO: confirm -->
+- mithlond: https://mithlond.jason-edelman.org/ — repo: <!-- TODO: confirm -->
+- ghent-zoning-reform: https://ghent-zoning-reform.jason-edelman.org/ — repo: <!-- TODO: confirm -->
 
-## Socials (fill in as confirmed)
-<!-- TODO: confirm handles/URLs -->
+## Socials
+- LinkedIn: https://www.linkedin.com/in/jason-edelman-168b1370
+- GitHub: https://github.com/jedelman
+- Bluesky: https://bsky.app/profile/jason-edelman.org
+
+---
+
+## Intellectual through-line across projects
+
+These three projects are independent but not unrelated. The commons framework
+developed in **Power Explained** is the shared lens. Understanding it is essential
+context for working on any of Jason's projects.
+
+### The commons framework (from Power Explained)
+- Systemic problems are design features, not failures. They serve someone.
+- Meaningful change comes from building alternatives, not from electoral politics alone.
+- The commons — resources governed collectively for shared benefit — is the
+  practical alternative to both state control and private enclosure.
+
+### How each project applies it
+
+**Power Explained** (`power-explained.jason-edelman.org`)
+The source. An educational resource that builds the analytical vocabulary: how power
+works, how enclosure happens, how commons-based alternatives function. Case studies,
+thinker profiles, and tools for local power analysis. The other two projects are
+applied instances of this framework.
+
+**Ghent Streets** (`ghent-zoning-reform.jason-edelman.org`)
+Urban space as commons. The HC-G2 zoning campaign in Norfolk, VA argues that
+street-level commercial activity — cafés, bookshops, neighborhood retailers — is
+a form of shared infrastructure that current zoning law has enclosed behind
+permitting costs. Restoring it by-right is a commons restoration argument.
+
+**Mithlond** (`mithlond.jason-edelman.org`)
+Compute as commons. AI-era data center infrastructure is arriving in Hampton Roads.
+Who owns it, who bears the environmental costs (including sea-level rise risk), and
+whether local communities receive structural economic benefit are all commons
+questions applied to a new kind of resource enclosure.
+
+### Development implications
+- When writing copy or making arguments on Ghent or Mithlond, the Power Explained
+  framework should be legible in the background — don't contradict it, and look for
+  opportunities to cross-link.
+- Do not invent connections between the projects that Jason hasn't made explicitly.
+  The framework is real; specific claims about relationships need to be verified.
