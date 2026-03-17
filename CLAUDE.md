@@ -81,3 +81,54 @@ questions applied to a new kind of resource enclosure.
   opportunities to cross-link.
 - Do not invent connections between the projects that Jason hasn't made explicitly.
   The framework is real; specific claims about relationships need to be verified.
+
+---
+
+## Session start instructions
+
+**At the start of every session in this repo, load the memory substrate:**
+
+```bash
+git clone https://github.com/jedelman/claude-memory.git /tmp/claude-memory 2>/dev/null \
+  || git -C /tmp/claude-memory pull
+```
+
+Then read:
+- `/tmp/claude-memory/context/user.md` — who Jason is, working style
+- `/tmp/claude-memory/context/projects.md` — active projects and status
+- The most recent file in `/tmp/claude-memory/conversations/` — last session context
+
+**At the end of every session**, write a log to
+`/tmp/claude-memory/conversations/YYYY-MM-DD-<slug>.md` and push.
+This prevents bootstrapping from scratch next session.
+
+---
+
+## Fact-checking protocol
+
+All specific claims in content produced for this repo require verification.
+Full protocol: `github.com/jedelman/claude-memory/protocols/fact-checking.md`
+
+### The core distinction
+Framework analysis is relatively safe from hallucination. Specific claims —
+named people, quotes, dates, figures, organizations — are high hallucination
+risk. Check them separately, every time.
+
+### Claim grades
+| Grade | Meaning | Action |
+|---|---|---|
+| ✅ Verified | Live URL, detail confirmed in page text | Keep, cite correctly |
+| ⚠️ Plausible, unverified | No URL, directionally consistent | Rewrite as uncertain or cut |
+| ❌ Wrong | Detail incorrect | Correct or cut |
+| 🚫 Unverifiable | Paywalled or unavailable | Cut the specific detail |
+| ☠️ Fabricated | Generated without source | Cut entirely — do not rewrite vague |
+
+### Hallucination tells — trigger immediate verification
+- Named person + quote + outlet + date all in one sentence
+- "According to [prestigious institution]"
+- Suspiciously precise figures
+- Quotes that perfectly illustrate the analytical point
+- Any detail not retrieved in the current session
+
+### Attribution rule
+Always attribute to the originating outlet, not a secondary one.
