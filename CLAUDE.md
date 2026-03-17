@@ -31,9 +31,9 @@ These rules apply to ALL changes made by Claude in this repo. They are not optio
 ---
 
 ## Project links
-- power-explained: https://power-explained.jason-edelman.org/ — repo: <!-- TODO: confirm -->
-- mithlond: https://mithlond.jason-edelman.org/ — repo: <!-- TODO: confirm -->
-- ghent-zoning-reform: https://ghent-zoning-reform.jason-edelman.org/ — repo: <!-- TODO: confirm -->
+- power-explained: https://power-explained.jason-edelman.org/ — repo: https://github.com/jedelman/power-explained
+- mithlond: https://mithlond.jason-edelman.org/ — repo: https://github.com/jedelman/mithlond
+- ghent-zoning-reform: https://ghent-zoning-reform.jason-edelman.org/ — repo: https://github.com/jedelman/ghent-zoning-reform
 
 ## Socials
 - LinkedIn: https://www.linkedin.com/in/jason-edelman-168b1370
