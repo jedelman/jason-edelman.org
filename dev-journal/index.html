@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dev Journal — Jason Edelman</title>
+  <meta name="description" content="Notes from the work: what we built, what broke, what we learned.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+    </nav>
+
+    <header>
+      <h1>Dev Journal</h1>
+      <p class="tagline">Notes from the work.</p>
+    </header>
+
+    <section>
+      <span class="label">Entries</span>
+      <ul class="entries">
+
+        <li class="entry-card">
+          <a href="2026-04-12-optical-computing.html">
+            <h2>Down the Optical Computing Rabbit Hole</h2>
+          </a>
+          <p class="date">April 12–17, 2026</p>
+          <p>A detour into photonic inference architectures and holographic optics. Not every session produces a shipped product — some produce a much better understanding of why something is hard.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-04-10-norfolk-compute-commons.html">
+            <h2>Cooperative Compute for Norfolk</h2>
+          </a>
+          <p class="date">April 10, 2026</p>
+          <p>Designed a lease-to-own edge compute cooperative for local businesses — 4-GPU pods, 75/25 revenue split, operator equity via board seats. The commons framework applied to GPU infrastructure.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-04-07-astro-persona-launch-prep.html">
+            <h2>Astro Persona: One Deployment, No Ambiguity</h2>
+          </a>
+          <p class="date">April 7–8, 2026</p>
+          <p>Collapsed Cloudflare Pages and Worker into a single Worker deployment, wired up Stripe, built the landing page with a p5.js celestial animation, and shipped an internal hydration tool with Synthesize and Charts tabs.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-04-06-series-vi.html">
+            <h2>Nine Pieces in One Session</h2>
+          </a>
+          <p class="date">April 6, 2026</p>
+          <p>Planned and wrote the full Series VI — "Enclosure of the Mind" — in a single long session. Reich through Hardt &amp; Negri, tracing how the enclosure of physical resources was followed by the enclosure of attention, desire, and language.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-04-05-seo-search.html">
+            <h2>SSR Prerendering a React SPA for Static Hosting</h2>
+          </a>
+          <p class="date">April 5, 2026</p>
+          <p>Built a full SSR prerender pipeline for an 83-route React/Vite app deployed to Cloudflare Pages. The core problem: <code>lazy()</code> and <code>renderToString</code> don't mix. The solution is a separate eager-import server entry.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-04-03-for-agents-holdfast.html">
+            <h2>Writing for AI Readers and Designing a Decentralized Marketplace</h2>
+          </a>
+          <p class="date">April 3, 2026</p>
+          <p>Two launches: a knowledge module written specifically for AI reasoning systems, and Holdfast — a neutral evidentiary clearinghouse for decentralized commerce on AT Protocol.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-04-01-astro-persona-hydration.html">
+            <h2>Hydrating 2,268 Prompt Slots with Haiku</h2>
+          </a>
+          <p class="date">April 1, 2026</p>
+          <p>Built the internal hydration tool for Astro Persona — a five-tab dashboard for batch-generating astrological prompt content via Claude Haiku with real-time cost tracking and prompt cache awareness.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-29-green-norfolk.html">
+            <h2>A Civic Accountability Dashboard for Norfolk's Green Plan</h2>
+          </a>
+          <p class="date">March 29, 2026</p>
+          <p>Built a public dashboard tracking the city's compliance with its 2018 Green Infrastructure Plan. Finding: the city is running a 9.9:1 tree removal-to-planting ratio against a mandate requiring 5,200 plantings per year.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-27-astro-persona.html">
+            <h2>Astro Persona: Astrological Natal Chart Personas as an MCP Service</h2>
+          </a>
+          <p class="date">March 27, 2026</p>
+          <p>Designed and built the full Astro Persona system — natal chart + live transit aspects assembled into a persona JSON delivered via MCP at session start. Aspects as combinators, not lookup tables.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-25-d3-graphics.html">
+            <h2>D3 for Argument, Not Decoration</h2>
+          </a>
+          <p class="date">March 25, 2026</p>
+          <p>Moved from Canva to hand-coded SVG to D3 for building infographics. The principle that stuck: the diagram has to enact the argument, not illustrate it. Arrow weight equals flow volume — that IS the claim.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-21-friendly-feed.html">
+            <h2>Friendly Feed: Plain Language to Custom Bluesky Feeds</h2>
+          </a>
+          <p class="date">March 21, 2026</p>
+          <p>Designed Friendly Feed after a call-out on Bluesky. Stack: Tap → Filter Engine → D1 → Cloudflare Worker. Currently on hold after Attie launched with overlapping creation UX — waiting to see if their refinement loop compounds or just re-prompts.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-19-scout-pr.html">
+            <h2>Scout-Two Submits a Pull Request</h2>
+          </a>
+          <p class="date">March 19, 2026</p>
+          <p>Scout-Two reviewed power-explained, proposed contributing, and submitted PR #1 — two pieces on Simondon and on AI agents as commons infrastructure. Reviewed the diff and posted seven issues for Scout to address.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-18-series-v.html">
+            <h2>Series V: Seven Pieces in One Session</h2>
+          </a>
+          <p class="date">March 18, 2026</p>
+          <p>Planned and wrote the full Series V — "Where We Go From Here" — in a single session. Seven pieces covering the commons in money, land, care, and language. One of them makes the argument that natural language itself is the commons that LLMs are currently enclosing.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-17-launch-day.html">
+            <h2>Launch Day: jason-edelman.org, Shannon, and Gödel</h2>
+          </a>
+          <p class="date">March 17, 2026</p>
+          <p>Three things in one day: launched this site, wrote a piece on Shannon's information theory and the commons, and extended the Gödel thinker page to connect his incompleteness theorems to D&amp;G's lines of flight.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-15-two-agent-workflow.html">
+            <h2>Two Agents, One GitHub Repo</h2>
+          </a>
+          <p class="date">March 15, 2026</p>
+          <p>Dropped Google Drive as the handoff layer between Claude and Gemini. GitHub is now the sync surface — Gemini writes findings to <code>research/findings/</code>, Claude pulls, reviews, and promotes to the blog. Simpler and auditable.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-12-three-launches.html">
+            <h2>Three Launches: Mithlond, Ghent Streets, Tools Pages</h2>
+          </a>
+          <p class="date">March 12, 2026</p>
+          <p>Built and launched three projects in a day — a commons-framework research site for Hampton Roads data center infrastructure, a zoning reform campaign for our neighborhood, and three practitioner tool pages on power-explained.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-11-css-refactor.html">
+            <h2>Removing 11,500 Lines of Duplicated CSS</h2>
+          </a>
+          <p class="date">March 11, 2026</p>
+          <p>Found ~200 hardcoded color values across 46 HTML files that broke dark mode, extracted all shared styles into a single CSS file, and introduced channel variables for opacity-based theming. Net change: −11,500 lines.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-09-scout-two.html">
+            <h2>Building Scout-Two: A Bluesky Agent on GitHub Actions</h2>
+          </a>
+          <p class="date">March 9, 2026</p>
+          <p>Built the full agent loop for Scout-Two — a Bluesky agent with a feed pull, a think step (Letta), and an act step that posts, replies, likes, and reposts. Out-of-band requests committed to the repo as Markdown.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-07-commons-wire.html">
+            <h2>commons-wire: Score Automatically, Write Deliberately</h2>
+          </a>
+          <p class="date">March 7, 2026</p>
+          <p>Built an automated news pipeline that scores articles against a commons/capture framework daily and commits candidates to GitHub. The key design decision: score by cron, write manually. Keeps editorial judgment in the loop.</p>
+        </li>
+
+        <li class="entry-card">
+          <a href="2026-03-06-day-one.html">
+            <h2>Day One: Memory, Philosophy, and a Site</h2>
+          </a>
+          <p class="date">March 6, 2026</p>
+          <p>The first session. Built a GitHub-backed persistent memory system for Claude, completed a forward-and-reverse pass through seven political philosophers, and launched power-explained as a static site — seven pieces on power, commons, and alternatives.</p>
+        </li>
+
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

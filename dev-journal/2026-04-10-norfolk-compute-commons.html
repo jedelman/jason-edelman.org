@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cooperative Compute for Norfolk — Dev Journal</title>
+  <meta name="description" content="Designed a lease-to-own edge compute cooperative for local businesses — 4-GPU pods, 75/25 revenue split, operator equity via board seats. The commons framework applied to GPU infrastructure.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Cooperative Compute for Norfolk</h1>
+        <p class="date">April 10, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          The AI infrastructure story in Virginia is largely a Northern Virginia story — data centers in Ashburn, Loudoun County, the same grid that's already congested and getting more so. Hampton Roads has the physical infrastructure (port, fiber, industrial sites), the energy capacity, and the need for economic diversification. What it doesn't have is a local compute cooperative.
+        </p>
+
+        <p>
+          The model I designed: 4-GPU pods (L40S-class, around 2kW draw) on standard 240V circuits, leased to local businesses over 36 months at $756/month. At the end of the lease, the operator owns the hardware. While the pods are running, external inference workloads are brokered through the platform — operators get 75% of that revenue, the platform takes 25%. Operators earn board seats based on pod count, which means governance is distributed from the start rather than deferred to some future cooperative conversion.
+        </p>
+
+        <p>
+          The economics at first cohort scale (15 pods): roughly $300K in capital expenditure, breakeven around month 29, exit thesis at 4–5× ARR via a strategic acquirer — likely a regional cloud provider or a municipal fiber network looking to add compute capacity. The Northern Virginia grid congestion is a real tailwind: there's genuine demand for distributed inference that doesn't depend on a single oversubscribed corridor.
+        </p>
+
+        <p>
+          The commons framing here is deliberate. This isn't a pitch for a vertically integrated GPU cloud. It's a pitch for shared infrastructure where the people who use it own it, the economic upside stays local, and the governance model prevents the same capture dynamic that's already played out in every other compute infrastructure story. Whether that's achievable at this scale is an open question. The one-pager makes the case that it is.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

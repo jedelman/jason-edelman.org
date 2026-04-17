@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SSR Prerendering a React SPA for Static Hosting — Dev Journal</title>
+  <meta name="description" content="Built a full SSR prerender pipeline for an 83-route React/Vite app on Cloudflare Pages. The core problem: lazy() and renderToString don't mix.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>SSR Prerendering a React SPA for Static Hosting</h1>
+        <p class="date">April 5, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          power-explained is a React/Vite SPA with 83 routes deployed to Cloudflare Pages. Single-page apps are invisible to search engines by default — the crawler fetches the HTML shell, sees no content, and moves on. The fix is server-side rendering: generate a static HTML file per route at build time, with the full content and all the meta tags baked in.
+        </p>
+
+        <p>
+          The core problem is that React's <code>lazy()</code> and <code>renderToString()</code> don't compose. <code>lazy()</code> returns a promise; <code>renderToString()</code> is synchronous. If your route components are lazy-loaded — which is the standard Vite SPA pattern for code-splitting — your SSR entry will silently render empty shells for every page. You won't get an error. You'll just get bad output.
+        </p>
+
+        <p>
+          The solution is a separate server entry file that imports every route component eagerly. Not the same entry as the client bundle — a dedicated <code>entry-server.jsx</code> that uses <code>StaticRouter</code> instead of <code>BrowserRouter</code> and has explicit eager imports for all 83 pages. The prerender script runs the Vite SSR build, iterates every route, calls <code>renderToString()</code> with the right path, injects 13 head tags (title, description, canonical, all the OG and Twitter variants), and writes <code>dist/slug.html</code> and <code>dist/slug/index.html</code> for each. Cloudflare Pages serves whichever it finds.
+        </p>
+
+        <p>
+          The build sequence that came out of this: <code>vite build</code> → prerender → Pagefind index → sitemap generation. Pagefind runs against the prerendered HTML, which means the search index sees real content rather than a JavaScript shell. The sitemap is generated from the same pages manifest that drives the routes, so it can't drift out of sync.
+        </p>
+
+        <p>
+          The failure mode worth documenting: if you forget the eager imports and run the build, everything appears to succeed. The dist files exist, the paths resolve, the site loads. The bug only shows up when you inspect the prerendered HTML and find that the article body is absent. Test by grepping for known article text in the dist output before deploying.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

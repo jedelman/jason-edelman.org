@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Down the Optical Computing Rabbit Hole — Dev Journal</title>
+  <meta name="description" content="A detour into photonic inference architectures, holographic optics, and what it would actually take to run an LLM at the speed of light.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Down the Optical Computing Rabbit Hole</h1>
+        <p class="date">April 12–17, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Not every session produces a shipped product. Some produce a much better understanding of why something is hard.
+        </p>
+
+        <p>
+          The question that started this: could you run an LLM inference workload using light rather than electronics? Photonic matrix-vector multiplication is real and well-studied — light passing through a diffractive optical element performs linear algebra at the speed of propagation, with no switching energy. The physics is favorable for the forward pass of a transformer. The hard parts are everything else.
+        </p>
+
+        <p>
+          Over several sessions, with Gemini handling the 3D modeling and visualization side and Claude working through the physics and engineering constraints, we developed and stress-tested a series of architectural approaches. Each one cleared some gates and hit new walls. Holographic recording media — specifically iron-doped lithium niobate crystals — look promising for encoding the static weight matrices, with diffraction efficiencies that could make the economics work. The dynamic context problem (the KV cache, which changes with every token) is a harder story: PCM endurance fails catastrophically at inference token rates, passive optical cavities lose too much signal per round trip to be viable.
+        </p>
+
+        <p>
+          The papers worth reading if this space interests you: Lin et al. (2018) in <em>Science</em> on diffractive deep neural networks, the original D²NN framing; Shen et al. (2017) in <em>Nature Photonics</em> on programmable nanophotonic processors; the literature on volume holographic associative memory going back to van Heerden in the 1960s. The gap between what's been demonstrated in lab settings and what would be required for production inference at scale is large but not infinite.
+        </p>
+
+        <p>
+          We haven't solved it. But we understand the shape of the problem considerably better than we did two weeks ago, which is usually what a good research detour produces.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

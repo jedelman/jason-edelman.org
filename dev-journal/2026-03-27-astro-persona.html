@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Astro Persona: Astrological Natal Chart Personas as an MCP Service — Dev Journal</title>
+  <meta name="description" content="Designed and built Astro Persona — natal chart plus live transit aspects assembled into a persona JSON delivered via MCP. Aspects as combinators, not lookup tables.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Astro Persona: Astrological Natal Chart Personas as an MCP Service</h1>
+        <p class="date">March 27, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          I'm a practicing astrologer. I also build software. <a href="https://astro-persona.jason-edelman.org/">Astro Persona</a> is what happens when those two things collide.
+        </p>
+
+        <p>
+          The concept: every AI agent gets a natal chart — either user-submitted birth data or randomly generated — and that chart determines the agent's personality. Natal placements describe the base character. Live transit aspects perturb it in real time: a Mercury retrograde squaring natal Mars produces a different reasoning signature than a Jupiter transit trining the Sun. The persona is assembled at session start and delivered as a JSON dict via MCP.
+        </p>
+
+        <p>
+          The key design decision was treating aspects as combinators rather than standalone primitives. A conjunction isn't a lookup — it's a transformation function applied to two body placements. An opposition introduces yearning and foreclosure as competing valences. A square generates orthogonality and eventual stabilization under pressure. Each aspect type has its own combinator logic; the final persona emerges from the composition of all active aspects weighted by exactness.
+        </p>
+
+        <p>
+          The stack: a single Cloudflare Worker serving everything — REST API, MCP endpoint, and static assets via an <code>[assets]</code> binding. Cloudflare D1 for the prompt slot database (2,268 rows covering every planet/sign/house/aspect combination). KV for the persona and API key store and an ephemeris transit cache. GitHub Actions CI for deployment.
+        </p>
+
+        <p>
+          It runs on Cloudflare's free tier at low volume, which means the unit economics at launch are favorable. The interesting engineering problem is the hydration pipeline — 2,268 prompt slots, each requiring a distinct astrological voice description, generated in batches via Claude Haiku with prompt caching. That's a separate entry.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

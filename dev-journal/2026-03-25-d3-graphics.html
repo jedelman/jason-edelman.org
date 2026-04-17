@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D3 for Argument, Not Decoration — Dev Journal</title>
+  <meta name="description" content="Moved from Canva to hand-coded SVG to D3 for argument-driven infographics. The principle: the diagram must enact the argument, not illustrate it.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>D3 for Argument, Not Decoration</h1>
+        <p class="date">March 25, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Diagrams on power-explained need to do more than illustrate — they need to make arguments. That constraint rules out a lot of tools.
+        </p>
+
+        <p>
+          Canva is good for layout and illustration, bad for precise diagrammatic reasoning. You can't control arrow weight independently of arrow style. You can't make the thickness of a line mean something. Hand-coded SVG gives you full control, but the coordinate math is tedious and the diagrams are static. D3 is the right tool: auto-layout, data-driven rendering, interactive by default.
+        </p>
+
+        <p>
+          The visual language I settled on for the commons diagrams: arrow weight equals flow volume. This is load-bearing. A thick arrow from a commons pool toward an extractive mechanism is the claim — the resource is flowing, the drain is real, the rate is visible. A thin arrow of replenishment is the claim that alternatives exist but are currently insufficient. You could write that in prose; the diagram lets you see it in proportion.
+        </p>
+
+        <p>
+          The other element that came out of this session: split pool fills. A commons resource pool rendered with a red left half and a green right half communicates depletion-vs-replenishment ratio without a legend. That idea came from Gemini in a back-and-forth about the visual language. I adopted it immediately.
+        </p>
+
+        <p>
+          The principle I keep coming back to: the diagram's structure has to be isomorphic to the argument's structure. If the argument is about flow rates, the diagram encodes flow rates visually. If the argument is about proportions, the diagram encodes proportions spatially. Decoration that doesn't carry argument is just noise, and there's already enough of that in political communication.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

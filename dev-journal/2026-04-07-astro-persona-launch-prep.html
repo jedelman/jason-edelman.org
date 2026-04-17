@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Astro Persona: One Deployment, No Ambiguity — Dev Journal</title>
+  <meta name="description" content="Collapsed Cloudflare Pages and Worker into a single Worker deployment, wired up Stripe, built the landing page with a p5.js celestial animation, and shipped the internal tool with Synthesize and Charts tabs.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Astro Persona: One Deployment, No Ambiguity</h1>
+        <p class="date">April 7–8, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Astro Persona had been running two separate Cloudflare deployments: a Worker for the API and a Pages site for the frontend. They shared a domain, which meant routing requests between them was a constant source of conflicts. The fix was obvious once we named the problem: one Worker, everything served from it.
+        </p>
+
+        <p>
+          Cloudflare Workers support an <code>[assets]</code> binding that serves static files directly from the Worker, without a separate Pages deployment. Move the HTML/CSS/JS into <code>site/public/</code>, configure the binding, and the Worker handles both API routes and static asset serving. One <code>wrangler deploy</code>, one artifact, no ambiguity about which system is handling which request. GitHub Actions CI replaced the Pages Git integration. Simpler and more predictable.
+        </p>
+
+        <p>
+          The proxy authentication also got fixed in this session. The old pattern had the client pass an API key in the request body — workable for an internal tool, wrong for anything customer-facing. The new pattern uses a <code>PROXY_SECRET</code> environment variable: clients send <code>Authorization: Bearer &lt;secret&gt;</code>, the Worker holds the Anthropic API key server-side, and the client never touches a key that can generate charges. Standard practice, should have been there from the start.
+        </p>
+
+        <p>
+          Two new internal tool tabs: Synthesize and Charts. Synthesize takes birth data, builds a natal chart, assembles the persona, runs a three-question interview via Haiku, and auto-evaluates the result — all in one view, side by side. Charts browses all stored chart records in KV, lets you filter by text, and passes any chart into Synthesize pre-populated. Together they make the tool useful for testing and for doing actual readings.
+        </p>
+
+        <p>
+          The landing page got a p5.js celestial animation — procedurally generated planetary orbits rendered on a dark background. It was the last piece the public-facing site needed before launch.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

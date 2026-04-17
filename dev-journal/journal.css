@@ -1,0 +1,203 @@
+/* Inherits design tokens from parent site */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:         #0f0f0f;
+  --surface:    #1a1a1a;
+  --border:     #2a2a2a;
+  --text:       #e0e0e0;
+  --muted:      #888;
+  --accent:     #5fa86e;
+  --link:       #7ec9a0;
+  --link-hover: #b2dfc0;
+  --max-w:      640px;
+  --gap:        2.5rem;
+}
+
+html {
+  font-size: 17px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.7;
+  padding: 3rem 1.25rem 5rem;
+}
+
+main {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* Nav */
+nav {
+  display: flex;
+  align-items: baseline;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+nav a {
+  color: var(--link);
+  text-decoration: none;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 0.8rem;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+nav a:hover {
+  color: var(--link-hover);
+  border-bottom-color: var(--link-hover);
+}
+
+nav .home {
+  color: var(--muted);
+}
+
+/* Header */
+header h1 {
+  font-size: 2rem;
+  font-weight: normal;
+  letter-spacing: -0.01em;
+  color: #fff;
+}
+
+.tagline {
+  margin-top: 0.35rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+}
+
+/* Section labels */
+.label {
+  font-size: 0.7rem;
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-bottom: 1.25rem;
+  display: block;
+}
+
+/* Entry list (index page) */
+.entries {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.entry-card {
+  padding: 1.25rem 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.entry-card a {
+  text-decoration: none;
+}
+
+.entry-card h2 {
+  font-size: 1rem;
+  font-weight: normal;
+  color: var(--link);
+  margin-bottom: 0.35rem;
+  transition: color 0.15s;
+}
+
+.entry-card a:hover h2 {
+  color: var(--link-hover);
+}
+
+.entry-card .date {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  margin-bottom: 0.6rem;
+}
+
+.entry-card p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Entry page prose */
+article header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1.5rem;
+}
+
+article header h1 {
+  font-size: 1.6rem;
+  margin-bottom: 0.5rem;
+}
+
+article header .date {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+}
+
+article section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+article p {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+article a {
+  color: var(--link);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+article a:hover {
+  color: var(--link-hover);
+  border-bottom-color: var(--link-hover);
+}
+
+article code {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 0.85em;
+  color: var(--accent);
+  background: var(--surface);
+  padding: 0.1em 0.3em;
+  border-radius: 2px;
+}
+
+.back-link {
+  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.back-link:hover {
+  color: var(--link-hover);
+  border-bottom-color: var(--link-hover);
+}
+
+@media (max-width: 480px) {
+  html { font-size: 16px; }
+  header h1 { font-size: 1.6rem; }
+}
