@@ -1,0 +1,48 @@
+# System Design Parameters
+# RULE: Every entry MUST have an explicit rationale.
+# Rationale must reference either physics derivation, experimental data, or constraint from architecture.
+# No arbitrary numbers.
+
+[optical]
+wavelength_nm = 850
+# Rationale: GaAs VCSEL OTS maturity at 850nm. PTR glass transparent 300-3000nm.
+# Si PD responsivity 0.6 A/W at 850nm. Fiber abundant. Consistent with Glass Brain validated choice.
+
+[token_embedding]
+dimension = 512
+# Rationale: TBD — placeholder. Actual dimension set by model architecture choice.
+# Constraint: must be realizable as spatial pixels on PTR plate at 50-100um pitch.
+# 512 → 22.6mm at 50um pitch, fits within 50cm aperture comfortably.
+
+[spatial]
+pixel_pitch_um = 100
+# Rationale: Conservative 180x safety margin vs diffraction limit at 850nm (lambda/2 ~ 0.425um).
+# Matches Glass Brain plate spec. Validated by Gaussian beam waist analysis.
+
+aperture_mm = 512
+# Rationale: 512 pixels × 100um pitch = 51.2mm. Allows full weight matrix on single plate face.
+# Larger than PTR plate in Glass Brain (6.4mm) because we are not spatially multiplexing —
+# each resonator mode uses the full aperture.
+
+[resonator]
+# Parameters TBD — requires derivation of resonator geometry
+# Key open questions:
+#   - What cavity geometry? (Fabry-Perot, ring, bowtie, Sagnac?)
+#   - What is the round-trip loss budget?
+#   - How many round-trips correspond to one inference "layer"?
+finesse = "TBD"
+round_trip_loss_dB = "TBD"
+free_spectral_range_GHz = "TBD"
+
+[snr]
+target_bits = 6
+# Rationale: 6-bit precision sufficient for transformer inference (established by quantization literature).
+# See: Dettmers et al. 2022 (LLM.int8()), Frantar et al. 2022 (GPTQ).
+# SNR_required_dB = 6.02 * N_bits + 1.76 = 37.9 dB for N=6.
+target_snr_dB = 38.0
+
+[power]
+# TBD — requires resonator geometry and loss budget
+optical_input_mW = "TBD"
+facility_W = "TBD"
+

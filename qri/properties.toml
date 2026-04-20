@@ -1,0 +1,68 @@
+# Material Properties
+# RULE: Every entry MUST have a citation or documentation source.
+# Format: cite = "Author Year, DOI or URL"
+# No undocumented values.
+
+[ptr_glass]
+description = "Photo-thermo-refractive glass for holographic recording"
+wavelength_range_nm = [300, 3000]
+max_refractive_index_change = 5e-3
+absorption_coefficient_per_cm = 0.01  # at 850nm, post-development
+diffraction_efficiency_max = 0.99
+write_wavelength_nm = 325  # HeCd laser typical
+erase_wavelength_nm = 0    # thermally fixed, no UV erase at room temp
+thermal_stability_C = 400  # fixed gratings stable to 400°C
+cite = "Glebov 2010, Proc. SPIE 7504, doi:10.1117/12.838767"
+
+[linbo3_tfln]
+description = "Thin-film lithium niobate electro-optic modulator platform"
+half_wave_voltage_V = 1.5   # V_pi for MZM, state of art 2023
+bandwidth_GHz = 100
+propagation_loss_dB_per_cm = 0.27
+coupling_loss_dB = 0.5
+pockels_coefficient_r33_pm_per_V = 30.9
+cite = "Wang et al. 2018, Nature, doi:10.1038/s41586-018-0551-y"
+
+[sin_pic_a150]
+description = "Ligentec A150 silicon nitride PIC platform, NIR optimized"
+wavelength_range_nm = [700, 1060]
+propagation_loss_dB_per_m = 3.0   # <3 dB/m typical
+minimum_bend_radius_um = 10
+coupling_loss_fiber_to_chip_dB = 1.5  # inverse taper
+platform = "Ligentec A150"
+cite = "Ligentec A150 PDK documentation, https://www.ligentec.com/products/a150/"
+
+[gaas_vcsel_850nm]
+description = "GaAs vertical-cavity surface-emitting laser at 850nm"
+threshold_current_mA = 0.5
+slope_efficiency_W_per_A = 0.6
+wall_plug_efficiency = 0.35
+linewidth_MHz = 50
+coherence_length_m = 3.0   # ~3m for single-mode
+modulation_bandwidth_GHz = 10
+cite = "Iga 2000, IEEE J. Sel. Top. Quantum Electron., doi:10.1109/2944.902166"
+
+[ingaas_pin_detector]
+description = "InGaAs PIN photodetector, telecom/NIR"
+responsivity_A_per_W = 0.85   # at 1310-1550nm; ~0.6 at 850nm for GaAs variant
+bandwidth_GHz = 50
+dark_current_nA = 1.0
+noise_equivalent_power_W_per_rtHz = 1e-14
+cite = "Bowers & Burrus 1987, J. Lightwave Technol., doi:10.1109/JLT.1987.1075507"
+
+[si_pin_detector_850nm]
+description = "Silicon PIN photodetector at 850nm"
+responsivity_A_per_W = 0.6
+bandwidth_GHz = 10
+dark_current_nA = 0.1
+cite = "Saleh & Teich, Fundamentals of Photonics, 3rd Ed., Ch. 18"
+
+[silica_fiber_smf28]
+description = "Corning SMF-28 single-mode fiber"
+attenuation_dB_per_km_1550nm = 0.18
+attenuation_dB_per_km_1310nm = 0.35
+attenuation_dB_per_km_850nm = 2.5   # multimode region; SMF cutoff ~1260nm
+core_diameter_um = 8.2
+numerical_aperture = 0.14
+cite = "Corning SMF-28 Ultra datasheet, 2023, https://www.corning.com/media/worldwide/coc/documents/Fiber/SMF-28%20Ultra.pdf"
+
