@@ -380,6 +380,17 @@ For a target model (e.g., a compact ~1B param transformer with 24 layers):
 
 > Cite: Corning SMF-28 Ultra datasheet, 2023, https://www.corning.com/media/worldwide/coc/documents/Fiber/SMF-28%20Ultra.pdf
 
+### `gaas_vcsel_850nm_single_mode`
+*Single-mode GaAs VCSEL at 850nm with narrow linewidth for coherent resonator operation*
+
+- **linewidth_MHz**: 10
+- **coherence_length_m**: 30.0
+- **threshold_current_mA**: 1.0
+- **modulation_bandwidth_GHz**: 5
+- **note**: Oxide-confined single-mode VCSEL. Broader multimode VCSEL (50MHz, 6m l_c) insufficient for T>60 at L=20mm.
+
+> Cite: Larsson 2011, IEEE J. Sel. Top. Quantum Electron. 17(6):1551, doi:10.1109/JSTQE.2011.2114837
+
 ---
 
 ## Design Parameters
@@ -393,13 +404,13 @@ For a target model (e.g., a compact ~1B param transformer with 24 layers):
 ### `resonator`
 - **geometry**: `Fabry-Perot`
 - **medium**: `PTR_glass`
-- **round_trips_T**: `TBD`
-- **cavity_length_L_mm**: `TBD`
-- **mirror_reflectivity_R**: `TBD`
+- **round_trips_T**: `100`
+- **cavity_length_L_mm**: `20`
+- **mirror_reflectivity_R**: `0.999`
 
 ### `spatial`
 - **pixel_pitch_um**: `50`
-- **aperture_mm**: `TBD`
+- **aperture_mm**: `2.5`
 
 ### `snr`
 - **target_bits**: `6`

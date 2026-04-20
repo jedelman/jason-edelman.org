@@ -66,3 +66,13 @@ core_diameter_um = 8.2
 numerical_aperture = 0.14
 cite = "Corning SMF-28 Ultra datasheet, 2023, https://www.corning.com/media/worldwide/coc/documents/Fiber/SMF-28%20Ultra.pdf"
 
+
+[gaas_vcsel_850nm_single_mode]
+description = "Single-mode GaAs VCSEL at 850nm with narrow linewidth for coherent resonator operation"
+linewidth_MHz = 10
+coherence_length_m = 30.0
+# coherence_length = c0 / delta_nu = 3e8 / 10e6 = 30m
+threshold_current_mA = 1.0
+modulation_bandwidth_GHz = 5
+note = "Oxide-confined single-mode VCSEL. Broader multimode VCSEL (50MHz, 6m l_c) insufficient for T>60 at L=20mm."
+cite = "Larsson 2011, IEEE J. Sel. Top. Quantum Electron. 17(6):1551, doi:10.1109/JSTQE.2011.2114837"

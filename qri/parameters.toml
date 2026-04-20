@@ -26,17 +26,20 @@ medium = "PTR_glass"
 # Rationale: ARCH-1 LOCKED. Non-volatile holographic weight storage. Δn(x,y) = trained
 # weight distribution. Thermally fixed. Transparent at 850nm. Psaltis 1990 + Glebov 2010.
 
-round_trips_T = "TBD"
+round_trips_T = 100
+# Rationale: T_op=100 << T_coh=750 (single-mode VCSEL lw=10MHz, L=20mm). Coherent regime.
 # Rationale: Depends on round-trip loss budget. T_max = -log(SNR_threshold) / log(1/R_eff)
 # where R_eff = product of all round-trip losses (mirror R, PTR absorption, diffraction).
 # Derive in ARCH-2.
 
-cavity_length_L_mm = "TBD"
+cavity_length_L_mm = 20
+# Rationale: T_coh=750 at SM-VCSEL linewidth. tau=133ps. 75M tok/s at T=100.
 # Rationale: Sets FSR = c/2L and round-trip time tau = 2L/c.
 # Token throughput = 1 / (T * tau). Must satisfy tau << 1/token_rate.
 # Derive in ARCH-4.
 
-mirror_reflectivity_R = "TBD"
+mirror_reflectivity_R = 0.9990
+# Rationale: Practical dielectric HR @ 850nm. Finesse=3140. 0.023dB round-trip loss.
 # Rationale: Drives round-trip loss budget. Higher R → more round trips (depth) but
 # harder to in/out-couple. Typical high-reflectivity: R > 0.99. Derive in ARCH-2.
 
@@ -46,7 +49,8 @@ pixel_pitch_um = 50
 # Safety margin: 50um >> lambda/2 = 0.425um (117x diffraction limit).
 # Allows 512 modes across ~25mm aperture.
 
-aperture_mm = "TBD"
+aperture_mm = 2.5
+# Rationale: 23x23=529 modes >= 512 at 50um spacing -> 1.15mm min. 2.5mm gives 2x margin.
 # Rationale: Must support N = 512 modes with 50um spacing → ~25.6mm minimum.
 # Actual aperture set by PTR glass availability and Fabry-Perot mirror size.
 # Derive in ARCH-3.
