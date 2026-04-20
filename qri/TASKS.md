@@ -49,7 +49,7 @@
 
 ## Architecture Derivation Tasks
 
-- [ ] ARCH-1: Identify the optical primitive — What is the natural optical operation corresponding to MVM? Compare: (a) 4f holographic diffraction, (b) MZI interference, (c) resonant mode coupling, (d) parametric interaction. Derive from Maxwell's equations, not analogy.
+- [x] ARCH-1: Identify the optical primitive — What is the natural optical operation corresponding to MVM? Compare: (a) 4f holographic diffraction, (b) MZI interference, (c) resonant mode coupling, (d) parametric interaction. Derive from Maxwell's equations, not analogy.
 - [ ] ARCH-2: Resonator geometry choice — Fabry-Perot vs ring vs bowtie vs Sagnac. Criteria: (a) round-trip loss budget, (b) mode volume, (c) FSR vs token bandwidth, (d) mechanical stability.
 - [ ] ARCH-3: Nonlinearity mechanism — What provides the activation function? Options: (a) saturable absorber, (b) Kerr effect, (c) EIT, (d) optoelectronic. Derive SNR cost of each.
 - [ ] ARCH-4: Token encoding — How does a token embedding vector enter the resonator? Map options to optical degrees of freedom.
@@ -62,4 +62,18 @@
 - [ ] INFRA-1: Add PDF fetching to generate_sysdoc.py — download full PDFs where DOI is available, store in citations/
 - [ ] INFRA-2: Add design/render_resonator.py — placeholder renderer for resonator geometry diagrams
 - [ ] INFRA-3: Set up conversations/ log rotation — one file per session
+
+
+---
+
+## Architecture Derivation Tasks (derived from ARCH-1)
+
+- [x] ARCH-1: Optical primitive LOCKED — Fabry-Perot resonator as wave RNN (Hughes 2019 mapping)
+- [ ] ARCH-2: Resonator geometry — derive L, mirror R, round-trips T_max from loss budget and SNR requirement
+- [ ] ARCH-3: Mode structure — derive aperture size from d=512 embedding; confirm N ≥ 512 orthogonal modes fit
+- [ ] ARCH-4: Token throughput — derive token rate from L and T (tau = 2L/c, rate = 1/T*tau)
+- [ ] ARCH-5: SNR budget — derive noise accumulation over T round trips; confirm 6-bit precision achievable
+- [ ] ARCH-6: Training pipeline — adjoint method for wave dynamics; compute UV hologram from Δn(x,y)
+- [ ] ARCH-7: Hologram capacity — how many weight matrix parameters fit in PTR plate at 50um pitch?
+- [ ] ARCH-8: Interposer — confirm Glass Brain design reusable; derive changes needed for resonator vs. feedforward
 

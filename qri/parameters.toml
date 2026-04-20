@@ -6,43 +6,79 @@
 [optical]
 wavelength_nm = 850
 # Rationale: GaAs VCSEL OTS maturity at 850nm. PTR glass transparent 300-3000nm.
-# Si PD responsivity 0.6 A/W at 850nm. Fiber abundant. Consistent with Glass Brain validated choice.
+# Si PD responsivity 0.6 A/W at 850nm. Fiber abundant. Glass Brain validated choice.
+# Consistent with Glass Brain 2026-04-17 session locked decision.
 
 [token_embedding]
 dimension = 512
-# Rationale: TBD — placeholder. Actual dimension set by model architecture choice.
-# Constraint: must be realizable as spatial pixels on PTR plate at 50-100um pitch.
-# 512 → 22.6mm at 50um pitch, fits within 50cm aperture comfortably.
-
-[spatial]
-pixel_pitch_um = 100
-# Rationale: Conservative 180x safety margin vs diffraction limit at 850nm (lambda/2 ~ 0.425um).
-# Matches Glass Brain plate spec. Validated by Gaussian beam waist analysis.
-
-aperture_mm = 512
-# Rationale: 512 pixels × 100um pitch = 51.2mm. Allows full weight matrix on single plate face.
-# Larger than PTR plate in Glass Brain (6.4mm) because we are not spatially multiplexing —
-# each resonator mode uses the full aperture.
+# Rationale: Placeholder for target model. Must equal number of spatial modes N excited
+# at resonator input. N ≥ 512 requires aperture supporting 512 orthogonal TEM_mn modes.
+# At 850nm, aperture ~ 22.6mm for 50um mode spacing (TBD in ARCH-3).
 
 [resonator]
-# Parameters TBD — requires derivation of resonator geometry
-# Key open questions:
-#   - What cavity geometry? (Fabry-Perot, ring, bowtie, Sagnac?)
-#   - What is the round-trip loss budget?
-#   - How many round-trips correspond to one inference "layer"?
-finesse = "TBD"
-round_trip_loss_dB = "TBD"
-free_spectral_range_GHz = "TBD"
+# All TBD pending ARCH-2 derivation. Do not insert placeholder values.
+geometry = "Fabry-Perot"
+# Rationale: ARCH-1 LOCKED. Simplest geometry, well-characterized standing-wave modes,
+# retroreflection naturally implements the u_{t-1} term in wave equation RNN (eq. 1).
+# Hughes 2019 exact mapping applies directly.
+
+medium = "PTR_glass"
+# Rationale: ARCH-1 LOCKED. Non-volatile holographic weight storage. Δn(x,y) = trained
+# weight distribution. Thermally fixed. Transparent at 850nm. Psaltis 1990 + Glebov 2010.
+
+round_trips_T = "TBD"
+# Rationale: Depends on round-trip loss budget. T_max = -log(SNR_threshold) / log(1/R_eff)
+# where R_eff = product of all round-trip losses (mirror R, PTR absorption, diffraction).
+# Derive in ARCH-2.
+
+cavity_length_L_mm = "TBD"
+# Rationale: Sets FSR = c/2L and round-trip time tau = 2L/c.
+# Token throughput = 1 / (T * tau). Must satisfy tau << 1/token_rate.
+# Derive in ARCH-4.
+
+mirror_reflectivity_R = "TBD"
+# Rationale: Drives round-trip loss budget. Higher R → more round trips (depth) but
+# harder to in/out-couple. Typical high-reflectivity: R > 0.99. Derive in ARCH-2.
+
+[spatial]
+pixel_pitch_um = 50
+# Rationale: Conservative choice. Matches Glass Brain plate spec.
+# Safety margin: 50um >> lambda/2 = 0.425um (117x diffraction limit).
+# Allows 512 modes across ~25mm aperture.
+
+aperture_mm = "TBD"
+# Rationale: Must support N = 512 modes with 50um spacing → ~25.6mm minimum.
+# Actual aperture set by PTR glass availability and Fabry-Perot mirror size.
+# Derive in ARCH-3.
 
 [snr]
 target_bits = 6
-# Rationale: 6-bit precision sufficient for transformer inference (established by quantization literature).
-# See: Dettmers et al. 2022 (LLM.int8()), Frantar et al. 2022 (GPTQ).
-# SNR_required_dB = 6.02 * N_bits + 1.76 = 37.9 dB for N=6.
+# Rationale: 6-bit precision sufficient for transformer inference.
+# Established by quantization literature: Dettmers et al. 2022 (LLM.int8()),
+# Frantar et al. 2022 (GPTQ). 6-bit: SNR_required = 6.02*6 + 1.76 = 37.9 dB.
 target_snr_dB = 38.0
 
+[interposer]
+# Reuse Glass Brain interposer design (validated 2026-04-17)
+detector = "Si_PIN_850nm"
+amplifier = "TIA_180nm_CMOS"
+nonlinearity = "analog_comparator_GeLU"
+emitter = "GaAs_VCSEL_850nm"
+latency_ns_per_layer = 67
+# Rationale: Glass Brain derivation: 67ns/block. Identical architecture reused.
+power_W_per_head = 1.32
+# Rationale: Glass Brain derivation: 1.32W/head (256 neurons). Reused.
+
+[model]
+# Target embedded model parameters (TBD — depends on resonator capacity from ARCH-7)
+target_params = "TBD"
+layers = "TBD"
+embedding_dim = 512
+# Rationale: Placeholder. Set to match [token_embedding].dimension above.
+
 [power]
-# TBD — requires resonator geometry and loss budget
-optical_input_mW = "TBD"
+# TBD — derive after resonator geometry and layer count are locked
+# Key constraint: embedded device. Power budget << server GPU.
 facility_W = "TBD"
+target_per_token_mJ = "TBD"
 
