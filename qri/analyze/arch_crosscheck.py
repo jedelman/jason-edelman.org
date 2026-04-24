@@ -97,6 +97,23 @@ class ArchitectureCrosscheck:
     wavelength_inference_nm: float = 850
     wavelength_training_nm: float = 532
     
+    # NARG: Non-Autoregressive Generation (2026-04-24)
+    narg_enabled: bool = False
+    narg_fertility_dim: int = 512
+    narg_write_overhead: float = 0.15
+    narg_latency_gain: float = 0.15
+    narg_snr_margin_used: float = 0.4
+    
+    # PTYCHOGRAPHY: Fresnel phase reconstruction (2026-04-24)
+    ptych_enabled: bool = False
+    ptych_capacity_multiplier: float = 2.5
+    ptych_write_slowdown: float = 30
+    ptych_feature_size_um: float = 0.6
+    ptych_plate_size_mm: float = 5
+    ptych_params_multiplier: float = 2.5
+    ptych_snr_headroom_write_db: float = 15
+    ptych_snr_headroom_read_db: float = 4
+    
     checks_performed: List[Tuple[str, bool, str]] = field(default_factory=list)
     
     def check_arch1_arch2_consistency(self) -> Tuple[bool, str]:
@@ -245,6 +262,64 @@ class ArchitectureCrosscheck:
         
         return True, "ARCH-1 through ARCH-10 fully integrated and mutually consistent"
     
+    def check_narg_compatibility(self) -> Tuple[bool, str]:
+        """Check NARG compatibility with ARCH-3 and ARCH-5."""
+        if not self.narg_enabled:
+            return True, "NARG: disabled (baseline mode)"
+        
+        # NARG requires 512 spatial modes for parallel position decoding
+        if self.arch3_modes < self.narg_fertility_dim:
+            return False, f"NARG: {self.narg_fertility_dim} parallel positions > {self.arch3_modes} modes"
+        
+        # SNR margin check: √512 ≈ 23× louder during parallel decode
+        snr_margin_available = self.arch5_snr_db - self.arch5_target_db
+        snr_noise_increase_db = 10 * math.log10(math.sqrt(self.narg_fertility_dim))  # ~23.6 dB
+        
+        if snr_margin_available < snr_noise_increase_db * self.narg_snr_margin_used:
+            return False, f"NARG: SNR margin {snr_margin_available}dB insufficient (need {snr_noise_increase_db * self.narg_snr_margin_used:.1f}dB)"
+        
+        return True, f"NARG: {self.narg_fertility_dim} parallel positions compatible. SNR margin {snr_margin_available}dB >> {snr_noise_increase_db:.1f}dB noise"
+    
+    def check_ptych_compatibility(self) -> Tuple[bool, str]:
+        """Check ptychography compatibility with ARCH-7 and ARCH-10."""
+        if not self.ptych_enabled:
+            return True, "PTYCHOGRAPHY: disabled (standard holography)"
+        
+        # Ptychography trades write speed for capacity
+        write_time_multiplier = self.ptych_write_slowdown  # 20-50×
+        capacity_gain = self.ptych_capacity_multiplier  # 2-4×
+        
+        # New capacity estimate
+        baseline_params = self.arch7_total_params
+        new_params = baseline_params * capacity_gain
+        
+        # Check if new params exceed practical limit (~5M for rank-100/full-rank)
+        if new_params > 5_000_000:
+            return False, f"PTYCH: {new_params:.1e} params exceeds practical limit (~5M)"
+        
+        # SNR headroom check
+        available_snr_write = self.arch5_snr_db - self.arch5_target_db
+        if available_snr_write < self.ptych_snr_headroom_write_db:
+            return False, f"PTYCH: Write SNR margin {available_snr_write}dB < {self.ptych_snr_headroom_write_db}dB required"
+        
+        plate_volume_ratio = (10 * 10 / (self.ptych_plate_size_mm ** 2))  # 4× smaller
+        
+        return True, f"PTYCH: {capacity_gain}× capacity ({new_params/1e6:.1f}M params), {write_time_multiplier}× slower write, {plate_volume_ratio:.0f}× smaller plates"
+    
+    def check_narg_ptych_interaction(self) -> Tuple[bool, str]:
+        """Check if NARG + PTYCH together are compatible."""
+        if not (self.narg_enabled and self.ptych_enabled):
+            return True, "NARG+PTYCH: not both enabled (no interaction)"
+        
+        # If both: NARG increases write overhead (multi-target Hebbian)
+        # PTYCH increases write complexity (phase reconstruction)
+        combined_write_cost = self.narg_write_overhead + (1.0 - 1.0 / self.ptych_write_slowdown)
+        
+        if combined_write_cost > 0.8:
+            return False, f"NARG+PTYCH: combined write overhead {combined_write_cost:.1%} approaching saturation"
+        
+        return True, f"NARG+PTYCH: combined write overhead {combined_write_cost:.1%} (tolerable)"
+    
     def run_all_checks(self) -> bool:
         """Run all consistency checks."""
         checks = [
@@ -258,6 +333,9 @@ class ArchitectureCrosscheck:
             ("ARCH-8 ↔ ARCH-9", self.check_arch8_arch9_consistency()),
             ("ARCH-9 ↔ ARCH-10", self.check_arch9_arch10_consistency()),
             ("Full Integration", self.check_arch1_through_10_integration()),
+            ("NARG Compat", self.check_narg_compatibility()),
+            ("PTYCH Compat", self.check_ptych_compatibility()),
+            ("NARG+PTYCH", self.check_narg_ptych_interaction()),
         ]
         
         self.checks_performed = checks
@@ -362,6 +440,25 @@ class ArchitectureCrosscheck:
                     "surface_area_mm2": self.arch10_surface_mm2,
                     "passive_rise_k": self.arch10_passive_rise_k,
                     "absorption_db_cm": self.arch10_absorption_db_cm,
+                },
+                "NARG": {
+                    "name": "Non-Autoregressive Generation (2026-04-24)",
+                    "enabled": self.narg_enabled,
+                    "fertility_dim": self.narg_fertility_dim,
+                    "write_overhead": self.narg_write_overhead,
+                    "latency_gain": self.narg_latency_gain,
+                    "snr_margin_used": self.narg_snr_margin_used,
+                },
+                "PTYCHOGRAPHY": {
+                    "name": "Fresnel Phase Reconstruction (2026-04-24)",
+                    "enabled": self.ptych_enabled,
+                    "capacity_multiplier": self.ptych_capacity_multiplier,
+                    "write_slowdown": self.ptych_write_slowdown,
+                    "feature_size_um": self.ptych_feature_size_um,
+                    "plate_size_mm": self.ptych_plate_size_mm,
+                    "params_multiplier": self.ptych_params_multiplier,
+                    "snr_headroom_write_db": self.ptych_snr_headroom_write_db,
+                    "snr_headroom_read_db": self.ptych_snr_headroom_read_db,
                 },
             },
             "checks": [
