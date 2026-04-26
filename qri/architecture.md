@@ -723,7 +723,7 @@ Peltier cooler + PID control keeps plate at 20-25°C even at 10W intra-cavity. P
 | 2026-04-20 | ARCH-7 LOCKED | 51.2k weights/layer via rank-50 U·V^T factorization. 24 layers = 1.23M params. Capacity limited by angular multiplexing (~1000 gratings). |
 | 2026-04-20 | ARCH-8 LOCKED | All-optical layer coupling, no electronics in inference path. Homodyne readout for error feedback and final output. |
 | 2026-04-20 | ARCH-9 LOCKED | Kerr nonlinearity (SPM), φ_NL=0.2-1rad/pass. 66dB phase SNR. Cavity detuned δ≈π for ReLU-like threshold. |
-| 2026-04-20 | ARCH-10 LOCKED | Thermal: 10×10×0.5mm PTR plate, passive+Peltier cooling. 15K rise @ 2-3W dissipation. |
+| 2026-04-26 | ARCH-16 LOCKED | Rank ceiling 200, production target rank-100 (1.8 dB SNR margin), stretch rank-150. Hybrid HG/LG basis above rank-100. Insertion loss model (0.01 dB/rank) anchored to Ashtiani 2025 PIN data but not validated for LiNbO3 @ 850nm → EXP-6 added. χ³/mode-density coupling unquantified pending EXP-1. |
 
 
 ---
@@ -1163,7 +1163,7 @@ L_digital = Σ_i ||y_pred_i - y_target_i||²    [standard cross-entropy or MSE]
 
 # 16. Mode Compression & Rank Scaling (ARCH-16)
 
-**Status:** DRAFT 2026-04-24  
+**Status:** LOCKED 2026-04-26  
 **Question:** How high can rank go before optics fail?
 
 ---
@@ -1331,7 +1331,17 @@ Current design: 1 kHz PID → supports rank-150 safely. Above that, active cooli
 
 ---
 
-## 16.7 ARCH-16 Design Parameters
+## 16.7 Insertion Loss Model — Validation Status
+
+The per-rank insertion loss estimate of `0.01 dB/rank increment` is derived by scaling from silicon photonic PIN attenuator data (Ashtiani et al. 2025, arXiv:2506.14575: 0.2 dB/element measured at 1550nm in AMF SOI process) to LiNbO3 MZM context at 850nm, accounting for fewer active phase-shifter pairs per round-trip due to resonant enhancement (~1000× intra-cavity power reduces the effective per-element contribution).
+
+**This scaling is NOT experimentally validated for PTR + LiNbO3 at 850nm.** The actual number could be 2× higher (0.02 dB/rank), which would eliminate SNR margin entirely at rank-100. This is flagged as:
+
+> **EXP-6 (NEW):** Measure insertion loss per LiNbO3 MZM arm at 850nm in a single-pass test bench. Target: < 0.3 dB/element. If > 0.3 dB, rank-100 production target requires SNR upgrade (Phase 2 electronics: +3 dB VCSEL) before proceeding.
+
+Additionally, the accuracy loss model (`ε_rank`, `ε_SNR`) does not currently account for the coupling between χ³ nonlinearity contrast and mode density. At rank-100 (200 modes), if the Kerr phase shift φ_NL per pass is at the low end of our estimate (0.2 rad, not 1 rad), the ReLU-like threshold softens and accuracy degrades by an additional 1–2% independent of the SNR budget. This coupling is unquantified pending EXP-1 (PTR χ³ at 850nm).
+
+## 16.8 ARCH-16 Design Parameters
 
 Add to `parameters.toml`:
 

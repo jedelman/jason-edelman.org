@@ -57,7 +57,14 @@
 
 ---
 
-## Build / Infrastructure Tasks
+## Experimental Validation Tasks
+
+- [ ] EXP-1 (HIGH): PTR χ³ @ 850nm CW — measure nonlinear refractive index n₂. Expected: ~1.3×10⁻²⁰ m²/W (silicate baseline). If lower, revisit φ_NL estimate and accuracy loss model in ARCH-9/16.
+- [ ] EXP-2 (HIGH): Two-wavelength photosensitivity — PTR @ 532nm write + 850nm read simultaneously. Confirm no cross-sensitization degrading the read signal.
+- [ ] EXP-3 (HIGH): Hebbian grating growth rate — measure Δn vs. 532nm exposure time. Target: reach Δn = 5×10⁻³ in < 1000 inference passes.
+- [ ] EXP-4 (HIGH): Thermal lensing dn/dT — measure cavity stability under 2-3W CW intra-cavity load. Acceptable drift: < 5 mrad/hour.
+- [ ] EXP-5 (MED): Homodyne phase-lock stability — VCSEL frequency lock margin vs. thermal drift. Target: PID lock stable over 1-hour inference run.
+- [ ] EXP-6 (HIGH): LiNbO3 MZM insertion loss @ 850nm — single-pass bench measurement. Target: < 0.3 dB/element. If > 0.3 dB, ARCH-16 rank-100 production target requires +3 dB SNR upgrade before validation. Blocks ARCH-16 insertion loss model validation.
 
 - [ ] INFRA-1: Add PDF fetching to generate_sysdoc.py — download full PDFs where DOI is available, store in citations/
 - [ ] INFRA-2: Add design/render_resonator.py — placeholder renderer for resonator geometry diagrams
