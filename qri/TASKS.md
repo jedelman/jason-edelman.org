@@ -51,7 +51,7 @@
 
 - [x] ARCH-1: Identify the optical primitive — What is the natural optical operation corresponding to MVM? Compare: (a) 4f holographic diffraction, (b) MZI interference, (c) resonant mode coupling, (d) parametric interaction. Derive from Maxwell's equations, not analogy.
 - [ ] ARCH-2: Resonator geometry choice — Fabry-Perot vs ring vs bowtie vs Sagnac. Criteria: (a) round-trip loss budget, (b) mode volume, (c) FSR vs token bandwidth, (d) mechanical stability.
-- [ ] ARCH-3: Nonlinearity mechanism — What provides the activation function? Options: (a) saturable absorber, (b) Kerr effect, (c) EIT, (d) optoelectronic. Derive SNR cost of each.
+- [x] ARCH-3: Nonlinearity mechanism — CLOSED 2026-04-27. Activation function is intensity squaring via VCSEL driver (I_drive ∝ I_detected). No optical nonlinearity required. Kerr, saturable absorber, EIT all retired.
 - [ ] ARCH-4: Token encoding — How does a token embedding vector enter the resonator? Map options to optical degrees of freedom.
 - [ ] ARCH-5: Learning mechanism — Are weights static (fab-time) or in-situ tunable? What does "learning" mean physically for a resonator?
 
@@ -59,7 +59,7 @@
 
 ## Experimental Validation Tasks
 
-- [ ] EXP-1 (HIGH): PTR χ³ @ 850nm CW — measure nonlinear refractive index n₂. Expected: ~1.3×10⁻²⁰ m²/W (silicate baseline). If lower, revisit φ_NL estimate and accuracy loss model in ARCH-9/16.
+- [x] EXP-1 (CLOSED 2026-04-27): PTR χ³ @ 850nm CW — CLOSED. Kerr SPM retired from architecture (ARCH-9 revised). Activation function is now intensity squaring via VCSEL driver electronics. PTR n₂ measurement no longer architecturally relevant.
 - [ ] EXP-2 (HIGH): Two-wavelength photosensitivity — PTR @ 532nm write + 850nm read simultaneously. Confirm no cross-sensitization degrading the read signal.
 - [ ] EXP-3 (HIGH): Hebbian grating growth rate — measure Δn vs. 532nm exposure time. Target: reach Δn = 5×10⁻³ in < 1000 inference passes.
 - [ ] EXP-4 (HIGH): Thermal lensing dn/dT — measure cavity stability under 2-3W CW intra-cavity load. Acceptable drift: < 5 mrad/hour.
