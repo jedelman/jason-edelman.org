@@ -64,7 +64,8 @@
 - [ ] EXP-3 (HIGH): Hebbian grating growth rate — measure Δn vs. 532nm exposure time. Target: reach Δn = 5×10⁻³ in < 1000 inference passes.
 - [ ] EXP-4 (HIGH): Thermal lensing dn/dT — measure cavity stability under 2-3W CW intra-cavity load. Acceptable drift: < 5 mrad/hour.
 - [ ] EXP-5 (MED): Homodyne phase-lock stability — VCSEL frequency lock margin vs. thermal drift. Target: PID lock stable over 1-hour inference run.
-- [ ] EXP-6 (HIGH): LiNbO3 MZM insertion loss @ 850nm — single-pass bench measurement. Target: < 0.3 dB/element. If > 0.3 dB, ARCH-16 rank-100 production target requires +3 dB SNR upgrade before validation. Blocks ARCH-16 insertion loss model validation.
+- [x] EXP-6 (CLOSED 2026-04-26): LiNbO3 MZM insertion loss @ 850nm — CLOSED. MZM removed from design (ARCH-11 revised). Intra-cavity MZM disqualified: 0.1 dB/pass × T=100 = 10 dB cumulative loss. No longer relevant.
+- [ ] EXP-7 (HIGH): In-situ training convergence rate — train a small holographic RNN (rank-10, single layer) using the two-wavelength iterative write-develop protocol. Measure loss vs. write-develop cycle number. Target: convergence to within 2% of digital baseline in ≤5 cycles. If slower, characterize dominant error source: gradient encoding fidelity vs. thermal development precision vs. cavity reinstallation repeatability (kinematic mount).
 
 - [ ] INFRA-1: Add PDF fetching to generate_sysdoc.py — download full PDFs where DOI is available, store in citations/
 - [ ] INFRA-2: Add design/render_resonator.py — placeholder renderer for resonator geometry diagrams

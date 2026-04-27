@@ -724,264 +724,191 @@ Peltier cooler + PID control keeps plate at 20-25°C even at 10W intra-cavity. P
 | 2026-04-20 | ARCH-8 LOCKED | All-optical layer coupling, no electronics in inference path. Homodyne readout for error feedback and final output. |
 | 2026-04-20 | ARCH-9 LOCKED | Kerr nonlinearity (SPM), φ_NL=0.2-1rad/pass. 66dB phase SNR. Cavity detuned δ≈π for ReLU-like threshold. |
 | 2026-04-26 | ARCH-16 LOCKED | Rank ceiling 200, production target rank-100 (1.8 dB SNR margin), stretch rank-150. Hybrid HG/LG basis above rank-100. Insertion loss model (0.01 dB/rank) anchored to Ashtiani 2025 PIN data but not validated for LiNbO3 @ 850nm → EXP-6 added. χ³/mode-density coupling unquantified pending EXP-1. |
+| 2026-04-26 | ARCH-11 RETRACTED & REPLACED | Ephemeral weights via LiNbO3 MZM intra-cavity is physically disqualifying: 0.1 dB/pass × T=100 = 10 dB cumulative insertion loss per token, wiping the SNR budget. MZM removed from design entirely. EXP-6 closed as no longer relevant. Replaced by in-situ two-wavelength holographic training (see new ARCH-11). |
+| 2026-04-26 | ARCH-11 (new): In-situ two-wavelength training LOCKED | Weight translation from digital simulation to physical cavity is infeasible due to sub-wavelength manufacturing imprecision compounding over T=100 round trips. Training must be in-situ using the physical cavity as the forward model. Wavelength separation (532nm write, 850nm infer) is the only clean isolation mechanism — σ_r(850nm)≈0 in PTR glass is a physics argument, not an engineering tradeoff. Pure-glass resonator: no active intra-cavity elements. Iterative write-develop cycles converge in 3–5 iterations. EXP-7 added. |
+| 2026-04-26 | ARCH-12 REVISED | Prior ARCH-12 (ensemble cavity arrays) was motivated by online learning phase stability. Online learning retracted. Single cavity phase budget (~24K tokens at σ=5 mrad/token) is adequate for LLM inference. Ensemble arrays demoted to optional scaling path. |
+| 2026-04-26 | ARCH-13 REVISED | Prior ARCH-13 (voltage preset model swapping) retracted with ephemeral weight model. Model update = glass swap via kinematic mount. Write station + adjoint simulation loop is the training infrastructure. Model update cadence: ~1 day, compatible with deployment cycles of weeks to months. |
 
 
 ---
 
-# 11. Learning via Resonant Modulation (ARCH-11: Ephemeral Weights & Photonic Gradient Descent)
+# 11. In-Situ Two-Wavelength Training (ARCH-11: Holographic Weight Discovery)
 
-**Status:** LOCKED 2026-04-24  
-**Authors:** Jason (ephemeral weight insight), Claude (formalization)
-
-## 11.1 Weight Encoding Shift: Permanent → Ephemeral
-
-**Previous assumption (ARCH-2):** Weights stored as permanent holographic gratings in PTR glass. One write, many reads, static model.
-
-**New assumption:** Weights are **transient, modulated in time** via electro-optic effect. No permanent write. Enables rapid re-training and gradient descent at optical timescales.
-
-**Mechanism:**
-```
-Δn(x,y,z,t) = Δn_PTR(x,y,z) + V(t) · m(x,y) · χ^(2)
-```
-
-- Δn_PTR: static PTR cavity geometry (unchanged from ARCH-2)
-- V(t): applied voltage to Pockels modulator (LiNbO3 inline)
-- m(x,y): spatial mode profile (transverse TEM mode)
-- χ^(2): electro-optic susceptibility of LiNbO3 (Pockels effect)
-
-**Timescale:** Weight updates occur every ~1 µs (optical round-trip time). Gradient descent can proceed at MHz rate.
-
-## 11.2 Hybrid Architecture (PTR + LiNbO3)
-
-PTR cavity provides **geometry** (high Q, low loss, thermal stability).  
-LiNbO3 MZM provides **weight modulation** (fast, efficient, analog control).
-
-```
-[850 nm laser] → [PTR Cavity] → [LiNbO3 MZM] → [Detector]
-                       (Q~10⁴)        (0–5V)
-```
-
-**Why not pure LiNbO3?**
-- LiNbO3 cavity Q ~100–1000 (much lower than PTR ~10⁴)
-- SNR penalty: ~10 dB
-- PTR optimized for cavity geometry; LiNbO3 optimized for fast modulation
-
-**Why not pure 4WM (χ^(3))?**
-- χ^(3) ~100× weaker than χ^(2); requires mW pump power
-- Bandwidth limited by thermal dephasing (~1 GHz in glass)
-- Weight update timescale ~100 ns (slow for gradient descent)
-- Convergence proof for 4WM backprop unknown; Pockels proven
-
-**Decision:** Hybrid is optimal trade-off: Q from PTR, speed from LiNbO3.
-
-## 11.3 Photonic Backpropagation
-
-**Forward pass:**
-1. Inject token embedding x into cavity (encoded as spatial mode amplitudes)
-2. Circulate N_circ times (~13 ns per round trip)
-3. Read output y via photodiode
-4. Heterodyne against target signal y_target to compute loss proxy
-
-**Backward pass (Heterodyne gradient):**
-1. Send phase-reversed probe beam through cavity (orthogonal to signal, or different frequency)
-2. Probe couples to weight modulator at sites of steepest gradient
-3. Scattered probe power ∝ ∂L/∂V (gradient of loss w.r.t. voltage)
-4. Demodulate scattered probe to extract ∂L/∂V
-
-**Weight update:**
-```
-V_{t+1} = V_t - α · ∂L/∂V_t
-```
-
-where α is optical learning rate (controlled by modulator gain).
-
-**Timescale:** Forward + backward ~2.6 µs; weight update every 1 µs per gradient step.
-
-**Convergence:** Unknown empirically. Literature (Hughes 2019, Shen et al. 2017) suggests waveguide-based gradients are differentiable and backprop-compatible. Your Phase 1 experiments will validate.
-
-## 11.4 Horizontal Parallelism & Sequence Length Scaling
-
-**Problem:** Single cavity has phase coherence budget B (e.g., 100 tokens before re-lock needed).
-
-**Solution:** N independent cavities in parallel, same input, broadcast loss signal.
-
-```
-[Input] → [Splitter 1→N] → [Cavity 1] [Cavity 2] ... [Cavity N]
-                                ↓
-                          [Output averager]
-                                ↓
-                           [Final y]
-```
-
-**Phase stability with ensemble:**
-- Each cavity drifts independently (different thermal/mechanical coupling)
-- Averaging output: y_final = (1/N) Σ_i y_i
-- Variance in phase drift reduces as √N (statistical averaging)
-- **Effective token budget:** B_eff ≈ B · √N
-
-Example: N=4 cavities, B=100 → B_eff ≈ 200 tokens before re-lock.
-
-**Model training in parallel:**
-- All cavities receive same loss gradient
-- Weight updates synchronized: V_i ← V_i - α · ∂L/∂V_i
-- No throughput penalty (still 75M tok/s per cavity)
-
-## 11.5 Ephemeral vs. Persistent Weights
-
-**Implication of transient V(t):**
-
-1. **No model persistence.** Turn off laser → weights zero. Device is "blank" until reinitialized.
-
-2. **Rapid model swap.** Store K different weight initializations as electrical bias presets:
-   ```
-   Model A: V_init_A = [0.5V, -0.3V, ..., 0.2V]
-   Model B: V_init_B = [0.1V, 0.7V, ..., -0.4V]
-   Switch: Load V_init_B in ~1 ms → cavity resonance shifts → weights update
-   ```
-   No hardware change. One device, K available models.
-
-3. **Rapid re-training.** Training epochs cycle at µs timescale. Convergence in hours instead of days.
-   ```
-   Convergence time ~ (1M params) × (1 µs/update) × (100 epochs) = 100 seconds
-   (Empirically: expect 1–10 hours with realistic learning curves)
-   ```
-
-4. **On-device adaptation.** If task distribution shifts, gradient descent adapts weights in situ.
-
-## 11.6 Training Stability & Regularization
-
-**Risk:** Learned Δn(t) may introduce birefringence, scattering, or mode coupling that degrades optical properties.
-
-**Mitigation:** Regularize the learned weights during gradient descent:
-```
-L_total = L_task + λ_smooth · ∫(∇²Δn)² dV + λ_sparse · Σ|V_i|
-```
-
-- L_task: standard token prediction loss
-- λ_smooth: penalty on refractive index curvature (preserve mode orthogonality)
-- λ_sparse: penalty on weight magnitude (reduce inserted losses)
-
-**Tuning:** λ_smooth, λ_sparse set empirically during Phase 1 training.
-
-## 11.7 Convergence Proof (Open)
-
-**Question:** Does heterodyne gradient descent on Δn(t) provably minimize digital loss L?
-
-**Status:** Not proven here. Empirical validation in Phase 1 is critical.
-
-**Relevant literature:**
-- Hughes et al. 2019: Waveguide backprop (RNN + reverse-mode AD on discretized wave eq.)
-- Shen et al. 2017: Optical neural networks with backprop (forward + reverse photon paths)
-- Claim: Heterodyne detection is equivalent to Hessian-weighted gradient (verify in lit dive)
-
-**Your task:** Find convergence bound or proof in literature. Expected outcome: O(1/√N_circ) convergence rate.
+**Status:** LOCKED 2026-04-26
+**Replaces:** ARCH-11 (2026-04-24) — "Ephemeral Weights & Photonic Gradient Descent"
+**Retraction rationale:** The prior ARCH-11 introduced a LiNbO3 MZM intra-cavity for Pockels weight modulation. This is physically disqualifying: at T=100 round trips, even 0.1 dB/pass insertion loss from the MZM accumulates to 10 dB per inference pass, consuming the entire SNR budget. The ephemeral weight model, voltage preset model swapping, and online gradient descent via heterodyne probe are all retracted. The correct architecture — in-situ two-wavelength holographic training — is formalized below.
 
 ---
 
-# 12. Horizontal Parallelism & Stability (ARCH-12)
+## 11.1 The Weight Translation Problem
 
-**Status:** LOCKED 2026-04-24
+Offline digital training (running the adjoint wave equation simulation on a GPU) computes an optimal Δn(x,y) for a *mathematical* cavity. The physical cavity differs from that model in ways that are small in absolute terms but large relative to λ=850nm. A length error of 1 µm is 1.2 wavelengths. Mirror flatness errors of λ/10 introduce 85nm of wavefront error. Internal stress gradients in the PTR blank produce local Δn variations not present in simulation. These deviations compound over T=100 round trips, completely scrambling the correspondence between simulated weights and the weights that actually produce the target computation in the physical device.
 
-## 12.1 Array Architecture
+**Weight translation is therefore not feasible.** Weights computed for a mathematical cavity do not transfer to any real cavity. Every physical cavity is unique at the scale that matters.
 
-N identical cavities, independent thermal/vibrational environment:
+**Consequence:** Training must be performed in-situ, using the actual physical forward pass as the model. The cavity's imperfections are automatically incorporated because the gradient is computed from measurements made through the real glass, not through a simulation of it.
 
-| Param | Value |
-|:---|:---|
-| Array size | N = 4 (baseline) |
-| Cavities per unit | 1 cavity per thermal cell |
-| Thermal coupling | Low (independent Peltier tuning per cavity) |
-| Optical coupling | Broadcast loss signal (1→N splitter, N→1 combiner) |
-| Output aggregation | Unweighted average (1/N Σ y_i) or learned weighted sum |
-
-## 12.2 Phase Stability via Ensemble Averaging
-
-**Single cavity phase drift over K tokens:**
-```
-φ(K) = ∫₀^K dφ/dt · dt ≈ ∫₀^K (thermal_drift + vibration) dt
-σ_φ(K) ~ √K · σ_per_token
-```
-
-**N-cavity ensemble phase drift:**
-```
-φ_ensemble(K) = (1/N) Σ φ_i(K)
-σ_φ_ensemble(K) = σ_φ(K) / √N    [by central limit theorem]
-```
-
-**Effective token budget:** If single cavity has budget B (before σ_φ > π/4 phase noise), ensemble has budget B · √N.
-
-Example: N=4, σ_per_token = 5 mrad/token, B = 100
-- Single cavity: σ_φ(100) = √100 × 5 mrad = 50 mrad ≈ π/64 (acceptable)
-- 4-cavity ensemble: σ_φ_ensemble(100) = 50/2 = 25 mrad (better margin)
-
-## 12.3 Training Dynamics in Parallel
-
-**Key:** All cavities synchronized to same loss gradient.
-
-**Gradient broadcast:**
-1. Sample token batch (1000 tokens per sec)
-2. Compute aggregate loss: L_agg = (1/N) Σ L_i
-3. Backprop: ∂L_agg/∂V_i for each cavity i
-4. Update: V_i ← V_i - α · ∂L_agg/∂V_i (all cavities simultaneously)
-
-**Convergence:** N cavities, same loss, same update rule → same final weights (up to initialization noise, which acts as ensemble regularization).
+This is not online learning. Training is a dedicated offline phase using the physical device. Inference is a separate phase with the write beam off. The two phases are temporally and physically distinct.
 
 ---
 
-# 13. Ephemeral Weights & Deployment (ARCH-13)
+## 11.2 Wavelength Separation: Why It Is the Only Clean Solution
 
-**Status:** LOCKED 2026-04-24
+Three separation schemes for write/read isolation were evaluated analytically.
 
-## 13.1 Weight Lifecycle
+**Temporal separation** (write phase then read phase, exploit slow grating decay) fails because the read beam at 850nm has a nonzero photorefractive cross-section σ_r in any material with nonzero optical response. Over millions of inference tokens, the grating degrades. The device has a finite operational lifetime set by optical fixing fatigue, and the problem cannot be eliminated — only slowed. Additionally, this scheme provides nothing over PTR UV exposure, since online weight updating is not a design requirement.
 
-```
-[Init] → [Warm-up] → [Adapt] → [Infer] → [Retrain] → [Adapt]
-   ↓         ↓         ↓         ↓         ↓         ↓
-V ~ 0   Loss eval   ∇L ↓V    Frozen V   New task   ∇L ↓V
-(1 ms) (sec)      (hours)   (hours+)   (ms)      (hours)
-```
-
-**Initialize:** V = V_init (electrical preset, ~0.5 s warm-up time)
-**Warm-up:** Run calibration tokens, collect loss statistics
-**Adapt:** Gradient descent on training set (1–10 hours, depends on model size)
-**Infer:** Run inference with frozen V (hours to days, no learning)
-**Retrain:** If task distribution shifts, repeat adapt phase
-
-## 13.2 Model Swapping Without Swapping
-
-**Problem (old):** Different models require different hardware or UV rewrites (hours).
-
-**Solution (new):** Store K model initializations as voltage presets.
+**Spatial mode separation** (write with TEM₀₁, read with TEM₀₀, exploit amplitude orthogonality) fails because amplitude orthogonality does not imply intensity orthogonality. The grating coupling coefficient is:
 
 ```
-Preset 1: V_A = [0.2V, -0.1V, +0.3V, ...]  (Model A: language)
-Preset 2: V_B = [0.7V, +0.4V, -0.2V, ...]  (Model B: vision)
-Preset 3: V_C = [0.0V, +0.0V, +0.0V, ...]  (Model C: control)
-
-Switch A↔B: Load V_B in DAC (< 1 ms) → cavity re-resonates → Model B active
+κ_{00,01} = (k/2n) · ∫∫ ψ*₀₀(x,y) · Δn₀₁(x,y) · ψ₀₀(x,y) dx dy
 ```
 
-**No hardware swap.** Electrically select from K pre-trained models in situ.
+where Δn₀₁(x,y) follows the TEM₀₁ intensity profile. Since TEM₀₀ intensity (Gaussian, no node) and TEM₀₁ intensity (double-lobed) have nonzero overlap integral, TEM₀₀ both reads from and erases the TEM₀₁-written grating. The mechanism that enables the computation (mode coupling via the grating) is identical to the mechanism that causes erasure. They cannot be separated.
 
-## 13.3 On-Device Rapid Re-training
+**Wavelength separation** (write at 532nm, read/infer at 850nm) is categorically different from both. In PTR glass, photosensitivity is determined by the absorption cross-section of the silver-cerium photosensitive complex, which peaks in the UV and falls to negligible levels by 532nm, and to effectively zero by 850nm. The grating integrity condition is:
 
-**Scenario:** Model drifts from distribution. Re-adapt in hours instead of weeks offline.
-
-**Gradient descent loop:**
 ```
-for epoch in range(100):
-    for batch in training_data:
-        forward(x_batch, V)           # 1.3 µs per token
-        loss = compute_loss_photonic()
-        grad = backward_probe()         # 1.3 µs
-        V = V - α * grad              # in-place update
-        
-    if epoch % 10 == 0:
-        validate_on_holdout()         # measure test loss
-        adjust_learning_rate(α)
+σ_r · I_r << σ_w · I_w
+σ_r(850nm) ≈ 0  →  condition satisfied for any I_r, independent of intensity
 ```
 
-**Timescale:** 1M parameter RNN × 100 epochs = 100M gradient steps at 1 µs each = 100 seconds of pure compute. Realistic wall-clock time: 1–10 hours (accounting for calibration, validation, I/O).
+This is not a rate argument or an overlap argument. It is a physics argument: photons at 850nm lack the energy to drive the photochemical process that creates or destroys the grating. The inference beam cannot erase the weights because the mechanism does not operate at that wavelength. This robustness is unconditional and does not degrade with operating time, intensity, or temperature within the PTR stability envelope.
+
+**Wavelength separation is locked as the isolation mechanism.**
+
+---
+
+## 11.3 The Pure-Glass Resonator
+
+The LiNbO3 MZM retraction has a further architectural consequence: the inference resonator now contains no active intra-cavity elements at all. The cavity consists of PTR glass with HR mirror coatings on both faces. During inference, the only beam present is 850nm. The optical path is:
+
+```
+VCSEL array (850nm, 512 modes)
+  → input face (HR coating, R=0.9990, ~0.1% transmission for input coupling)
+  → PTR glass (Δn(x,y) = trained weight grating, Kerr χ³ nonlinearity)
+  → output face (HR coating, ~10% transmission for output coupling)
+  → Si PIN detector array
+```
+
+Nothing inside the resonator except glass. No modulators, no electrodes, no alignment-sensitive elements in the optical path. Finesse is set entirely by mirror reflectivity and PTR glass transmission at 850nm, both of which are characterized and stable. EXP-6 (LiNbO3 MZM insertion loss) is **closed as no longer relevant** — the MZM has been removed from the design.
+
+---
+
+## 11.4 In-Situ Training Protocol
+
+Training uses the physical inference cavity as the forward model, with a 532nm write beam added at the input face during the training phase only. The write port is a second input aperture on the mechanical housing, capped during inference.
+
+**Forward pass (850nm):** Inject training input x as spatial mode amplitudes via the VCSEL array. Circulate T=100 round trips. Measure output y via the Si PIN detector array. Compute loss L = ‖y − y_target‖².
+
+**Gradient computation:** The adjoint method (Hughes et al. 2018) computes ∂L/∂Δn(x,y) — the required change to the refractive index distribution to reduce the loss. This computation runs digitally on a host machine, using the measured forward pass output as the boundary condition. The cavity's physical imperfections are implicitly captured because the forward pass is measured through the real glass.
+
+**Weight update (532nm):** The gradient ∂L/∂Δn(x,y) is encoded as a spatial amplitude and phase pattern on the 532nm write beam. This pattern is injected into the cavity via the write port. The 532nm beam interferes with itself inside the glass (or in single-pass configuration, with a counter-propagating reference beam) to produce an intensity pattern that drives a photorefractive index increment precisely matching the computed gradient step:
+
+```
+Δn(x,y) ← Δn(x,y) + η · ∂L/∂Δn(x,y)
+```
+
+where η is the learning rate, set by the 532nm exposure dose. PTR glass is photosensitive at 532nm (the silver-cerium complex absorbs at this wavelength with sufficient cross-section to drive measurable Δn changes at accessible intensities — exact rate subject to EXP-3 validation). The 850nm beam is off during the write step. The write step does not require the cavity to be resonant at 532nm; single-pass write is adequate since resonant enhancement is not required for grating buildup — it merely sets the exposure time.
+
+**Thermal development:** After accumulating sufficient gradient steps (typically one epoch of training data), the PTR glass is removed from the cavity and thermally developed (500°C, ~30 minutes in a furnace). Development converts the latent photorefractive exposure into permanent crystallographic index modulation — the grating becomes structural, not optical. Previously-developed grating components are unaffected by subsequent write cycles, so development can be iterative. The glass is then reinstalled in the cavity.
+
+**Iteration:** After reinstallation, the forward pass is remeasured and the residual loss is evaluated. If loss is above target, another write-develop cycle is performed. Convergence is expected in 3–5 cycles because each cycle starts from the previously-fixed grating and makes physically-grounded incremental corrections rather than restarting from scratch.
+
+**Training timeline estimate (per layer):**
+
+| Step | Duration | Notes |
+|:---|:---|:---|
+| One write epoch (exposure) | ~1 hour | Depends on 532nm power and target Δn magnitude; EXP-3 |
+| Thermal development | 30 min | Batch-processable across all 24 layers simultaneously |
+| Reinstall + evaluate | 15 min | Cavity realignment negligible if kinematic mount used |
+| Cycles to convergence | 3–5 | Empirical estimate; EXP-7 validates |
+| **Total per layer** | **~1 day** | Sequential; parallelizable with multiple write setups |
+| **Total, 24 layers parallel** | **~1 day** | One furnace batch, 24 simultaneous write stations |
+
+---
+
+## 11.5 Grating Stability During Inference
+
+After thermal development, the grating is permanent in the sense that 850nm photons cannot interact with the silver-cerium complex (it has already reacted during the write and development phases). The grating mechanism has been converted from photochemical to crystallographic. Glebov et al. have demonstrated PTR grating stability over decade-plus timescales with no measurable diffraction efficiency change. The 850nm inference beam, at 2-3W intra-cavity, does not threaten the grating.
+
+The only stability risk during inference is thermal drift of the *effective* optical path length — a dynamic, reversible effect that shifts the cavity resonance frequency without altering the grating. This is already addressed by the VCSEL PID frequency lock (ARCH-9) and flagged for experimental validation as EXP-4. It is not a grating integrity concern.
+
+---
+
+## 11.6 Model Update Workflow
+
+When a model update is required (new fine-tune, new base model, or distribution shift requiring retraining), the workflow is:
+
+Run the adjoint simulation digitally to produce updated target Δn_k(x,y) patterns for each of the 24 layers, initialized from the existing grating state (not from zero) to reduce the number of write-develop cycles needed. Write and develop 24 new PTR plates. Swap the plates into the device. Resume inference. The mechanical housing uses a kinematic mount for each plate so reinstallation is repeatable without realignment. Model update cadence is expected to be on the scale of weeks to months for a deployed LLM inference device, making the day-scale training time fully acceptable.
+
+---
+
+## 11.7 Open Experiments
+
+**EXP-7 (HIGH):** In-situ training convergence rate. Train a small holographic RNN (rank-10, single layer) using the two-wavelength iterative protocol. Measure loss vs. write-develop cycle number. Target: convergence to within 2% of digital baseline in ≤5 cycles. If convergence is slower, characterize the dominant error source (gradient encoding fidelity vs. thermal development precision vs. cavity reinstallation error).
+
+EXP-1 (PTR χ³ at 850nm), EXP-2 (two-wavelength photosensitivity), EXP-3 (grating growth rate at 532nm), EXP-4 (thermal lensing dn/dT), and EXP-5 (homodyne phase-lock stability) remain open and are unaffected by this revision.
+
+---
+
+# 12. Deployment Architecture (ARCH-12, revised)
+
+**Status:** LOCKED 2026-04-26
+**Replaces:** ARCH-12 (2026-04-24) — "Horizontal Parallelism & Stability"
+**Retraction rationale:** Prior ARCH-12 was motivated primarily by online learning dynamics (ensemble averaging to extend phase coherence budget during concurrent training and inference). With offline training, that motivation is gone. Phase stability during pure inference is a simpler problem and does not require ensemble cavity arrays as a primary architectural element. Revised ARCH-12 covers the inference-phase deployment model.
+
+---
+
+## 12.1 Inference Phase Architecture
+
+During inference, the device operates as a pure 850nm system. The 532nm write port is physically capped. No training, no gradient computation, no weight updates occur. The only active electronics are the VCSEL driver array (input), the Si PIN TIA readout array (output), and the VCSEL PID frequency lock (cavity resonance stabilization).
+
+The phase stability budget is set by single-cavity thermal and vibrational drift, corrected by the PID lock. For a well-isolated cavity (passive vibration isolation mount, Peltier thermal stabilization), σ_per_token is expected to be in the range of 1–5 mrad/token. At σ = 5 mrad/token, the single-cavity phase budget before σ_φ > π/4 is reached is:
+
+```
+B = (π/4)² / σ²_per_token = (785 mrad)² / (5 mrad)² ≈ 24,600 tokens
+```
+
+This is more than adequate for LLM inference sequence lengths (typically 2K–128K tokens). Multi-cavity ensemble averaging is therefore not required as a baseline design element. It remains available as a scaling option if longer context windows or higher phase precision are needed, but it is not in the primary architecture.
+
+## 12.2 Glass Swap as Model Update
+
+Model updating is glass swapping. The device chassis is permanent hardware. The PTR glass plates are consumable/updatable elements, physically small (10×10×0.5mm), low cost (~$10–50 per blank), and replaceable in minutes using kinematic mounts. This is a simpler and more reliable model-update mechanism than the voltage preset system it replaces: no DAC drift, no register state, no power-on initialization. The weights are in the glass; as long as the glass is in the cavity, the model is loaded.
+
+---
+
+# 13. Training Infrastructure (ARCH-13, revised)
+
+**Status:** LOCKED 2026-04-26
+**Replaces:** ARCH-13 (2026-04-24) — "Ephemeral Weights & Deployment"
+**Retraction rationale:** Prior ARCH-13 described a deployment model predicated on ephemeral voltage-controlled weights. That model is retracted with ARCH-11.
+
+---
+
+## 13.1 Write Station Architecture
+
+The write station is a separate optical instrument used during the training phase. It consists of a 532nm CW laser (Nd:YAG SHG, ~100mW), a spatial light modulator or holographic beam shaper for encoding the gradient pattern, a precision kinematic stage holding the PTR glass plate, and a reference beam path for interferometric write. The write station couples to the inference cavity via the write port aperture on the mechanical housing, or the glass plate can be removed and written in a standalone holographic bench for higher spatial precision.
+
+The write station does not need to be co-located with the inference device during deployment. Training happens at a write facility; the finished glass plates are shipped and installed. For a device deployed in the field, a model update is operationally equivalent to receiving a small package of glass cards.
+
+## 13.2 Adjoint Simulation Infrastructure
+
+The gradient computation (∂L/∂Δn(x,y) for each layer) runs on conventional digital hardware — a GPU cluster running the differentiable wave equation model. The simulation does not need to accurately model the physical cavity geometry (that's precisely the problem ARCH-11 solves by using in-situ measurement). Instead, the simulation provides the gradient *direction* — which regions of Δn to increase or decrease — and the in-situ measurement provides the ground truth on whether the update improved the forward pass. The simulation and physical measurement are coupled in a closed loop: simulate → write → measure → compare → update simulation parameters → repeat.
+
+Over multiple training cycles, the simulation parameters are progressively refined to match the physical cavity. By the final write cycle, the simulation is an accurate surrogate for the physical device, which could in principle be used to compute weight updates without further in-situ measurement. This is a form of system identification, and it is a natural byproduct of the iterative training protocol.
+
+## 13.3 Revised Weight Lifecycle
+
+```
+[Write] → [Develop] → [Install] → [Infer] → [Update?] → [Write]
+   ↓           ↓           ↓          ↓           ↓          ↓
+532nm      500°C oven   kinematic  850nm only   new model  532nm
+exposure   30 min       mount      T=100 RT     needed?    exposure
+~1hr/layer  batch 24    minutes    indefinite   months     ~1hr/layer
+```
+
+No voltage initialization. No warm-up calibration. No gradient descent during inference. The device is ready to serve tokens the moment the 850nm laser is on and the cavity is locked.
 
 ---
 
@@ -999,9 +926,9 @@ for epoch in range(100):
 | 8 | Inference latency | ✓ LOCKED | 13 ns/round trip, 1–100 iterations |
 | 9 | Scaling (thermal) | ✓ LOCKED | PID lock, ±5 mrad/hour drift |
 | 10 | Economics | ✓ LOCKED | $1.2k Phase 1, 12 weeks prod |
-| **11** | **Learning (ephemeral)** | **✓ LOCKED** | **Pockels + backprop, µs updates** |
-| **12** | **Parallelism** | **✓ LOCKED** | **N cavities, √N phase budget gain** |
-| **13** | **Deployment** | **✓ LOCKED** | **Model swap <1ms, retrain in hours** |
+| **11** | **In-situ training** | **✓ LOCKED (revised 2026-04-26)** | **Two-wavelength: 532nm write, 850nm infer. Pure-glass resonator. Iterative write-develop cycles. No MZM.** |
+| **12** | **Deployment** | **✓ LOCKED (revised 2026-04-26)** | **Glass swap = model update. Single cavity sufficient for LLM context lengths. Kinematic mount.** |
+| **13** | **Training infrastructure** | **✓ LOCKED (revised 2026-04-26)** | **Write station + adjoint simulation. System identification loop. ~1 day per model update.** |
 
 
 ---
@@ -1152,7 +1079,7 @@ L_digital = Σ_i ||y_pred_i - y_target_i||²    [standard cross-entropy or MSE]
 |:---|:---|:---|
 | 1–5 | Physics, geometry, encoding, throughput, noise | ✓ PROVEN |
 | 6–10 | Holography, inference, scaling, economics | ✓ LOCKED |
-| **11–13** | **Ephemeral weights, parallelism, deployment** | **✓ LOCKED** |
+| **11–13** | **In-situ training, deployment, write infrastructure** | **✓ LOCKED (revised 2026-04-26)** |
 | **14–15** | **Convergence proof, loss landscape** | **✓ LOCKED** |
 
 **Foundation:** Hughes et al. 2018 (adjoint backprop), Pai et al. 2023 (experimental in situ backprop, 94% MNIST).
