@@ -1,0 +1,5 @@
+# Proxy /abolish-lawns/* to the abolish-lawns Cloudflare Pages deployment
+# The :splat captures everything after /abolish-lawns/
+# Status 200 = proxy rewrite (URL stays jason-edelman.org/abolish-lawns/...)
+/abolish-lawns/* https://abolish-lawns.pages.dev/:splat 200
+/abolish-lawns https://abolish-lawns.pages.dev/ 200
