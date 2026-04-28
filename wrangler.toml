@@ -1,0 +1,13 @@
+name = "jason-edelman-org"
+compatibility_date = "2026-04-28"
+account_id = "543fde7feabd0af945bfae926ceea7ad"
+
+# public/ is the assets root. Structure:
+#   public/index.html          → jason-edelman.org/
+#   public/style.css           → jason-edelman.org/style.css
+#   public/dev-journal/        → jason-edelman.org/dev-journal/
+#   public/abolish-lawns/      → jason-edelman.org/abolish-lawns/ (SvelteKit build output)
+#   public/.well-known/        → jason-edelman.org/.well-known/
+[assets]
+directory = "public"
+not_found_handling = "404-page"
