@@ -80,7 +80,7 @@ def assemble() -> str:
     perf = run_analysis("performance_update.py", "--output", "table")
 
     doc = f"""---
-title: "Quantum Resonator Inference"
+title: "Optical Resonator Inference"
 subtitle: "System Design Document"
 author: "Jason Edelman"
 date: "{TODAY}"
@@ -94,7 +94,7 @@ numbersections: true
 
 \\newpage
 
-# Quantum Resonator Inference: System Design Document
+# Optical Resonator Inference: System Design Document
 
 **Generated:** {TODAY}
 **Status:** ARCH-1 through ARCH-17 LOCKED. Experimental validation phase.

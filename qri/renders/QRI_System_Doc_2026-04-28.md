@@ -1,5 +1,5 @@
 ---
-title: "Quantum Resonator Inference"
+title: "Optical Resonator Inference"
 subtitle: "System Design Document"
 author: "Jason Edelman"
 date: "2026-04-28"
@@ -13,7 +13,7 @@ numbersections: true
 
 \newpage
 
-# Quantum Resonator Inference: System Design Document
+# Optical Resonator Inference: System Design Document
 
 **Generated:** 2026-04-28
 **Status:** ARCH-1 through ARCH-17 LOCKED. Experimental validation phase.
@@ -21,7 +21,7 @@ numbersections: true
 
 ---
 
-# Quantum Resonator Inference — Architecture Specification
+# Optical Resonator Inference — Architecture Specification
 
 **Status:** ARCH-1 through ARCH-17 LOCKED
 **Last revised:** 2026-04-26

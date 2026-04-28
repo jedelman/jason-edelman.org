@@ -1,4 +1,4 @@
-# Quantum Resonator Inference — System Documentation
+# Optical Resonator Inference — System Documentation
 
 *Generated: 2026-04-28*
 
@@ -6,7 +6,7 @@
 
 ## Architecture
 
-# Quantum Resonator Inference — Architecture Specification
+# Optical Resonator Inference — Architecture Specification
 
 **Status:** ARCH-1 through ARCH-17 LOCKED
 **Last revised:** 2026-04-26

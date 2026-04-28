@@ -1,4 +1,4 @@
-# Quantum Resonator Inference (QRI)
+# Optical Resonator Inference (ORI)
 
 **Coherent all-optical resonator that learns and executes token inference from first principles.**
 

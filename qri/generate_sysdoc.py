@@ -52,7 +52,7 @@ def validate_parameters(params: dict) -> list[str]:
 
 def assemble_sysdoc(props: dict, params: dict) -> str:
     """Render a markdown system document from repo artifacts."""
-    doc = f"""# Quantum Resonator Inference — System Documentation
+    doc = f"""# Optical Resonator Inference — System Documentation
 
 *Generated: {date.today().isoformat()}*
 

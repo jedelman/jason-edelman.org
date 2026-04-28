@@ -9,7 +9,7 @@
 
 ## Title (options, ranked)
 
-1. **Quantum Resonator Inference: An All-Optical Wave RNN for Token-Level Language Model Inference**
+1. **Optical Resonator Inference: An All-Optical Wave RNN for Token-Level Language Model Inference**
 2. **Optical Recurrent Inference via Holographic Fabry-Perot Resonators**
 3. **Wave RNN in Glass: A Coherent Optical Architecture for SSM-Class Token Inference**
 
@@ -19,7 +19,7 @@ Recommendation: Option 2. Descriptive, avoids "quantum" (which implies quantum m
 
 ## Abstract (draft)
 
-We present Quantum Resonator Inference (QRI), a theoretical architecture for executing recurrent neural network inference entirely in the optical domain using coherent Fabry-Perot resonators. Drawing on the formal equivalence between the discretized scalar wave equation and an RNN hidden state update (Hughes et al. 2019), and the established capacity of holographic gratings to implement matrix-vector multiplication (Psaltis et al. 1990), we derive a system in which: (1) token embeddings are encoded as spatial mode amplitudes at 850nm; (2) holographic gratings in photo-thermo-refractive (PTR) glass implement learned weight matrices; (3) activation is provided by VCSEL threshold nonlinearity (ReLU on intensity) at inter-layer boundaries; and (4) in-situ training proceeds via two-wavelength holographic exposure at 532nm without disrupting the 850nm inference path. We derive the system's hidden state capacity (12,288 real values at 40dB SNR for 512 modes, 24 layers), characterize it as sub-Mamba-130M class, and identify a clear scaling roadmap to Mamba-3B-equivalent state via VCSEL array densification within the same optical aperture. Full transformer-class inference (O(N) attention state) is identified as a fundamental barrier not addressable by O(1) optical state. We propose a hybrid architecture combining QRI's optical recurrence with digital sparse attention as a near-term path to transformer-approximate quality. Experimental validation (EXP-7: in-situ training convergence) is identified as the next milestone.
+We present Optical Resonator Inference (ORI), a theoretical architecture for executing recurrent neural network inference entirely in the optical domain using coherent Fabry-Perot resonators. Drawing on the formal equivalence between the discretized scalar wave equation and an RNN hidden state update (Hughes et al. 2019), and the established capacity of holographic gratings to implement matrix-vector multiplication (Psaltis et al. 1990), we derive a system in which: (1) token embeddings are encoded as spatial mode amplitudes at 850nm; (2) holographic gratings in photo-thermo-refractive (PTR) glass implement learned weight matrices; (3) activation is provided by VCSEL threshold nonlinearity (ReLU on intensity) at inter-layer boundaries; and (4) in-situ training proceeds via two-wavelength holographic exposure at 532nm without disrupting the 850nm inference path. We derive the system's hidden state capacity (12,288 real values at 40dB SNR for 512 modes, 24 layers), characterize it as sub-Mamba-130M class, and identify a clear scaling roadmap to Mamba-3B-equivalent state via VCSEL array densification within the same optical aperture. Full transformer-class inference (O(N) attention state) is identified as a fundamental barrier not addressable by O(1) optical state. We propose a hybrid architecture combining QRI's optical recurrence with digital sparse attention as a near-term path to transformer-approximate quality. Experimental validation (EXP-7: in-situ training convergence) is identified as the next milestone.
 
 ---
 
@@ -175,6 +175,6 @@ No new research required. All source material is in the repo.
 
 ## What to Do With the Title
 
-"Quantum Resonator Inference" is a good project name but a risky paper title. "Quantum" in a photonics paper implies quantum mechanics (entanglement, superposition). We're doing classical coherent optics. A reviewer seeing "quantum" will look for qubits and find none — this is a distraction.
+"Optical Resonator Inference" is a good project name but a risky paper title. "Quantum" in a photonics paper implies quantum mechanics (entanglement, superposition). We're doing classical coherent optics. A reviewer seeing "quantum" will look for qubits and find none — this is a distraction.
 
 Recommendation: use "QRI" as an acronym in the paper, explain it stands for the project name, but lead the title with a descriptive phrase. Option 2 above ("Optical Recurrent Inference via Holographic Fabry-Perot Resonators") is clean, accurate, and searchable.
