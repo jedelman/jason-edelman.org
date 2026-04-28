@@ -83,6 +83,33 @@
 				</div>
 			</div>
 
+
+			<div class="zine-item">
+				<div class="zine-item__meta">
+					<span class="zine-item__number">No. 03</span>
+					<span class="zine-item__year">2025</span>
+				</div>
+				<div class="zine-item__body">
+					<h2 class="zine-item__title">Your Lawn Uses More Water Than AI</h2>
+					<p class="zine-item__desc">
+						For environmentalists already writing their senators about data centers.
+						US lawns consume 170 times more water than all US data centers combined.
+						Your anger is correct. Here is where to aim it.
+					</p>
+					<div class="zine-item__actions">
+						<a class="btn btn--primary" href="{base}/zines/abolish-lawns-zine-03.pdf" download>
+							↓ Download PDF
+						</a>
+						<a class="btn btn--ghost" href="{base}/zines/abolish-lawns-zine-03.pdf" target="_blank">
+							Preview →
+						</a>
+					</div>
+					<p class="zine-item__print">
+						For climate meetings, water board hearings, environmental orgs.
+						Leave at your Sierra Club chapter table. Free to reproduce.
+					</p>
+				</div>
+			</div>
 		</div>
 
 		<div class="coming-soon">
