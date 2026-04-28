@@ -19,7 +19,28 @@ Recommendation: Option 2. Descriptive, avoids "quantum" (which implies quantum m
 
 ## Abstract (draft)
 
-We present Optical Resonator Inference (ORI), a theoretical architecture for executing recurrent neural network inference entirely in the optical domain using coherent Fabry-Perot resonators. Drawing on the formal equivalence between the discretized scalar wave equation and an RNN hidden state update (Hughes et al. 2019), and the established capacity of holographic gratings to implement matrix-vector multiplication (Psaltis et al. 1990), we derive a system in which: (1) token embeddings are encoded as spatial mode amplitudes at 850nm; (2) holographic gratings in photo-thermo-refractive (PTR) glass implement learned weight matrices; (3) activation is provided by VCSEL threshold nonlinearity (ReLU on intensity) at inter-layer boundaries; and (4) in-situ training proceeds via two-wavelength holographic exposure at 532nm without disrupting the 850nm inference path. We derive the system's hidden state capacity (12,288 real values at 40dB SNR for 512 modes, 24 layers), characterize it as sub-Mamba-130M class, and identify a clear scaling roadmap to Mamba-3B-equivalent state via VCSEL array densification within the same optical aperture. Full transformer-class inference (O(N) attention state) is identified as a fundamental barrier not addressable by O(1) optical state. We propose a hybrid architecture combining QRI's optical recurrence with digital sparse attention as a near-term path to transformer-approximate quality. Experimental validation (EXP-7: in-situ training convergence) is identified as the next milestone.
+We present Optical Resonator Inference (ORI), a theoretical architecture for executing recurrent
+neural network inference entirely in the optical domain using coherent Fabry-Perot resonators.
+Drawing on the formal equivalence between the discretized scalar wave equation and an RNN hidden
+state update (Hughes et al. 2019), and the established capacity of holographic gratings to
+implement matrix-vector multiplication (Psaltis et al. 1990), we derive a system in which:
+(1) token embeddings are encoded as spatial mode amplitudes at 850 nm via split-positive
+differential encoding, resolving the sign constraint imposed by non-negative optical power;
+(2) holographic gratings in photo-thermo-refractive (PTR) glass implement learned weight matrices
+as angularly multiplexed rank-50 grating components, with an exact correspondence between grating
+rank and weight matrix rank derived from coupled-mode theory; (3) activation is provided by VCSEL
+threshold nonlinearity (ReLU on intensity) at inter-layer boundaries; and (4) in-situ training
+proceeds via two-wavelength holographic exposure at 532 nm without disrupting the 850 nm inference
+path. We show that the resonator computes the T-th power of the round-trip operator — a depth-T
+weight-tied RNN — not a single matrix-vector multiply, and that T = 100 is derived from the
+intersection of the coherence requirement and the SNR budget. We derive the system's hidden state
+capacity (12,288 real values at 40 dB SNR for 512 modes, 24 layers, 1.254M parameters),
+characterize it as sub-Mamba-130M class, and identify a clear scaling roadmap to Mamba-3B-equivalent
+state via VCSEL array densification within the same optical aperture. Full transformer-class
+inference (O(N) attention state) is identified as a fundamental barrier not addressable by O(1)
+optical state. We propose a hybrid architecture combining ORI's optical recurrence with digital
+sparse attention as a near-term path to transformer-approximate quality. Experimental validation
+(EXP-7: in-situ training convergence) is identified as the next milestone.
 
 ---
 
@@ -72,33 +93,79 @@ Mamba (Gu 2023), RWKV (Peng 2023), and linear attention (Katharopoulos 2020) ach
 
 ### 3. Theoretical Foundation (1.5 pages)
 
-**3.1 Wave equation → RNN**
-Reproduce Hughes 2019 derivation in 10 lines. Identify: hidden state h_t = [u_t, u_{t-1}], weight matrix A from Laplacian on c(x,y), input injection P^(i), output readout P^(o). Nonlinearity = intensity detection y_t = |h_t|².
+**Source:** `docs/theory_derivations.md` §1–§3. All derivations are formalized there; this section
+is a condensed extract for the paper.
 
-**3.2 From scalar wave to multimode resonator**
-Extend Hughes 2019 (scalar, 1D) to: multimode Fabry-Perot, vector hidden state (512 Hermite-Gaussian modes), holographic MVM via Δn(x,y) grating. Key extension: mode structure maps token embedding dimensions to spatial eigenmodes.
+**3.1 Wave equation → RNN (theory_derivations.md §1.1–§1.2)**
+Reproduce Hughes 2019 derivation in 10 lines. Scalar wave equation discretized in time → exact
+RNN update h_{t+1} = A(n)·h_t + B·f_t, y_t = |P^(o)·h_t|². State transition operator A(n) given
+by eq. (1.5) in theory_derivations.md. Mapping is exact at the level of Maxwell's equations, not
+an approximation. Trainable parameter: refractive index distribution n(x,y).
 
-**3.3 Holographic MVM**
-Psaltis 1990 synthesis: Δn(x,y) = Σ_k a_k cos(K_k · r) (superposition of gratings at different angles). Each grating implements one outer product row. Rank-50 factorization W = U·Vᵀ stored as 50 angular-multiplexed gratings.
+**3.2 The Fabry-Perot as a weight-tied RNN of depth T (theory_derivations.md §1.3–§1.5)**
+Key extension beyond Hughes 2019: the resonator computes M^T (the T-th power of the round-trip
+operator), not a single MVM. This is a weight-tied RNN unrolled for T=100 steps. Stability is
+guaranteed by mirror loss (contractivity, eq. 1.10). T=100 is derived from the intersection of
+the coherence constraint (T << T_coh = 750) and the SNR budget (T ≤ 460 from accumulated mirror
+loss, tightened to T ≈ 100–130 when mode-dependent diffraction loss is included).
+
+**3.3 Holographic MVM: the coupling tensor (theory_derivations.md §2)**
+Coupled-mode derivation of κ_{ij}^(k) — the coupling coefficient from mode j to mode i per round
+trip due to grating component k (eq. 2.9). The full coupling matrix K(Δn) (eq. 2.10) is the
+spatial overlap of output mode, grating, and input mode. Round-trip operator M = √R (I + i·K(Δn))
+(eq. 2.11). Rank-r factorization W = U·Vᵀ stored as r angularly multiplexed gratings — exact
+correspondence, no approximation (eq. 2.15–2.16). Angular multiplexing capacity ~3,249 components
+in 2D; rank-50 uses <2% (eq. 2.18).
+
+**3.4 Computational basis: field amplitude vs. intensity (theory_derivations.md §3)**
+Intra-layer computation is on complex field amplitudes (linear map M^T over C^N). The detector
+performs the squaring (eq. 3.4–3.5), collapsing to non-negative real intensities. Cross terms from
+coherent interference between modes vanish when the detector array is mode-matched (pixel pitch ≤
+mode pitch = 50 µm — a design requirement, eq. 3.6). In the incoherent limit (random VCSEL phases),
+output intensity is exactly a linear MVM on input intensities: P_j^(T) = Σ_i W_{ji} P_i^(0) with
+W_{ji} = |[M^T]_{ji}|² (eq. 3.11). In-situ training handles the coherent case automatically via
+real physical measurements.
 
 ---
 
 ### 4. System Architecture (3 pages)
 
 **4.1 Overview**
-Block diagram. Signal flow: VCSEL array → PTR glass resonator (T=100 round trips) → Si PIN detector → VCSEL driver (ReLU activation) → next layer. 24 layers.
+Block diagram. Signal flow: VCSEL array → PTR glass resonator (T=100 round trips) → Si PIN
+detector → VCSEL driver (ReLU activation) → next layer. 24 layers. Complete per-layer computation
+given by the chain in theory_derivations.md §5 (eqs. 5.1–5.5).
 
-**4.2 Resonator design**
-Confocal Fabry-Perot, L=20mm, R=0.9990, Finesse=3140, T_op=100. Key derivations: coherence requirement (T_op << T_coh = 750), mode capacity (N_max = π/4 × F² ≈ 6,635 at 2.5mm aperture), SNR budget (40dB shot-noise limited, 2dB margin over 6-bit requirement).
+**4.2 Input encoding: differential encoding for signed embeddings (theory_derivations.md §4)**
+Transformer embeddings are signed (x_i ∈ ℝ). VCSELs produce non-negative power. Resolution:
+split-positive differential encoding — each component x_i = x_i⁺ − x_i⁻ encoded on two modes
+ψ_i⁺ and ψ_i⁻ (eq. 4.1–4.3). Output reconstructed as y_j = I_j⁺ − I_j⁻ (eq. 4.4). Negative
+channels are only needed at the input layer (layer 1); after the first ReLU all activations are
+non-negative and no negative channels are needed (eq. 4.5). Input VCSEL array: 1024 emitters in
+32×32 grid at 50 µm pitch (1.6×1.6mm, well within 2.5mm aperture). Total parameter count: 1.254M
+(updated from 1.23M, eq. 4.7).
 
-**4.3 Activation function**
-Full signal chain derivation: I_photo = R·P_k, V_TIA = R_f·I_photo (R_f = 667Ω), I_drive = g·V_TIA, P_out = η_s·max(0, I_drive − I_th). Result: ReLU on intensity P_out = A²·max(0, P_in − θ). A²=1.2, θ=0.5mW. Prove nonlinearity. Prove universal approximation. Note: Kerr SPM evaluated and rejected (φ_NL ~ 10⁻¹⁵ rad/pass at operating intensity — negligible).
+**4.3 Resonator design**
+Confocal Fabry-Perot, L=20mm, R=0.9990, Finesse=3140, T_op=100. Key derivations: coherence
+requirement (T_op << T_coh = 750), mode capacity (N_max ≈ 6,635 at 2.5mm aperture), SNR budget
+(40dB shot-noise limited, 2dB margin over 6-bit requirement at T=100). Mode-dependent diffraction
+loss negligible for all 512 addressed modes (theory_derivations.md §2.5, eq. 2.12).
 
-**4.4 Training protocol**
-Two-wavelength separation (850nm inference, 532nm write). Hebbian grating exposure. Adjoint gradient computation. Batch accumulation (eliminates holographic crosstalk). Clone-and-fine-tune scaling.
+**4.4 Activation function**
+Full signal chain derivation: I_photo = ℛ·P_k, V_TIA = R_f·I_photo (R_f = 667Ω), I_drive = g·V_TIA,
+P_out = η_s·max(0, I_drive − I_th). Result: ReLU on intensity P_out = A²·max(0, P_in − θ). A²=1.2,
+θ=0.5mW. Prove nonlinearity (fails homogeneity). Prove universal approximation (Hornik 1991;
+Leshno 1993). Note: Kerr SPM evaluated and rejected (φ_NL ~ 10⁻¹⁵ rad/pass at operating
+intensity — negligible by 15 orders of magnitude).
 
-**4.5 Throughput and latency**
-τ = 133ps round-trip, T_op = 100 → 13.3ns per layer. 24 layers → 320ns per token. Token rate = 75M tok/s. Bandwidth comparison to GPU.
+**4.5 Training protocol**
+Two-wavelength separation (850nm inference, 532nm write). Adjoint gradient computation (in-situ,
+physical device as forward model). Batch accumulation before each write (eliminates holographic
+crosstalk). Thermal development per epoch (500°C, 30 min, crystallographic Δn). Clone-and-fine-tune
+scaling. See also open assumption A5 (kinematic mount precision) in theory_derivations.md §6.
+
+**4.6 Throughput and latency**
+τ = 133ps round-trip, T_op = 100 → 13.3ns per layer. 24 layers → 320ns per token. Token rate =
+75M tok/s. Bandwidth comparison to GPU.
 
 ---
 
@@ -158,18 +225,24 @@ Core: Hughes 2019, Psaltis 1990, Lin 2018, Shen 2017, Feldmann 2019/2021, Xu 202
 
 | Section | Status | Effort |
 |:---|:---|:---|
-| Abstract | Draft above | 30 min polish |
+| Abstract | Updated draft above | 30 min polish |
 | Introduction | Outline ready | 2 hours |
 | Background / Related Work | All citations reviewed | 2 hours |
-| Theoretical Foundation | In architecture.md | 1 hour extraction |
-| System Architecture | In architecture.md | 2 hours condensation |
+| Theoretical Foundation | **Fully derived in docs/theory_derivations.md** | 1 hour extraction + LaTeX |
+| System Architecture | architecture.md + theory_derivations.md §4–§5 | 2 hours condensation |
 | State Capacity / Scaling | In docs/state_scaling_analysis.md | 1 hour extraction |
 | Competitive Analysis | In citations/ + this doc | 1 hour |
 | Experimental Path | In TASKS.md | 30 min |
 | Conclusion | Follows from above | 30 min |
 | **Total** | | **~10 hours writing** |
 
-No new research required. All source material is in the repo.
+**Theory status (as of 2026-04-28):** All four critical theory gaps resolved and formalized in
+`docs/theory_derivations.md`. The document contains LaTeX-ready equations (1.1)–(5.5) covering
+the wave equation → RNN derivation (§1), the coupled-mode coupling tensor and grating-to-operator
+mapping (§2), the field-vs-intensity computational basis with mode-matching design requirement (§3),
+and differential encoding for signed embeddings (§4). Six open assumptions are catalogued in §6
+with explicit experimental or engineering validation requirements. The Methods section can now be
+written directly from this source. No new theory research required.
 
 ---
 

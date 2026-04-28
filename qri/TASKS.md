@@ -58,6 +58,7 @@ These decisions are LOCKED in architecture.md. These tasks are formal derivation
 - [ ] EXP-5 (MED): Homodyne phase-lock stability — VCSEL PID lock over 1-hour inference run. Blocks ARCH-12 phase budget.
 - [x] EXP-6 (CLOSED 2026-04-26): LiNbO₃ MZM insertion loss — CLOSED. MZM removed from design.
 - [ ] EXP-7 (HIGH): In-situ training convergence. Phase A: rank-10, single layer, ≤5 write-develop cycles to 2% of digital baseline. Phase B: clone-and-fine-tune (unit 01 → unit 02, ≤2 cycles). Blocks ARCH-17 validation.
+- [ ] EXP-8 (HIGH): Kinematic mount reinstallation precision. Requirement: repeatability << λ/4 = 212nm. Standard kinematic mounts achieve ~1µm — 5× worse than needed. Must characterize actual positional error and determine whether (a) training protocol can absorb this error by treating reinstalled cavity as new forward model, or (b) active cavity locking is required to recover phase reference between write-develop cycles. Blocks ARCH-11 iterative training protocol. Flagged in docs/theory_derivations.md §6 as open assumption A5.
 
 ---
 
@@ -79,12 +80,14 @@ These decisions are LOCKED in architecture.md. These tasks are formal derivation
 - [x] Activation function: ReLU on intensity, proven nonlinear, universal approximation
 - [x] Economic analysis: 5-year TCO vs. GPU
 - [x] System doc: auto-generated PDF from current sources
+- [x] Theory derivations: all four critical gaps resolved — round-trip operator, coupling tensor κ_{ij}, field/intensity basis, differential encoding (docs/theory_derivations.md)
 
 ### Needs work before preprint (no lab)
-- [ ] ARCH-2 through ARCH-8 formal derivation docs (methods section material)
+- [ ] ARCH-2 through ARCH-8 formal derivation docs (methods section material) — partially covered by theory_derivations.md, needs integration
 - [ ] Related work section: differentiation table vs. D²NN, MZI, PCM, reservoir, Taichi
 - [ ] Abstract + introduction draft
 - [ ] Address Taichi (160 TOPS/W): argue why recurrent holographic beats feedforward chiplet for LLM token inference specifically
+- [ ] Update parameters.toml: fix stale Glass Brain entries in [interposer], populate [model] and [power] blocks
 
 ### Requires lab (post-preprint)
-- [ ] EXP-2, 3, 4, 5, 7 — experimental validation
+- [ ] EXP-2, 3, 4, 5, 7, 8 — experimental validation

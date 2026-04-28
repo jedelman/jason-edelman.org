@@ -299,13 +299,26 @@ throughput = 1/t_token = 75M tokens/sec
 Weight matrix stored via low-rank factorization W = U·V^T:
 
 ```
-U ∈ ℝ^(512 × r),  V ∈ ℝ^(512 × r)
-Total weights per layer: 1024r
+U ∈ ℝ^(N_out × r),  V ∈ ℝ^(N_in × r)
+Total weights per layer: (N_out + N_in) × r
 ```
 
-At rank r=50: 51.2k weights per layer. Each outer product u_i ⊗ v_i^T → one holographic grating component, written via angular multiplexing. PTR glass supports ~1000 independent grating components (Glebov 2010, λ/D angular selectivity criterion) — ample headroom at rank-50.
+At rank r=50 and internal layers (N_in = N_out = 512): 51.2k weights per layer.
 
-For a 24-layer stack: 24 × 51.2k = 1.23M equivalent parameters. This is a low-rank approximation; accuracy trade-off (rank-50 typically retains 95-98% of transformer capability) is acceptable given the physics constraints. Rank can be increased to 100-200 with mode basis expansion (ARCH-16).
+**Input layer (layer 1):** Differential encoding (§4.4 and docs/theory_derivations.md §4)
+requires 2×512 = 1024 input modes to represent signed embeddings. Layer 1 factorization:
+U^(1) ∈ ℝ^(512 × 50), V^(1) ∈ ℝ^(1024 × 50) → 76,800 weights.
+
+For a 24-layer stack with differential input:
+
+```
+N_params = 76,800 + 23 × 51,200 = 1,254,400 ≈ 1.254M
+```
+
+Each outer product u_i ⊗ v_i^T → one holographic grating component, written via angular
+multiplexing. PTR glass supports ~1000 independent grating components (Glebov 2010, λ/D angular
+selectivity criterion) — ample headroom at rank-50. Rank can be increased to 100-200 with mode
+basis expansion (ARCH-16).
 
 ### 4.10 Thermal Management (ARCH-10)
 
