@@ -55,6 +55,34 @@
 				</div>
 			</div>
 
+			<div class="zine-item">
+				<div class="zine-item__meta">
+					<span class="zine-item__number">No. 02</span>
+					<span class="zine-item__year">2025</span>
+				</div>
+				<div class="zine-item__body">
+					<h2 class="zine-item__title">Your Water Bill Is a Lawn Bill</h2>
+					<p class="zine-item__desc">
+						Water bills up 24% in five years. Up to 70% of your summer
+						water goes to the lawn. Half evaporates. You pay sewer rates
+						on all of it. The city mandates the lawn. You pay the bill.
+					</p>
+					<div class="zine-item__actions">
+						<a class="btn btn--primary" href="{base}/zines/abolish-lawns-zine-02.pdf" download>
+							↓ Download PDF
+						</a>
+						<a class="btn btn--ghost" href="{base}/zines/abolish-lawns-zine-02.pdf" target="_blank">
+							Preview →
+						</a>
+					</div>
+					<p class="zine-item__print">
+						Print double-sided on letter paper, fold in half lengthwise.
+						Leave on a neighbor's doorstep. Leave at your utility company's
+						public counter. Free to reproduce without permission.
+					</p>
+				</div>
+			</div>
+
 		</div>
 
 		<div class="coming-soon">
