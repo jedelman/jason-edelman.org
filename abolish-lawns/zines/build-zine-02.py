@@ -424,7 +424,7 @@ def page_back(c):
     t(c, "STOP PAYING", PAD, H-0.62*inch, "Cond", 30, HD_WHITE)
     t(c, "FOR YOUR LAWN.", PAD, H-0.98*inch, "Cond", 30,
       colors.HexColor("#7CB900"))
-    t(c, "START HERE.", PAD, H-1.32*inch, "Cond", 18, colors.HexColor("#A8C0E8"))
+    t(c, "START NOW.", PAD, H-1.32*inch, "Cond", 18, colors.HexColor("#A8C0E8"))
 
     # Productive field image
     img_h = 1.4*inch
@@ -439,60 +439,57 @@ def page_back(c):
     y = img_y - 0.18*inch
 
     y = para(c,
-        "Water bills will keep rising. The lawn mandate will keep "
-        "costing you. The only exit is changing the law.",
+        "You don't need permission to stop watering. "
+        "You don't need a new ordinance to rip out your lawn. "
+        "You need to do it, publicly, and let the consequences be the argument.",
         PAD, y, "Sans", 8.5, HD_BLACK, 13, W-2*PAD)
 
     y -= 0.12*inch
     rule(c, PAD, y, W-2*PAD, RULE_C, 0.5)
-    y -= 0.18*inch
+    y -= 0.16*inch
 
-    # Policy actions framed as billing adjustments
-    actions_policy = [
-        ("REDUCE YOUR BILL NOW",
-         "Stop watering. Seriously. Most lawns go dormant, not dead. "
-         "They recover. Your HOA may send a notice. That notice is the argument."),
-        ("CUT IT BY 85%",
-         "Replace lawn with native plants. California and other states "
-         "offer rebates that cover up to half the cost. Check yours."),
-        ("ELIMINATE IT ENTIRELY",
-         "Advocate for ordinance reform. Every city that has relaxed "
-         "weed ordinances has seen mass voluntary conversion. "
-         "People don't love their lawns. They comply with them."),
+    # Direct action tiers — escalating, honest about consequences
+    actions = [
+        ("STOP WATERING. TODAY.",
+         "Most lawns go dormant, not dead. They recover. "
+         "You save money immediately. Your HOA may send a notice. "
+         "Keep the notice. It's evidence."),
+        ("LET IT GO.",
+         "Stop mowing. See what grows. Document it. "
+         "The ecosystem will answer faster than any ordinance. "
+         "Your neighbors' reactions will tell you everything about the system."),
+        ("PLANT SOMETHING.",
+         "Food, native plants, clover, wildflowers — anything that isn't lawn. "
+         "Do the front yard. Make it visible. "
+         "One converted yard gives permission to everyone on the block."),
+        ("PICK YOUR FIGHT.",
+         "If you get a fine or a notice, fight it publicly. "
+         "Contact your local press. Post it. "
+         "Every enforcement action is free advertising for this argument. "
+         "Policy changes when enough people make that calculation."),
     ]
-    for title, body in actions_policy:
+    for title, body in actions:
         t(c, title, PAD, y, "Cond", 9, UTIL_BLUE); y -= 0.14*inch
         y = para(c, body, PAD+0.08*inch, y, "Sans", 7.5, DIM, 11, W-2*PAD-0.08*inch)
-        y -= 0.11*inch
+        y -= 0.10*inch
 
-    rule(c, PAD, y, W-2*PAD, UTIL_BLUE, 1.5)
-    y -= 0.24*inch
-    t(c, "JOIN US.", PAD, y, "Cond", 26, HD_BLACK)
-    y -= 0.20*inch
+    rule(c, PAD, y, W-2*PAD, UTIL_BLUE, 1.5); y -= 0.22*inch
+    t(c, "DOCUMENT EVERYTHING.", PAD, y, "Cond", 14, HD_BLACK); y -= 0.17*inch
+    y = para(c,
+        "Your lawn conversion is content. Your HOA notice is content. "
+        "Your lower water bill is content. Share it.",
+        PAD, y, "Sans", 8, DIM, 12, W-2*PAD)
 
+    y -= 0.10*inch
     calls = [
-        "Read the manifesto: jason-edelman.org/abolish-lawns",
-        "Follow @abolish.lawns on Instagram",
-        "Stop watering. Document it. Share it.",
-        "Show up to your utility commission meeting.",
-        "Print this. Leave it on a neighbor's doorstep.",
+        "jason-edelman.org/abolish-lawns",
+        "@abolish.lawns on Instagram",
+        "Print this. Leave it at your water utility's public counter.",
     ]
     for call in calls:
         t(c, "→", PAD, y, "SansBold", 9, ACID)
         y = para(c, call, PAD+0.17*inch, y, "Sans", 8.5, HD_BLACK, 12, W-2*PAD-0.17*inch)
-        y -= 0.04*inch
-
-    y -= 0.10*inch
-    rule(c, PAD, y, W-2*PAD, RULE_C, 0.5)
-    y -= 0.15*inch
-    t(c, "PRINT THIS. SHARE IT. PROPAGATE FREELY.",
-      W/2, y, "Cond", 9, HD_BLACK, "center")
-    y -= 0.17*inch
-    t(c, "jason-edelman.org/abolish-lawns",
-      W/2, y, "SansBold", 10.5, ACID, "center")
-    y -= 0.16*inch
-    t(c, "commons framework: power-explained.jason-edelman.org",
-      W/2, y, "Sans", 6.5, FAINT, "center")
+        y -= 0.05*inch
 
     fr(c, 0, 0, W, 0.34*inch, UTIL_BLUE)
     t(c, "ABOLISH LAWNS — NO. 2 — 2025 — FREE TO REPRODUCE",

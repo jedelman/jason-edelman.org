@@ -24,7 +24,7 @@ The goal is not to convert skeptics. It is to give ammunition and permission to 
 1. **Cover** — the hook. Must work as a standalone object. This is what someone picks up.
 2. **Inside left (p.2)** — the indictment. Data and argument. The "you were right" page.
 3. **Inside right (p.3)** — solidarity + alternatives. "You're not alone / here's what would be better."
-4. **Back cover (p.4)** — the ask. What we're doing, how to join, URL, "print more of these."
+4. **Back cover (p.4)** — the ask. Direct action leads: what the reader can do *today, without permission*. Stop watering. Rip it out. Plant something. Document it. Make it visible. Policy reform belongs in the mix but not at the top — it's a slow tool, not the exit. URL, "print more of these."
 
 ---
 
@@ -182,6 +182,7 @@ These apply to all text in all zines.
 5. **No exclamation points.** The data is damning enough.
 6. **No "we believe" or "we think."** State the argument. Let readers decide.
 7. **The principled argument is the spine; the data is armor.** Even if every statistic were contested, the enclosure argument would still stand. Don't let the zine feel like it depends on the numbers.
+8. **Direct action is the primary ask, not the last resort.** Changing the law is one tool among many — and a slow one. The back page of every zine should lead with what someone can do *today*, without permission: stop watering, stop mowing, plant something, document it publicly. Policy reform belongs in the mix but not at the top. The sequence is: act first, let the consequences generate the argument, then build toward systemic change. This is not a disclaimer — it's the theory of change.
 
 ---
 
