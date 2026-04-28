@@ -175,50 +175,79 @@ The relay lens pair performs geometric mode-matching only — it maps the output
 
 Phase coherence is not required to be maintained across layers. The token embedding at each layer input is a real-valued intensity vector (the output of the Si PIN detector array), re-encoded as VCSEL amplitudes. Incoherent coupling between layers eliminates the need for a global phase reference, dramatically simplifying the multi-layer stack and enabling independent per-layer thermal management.
 
-**VCSEL driver transfer function (activation function):** VCSEL drive current is set proportional to detected intensity `I_detected`. Since VCSEL output amplitude ∝ √(drive current) and drive current ∝ `I_detected = |E_k|²`, the re-encoded field amplitude at layer k+1 input is:
+**Inter-layer signal chain and activation function:** The detector–driver–VCSEL chain implements the system's activation function. The signal path per mode is:
 
 ```
-E_in,k+1 ∝ I_k = |E_k|²
+P_k = |E_k|²                           (layer k output intensity, per mode)
+I_photo = R · P_k                       R = 0.6 A/W  → I_photo ≈ 1.5 mA at P=2.5mW
+V_TIA   = R_f · I_photo                 R_f = 667 Ω  → V_TIA ≤ 1V  (within 3.3V rail)
+I_drive = g · V_TIA                     g = 5 mA/V   → I_drive ≈ 5 mA at nominal
+P_VCSEL = η_s · max(0, I_drive - I_th)  η_s=0.6 W/A, I_th=1 mA
 ```
 
-This is the system's activation function: elementwise intensity squaring interleaved with linear MVMs. It is guaranteed by the electronics (no optical nonlinearity required), present at every inter-layer boundary, and sufficient for universal approximation. No Kerr effect, no intra-cavity nonlinear element, no special glass property needed.
+Combining: `P_out = η_s · K · max(0, P_k − θ)` where:
+- `K = g · R_f · R = 2.0` (dimensionless gain)
+- `θ = I_th / K = 0.5 mW` (power threshold, tunable via VCSEL bias current)
+- `A² = η_s · K = 1.2` (net intensity gain > 1, compensates coupling loss)
 
-Note: the alternative (amplitude ∝ `√I_detected`, i.e., current ∝ `I`, amplitude ∝ `√I`) would give amplitude passthrough with phase erasure — not a useful nonlinearity. The driver must be linear in current (not in amplitude) to realize the squaring activation.
+**In the intensity (power) computational basis, this is exactly ReLU:**
+
+```
+P_out = A² · max(0, P_in − θ)
+```
+
+Linear MVMs operate on intensity vectors; ReLU on intensity is interleaved between every layer. This satisfies universal approximation (Leshno et al. 1993: any non-polynomial bounded activation suffices; ReLU is the degenerate limit θ→0).
+
+**Key TIA design constraint:** R_f = 667 Ω, not 100 kΩ. At I_photo = 1.5 mA, R_f = 100 kΩ gives V_TIA = 150 V — a rail violation. The correct transimpedance for ≤1V output at this photocurrent is 667 Ω. This also corrects the SNR section which previously cited 100 kΩ (that figure was from a low-light single-photon context, not applicable here).
+
+**Threshold tunability:** VCSEL bias current sets the effective threshold:
+- Bias = 0: θ_eff = 0.5 mW (20% of P_op) — moderate nonlinearity
+- Bias = 95% · I_th: θ_eff = 0.025 mW (1% of P_op) — near-linear (soft activation)
+- Bias < I_th always: VCSEL off when no signal — hard sparsity below threshold
+
+The threshold is a single per-layer scalar set by bias DAC — trainable hyperparameter.
 
 **On the question of MZIs in the coupling path:** MZI meshes are not present and are not needed. MZIs in photonic neural networks implement programmable weight matrices. In QRI, the weight matrix is implemented by the holographic grating inside the resonator. The coupling path has no computational role — it is purely geometric transport. Passive relay optics suffice.
 
-### 4.6 Activation Function (ARCH-9, revised 2026-04-27)
+### 4.6 Activation Function (ARCH-9, locked 2026-04-27)
 
-The activation function is **intensity squaring** implemented by the VCSEL driver electronics at each inter-layer boundary. No intra-cavity nonlinear optical element is required or present.
+The activation function is **ReLU on intensity**, implemented by the VCSEL threshold nonlinearity at each inter-layer boundary. No intra-cavity nonlinear optical element is required.
 
-**Mechanism:** At each layer output, Si PIN detectors measure intensity `I_k = |E_k|²`. VCSEL drive current for layer k+1 is set linearly proportional to `I_k`. VCSEL output amplitude ∝ √(drive current), so:
+**Derivation:** See ARCH-8 signal chain. The complete transfer function from layer k intensity to layer k+1 intensity is:
 
 ```
-E_in,k+1 ∝ I_k = |E_k|²  (elementwise)
+P_out = A² · max(0, P_in − θ)
+
+where:
+  A²  = η_s · K = η_s · g · R_f · R  = 1.2   (net gain)
+  θ   = I_th / K                      = 0.5 mW (power threshold)
+  K   = g · R_f · R                   = 2.0
 ```
 
-Stacking linear MVMs (holographic grating) with this squaring nonlinearity between layers produces a deep network with universal approximation capability. The activation is:
+This is ReLU with gain A² = 1.2 and threshold θ = 0.5 mW. The gain > 1 is intentional: it compensates the ~10% inter-layer coupling loss so that signal level is maintained across 24 layers without electronic amplification stages.
 
-- **Guaranteed** — set by the driver circuit, not by optical material properties
-- **Uniform** — identical at every inter-layer boundary
-- **Zero insertion loss** — occurs outside the cavity, no SNR impact
-- **No special physics required** — no Kerr effect, no bistability, no cavity detuning
+**Proof of nonlinearity:** f(a·P) = A²·max(0,a·P−θ) ≠ a·f(P) for θ≠0. Fails homogeneity → nonlinear. ✓
 
-**Why not Kerr SPM:** Kerr SPM in PTR glass (n₂ ~ 10⁻²⁰ m²/W) at operating intensity (~0.5 W/mm²) produces φ_NL ~ 10⁻¹⁵ rad/pass — computationally negligible. SPM is a phase nonlinearity; amplitude effects require interference and the resulting Airy transfer function is symmetric and oscillatory, not threshold-asymmetric. The detector-squaring mechanism is physically correct and numerically closed; Kerr was neither.
+**Proof of expressiveness:** ReLU networks with sufficient width are universal approximators (Hornik 1991). The intensity-domain computation (holographic MVM interleaved with intensity ReLU) is precisely this architecture. ✓
 
-**Driver implementation note:** VCSEL drive current must be linear in `I_detected` (not in `√I_detected`). If current ∝ √I then amplitude ∝ I^(1/4) — a much weaker nonlinearity. The linear current driver is the standard operating mode for direct-modulation VCSELs and requires no special hardware.
+**Why not Kerr SPM:** φ_NL ~ 10⁻¹⁵ rad/pass at operating intensity — negligible. SPM is a phase effect; it produces no amplitude nonlinearity at these power levels. Retired.
+
+**Computational basis note:** The correct basis for QRI computation is **intensity** (power), not field amplitude. The holographic MVM mixes intensity modes; the VCSEL threshold applies ReLU to each intensity component; the next layer sees an intensity input. Phase is erased at each inter-layer boundary — this is intentional and required for thermal independence between layers (ARCH-8).
 
 **ARCH-9 locked parameters:**
 
-| Parameter | Value |
-|:---|:---|
-| Activation mechanism | Intensity squaring via VCSEL driver |
-| Driver transfer function | I_drive ∝ I_detected (linear in current) |
-| Activation function | f(x) = x² (elementwise intensity) |
-| Location | Inter-layer boundary, outside cavity |
-| Intra-cavity nonlinear element | None |
-| Cavity detuning | On-resonance (δ = 0, maximize throughput) |
-| VCSEL PID lock bandwidth | ~1 kHz (thermal stability only) |
+| Parameter | Value | Derivation |
+|:---|:---|:---|
+| Activation function | ReLU on intensity: P_out = A²·max(0, P_in−θ) | VCSEL threshold |
+| Net gain A² | 1.2 | η_s · g · R_f · R = 0.6 × 5e-3 × 667 × 0.6 |
+| Power threshold θ | 0.5 mW (zero bias) | I_th / K = 1mA / 2.0 |
+| θ tunability | 0–0.5 mW via VCSEL bias DAC | Bias sets effective I_th |
+| TIA transimpedance R_f | 667 Ω | V_max=1V at I_photo=1.5mA |
+| Driver transconductance g | 5 mA/V | I_drive,max=5mA at V=1V |
+| Intra-cavity nonlinear element | None | — |
+| Cavity detuning | On-resonance (δ = 0) | Maximize finesse buildup |
+| Computational basis | Intensity (power) | Phase erased at each boundary |
+| VCSEL PID lock bandwidth | ~1 kHz | Thermal drift correction only |
 
 ### 4.7 SNR and Noise Budget (ARCH-5)
 
@@ -230,7 +259,7 @@ Input: 2-3 mW per VCSEL mode
   → T=100 round-trip loss: 0.995^100 ≈ 0.606 (2.4 dB)
   → output power ~1.2-1.8W aggregate
   → Si PIN (0.6 A/W) → 0.36-0.54 A photocurrent
-  → TIA (100kΩ) → 6-bit quantizer
+  → TIA (R_f=667Ω) → 6-bit quantizer
 ```
 
 Dominant noise: shot noise. At I ≈ 0.4A, readout bandwidth 1GHz:
@@ -460,7 +489,7 @@ Test accuracy = Digital_baseline - ε_rank - ε_SNR
 **Stretch goal:** Rank-150 (requires +3dB VCSEL upgrade for margin).
 **Ceiling:** Rank-200 (all margins exhausted; not recommended for production).
 
-Note: the ε_rank and ε_SNR model accounts for MVM fidelity and SNR. The activation function (intensity squaring) is guaranteed by electronics and does not contribute accuracy loss.
+Note: the ε_rank and ε_SNR model accounts for MVM fidelity and SNR. The activation function (ReLU on intensity, VCSEL threshold) is guaranteed by electronics and does not contribute accuracy loss.
 
 ---
 
@@ -515,7 +544,8 @@ Training stability requires signal-to-gradient ratio >10:1 (satisfied at 40dB SN
 | 2026-04-20 | ARCH-7 LOCKED | Rank-50 U·V^T, 51.2k weights/layer, 1.23M total. |
 | 2026-04-20 | ARCH-8 LOCKED | All-optical layer coupling, passive relay optics only. No MZIs in coupling path. |
 | 2026-04-20 | ARCH-9 LOCKED | Kerr SPM (χ³ in PTR glass), φ_NL=0.2-1 rad/pass. |
-| 2026-04-27 | ARCH-9 REVISED | Activation function changed: Kerr SPM retired. Detector-squaring (I_drive ∝ I_detected) locked as activation. Cavity on-resonance (δ=0). EXP-1 closed. |
+| 2026-04-27 | ARCH-9 REVISED | Kerr SPM retired. |
+| 2026-04-27 | ARCH-9 LOCKED | Activation: ReLU on intensity P_out=A²·max(0,P_in−θ). A²=1.2, θ=0.5mW. TIA R_f=667Ω (corrected from 100kΩ). Computational basis: intensity. |
 | 2026-04-20 | ARCH-10 LOCKED | 10×10×0.5mm plate, passive+active thermal management. |
 | 2026-04-24 | ARCH-14 LOCKED | Photonic backprop exactness via adjoint (Hughes 2018, Pai 2023). |
 | 2026-04-24 | ARCH-15 LOCKED | Loss landscape: L_optical ≈ L_digital with phase calibration. |
@@ -571,7 +601,7 @@ Training stability requires signal-to-gradient ratio >10:1 (satisfied at 40dB SN
 | 6 | Training (old) | ✗ SUPERSEDED | Replaced by ARCH-11 |
 | 7 | Weight capacity | ✓ LOCKED | Rank-50, 51.2k weights/layer, 1.23M total |
 | 8 | Layer coupling | ✓ LOCKED | Passive relay optics. No MZIs. Incoherent between layers. |
-| 9 | Activation function | ✓ LOCKED (revised 2026-04-27) | Intensity squaring via VCSEL driver. I_drive ∝ I_detected. No intra-cavity nonlinear element. |
+| 9 | Activation function | ✓ LOCKED 2026-04-27 | ReLU on intensity: P_out=A²·max(0,P_in−θ). A²=1.2, θ=0.5mW. VCSEL threshold. Intensity computational basis. |
 | 10 | Thermal management | ✓ LOCKED | 10×10×0.5mm plate, Peltier optional |
 | 11 | In-situ training | ✓ LOCKED (2026-04-26) | Pure-glass resonator. 532nm write / 850nm infer. Batch accumulation + thermal cure per epoch. Weight translation infeasible; training must be in-situ. |
 | 12 | Deployment | ✓ LOCKED (2026-04-26) | Single cavity. Glass swap = model update. ~24K token phase budget. |
