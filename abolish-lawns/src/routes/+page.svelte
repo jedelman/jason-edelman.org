@@ -35,15 +35,15 @@
 		<div class="stat-row">
 			<div class="stat">
 				<span class="stat__figure">40M</span>
-				<span class="stat__label">acres of lawn in the United States — more than any single food crop</span>
+				<span class="stat__label">acres of lawn — more than any single irrigated crop in the country</span>
 			</div>
 			<div class="stat">
-				<span class="stat__figure">$40B</span>
-				<span class="stat__label">spent annually on lawn maintenance, fertilizer, and pesticides</span>
+				<span class="stat__figure">$153B</span>
+				<span class="stat__label">annual US landscaping services industry revenue — larger than the film industry</span>
 			</div>
 			<div class="stat">
-				<span class="stat__figure">3B</span>
-				<span class="stat__label">gallons of water used for lawn irrigation every day</span>
+				<span class="stat__figure">9B</span>
+				<span class="stat__label">gallons of water used for residential landscape irrigation every day</span>
 			</div>
 		</div>
 
@@ -97,8 +97,8 @@
 				<h3 class="enforcement-item__head">HOA Covenants</h3>
 				<p>Private land use contracts, binding at sale, that specify lawn
 				maintenance standards, prohibit food gardens in front yards, and
-				impose fines for noncompliance. Approximately 74 million Americans
-				live under HOA governance. Membership is rarely voluntary in
+				impose fines for noncompliance. Some 78 million Americans
+				live in community associations. Membership is rarely voluntary in
 				practice—it is a condition of the only housing they could afford.</p>
 			</div>
 			<div class="enforcement-item">
@@ -305,16 +305,22 @@
 				<p class="entry-card__body">Model ordinances, case studies, and the political economy of lawn reform for planners and policymakers who want to act.</p>
 				<span class="entry-card__arrow">→</span>
 			</a>
-			<a class="entry-card" href="./science">
-				<span class="entry-card__tag">Evidence</span>
-				<h3 class="entry-card__title">You want the data</h3>
-				<p class="entry-card__body">The ecological, economic, and public health literature on turf grass monoculture. Peer-reviewed and citable.</p>
+			<a class="entry-card" href="./factsheet">
+				<span class="entry-card__tag">Factsheet</span>
+				<h3 class="entry-card__title">You want the numbers</h3>
+				<p class="entry-card__body">Every statistic on this site, sourced and annotated. The ecological, economic, and public health literature on turf grass monoculture.</p>
 				<span class="entry-card__arrow">→</span>
 			</a>
 			<a class="entry-card" href="./alternatives">
 				<span class="entry-card__tag">Practical</span>
 				<h3 class="entry-card__title">You want to convert your lawn</h3>
 				<p class="entry-card__body">What grows instead. By region, by budget, by how much of a fight you want to pick with your neighbors.</p>
+				<span class="entry-card__arrow">→</span>
+			</a>
+			<a class="entry-card" href="./bibliography">
+				<span class="entry-card__tag">Sources</span>
+				<h3 class="entry-card__title">Bibliography</h3>
+				<p class="entry-card__body">Every reference, with source type, methodology notes, and our confidence assessment. Cite us accurately.</p>
 				<span class="entry-card__arrow">→</span>
 			</a>
 		</div>
@@ -597,7 +603,7 @@ main {
 /* ── Entry cards ──────────────────────────────────────────────── */
 .entry-grid {
 	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 	border: 1px solid var(--border);
 	margin-top: var(--space-8);
 }
