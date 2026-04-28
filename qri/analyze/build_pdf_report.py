@@ -1,149 +1,211 @@
 #!/usr/bin/env python3
 """
-Build complete PDF summary of QRI project.
-Combines all reports, analysis, and architecture specs into single PDF.
+build_pdf_report.py
+Assembles and renders the QRI system document as PDF and HTML.
+Sources: architecture.md, properties.toml, parameters.toml, analyze/ outputs.
+Replaces hardcoded 2026-04-24 file references.
 """
 
 import subprocess
-import os
+import sys
+import tomllib
 from pathlib import Path
+from datetime import date
 
-def build_pdf():
-    repo_root = Path(__file__).parent.parent
-    
-    # Read markdown files
-    final_report = (repo_root / "FINAL_REPORT_NARG_PTYCH_SNR_2026-04-24.md").read_text()
-    econ_perf = (repo_root / "ECONOMICS_AND_PERFORMANCE_2026-04-24.md").read_text()
-    snr_upgrade = (repo_root / "SNR_UPGRADE_ELECTRONICS_2026-04-24.md").read_text()
-    arch = (repo_root / "architecture.md").read_text()[:6000]
-    
-    # Build master markdown
-    master = f"""---
-title: Quantum Resonator Inference
-subtitle: Complete Project Summary
-author: Jason Edelman
-date: 2026-04-24
-geometry: margin=0.75in
-fontsize: 11pt
-linestretch: 1.2
+ROOT = Path(__file__).parent.parent
+TODAY = date.today().isoformat()
+
+
+def run_crosscheck() -> str:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "analyze" / "arch_crosscheck.py"), "--output", "table"],
+        capture_output=True, text=True, cwd=str(ROOT)
+    )
+    return result.stdout.strip()
+
+
+def run_analysis(script: str, *args) -> str:
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "analyze" / script), *args],
+        capture_output=True, text=True, cwd=str(ROOT)
+    )
+    return result.stdout.strip()
+
+
+def load_toml(path: Path) -> dict:
+    with open(path, "rb") as f:
+        return tomllib.load(f)
+
+
+def render_properties(props: dict) -> str:
+    lines = []
+    for material, values in props.items():
+        if not isinstance(values, dict):
+            continue
+        lines.append(f"### `{material}`")
+        if "description" in values:
+            lines.append(f"*{values['description']}*\n")
+        for k, v in values.items():
+            if k not in ("description", "cite", "note"):
+                lines.append(f"- **{k}**: {v}")
+        if "note" in values:
+            lines.append(f"\n> Note: {values['note']}")
+        lines.append(f"\n> Cite: {values.get('cite', 'MISSING')}\n")
+    return "\n".join(lines)
+
+
+def render_parameters(params: dict) -> str:
+    lines = []
+    for section, values in params.items():
+        if not isinstance(values, dict):
+            continue
+        lines.append(f"### `{section}`\n")
+        lines.append("| Parameter | Value |")
+        lines.append("|:---|:---|")
+        for k, v in values.items():
+            if not str(k).startswith("#"):
+                lines.append(f"| {k} | `{v}` |")
+        lines.append("")
+    return "\n".join(lines)
+
+
+def assemble() -> str:
+    arch = (ROOT / "architecture.md").read_text()
+    tasks = (ROOT / "TASKS.md").read_text()
+    props = load_toml(ROOT / "properties.toml")
+    params = load_toml(ROOT / "parameters.toml")
+
+    crosscheck = run_crosscheck()
+    econ = run_analysis("economic_analysis.py", "--years", "5", "--output", "table")
+    perf = run_analysis("performance_update.py", "--output", "table")
+
+    doc = f"""---
+title: "Quantum Resonator Inference"
+subtitle: "System Design Document"
+author: "Jason Edelman"
+date: "{TODAY}"
+geometry: "margin=0.85in"
+fontsize: 10pt
+linestretch: 1.25
 toc: true
 toc-depth: 3
+numbersections: true
 ---
 
-# Quantum Resonator Inference: Complete Project Summary
+\\newpage
 
-**Date:** 2026-04-24  
-**Status:** Architecture LOCKED. Electronics upgrade specified. Production-ready.
+# Quantum Resonator Inference: System Design Document
 
----
-
-## Part 1: Executive Summary & Recommendations
-
-{final_report}
+**Generated:** {TODAY}
+**Status:** ARCH-1 through ARCH-17 LOCKED. Experimental validation phase.
+**Repo:** https://github.com/jedelman/quantum-resonator-inference
 
 ---
-
-## Part 2: Economics & Performance Analysis
-
-{econ_perf}
-
----
-
-## Part 3: Electronics Upgrade Specifications
-
-{snr_upgrade}
-
----
-
-## Appendix A: Architecture Specification (excerpt)
 
 {arch}
 
-[Full architecture: `architecture.md`]
+\\newpage
+
+# Architecture Cross-Check
+
+All architecture decisions validated for mutual consistency by `analyze/arch_crosscheck.py`.
+
+```
+{crosscheck}
+```
+
+\\newpage
+
+# Experimental Validation Tasks
+
+{tasks}
+
+\\newpage
+
+# Material Properties
+
+{render_properties(props)}
+
+\\newpage
+
+# Design Parameters
+
+{render_parameters(params)}
+
+\\newpage
+
+# Economic Analysis (5-Year TCO)
+
+```
+{econ}
+```
+
+\\newpage
+
+# Performance Scenarios
+
+```
+{perf}
+```
 
 ---
 
-## Appendix B: Key Performance Metrics
-
-| Metric | Baseline | Path A | Path B ⭐ | Path C |
-|:---|:---:|:---:|:---:|:---:|
-| Latency gain | — | 16× | **128×** | **128×** |
-| SNR (dB) | 40 | 40 | 48 | 48 |
-| Parameters (M) | 1.23 | 1.23 | 1.23 | 2.46 |
-| Cost | $0 | $0 | $5k | $6k |
-| Timeline | 0 | 2wk | 6wk | 8wk |
-
----
-
-## Appendix C: Economics Summary
-
-**QRI vs. Hyperscale (5-year TCO):**
-- Capital: 138× cheaper ($1.0B vs $143.4B)
-- Annual OpEx: 422× cheaper ($73M vs $30.8B)
-- Total TCO: 212× cheaper ($1.4B vs $297.4B)
-- Payback: 0.4 months
-- Carbon: 44× lower
-
----
-
-## Appendix D: Files & Resources
-
-**Reports (Markdown):**
-- `FINAL_REPORT_NARG_PTYCH_SNR_2026-04-24.md` — Analysis & decision tree
-- `ECONOMICS_AND_PERFORMANCE_2026-04-24.md` — Path comparison & ROI
-- `SNR_UPGRADE_ELECTRONICS_2026-04-24.md` — Phase specifications
-- `NARG_PTYCH_CROSSCHECK_2026-04-24.md` — Feasibility details
-
-**Analysis Scripts:**
-- `analyze/arch_crosscheck.py` — Architecture consistency checks
-- `analyze/economic_analysis.py` — 5-year TCO comparison
-- `analyze/performance_update.py` — Scenario comparison tool
-
-**Repository:**
-https://github.com/jedelman/quantum-resonator-inference
-
----
-
-Generated by `make pdf` on {Path(__file__).parent.parent.name}
+*End of document. Generated by `analyze/build_pdf_report.py` on {TODAY}.*
 """
-    
-    # Write master markdown
-    master_file = repo_root / "QRI_Complete_Summary_2026-04-24.md"
-    master_file.write_text(master)
-    print(f"✓ Master markdown: {master_file.name}")
-    
-    # Try pandoc -> PDF
+    return doc
+
+
+def build():
+    print("Assembling document...")
+    doc = assemble()
+
+    renders = ROOT / "renders"
+    renders.mkdir(exist_ok=True)
+    md_out = renders / f"QRI_System_Doc_{TODAY}.md"
+    md_out.write_text(doc)
+    print(f"Markdown: {md_out.name}")
+
+    pdf_out = renders / f"QRI_System_Doc_{TODAY}.pdf"
     try:
-        subprocess.run([
-            "pandoc",
-            str(master_file),
-            "-o", str(repo_root / "QRI_Complete_Summary_2026-04-24.pdf"),
-            "--pdf-engine=xelatex",
-            "-V", "geometry:margin=0.75in",
-            "-V", "fontsize=11pt",
-            "-V", "linestretch=1.2",
-        ], check=True, capture_output=True)
-        print(f"✓ PDF generated: QRI_Complete_Summary_2026-04-24.pdf")
-        return True
+        result = subprocess.run(
+            [
+                "pandoc", str(md_out),
+                "-o", str(pdf_out),
+                "--pdf-engine=pdflatex",
+                "--highlight-style=tango",
+                "-V", "colorlinks=true",
+                "-V", "linkcolor=blue",
+            ],
+            capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            print(f"PDF:      {pdf_out.name}")
+            return str(pdf_out)
+        else:
+            print(f"xelatex error: {result.stderr[:300]}")
     except FileNotFoundError:
-        print("⚠ pandoc not found, generating HTML...")
-    except subprocess.CalledProcessError as e:
-        print(f"⚠ pandoc error: {e.stderr.decode()}")
-    
-    # Fallback: HTML
+        print("pandoc not found")
+
+    html_out = renders / f"QRI_System_Doc_{TODAY}.html"
     try:
-        subprocess.run([
-            "pandoc",
-            str(master_file),
-            "-o", str(repo_root / "QRI_Complete_Summary_2026-04-24.html"),
-            "-s", "--toc", "--toc-depth=3",
-            "-c", "style.css"
-        ], check=False)
-        print(f"✓ HTML generated: QRI_Complete_Summary_2026-04-24.html")
-    except:
-        print("✓ Master markdown saved (install pandoc for PDF/HTML)")
-    
-    return False
+        subprocess.run(
+            [
+                "pandoc", str(md_out),
+                "-o", str(html_out),
+                "-s", "--toc", "--toc-depth=3",
+                "--highlight-style=tango",
+            ],
+            check=True, capture_output=True
+        )
+        print(f"HTML:     {html_out.name}")
+        return str(html_out)
+    except Exception as e:
+        print(f"HTML fallback failed: {e}")
+        return str(md_out)
+
 
 if __name__ == "__main__":
-    build_pdf()
+    output = build()
+    print(f"Output: {output}")
+# Note: primary PDF via pandoc+latex; fallback is wkhtmltopdf from HTML.
+# Run: wkhtmltopdf renders/QRI_System_Doc_DATE.html renders/QRI_System_Doc_DATE.pdf

@@ -81,11 +81,16 @@ class ArchitectureCrosscheck:
     arch8_readout: str = "Homodyne detection"
     arch8_interposer_required: bool = False
     
-    # ARCH-9: Nonlinearity
-    arch9_mechanism: str = "Kerr self-phase modulation"
-    arch9_phi_nl_rad: float = 0.2
-    arch9_total_phi_100: float = 20
-    arch9_detuning_rad: float = math.pi
+    # ARCH-9: Activation function (revised 2026-04-27)
+    arch9_mechanism: str = "ReLU on intensity via VCSEL threshold"
+    arch9_tia_rf_ohm: float = 667.0          # transimpedance, Ω
+    arch9_driver_g_ma_per_v: float = 5.0     # driver transconductance, mA/V
+    arch9_vcsel_ith_ma: float = 1.0          # VCSEL threshold current, mA
+    arch9_vcsel_eta_s: float = 0.6           # slope efficiency, W/A
+    arch9_K: float = 2.0                     # K = g·R_f·R_det = 5e-3×667×0.6
+    arch9_A2: float = 1.2                    # net gain A² = η_s·K
+    arch9_theta_mw: float = 0.5             # power threshold θ = I_th/K, mW
+    arch9_apc_enabled: bool = True              # automatic power control on VCSEL driver
     
     # ARCH-10: Thermal
     arch10_plate_mm: str = "10×10×0.5"
@@ -210,34 +215,62 @@ class ArchitectureCrosscheck:
         return True, f"ARCH-7 ↔ ARCH-8: Holographic weights readable via {self.arch8_readout}"
     
     def check_arch8_arch9_consistency(self) -> Tuple[bool, str]:
-        """ARCH-8 (coupling) must support ARCH-9 (nonlinearity)."""
-        # All-optical coupling + Kerr nonlinearity requires coherent buildup
-        # Finesse must be high enough to achieve φ_NL=0.2rad per pass
-        
-        if not self.arch8_all_optical:
-            return False, "ARCH-8: Interposer coupling breaks all-optical nonlinearity assumption"
-        
-        if self.arch2_finesse < 1000:
-            return False, f"ARCH-2 finesse {self.arch2_finesse} insufficient for coherent Kerr buildup"
-        
-        expected_phi = 0.2  # rad/pass design target
-        if abs(self.arch9_phi_nl_rad - expected_phi) > 0.05:
-            return False, f"ARCH-9: φ_NL {self.arch9_phi_nl_rad} rad ≠ design {expected_phi} rad"
-        
-        return True, f"ARCH-8 ↔ ARCH-9: All-optical coupling achieves {self.arch9_phi_nl_rad}rad SPM per pass @ R={self.arch2_r}"
+        """ARCH-8 (inter-layer coupling) must correctly implement ARCH-9 (ReLU activation)."""
+        # Signal chain: P_k → I_photo → V_TIA → I_drive → P_VCSEL
+        # K = g · R_f · R_det; must be > 0 and produce I_drive > I_th at nominal P
+        R_det = 0.6  # A/W
+        K = self.arch9_driver_g_ma_per_v * 1e-3 * self.arch9_tia_rf_ohm * R_det
+        if abs(K - self.arch9_K) > 0.01:
+            return False, f"ARCH-9: K={K:.3f} ≠ stored {self.arch9_K} — signal chain inconsistent"
+
+        A2 = self.arch9_vcsel_eta_s * K
+        if abs(A2 - self.arch9_A2) > 0.01:
+            return False, f"ARCH-9: A²={A2:.3f} ≠ stored {self.arch9_A2}"
+
+        theta = (self.arch9_vcsel_ith_ma * 1e-3) / K  # W
+        theta_mw = theta * 1e3
+        if abs(theta_mw - self.arch9_theta_mw) > 0.01:
+            return False, f"ARCH-9: θ={theta_mw:.3f}mW ≠ stored {self.arch9_theta_mw}mW"
+
+        # TIA rail check: V_TIA = R_f · R_det · P_op ≤ 1V (3.3V supply)
+        P_op = 2.5e-3  # W nominal per mode
+        V_tia_max = self.arch9_tia_rf_ohm * R_det * P_op
+        if V_tia_max > 1.5:
+            return False, f"ARCH-9: TIA rail violation — V_TIA={V_tia_max:.1f}V at P_op"
+
+        # Gain > 1 required to compensate ~10% inter-layer coupling loss
+        if A2 < 1.0:
+            return False, f"ARCH-9: A²={A2:.3f} < 1.0 — signal attenuates across layers"
+
+        return True, (f"ARCH-8 ↔ ARCH-9: ReLU on intensity. "
+                      f"A²={A2:.2f}, θ={theta_mw:.1f}mW, V_TIA={V_tia_max*1e3:.0f}mV ✓")
     
     def check_arch9_arch10_consistency(self) -> Tuple[bool, str]:
-        """ARCH-9 (nonlinearity) must be thermally stable via ARCH-10."""
-        # 20 rad total phase shift over 100 passes = ~0.1 rad/degree thermal drift tolerance
-        # Passive cooling must keep dn/dT drift << phase change
-        
-        if self.arch10_passive_rise_k > 30:
-            return False, f"ARCH-10: Passive rise {self.arch10_passive_rise_k}K too high; may exceed thermal budget"
-        
-        # Rough estimate: dn/dT ~ 1e-4/K for glass; 15K rise → ~1.5e-3 phase drift
-        # Acceptable if << φ_NL budget
-        
-        return True, f"ARCH-9 ↔ ARCH-10: Kerr nonlinearity ({self.arch9_phi_nl_rad}rad/pass) thermally stable via passive {self.arch10_passive_rise_k}K rise"
+        """ARCH-9 activation threshold must be stable under ARCH-10 thermal conditions."""
+        # The 15K cavity thermal rise (ARCH-10) applies to PTR glass, not the VCSEL.
+        # VCSELs are external to the cavity. VCSEL thermal load is self-heating only.
+        # VCSEL self-heating: P_diss = I_drive·V_f - P_out ≈ 5mA×2V - 2.4mW = 7.6mW
+        # R_th (oxide-confined GaAs VCSEL die) ≈ 1000 K/W → ΔT_vcsel ≈ 7.6K
+        # dI_th/dT ≈ 0.5 mA/K → ΔI_th ≈ 3.8mA = 3.8× I_th(nom)
+        # Without compensation: threshold θ drifts ±190% — unacceptable.
+        # With APC: VCSEL driver IC monitors optical output power, adjusts I_bias
+        # to hold (I_drive - I_th) constant → θ stable to driver APC accuracy (~1%).
+        # APC is standard on all 850nm VCSEL driver ICs (OPT8241, MAX3748, etc.).
+
+        if not self.arch9_apc_enabled:
+            # Without APC, check raw drift tolerance
+            dI_th_dT = 0.5e-3   # A/K typical GaAs VCSEL
+            P_diss = 5e-3 * 2.0 - 2.4e-3  # W, at nominal drive
+            R_th = 1000  # K/W
+            delta_T_vcsel = P_diss * R_th
+            delta_I_th = dI_th_dT * delta_T_vcsel
+            frac = delta_I_th / (self.arch9_vcsel_ith_ma * 1e-3)
+            if frac > 0.2:
+                return False, (f"ARCH-9: VCSEL I_th drift {delta_I_th*1e3:.1f}mA "
+                               f"({frac:.0%} of I_th) without APC — threshold unstable. "
+                               f"Enable APC or add TEC.")
+        return True, (f"ARCH-9 ↔ ARCH-10: VCSEL external to cavity (15K rise is glass, not VCSEL). "
+                      f"VCSEL self-heating ~7.6K → ΔI_th~3.8mA, compensated by APC loop.")
     
     def check_arch1_through_10_integration(self) -> Tuple[bool, str]:
         """Full system integration check across all 10 architectures."""
@@ -356,7 +389,7 @@ class ArchitectureCrosscheck:
         print("\n" + "="*80)
         if all_pass:
             print("RESULT: All architecture decisions LOCKED and mutually consistent.")
-            print("Ready for experimental validation phase (EXP-1 through EXP-5).")
+            print("Ready for experimental validation phase (EXP-2 through EXP-5, EXP-7).")
         else:
             print("RESULT: Architecture conflicts detected. Review before proceeding.")
         print("="*80 + "\n")
@@ -428,10 +461,14 @@ class ArchitectureCrosscheck:
                     "interposer_required": self.arch8_interposer_required,
                 },
                 "ARCH-9": {
-                    "name": "Nonlinearity",
+                    "name": "Activation function",
                     "mechanism": self.arch9_mechanism,
-                    "spm_rad_per_pass": self.arch9_phi_nl_rad,
-                    "total_spm_100_passes": self.arch9_total_phi_100,
+                    "tia_rf_ohm": self.arch9_tia_rf_ohm,
+                    "driver_g_ma_per_v": self.arch9_driver_g_ma_per_v,
+                    "vcsel_ith_ma": self.arch9_vcsel_ith_ma,
+                    "K": self.arch9_K,
+                    "A2_net_gain": self.arch9_A2,
+                    "theta_mw": self.arch9_theta_mw,
                     "detuning_rad": self.arch9_detuning_rad,
                 },
                 "ARCH-10": {

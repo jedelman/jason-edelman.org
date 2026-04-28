@@ -1,0 +1,2234 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Jason Edelman" />
+  <meta name="dcterms.date" content="2026-04-28" />
+  <title>Quantum Resonator Inference</title>
+  <style>
+    html {
+      font-size: 10pt;
+      line-height: 1.25;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Quantum Resonator Inference</h1>
+<p class="subtitle">System Design Document</p>
+<p class="author">Jason Edelman</p>
+<p class="date">2026-04-28</p>
+</header>
+<nav id="TOC" role="doc-toc">
+<ul>
+<li><a href="#quantum-resonator-inference-system-design-document"
+id="toc-quantum-resonator-inference-system-design-document">Quantum
+Resonator Inference: System Design Document</a></li>
+<li><a href="#quantum-resonator-inference-architecture-specification"
+id="toc-quantum-resonator-inference-architecture-specification">Quantum
+Resonator Inference — Architecture Specification</a>
+<ul>
+<li><a href="#problem-statement" id="toc-problem-statement">1. Problem
+Statement</a></li>
+<li><a href="#design-principles" id="toc-design-principles">2. Design
+Principles</a></li>
+<li><a href="#theoretical-foundation-arch-1"
+id="toc-theoretical-foundation-arch-1">3. Theoretical Foundation
+(ARCH-1)</a>
+<ul>
+<li><a href="#wave-equation-as-rnn-hughes-et-al.-2019"
+id="toc-wave-equation-as-rnn-hughes-et-al.-2019">3.1 Wave Equation as
+RNN (Hughes et al. 2019)</a></li>
+<li><a href="#holographic-weight-storage-psaltis-et-al.-1990"
+id="toc-holographic-weight-storage-psaltis-et-al.-1990">3.2 Holographic
+Weight Storage (Psaltis et al. 1990)</a></li>
+<li><a href="#from-scalar-wave-to-token-embedding"
+id="toc-from-scalar-wave-to-token-embedding">3.3 From Scalar Wave to
+Token Embedding</a></li>
+</ul></li>
+<li><a href="#system-architecture" id="toc-system-architecture">4.
+System Architecture</a>
+<ul>
+<li><a href="#system-overview" id="toc-system-overview">4.1 System
+Overview</a></li>
+<li><a href="#resonator-geometry-arch-2-arch-3"
+id="toc-resonator-geometry-arch-2-arch-3">4.2 Resonator Geometry
+(ARCH-2, ARCH-3)</a></li>
+<li><a href="#the-pure-glass-resonator"
+id="toc-the-pure-glass-resonator">4.3 The Pure-Glass Resonator</a></li>
+<li><a href="#input-encoding-arch-3" id="toc-input-encoding-arch-3">4.4
+Input Encoding (ARCH-3)</a></li>
+<li><a href="#inter-layer-coupling-arch-8"
+id="toc-inter-layer-coupling-arch-8">4.5 Inter-Layer Coupling
+(ARCH-8)</a></li>
+<li><a href="#activation-function-arch-9-locked-2026-04-27"
+id="toc-activation-function-arch-9-locked-2026-04-27">4.6 Activation
+Function (ARCH-9, locked 2026-04-27)</a></li>
+<li><a href="#snr-and-noise-budget-arch-5"
+id="toc-snr-and-noise-budget-arch-5">4.7 SNR and Noise Budget
+(ARCH-5)</a></li>
+<li><a href="#token-throughput-arch-4"
+id="toc-token-throughput-arch-4">4.8 Token Throughput (ARCH-4)</a></li>
+<li><a href="#holographic-weight-capacity-arch-7"
+id="toc-holographic-weight-capacity-arch-7">4.9 Holographic Weight
+Capacity (ARCH-7)</a></li>
+<li><a href="#thermal-management-arch-10"
+id="toc-thermal-management-arch-10">4.10 Thermal Management
+(ARCH-10)</a></li>
+</ul></li>
+<li><a href="#training-architecture" id="toc-training-architecture">5.
+Training Architecture</a>
+<ul>
+<li><a href="#the-weight-translation-problem-arch-11"
+id="toc-the-weight-translation-problem-arch-11">5.1 The Weight
+Translation Problem (ARCH-11)</a></li>
+<li><a
+href="#wavelength-separation-write-at-532nm-infer-at-850nm-arch-11"
+id="toc-wavelength-separation-write-at-532nm-infer-at-850nm-arch-11">5.2
+Wavelength Separation: Write at 532nm, Infer at 850nm (ARCH-11)</a></li>
+<li><a href="#in-situ-training-protocol-arch-11"
+id="toc-in-situ-training-protocol-arch-11">5.3 In-Situ Training Protocol
+(ARCH-11)</a></li>
+<li><a href="#grating-stability-during-inference-arch-11"
+id="toc-grating-stability-during-inference-arch-11">5.4 Grating
+Stability During Inference (ARCH-11)</a></li>
+<li><a href="#batch-size-and-epoch-scale-arch-11"
+id="toc-batch-size-and-epoch-scale-arch-11">5.5 Batch Size and Epoch
+Scale (ARCH-11)</a></li>
+</ul></li>
+<li><a href="#scaling-architecture" id="toc-scaling-architecture">6.
+Scaling Architecture</a>
+<ul>
+<li><a href="#block-duplication-arch-17"
+id="toc-block-duplication-arch-17">6.1 Block Duplication
+(ARCH-17)</a></li>
+<li><a href="#clone-and-fine-tune-for-scale-training-arch-17"
+id="toc-clone-and-fine-tune-for-scale-training-arch-17">6.2
+Clone-and-Fine-Tune for Scale Training (ARCH-17)</a></li>
+<li><a href="#deployment-model-arch-12-arch-13"
+id="toc-deployment-model-arch-12-arch-13">6.3 Deployment Model (ARCH-12,
+ARCH-13)</a></li>
+</ul></li>
+<li><a href="#rank-scaling-arch-16" id="toc-rank-scaling-arch-16">7.
+Rank Scaling (ARCH-16)</a>
+<ul>
+<li><a href="#rank-and-mode-basis" id="toc-rank-and-mode-basis">7.1 Rank
+and Mode Basis</a></li>
+<li><a href="#rank-scaling-regimes" id="toc-rank-scaling-regimes">7.2
+Rank Scaling Regimes</a></li>
+<li><a href="#rank-loss-tradeoff" id="toc-rank-loss-tradeoff">7.3
+Rank-Loss Tradeoff</a></li>
+</ul></li>
+<li><a href="#convergence-theory-arch-14-arch-15"
+id="toc-convergence-theory-arch-14-arch-15">8. Convergence Theory
+(ARCH-14, ARCH-15)</a>
+<ul>
+<li><a href="#photonic-backpropagation-arch-14"
+id="toc-photonic-backpropagation-arch-14">8.1 Photonic Backpropagation
+(ARCH-14)</a></li>
+<li><a href="#loss-landscape-arch-15"
+id="toc-loss-landscape-arch-15">8.2 Loss Landscape (ARCH-15)</a></li>
+</ul></li>
+<li><a href="#decision-log" id="toc-decision-log">9. Decision
+Log</a></li>
+<li><a href="#open-experiments" id="toc-open-experiments">10. Open
+Experiments</a>
+<ul>
+<li><a
+href="#exp-7-in-situ-training-convergence-and-clone-validation-expanded"
+id="toc-exp-7-in-situ-training-convergence-and-clone-validation-expanded">10.1
+EXP-7: In-Situ Training Convergence and Clone Validation
+(Expanded)</a></li>
+</ul></li>
+<li><a href="#architecture-summary" id="toc-architecture-summary">11.
+Architecture Summary</a></li>
+</ul></li>
+<li><a href="#architecture-cross-check"
+id="toc-architecture-cross-check">Architecture Cross-Check</a></li>
+<li><a href="#experimental-validation-tasks"
+id="toc-experimental-validation-tasks">Experimental Validation
+Tasks</a></li>
+<li><a href="#tasks" id="toc-tasks">Tasks</a>
+<ul>
+<li><a href="#convention" id="toc-convention">Convention</a></li>
+<li><a href="#literature-investigation"
+id="toc-literature-investigation">Literature Investigation</a>
+<ul>
+<li><a href="#from-onn-review-fu-et-al.-2024-light-sci.-appl."
+id="toc-from-onn-review-fu-et-al.-2024-light-sci.-appl.">From ONN Review
+(Fu et al. 2024, Light: Sci. &amp; Appl.)</a></li>
+<li><a
+href="#from-dual-comb-holography-vicentini-et-al.-2021-nat.-photonics"
+id="toc-from-dual-comb-holography-vicentini-et-al.-2021-nat.-photonics">From
+Dual-Comb Holography (Vicentini et al. 2021, Nat. Photonics)</a></li>
+</ul></li>
+<li><a href="#architecture-derivation-tasks"
+id="toc-architecture-derivation-tasks">Architecture Derivation
+Tasks</a></li>
+<li><a href="#experimental-validation-tasks-1"
+id="toc-experimental-validation-tasks-1">Experimental Validation
+Tasks</a></li>
+<li><a href="#architecture-derivation-tasks-derived-from-arch-1"
+id="toc-architecture-derivation-tasks-derived-from-arch-1">Architecture
+Derivation Tasks (derived from ARCH-1)</a></li>
+</ul></li>
+<li><a href="#material-properties" id="toc-material-properties">Material
+Properties</a>
+<ul>
+<li><a href="#ptr_glass"
+id="toc-ptr_glass"><code>ptr_glass</code></a></li>
+<li><a href="#linbo3_tfln"
+id="toc-linbo3_tfln"><code>linbo3_tfln</code></a></li>
+<li><a href="#sin_pic_a150"
+id="toc-sin_pic_a150"><code>sin_pic_a150</code></a></li>
+<li><a href="#gaas_vcsel_850nm"
+id="toc-gaas_vcsel_850nm"><code>gaas_vcsel_850nm</code></a></li>
+<li><a href="#ingaas_pin_detector"
+id="toc-ingaas_pin_detector"><code>ingaas_pin_detector</code></a></li>
+<li><a href="#si_pin_detector_850nm"
+id="toc-si_pin_detector_850nm"><code>si_pin_detector_850nm</code></a></li>
+<li><a href="#silica_fiber_smf28"
+id="toc-silica_fiber_smf28"><code>silica_fiber_smf28</code></a></li>
+<li><a href="#gaas_vcsel_850nm_single_mode"
+id="toc-gaas_vcsel_850nm_single_mode"><code>gaas_vcsel_850nm_single_mode</code></a></li>
+</ul></li>
+<li><a href="#design-parameters" id="toc-design-parameters">Design
+Parameters</a>
+<ul>
+<li><a href="#optical" id="toc-optical"><code>optical</code></a></li>
+<li><a href="#token_embedding"
+id="toc-token_embedding"><code>token_embedding</code></a></li>
+<li><a href="#resonator"
+id="toc-resonator"><code>resonator</code></a></li>
+<li><a href="#spatial" id="toc-spatial"><code>spatial</code></a></li>
+<li><a href="#snr" id="toc-snr"><code>snr</code></a></li>
+<li><a href="#interposer"
+id="toc-interposer"><code>interposer</code></a></li>
+<li><a href="#model" id="toc-model"><code>model</code></a></li>
+<li><a href="#power" id="toc-power"><code>power</code></a></li>
+</ul></li>
+<li><a href="#economic-analysis-5-year-tco"
+id="toc-economic-analysis-5-year-tco">Economic Analysis (5-Year
+TCO)</a></li>
+<li><a href="#performance-scenarios"
+id="toc-performance-scenarios">Performance Scenarios</a></li>
+</ul>
+</nav>
+<h1 id="quantum-resonator-inference-system-design-document">Quantum
+Resonator Inference: System Design Document</h1>
+<p><strong>Generated:</strong> 2026-04-28 <strong>Status:</strong>
+ARCH-1 through ARCH-17 LOCKED. Experimental validation phase.
+<strong>Repo:</strong>
+https://github.com/jedelman/quantum-resonator-inference</p>
+<hr />
+<h1 id="quantum-resonator-inference-architecture-specification">Quantum
+Resonator Inference — Architecture Specification</h1>
+<p><strong>Status:</strong> ARCH-1 through ARCH-17 LOCKED <strong>Last
+revised:</strong> 2026-04-26 <strong>Project:</strong> All-optical
+resonator for embedded LLM token inference <strong>Constraint:</strong>
+Single-tenant embedded device. No context switching. No multi-tenancy.
+Offline training, static weights during inference.</p>
+<hr />
+<h2 id="problem-statement">1. Problem Statement</h2>
+<p>Standard LLM inference is memory-bandwidth-bound and
+thermodynamically inefficient. Every token requires moving billions of
+weight parameters through digital electronics at ~pJ/MAC. We are
+deriving an alternative: a coherent all-optical resonator that encodes
+model weights in the refractive index distribution of a physical medium
+and executes inference via photon-weight interactions at the speed of
+light.</p>
+<p>The key question is not “how do we map a digital architecture to
+optics?” but “what computation does physics perform naturally, and can
+that computation be trained to implement token inference?”</p>
+<p>The answer, derived below, is: <strong>yes, and the natural primitive
+is a holographic resonator.</strong></p>
+<hr />
+<h2 id="design-principles">2. Design Principles</h2>
+<ol type="1">
+<li><strong>First-principles only.</strong> Every architectural decision
+must be justified by physics, not by analogy to digital systems.</li>
+<li><strong>Coherence as a resource.</strong> The design exploits
+optical coherence (phase, amplitude, spatial mode structure) as a
+computational degree of freedom.</li>
+<li><strong>Learning is structural.</strong> Model weights are encoded
+in the refractive index distribution Δn(x,y,z) of the resonator medium.
+Writing weights = writing holograms.</li>
+<li><strong>Token inference is wave dynamics.</strong> Each forward pass
+is the time evolution of a wave field through a trained inhomogeneous
+medium. No digital approximation.</li>
+<li><strong>Embedded, single-tenant.</strong> One model loaded once. No
+scheduling, no reloading, no context switching.</li>
+<li><strong>No undocumented parameters.</strong> All values in
+parameters.toml require rationale.</li>
+<li><strong>In-situ training mandatory.</strong> Weights cannot be
+transferred from simulation to physical cavity. Training must use the
+physical device as the forward model.</li>
+</ol>
+<hr />
+<h2 id="theoretical-foundation-arch-1">3. Theoretical Foundation
+(ARCH-1)</h2>
+<h3 id="wave-equation-as-rnn-hughes-et-al.-2019">3.1 Wave Equation as
+RNN (Hughes et al. 2019)</h3>
+<p>The scalar wave equation for an optical field u(x,y,t) in a medium
+with refractive index distribution n(x,y):</p>
+<pre><code>∂²u/∂t² = (c₀/n(x,y))² · ∇²u + f(x,y,t)</code></pre>
+<p>Finite-difference discretization with time step Δt yields:</p>
+<pre><code>u_{t+1} = 2u_t - u_{t-1} + Δt²(c₀/n)²∇²u_t + Δt²f_t       (eq. 1)</code></pre>
+<p>Define hidden state h_t = [u_t, u_{t-1}]^T. Then eq. 1 is
+structurally identical to an RNN update (Hughes et al. 2019, eq. 5):</p>
+<pre><code>h_t = A(n) · h_{t-1} + P^(i) · x_t                            (eq. 2)
+y_t = |P^(o) · h_t|²                                          (eq. 3)</code></pre>
+<p>where A(n) is determined by the refractive index distribution, P^(i)
+is the input coupling matrix, P^(o) is the readout matrix, and y_t is
+detected intensity. The trainable parameter is n(x,y). Training =
+designing the refractive index distribution.</p>
+<p><strong>ARCH-1 conclusion:</strong> Any optical cavity with a
+spatially structured medium IS an RNN. The refractive index distribution
+is the weight matrix. Round-trip time = one RNN time step. This is an
+exact mapping at the level of Maxwell’s equations discretized in time,
+not an approximation.</p>
+<h3 id="holographic-weight-storage-psaltis-et-al.-1990">3.2 Holographic
+Weight Storage (Psaltis et al. 1990)</h3>
+<p>A holographic grating in a photosensitive medium stores a weight
+matrix as a spatial modulation of the refractive index:</p>
+<pre><code>Δn(x,y) = Δn_max · Σ_k A_k · cos(k_k · r + φ_k)              (eq. 4)</code></pre>
+<p>Each term encodes one outer product pattern. Angular multiplexing
+stores multiple patterns. For PTR glass: Δn_max = 5×10⁻³ (Glebov 2010),
+thermally fixed after development, transparent at 850nm.</p>
+<h3 id="from-scalar-wave-to-token-embedding">3.3 From Scalar Wave to
+Token Embedding</h3>
+<p>Token inference requires input x ∈ ℝ^d and output y ∈ ℝ^d. Extension:
+excite the resonator with d simultaneous spatial modes, each
+amplitude-modulated by one component of the input token vector:</p>
+<pre><code>f(x,y,t) = Σ_{i=1}^{d} x_i · ψ_i(x,y) · δ(t)               (eq. 5)</code></pre>
+<p>After T round trips, the output field is read by d output
+detectors:</p>
+<pre><code>y_j = |∫ ψ_j*(x,y) · u_T(x,y) dx dy|²                       (eq. 6)</code></pre>
+<p>The map x → y is a learned nonlinear transformation, optimized by
+training Δn(x,y) via the adjoint method. Stacking multiple resonators
+(each with its own Δn) = stacking transformer layers.</p>
+<hr />
+<h2 id="system-architecture">4. System Architecture</h2>
+<h3 id="system-overview">4.1 System Overview</h3>
+<pre><code>Token embedding x ∈ ℝ^512
+        ↓
+   [VCSEL array, 850nm, 512 modes]
+   x_i → amplitude of mode ψ_i
+        ↓
+   [PTR glass resonator]
+   Δn(x,y) = trained holographic weight grating
+   T=100 round trips per token
+        ↓
+   [Si PIN detector array + TIA]
+   Intensity readout → 512-dim output vector
+        ↓
+   [Inter-layer coupling: relay lens pair, free-space]
+   Passive mode-matching, no electronics
+        ↓
+   Next resonator (next layer)
+        ↓   × 24 layers
+   [Final output readout]
+   512-dim intensity vector → logits</code></pre>
+<h3 id="resonator-geometry-arch-2-arch-3">4.2 Resonator Geometry
+(ARCH-2, ARCH-3)</h3>
+<p><strong>Geometry:</strong> Confocal Fabry-Perot, one flat mirror and
+one concave mirror (R_c = L = 20mm). PTR glass fills the cavity. HR
+mirror coatings deposited directly on PTR glass faces after holographic
+development — no separate optics inside the cavity.</p>
+<p>The confocal condition (R_c = L) produces Hermite-Gaussian TEM_mn
+eigenmodes with fundamental waist w₀ = √(λL/2π) = 5.2 µm at 850nm.
+Fresnel number F = D²/(4λL) = 78 confirms &gt;7000 modes fit within the
+2.5mm aperture, of which 512 are addressed.</p>
+<p><strong>Why Fabry-Perot over ring:</strong> Ring resonators support
+traveling-wave modes, not standing-wave. The standing-wave mode
+structure of the Fabry-Perot naturally implements the u_{t-1} term in
+eq. 1 via retroreflection. Ring geometry rejected.</p>
+<p><strong>Why PTR glass fills the cavity:</strong> The weight grating
+is a property of the glass bulk. Filling the cavity with glass rather
+than using a thin insert maximizes MVM interaction length (more Δn
+accumulated per pass). No air gaps inside the resonator.</p>
+<p><strong>ARCH-2/3 locked parameters:</strong></p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Cavity length L</td>
+<td style="text-align: left;">20mm</td>
+<td style="text-align: left;">Sets τ=133ps, T_coh=750 &gt;&gt; T_op=100.
+Coherent regime.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Mirror reflectivity R</td>
+<td style="text-align: left;">0.9990</td>
+<td style="text-align: left;">Finesse=3140, intra-cavity gain ~1000×,
+practical dielectric HR</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Round-trip time τ</td>
+<td style="text-align: left;">133.3 ps</td>
+<td style="text-align: left;">τ = 2L/c₀</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Operating round trips T_op</td>
+<td style="text-align: left;">100</td>
+<td style="text-align: left;">T_op &lt;&lt; T_coh. SNR ≥ 38dB at this
+depth.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Cavity aperture</td>
+<td style="text-align: left;">2.5mm</td>
+<td style="text-align: left;">Supports 512 modes at 50µm VCSEL pitch
+with 2× margin</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Modes addressed</td>
+<td style="text-align: left;">512</td>
+<td style="text-align: left;">Embedding dimension d=512</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Polarization</td>
+<td style="text-align: left;">Vertical linear only</td>
+<td style="text-align: left;">VCSEL native, avoids mirror dichroism</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">VCSEL pitch</td>
+<td style="text-align: left;">50µm</td>
+<td style="text-align: left;">Glass Brain validated; 117× safety vs
+λ/2</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">PTR glass geometry</td>
+<td style="text-align: left;">10×10×0.5mm</td>
+<td style="text-align: left;">Thermal management (ARCH-10); post-carve
+coating</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-pure-glass-resonator">4.3 The Pure-Glass Resonator</h3>
+<p>The inference resonator contains no active intra-cavity elements. The
+optical path during inference is:</p>
+<pre><code>VCSEL array (850nm, 512 modes)
+  → input face (HR coating R=0.9990, ~0.1% input coupling)
+  → PTR glass bulk (Δn(x,y) weight grating)
+  → output face (HR coating, ~10% output coupling)
+  → Si PIN detector array</code></pre>
+<p>Nothing inside the resonator except glass. This is not a
+simplification for convenience — it is a physical requirement. Any
+active element (modulator, phase shifter, electrode) inside a
+Finesse-3140 cavity contributes insertion loss on every round trip. Even
+0.1 dB/pass accumulates to 10 dB over T=100 round trips, consuming the
+entire SNR budget. There is no margin for intra-cavity active elements
+at this finesse and round-trip count.</p>
+<h3 id="input-encoding-arch-3">4.4 Input Encoding (ARCH-3)</h3>
+<p>Each token x ∈ ℝ^512 is encoded as a spatial amplitude distribution
+at the input mirror:</p>
+<pre><code>E_in(x,y) = Σ_{i=1}^{512} x_i · ψ_i(x,y)</code></pre>
+<p>Implementation: 512 GaAs VCSELs at 850nm, arranged in a 23×23 grid at
+50µm pitch (1.15mm footprint), collimated and magnified 2.2× to fill the
+2.5mm cavity aperture. Each VCSEL is amplitude-modulated at the token
+rate (75M tok/s = 13.3ns/token, requiring ~75MHz modulation — well
+within VCSEL bandwidth of 5-10GHz).</p>
+<p>Note: current encoding uses amplitude only (x_i real-valued →
+amplitude of mode ψ_i). Phase of each mode is unused at input. This is
+an unexploited degree of freedom. Phase encoding could double the
+effective input capacity. Deferred to future work; not required for
+initial validation.</p>
+<h3 id="inter-layer-coupling-arch-8">4.5 Inter-Layer Coupling
+(ARCH-8)</h3>
+<p>Between successive resonator layers, coupling is entirely passive and
+free-space. No electronics, no active modulation, no homodyne reference
+in the inter-layer path.</p>
+<pre><code>Output face of layer k (partial transmission ~10%)
+  ↓ collimating lens
+  ↓ relay lens pair (mode-match aperture k → aperture k+1)
+  ↓ input face of layer k+1</code></pre>
+<p>The relay lens pair performs geometric mode-matching only — it maps
+the output field of cavity k onto the input aperture of cavity k+1 with
+correct magnification. It applies no computation. Inter-layer latency is
+~0.2ns for 50mm free-space propagation, negligible relative to the
+13.3ns per-layer compute time.</p>
+<p>Phase coherence is not required to be maintained across layers. The
+token embedding at each layer input is a real-valued intensity vector
+(the output of the Si PIN detector array), re-encoded as VCSEL
+amplitudes. Incoherent coupling between layers eliminates the need for a
+global phase reference, dramatically simplifying the multi-layer stack
+and enabling independent per-layer thermal management.</p>
+<p><strong>Inter-layer signal chain and activation function:</strong>
+The detector–driver–VCSEL chain implements the system’s activation
+function. The signal path per mode is:</p>
+<pre><code>P_k = |E_k|²                           (layer k output intensity, per mode)
+I_photo = R · P_k                       R = 0.6 A/W  → I_photo ≈ 1.5 mA at P=2.5mW
+V_TIA   = R_f · I_photo                 R_f = 667 Ω  → V_TIA ≤ 1V  (within 3.3V rail)
+I_drive = g · V_TIA                     g = 5 mA/V   → I_drive ≈ 5 mA at nominal
+P_VCSEL = η_s · max(0, I_drive - I_th)  η_s=0.6 W/A, I_th=1 mA</code></pre>
+<p>Combining: <code>P_out = η_s · K · max(0, P_k − θ)</code> where: -
+<code>K = g · R_f · R = 2.0</code> (dimensionless gain) -
+<code>θ = I_th / K = 0.5 mW</code> (power threshold, tunable via VCSEL
+bias current) - <code>A² = η_s · K = 1.2</code> (net intensity gain &gt;
+1, compensates coupling loss)</p>
+<p><strong>In the intensity (power) computational basis, this is exactly
+ReLU:</strong></p>
+<pre><code>P_out = A² · max(0, P_in − θ)</code></pre>
+<p>Linear MVMs operate on intensity vectors; ReLU on intensity is
+interleaved between every layer. This satisfies universal approximation
+(Leshno et al. 1993: any non-polynomial bounded activation suffices;
+ReLU is the degenerate limit θ→0).</p>
+<p><strong>Key TIA design constraint:</strong> R_f = 667 Ω, not 100 kΩ.
+At I_photo = 1.5 mA, R_f = 100 kΩ gives V_TIA = 150 V — a rail
+violation. The correct transimpedance for ≤1V output at this
+photocurrent is 667 Ω. This also corrects the SNR section which
+previously cited 100 kΩ (that figure was from a low-light single-photon
+context, not applicable here).</p>
+<p><strong>Threshold tunability:</strong> VCSEL bias current sets the
+effective threshold: - Bias = 0: θ_eff = 0.5 mW (20% of P_op) — moderate
+nonlinearity - Bias = 95% · I_th: θ_eff = 0.025 mW (1% of P_op) —
+near-linear (soft activation) - Bias &lt; I_th always: VCSEL off when no
+signal — hard sparsity below threshold</p>
+<p>The threshold is a single per-layer scalar set by bias DAC —
+trainable hyperparameter.</p>
+<p><strong>On the question of MZIs in the coupling path:</strong> MZI
+meshes are not present and are not needed. MZIs in photonic neural
+networks implement programmable weight matrices. In QRI, the weight
+matrix is implemented by the holographic grating inside the resonator.
+The coupling path has no computational role — it is purely geometric
+transport. Passive relay optics suffice.</p>
+<h3 id="activation-function-arch-9-locked-2026-04-27">4.6 Activation
+Function (ARCH-9, locked 2026-04-27)</h3>
+<p>The activation function is <strong>ReLU on intensity</strong>,
+implemented by the VCSEL threshold nonlinearity at each inter-layer
+boundary. No intra-cavity nonlinear optical element is required.</p>
+<p><strong>Derivation:</strong> See ARCH-8 signal chain. The complete
+transfer function from layer k intensity to layer k+1 intensity is:</p>
+<pre><code>P_out = A² · max(0, P_in − θ)
+
+where:
+  A²  = η_s · K = η_s · g · R_f · R  = 1.2   (net gain)
+  θ   = I_th / K                      = 0.5 mW (power threshold)
+  K   = g · R_f · R                   = 2.0</code></pre>
+<p>This is ReLU with gain A² = 1.2 and threshold θ = 0.5 mW. The gain
+&gt; 1 is intentional: it compensates the ~10% inter-layer coupling loss
+so that signal level is maintained across 24 layers without electronic
+amplification stages.</p>
+<p><strong>Proof of nonlinearity:</strong> f(a·P) = A²·max(0,a·P−θ) ≠
+a·f(P) for θ≠0. Fails homogeneity → nonlinear. ✓</p>
+<p><strong>Proof of expressiveness:</strong> ReLU networks with
+sufficient width are universal approximators (Hornik 1991). The
+intensity-domain computation (holographic MVM interleaved with intensity
+ReLU) is precisely this architecture. ✓</p>
+<p><strong>Why not Kerr SPM:</strong> φ_NL ~ 10⁻¹⁵ rad/pass at operating
+intensity — negligible. SPM is a phase effect; it produces no amplitude
+nonlinearity at these power levels. Retired.</p>
+<p><strong>Computational basis note:</strong> The correct basis for QRI
+computation is <strong>intensity</strong> (power), not field amplitude.
+The holographic MVM mixes intensity modes; the VCSEL threshold applies
+ReLU to each intensity component; the next layer sees an intensity
+input. Phase is erased at each inter-layer boundary — this is
+intentional and required for thermal independence between layers
+(ARCH-8).</p>
+<p><strong>ARCH-9 locked parameters:</strong></p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+<th style="text-align: left;">Derivation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Activation function</td>
+<td style="text-align: left;">ReLU on intensity: P_out = A²·max(0,
+P_in−θ)</td>
+<td style="text-align: left;">VCSEL threshold</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Net gain A²</td>
+<td style="text-align: left;">1.2</td>
+<td style="text-align: left;">η_s · g · R_f · R = 0.6 × 5e-3 × 667 ×
+0.6</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Power threshold θ</td>
+<td style="text-align: left;">0.5 mW (zero bias)</td>
+<td style="text-align: left;">I_th / K = 1mA / 2.0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">θ tunability</td>
+<td style="text-align: left;">0–0.5 mW via VCSEL bias DAC</td>
+<td style="text-align: left;">Bias sets effective I_th</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TIA transimpedance R_f</td>
+<td style="text-align: left;">667 Ω</td>
+<td style="text-align: left;">V_max=1V at I_photo=1.5mA</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Driver transconductance g</td>
+<td style="text-align: left;">5 mA/V</td>
+<td style="text-align: left;">I_drive,max=5mA at V=1V</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Intra-cavity nonlinear element</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Cavity detuning</td>
+<td style="text-align: left;">On-resonance (δ = 0)</td>
+<td style="text-align: left;">Maximize finesse buildup</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Computational basis</td>
+<td style="text-align: left;">Intensity (power)</td>
+<td style="text-align: left;">Phase erased at each boundary</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">VCSEL bias stabilization</td>
+<td style="text-align: left;">APC loop (automatic power control)</td>
+<td style="text-align: left;">Standard driver IC feature; compensates
+I_th thermal drift (~3.8mA at 7.6K self-heating)</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">VCSEL PID lock bandwidth</td>
+<td style="text-align: left;">~1 kHz</td>
+<td style="text-align: left;">Thermal drift correction only</td>
+</tr>
+</tbody>
+</table>
+<h3 id="snr-and-noise-budget-arch-5">4.7 SNR and Noise Budget
+(ARCH-5)</h3>
+<p>Signal path:</p>
+<pre><code>Input: 2-3 mW per VCSEL mode
+  → finesse buildup (~1000×) → 2-3W intra-cavity
+  → T=100 round-trip loss: 0.995^100 ≈ 0.606 (2.4 dB)
+  → output power ~1.2-1.8W aggregate
+  → Si PIN (0.6 A/W) → 0.36-0.54 A photocurrent
+  → TIA (R_f=667Ω) → 6-bit quantizer</code></pre>
+<p>Dominant noise: shot noise. At I ≈ 0.4A, readout bandwidth 1GHz:</p>
+<pre><code>σ_shot = √(2eIΔf) ≈ 10µA
+SNR = I/σ_shot ≈ 40dB</code></pre>
+<p>Target for 6-bit precision: 38dB (6.02×6 + 1.76 = 37.9dB). Margin:
+2dB.</p>
+<p><strong>ARCH-5 locked parameters:</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Input power per VCSEL</td>
+<td style="text-align: left;">2-3mW</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Intra-cavity power</td>
+<td style="text-align: left;">2-3W</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Output SNR</td>
+<td style="text-align: left;">40dB (target ≥38dB)</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">SNR margin</td>
+<td style="text-align: left;">2dB</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Noise floor</td>
+<td style="text-align: left;">Shot-noise-limited</td>
+</tr>
+</tbody>
+</table>
+<p>Risk: 2dB margin is tight. EXP-4 (thermal lensing) could erode it.
+Phase 1 VCSEL upgrade (+3dB, 2.5mW → 10mW) is available if margin is
+insufficient.</p>
+<h3 id="token-throughput-arch-4">4.8 Token Throughput (ARCH-4)</h3>
+<pre><code>τ = 2L/c₀ = 133.3 ps (round-trip time)
+t_token = T_op × τ = 100 × 133.3 ps = 13.3 ns
+throughput = 1/t_token = 75M tokens/sec</code></pre>
+<p>24-layer stack latency: 24 × 13.3ns = 320ns optical + inter-layer
+propagation ≈ 330ns total. No electronic interposer latency in the
+inference path.</p>
+<h3 id="holographic-weight-capacity-arch-7">4.9 Holographic Weight
+Capacity (ARCH-7)</h3>
+<p>Weight matrix stored via low-rank factorization W = U·V^T:</p>
+<pre><code>U ∈ ℝ^(512 × r),  V ∈ ℝ^(512 × r)
+Total weights per layer: 1024r</code></pre>
+<p>At rank r=50: 51.2k weights per layer. Each outer product u_i ⊗ v_i^T
+→ one holographic grating component, written via angular multiplexing.
+PTR glass supports ~1000 independent grating components (Glebov 2010,
+λ/D angular selectivity criterion) — ample headroom at rank-50.</p>
+<p>For a 24-layer stack: 24 × 51.2k = 1.23M equivalent parameters. This
+is a low-rank approximation; accuracy trade-off (rank-50 typically
+retains 95-98% of transformer capability) is acceptable given the
+physics constraints. Rank can be increased to 100-200 with mode basis
+expansion (ARCH-16).</p>
+<h3 id="thermal-management-arch-10">4.10 Thermal Management
+(ARCH-10)</h3>
+<p>PTR plate geometry: 10×10×0.5mm. Surface area 260mm² provides passive
+thermal dissipation with ΔT ≈ 15K above ambient at 1W absorbed. Active
+Peltier cooling holds plate at 20-25°C even at 10W intra-cavity (COP~2,
+~5W electrical overhead). Peltier is optional for the baseline design;
+included for margin.</p>
+<hr />
+<h2 id="training-architecture">5. Training Architecture</h2>
+<h3 id="the-weight-translation-problem-arch-11">5.1 The Weight
+Translation Problem (ARCH-11)</h3>
+<p>Digital training — running the adjoint wave equation simulation on a
+GPU — computes an optimal Δn(x,y) for a mathematical cavity. The
+physical cavity deviates from that model at scales that matter:</p>
+<ul>
+<li>A length error of 1µm = 1.2 wavelengths at 850nm</li>
+<li>Mirror flatness errors of λ/10 introduce 85nm wavefront error per
+pass</li>
+<li>Internal stress gradients in the PTR blank produce spatially varying
+Δn not present in simulation</li>
+</ul>
+<p>These deviations compound multiplicatively over T=100 round trips.
+The correspondence between simulated weights and physical weights is
+completely destroyed. <strong>Weight translation from simulation to
+physical cavity is not feasible.</strong> Every physical cavity is
+unique at the scale that determines the computation.</p>
+<p>Training must therefore be performed in-situ, using the actual
+physical cavity as the forward model. The physical imperfections are
+automatically incorporated because gradients are computed from
+measurements made through the real glass.</p>
+<h3 id="wavelength-separation-write-at-532nm-infer-at-850nm-arch-11">5.2
+Wavelength Separation: Write at 532nm, Infer at 850nm (ARCH-11)</h3>
+<p>Three isolation schemes for separating weight-writing from inference
+were analyzed.</p>
+<p><strong>Temporal separation</strong> (exploit slow grating decay
+between write and read phases) fails because any 850nm read beam has
+nonzero photorefractive cross-section σ_r in any optically responsive
+material. Over millions of inference tokens, the grating degrades via
+optical fixing fatigue. The erasure cannot be eliminated, only slowed.
+This provides no benefit over static PTR holography.</p>
+<p><strong>Spatial mode separation</strong> (write with TEM₀₁, read with
+TEM₀₀, exploit amplitude orthogonality) fails because amplitude
+orthogonality does not imply intensity orthogonality. The grating
+coupling coefficient involves an intensity overlap integral:</p>
+<pre><code>κ_{00,01} = (k/2n) · ∫∫ ψ*₀₀(x,y) · Δn₀₁(x,y) · ψ₀₀(x,y) dx dy</code></pre>
+<p>Since Δn₀₁(x,y) follows the TEM₀₁ intensity profile (even function,
+nonzero overlap with Gaussian TEM₀₀), this integral is nonzero. The read
+beam both uses and partially erases the written grating. The computation
+mechanism and the erasure mechanism are identical and cannot be
+separated by spatial mode choice.</p>
+<p><strong>Wavelength separation</strong> (write at 532nm, read at
+850nm) is categorically different. PTR glass photosensitivity is
+determined by the silver-cerium complex absorption spectrum, which peaks
+in the UV and falls to effectively zero at 850nm. The grating integrity
+condition is:</p>
+<pre><code>σ_r · I_r &lt;&lt; σ_w · I_w
+σ_r(850nm) ≈ 0  →  satisfied for any I_r, unconditionally</code></pre>
+<p>This is a physics argument — photons at 850nm lack the energy to
+drive the photochemical reaction that creates or destroys the grating —
+not a rate argument or an overlap argument. The inference beam cannot
+erase the weights. This property does not degrade with operating time,
+temperature, or intensity within the PTR stability envelope.</p>
+<p><strong>Wavelength separation is locked as the isolation
+mechanism.</strong></p>
+<h3 id="in-situ-training-protocol-arch-11">5.3 In-Situ Training Protocol
+(ARCH-11)</h3>
+<p>Training uses the physical inference cavity as the forward model. The
+mechanical housing includes a 532nm write port (capped during inference)
+in addition to the 850nm input port.</p>
+<p><strong>Forward pass (850nm):</strong> Inject training input x via
+the VCSEL array. Circulate T=100 round trips. Measure output y via the
+Si PIN detector array. Compute loss L = ‖y − y_target‖².</p>
+<p><strong>Gradient computation (digital):</strong> The adjoint method
+computes ∂L/∂Δn(x,y) on a GPU using the measured output as the boundary
+condition. The physical cavity’s imperfections are implicitly absorbed
+because the forward pass is measured, not simulated.</p>
+<p><strong>Weight update (532nm):</strong> The gradient ∂L/∂Δn(x,y) is
+encoded as a spatial amplitude and phase pattern on the 532nm write
+beam, which is injected via the write port in single-pass configuration.
+The 532nm beam’s intensity pattern drives a photorefractive index
+increment matching the gradient step:</p>
+<pre><code>Δn(x,y) ← Δn(x,y) + η · ∂L/∂Δn(x,y)</code></pre>
+<p>where η is set by the 532nm exposure dose. The 850nm beam is off
+during writing.</p>
+<p><strong>Batch gradient accumulation:</strong> Individual training
+samples should not trigger individual 532nm write pulses. Consecutive
+write exposures create overlapping latent images that partially erase
+each other (holographic crosstalk), degrading the weight trajectory.
+Instead, gradients are accumulated digitally over a batch of training
+tokens and a single summed gradient is written per batch. This maps onto
+standard batch gradient descent and eliminates intra-batch crosstalk.
+Batch size is a free parameter; larger batches reduce crosstalk and
+improve gradient quality at the cost of slower feedback. Optimal batch
+size is determined by the ratio of individual gradient magnitude to
+accumulated grating strength, which EXP-7 will characterize.</p>
+<p><strong>Thermal development:</strong> After one full training epoch
+(all batches processed), the PTR glass is removed from the cavity and
+thermally developed (500°C, ~30 minutes). Development converts the
+latent photorefractive exposure (silver nanoparticle seeds, ~10-20% of
+final Δn) into permanent crystallographic index modulation (NaF
+nanoparticle growth, full Δn). The crystallographic grating is immune to
+subsequent 532nm exposures — it cannot be overwritten or erased.
+Subsequent write cycles add corrections on top of the fixed
+structure.</p>
+<p><strong>Iteration:</strong> Reinstall the developed glass, remeasure
+the forward pass, evaluate residual loss. If loss is above target, run
+another write-develop cycle. Convergence expected in 3-5 cycles. The
+system identification loop (see ARCH-13) progressively refines the
+adjoint simulation to match the physical cavity, reducing residual error
+each cycle.</p>
+<p><strong>Training timeline (per layer):</strong></p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Step</th>
+<th style="text-align: left;">Duration</th>
+<th style="text-align: left;">Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">One write epoch</td>
+<td style="text-align: left;">~1 hour</td>
+<td style="text-align: left;">532nm power and target Δn magnitude;
+EXP-3</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Thermal development</td>
+<td style="text-align: left;">30 min</td>
+<td style="text-align: left;">Batch all 24 layers simultaneously</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Reinstall + evaluate</td>
+<td style="text-align: left;">15 min</td>
+<td style="text-align: left;">Kinematic mount; no realignment</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Cycles to convergence</td>
+<td style="text-align: left;">3-5</td>
+<td style="text-align: left;">EXP-7 validates</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;"><strong>Total, 24 layers
+parallel</strong></td>
+<td style="text-align: left;"><strong>~1 day</strong></td>
+<td style="text-align: left;">One furnace batch, 24 write stations</td>
+</tr>
+</tbody>
+</table>
+<h3 id="grating-stability-during-inference-arch-11">5.4 Grating
+Stability During Inference (ARCH-11)</h3>
+<p>After thermal development, the crystallographic grating is permanent.
+The silver-cerium photosensitive complex has been consumed; subsequent
+850nm photons find no reactive species. Glebov et al. demonstrated PTR
+grating stability over decade-plus timescales with no measurable
+diffraction efficiency change. The inference beam at 2-3W intra-cavity
+poses no grating integrity risk.</p>
+<p>The only inference-phase stability concern is thermal drift of the
+effective optical path length, which shifts the cavity resonance
+frequency (not the grating). This is addressed by the VCSEL PID
+frequency lock (ARCH-9) and flagged for validation as EXP-4.</p>
+<h3 id="batch-size-and-epoch-scale-arch-11">5.5 Batch Size and Epoch
+Scale (ARCH-11)</h3>
+<p>Because batch gradients are accumulated digitally before each 532nm
+write, the effective batch size can be arbitrarily large — limited only
+by GPU memory for gradient accumulation, not by any optical constraint.
+At 75M tok/s, running a batch of 1 billion training tokens takes ~13
+seconds of optical forward-pass time. This enables training on massive
+corpora per write-develop cycle, which is a significant advantage over
+any digital training setup: the optical forward pass is essentially free
+relative to the gradient computation. Training epochs can be made as
+large as desired; the per-epoch cost is dominated by the 30-minute
+furnace cycle, not by the optical exposure time.</p>
+<hr />
+<h2 id="scaling-architecture">6. Scaling Architecture</h2>
+<h3 id="block-duplication-arch-17">6.1 Block Duplication (ARCH-17)</h3>
+<p>A single QRI block (one PTR glass resonator + relay optics)
+implements one transformer layer. Blocks can be duplicated in two
+configurations.</p>
+<p><strong>Series (depth):</strong> Stack N blocks, each with its own
+holographic weight plate. The output of block k feeds the input of block
+k+1 via passive relay optics. Computation depth scales with N. This is
+the 24-layer baseline.</p>
+<p><strong>Parallel (width and expertise):</strong> Route the same input
+to M independent blocks simultaneously. Each block computes a different
+linear transformation (different holographic weight plate) over a
+different subspace of the embedding. Outputs are concatenated or
+combined. This is the mixture-of-experts (MoE) architecture, implemented
+physically as an array of independent glass resonators with passive
+optical splitters and combiners. M can be large because each block is
+independent — no shared optical resource creates a bottleneck.</p>
+<p>Incoherent coupling between layers and between parallel blocks is
+required for scalability. If phase coherence were maintained across
+blocks, a global phase reference would be needed for every block, and
+thermal drift in any one block would corrupt all others. Incoherent
+coupling (intensity readout at each block output, re-encoding at each
+block input) makes each block thermally and mechanically independent.
+This is the correct design for any system with more than a few
+blocks.</p>
+<h3 id="clone-and-fine-tune-for-scale-training-arch-17">6.2
+Clone-and-Fine-Tune for Scale Training (ARCH-17)</h3>
+<p>The weight translation problem (§5.1) establishes that weights cannot
+be transferred between a simulation and a physical cavity. The question
+for scaling is whether weights can be transferred between two physical
+cavities — i.e., whether unit 02 can be initialized from unit 01’s
+trained grating and then fine-tuned, rather than trained from
+scratch.</p>
+<p><strong>Why naive cloning fails in general.</strong> The trained
+grating of unit 01 encodes two superimposed components that cannot be
+separated by inspection of the physical glass: the intended computation
+(the weight matrix W that the training procedure converged to) and the
+cavity-specific correction (the Δn pattern that compensates for unit
+01’s specific mirror figure errors, glass inhomogeneities, and length
+deviations). When this grating is copied to unit 02, the cavity-specific
+correction terms — which were tuned to unit 01’s imperfections — are
+wrong for unit 02’s different imperfections. They introduce errors
+rather than correcting them.</p>
+<p><strong>Why cloning still works as an initialization.</strong>
+Despite this, the cloned grating is not useless for unit 02. The
+intended computation W is present, even if distorted. Unit 02 is
+computing an imperfect version of the right computation, not a random
+one. This is precisely the situation where fine-tuning is effective: the
+loss landscape has already been explored and a good region found;
+fine-tuning is a local search to correct for the cavity mismatch, not a
+global search from scratch.</p>
+<p><strong>The tolerance condition.</strong> For clone-and-fine-tune to
+be cheaper than full training, the following must hold: the
+cavity-specific correction |Δn_comp2 - Δn_comp1| (the difference between
+unit 02’s required correction and unit 01’s baked-in correction) must be
+small relative to the total grating magnitude |Δn_total|. This
+difference is bounded by the inter-unit manufacturing variation — how
+consistently the two cavities are built. Manufacturing consistency is
+therefore a direct determinant of the clone-and-fine-tune
+efficiency.</p>
+<p><strong>The two-stage training economy.</strong> If manufacturing
+consistency is sufficient that fine-tuning converges in 1-2
+write-develop cycles rather than the 3-5 needed for full training, the
+scaling economics change dramatically. A factory of N inference units
+requires: one fully-trained master unit (full training, ~1 day), an
+optical grating copying apparatus (contact printing or holographic
+duplication), and per-unit fine-tuning (1-2 write-develop cycles, ~4-8
+hours each). The fine-tuning cost is sublinear in total training cost
+per unit. This maps exactly onto the digital ML paradigm of foundation
+model pretraining followed by deployment-specific fine-tuning —
+implemented in glass.</p>
+<p><strong>What must be validated.</strong> The clone-and-fine-tune
+strategy requires experimental validation before being relied upon for
+scale deployment. EXP-7 (see §7) is extended to include this
+validation.</p>
+<h3 id="deployment-model-arch-12-arch-13">6.3 Deployment Model (ARCH-12,
+ARCH-13)</h3>
+<p>During inference, the device operates as a pure 850nm system. The
+532nm write port is physically capped. No training, gradient
+computation, or weight updates occur during inference.</p>
+<p>The single-cavity phase stability budget is approximately:</p>
+<pre><code>σ_per_token ~ 1-5 mrad/token (estimated, EXP-5 validates)
+B = (π/4)² / σ²_per_token ≈ 24,600 tokens at σ=5 mrad/token</code></pre>
+<p>This is adequate for LLM inference context lengths of 2K-128K tokens
+without ensemble averaging. Multi-cavity ensemble arrays are a scaling
+option if longer context or higher phase precision is required, but are
+not part of the baseline design.</p>
+<p><strong>Model update = glass swap.</strong> The device chassis is
+permanent hardware. PTR glass plates (10×10×0.5mm, ~$10-50 per blank)
+are swappable via kinematic mounts in minutes. No power cycling, no
+software update, no re-initialization. The device serves tokens
+immediately when the 850nm laser is on and the cavity is locked.</p>
+<p><strong>Write station.</strong> Training is performed at a dedicated
+write facility, not on the deployed device. The write station consists
+of a 532nm CW laser (Nd:YAG SHG, ~100mW), an SLM or holographic beam
+shaper for gradient encoding, a kinematic stage, and a reference beam
+path. The write station couples to the inference cavity via the write
+port, or the glass plate can be written on a standalone holographic
+bench. Finished plates are shipped to the deployed device. A model
+update is operationally equivalent to receiving a small package of glass
+cards.</p>
+<p><strong>Adjoint simulation infrastructure.</strong> Gradient
+computation (∂L/∂Δn(x,y) for each layer) runs on a GPU cluster using the
+differentiable wave equation model. The simulation is coupled to
+physical measurement in a closed loop: simulate → write → measure →
+compare → update simulation parameters → repeat. Over multiple cycles,
+the simulation converges to an accurate surrogate for the physical
+cavity (system identification). By the final write cycle, the surrogate
+may be good enough to compute updates without further in-situ
+measurement.</p>
+<hr />
+<h2 id="rank-scaling-arch-16">7. Rank Scaling (ARCH-16)</h2>
+<h3 id="rank-and-mode-basis">7.1 Rank and Mode Basis</h3>
+<p>RNN state dimensionality d = rank of the learned weight tensor. Each
+spatial mode carries one state dimension. The holographic grating
+encodes the weight matrix as a sum of rank-1 outer products, one per
+grating component. The mode basis determines how many independent
+grating components can be supported before the cavity Q degrades.</p>
+<p><strong>Hermite-Gauss (default, rank &lt;100):</strong> Orthogonal in
+2D rectangular geometry. 10×10 grid = 100 modes at rank-50; 20×20 grid =
+400 modes at rank-100 (limited by diffraction loss above ~rank-100).</p>
+<p><strong>Laguerre-Gauss (rank &gt;100):</strong> Cylindrical symmetry
+basis. Radial index p + azimuthal index ℓ. Scales more efficiently to
+high rank; mode overlap loss lower above rank-100.</p>
+<p><strong>Hybrid basis (recommendation for rank &gt;100):</strong></p>
+<pre><code>Φ_hybrid = {HG_{m,n} : m+n &lt; 10} ∪ {LG_{p,ℓ} : p ≤ 15, ℓ ≤ 3}
+         ≈ 100 HG + 100 LG = rank-200 native capacity</code></pre>
+<h3 id="rank-scaling-regimes">7.2 Rank Scaling Regimes</h3>
+<p><strong>Regime 1: Rank 50-100 (safe, current design)</strong>
+Insertion loss ~2.2-3.0dB, SNR 38-40dB, thermal PID at 1kHz sufficient.
+Accuracy within 1-2% of digital baseline.</p>
+<p><strong>Regime 2: Rank 100-200 (pushing limits)</strong> Insertion
+loss ~3.5-4.5dB, SNR 36-37dB, mode coupling introduces spurious terms.
+Requires mode orthonormalization regularization (λ₃ penalty on
+⟨φᵢ|φⱼ⟩²). Expected 2-4% accuracy loss vs. digital baseline.</p>
+<p><strong>Regime 3: Rank &gt;200 (failure)</strong> Cavity Q degrades
+below critical threshold. SNR drops to ~30dB. Thermal coupling between
+adjacent cavity regions exceeds PID tracking bandwidth. Not
+recommended.</p>
+<h3 id="rank-loss-tradeoff">7.3 Rank-Loss Tradeoff</h3>
+<pre><code>Test accuracy = Digital_baseline - ε_rank - ε_SNR
+
+ε_rank ≈ 1% · log₂(rank) / log₂(256)
+ε_SNR  ≈ 0.5% · (40dB - SNR_actual) / 10dB</code></pre>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Rank</th>
+<th style="text-align: left;">SNR (dB)</th>
+<th style="text-align: left;">ε_rank (%)</th>
+<th style="text-align: left;">ε_SNR (%)</th>
+<th style="text-align: left;">Total loss (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">50</td>
+<td style="text-align: left;">37.8</td>
+<td style="text-align: left;">0.8</td>
+<td style="text-align: left;">0.1</td>
+<td style="text-align: left;"><strong>0.9</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">100</td>
+<td style="text-align: left;">37.0</td>
+<td style="text-align: left;">1.5</td>
+<td style="text-align: left;">0.5</td>
+<td style="text-align: left;"><strong>2.0</strong></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">150</td>
+<td style="text-align: left;">36.2</td>
+<td style="text-align: left;">2.1</td>
+<td style="text-align: left;">0.9</td>
+<td style="text-align: left;"><strong>3.0</strong></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">200</td>
+<td style="text-align: left;">35.5</td>
+<td style="text-align: left;">2.8</td>
+<td style="text-align: left;">1.3</td>
+<td style="text-align: left;"><strong>4.1</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Production target:</strong> Rank-100 (200 basis modes, ~2%
+total accuracy loss, within acceptable range). <strong>Stretch
+goal:</strong> Rank-150 (requires +3dB VCSEL upgrade for margin).
+<strong>Ceiling:</strong> Rank-200 (all margins exhausted; not
+recommended for production).</p>
+<p>Note: the ε_rank and ε_SNR model accounts for MVM fidelity and SNR.
+The activation function (ReLU on intensity, VCSEL threshold) is
+guaranteed by electronics and does not contribute accuracy loss.</p>
+<hr />
+<h2 id="convergence-theory-arch-14-arch-15">8. Convergence Theory
+(ARCH-14, ARCH-15)</h2>
+<h3 id="photonic-backpropagation-arch-14">8.1 Photonic Backpropagation
+(ARCH-14)</h3>
+<p>Hughes et al. (2018) proved photonic backpropagation exactness via
+adjoint variable methods. For a photonic linear transformation y = M·x,
+gradients with respect to structural parameters are:</p>
+<pre><code>∂L/∂φ = Re( ⟨∂L/∂y | ∂y/∂φ⟩ )</code></pre>
+<p>computed by time-reversing the optical field and interfering with the
+loss gradient signal. This is exact — not an approximation — for any
+linear photonic system.</p>
+<p>In QRI’s in-situ training protocol, the adjoint computation runs
+digitally using the measured forward pass output as the boundary
+condition. The physical cavity’s imperfections are automatically
+captured. Pai et al. (2023) demonstrated this experimentally, achieving
+~94% MNIST accuracy (matching digital training) using in-situ photonic
+backpropagation.</p>
+<p>Convergence rate bound (Hughes 2018, implied):</p>
+<pre><code>E[||∇L||²] ≤ O(1/√N_circ)    where N_circ = round trips per forward pass</code></pre>
+<p>At N_circ = 100: gradient noise ~1% of loss signal. Learning rate
+0.01-0.1 per epoch. Expected convergence: 10-100 epochs (hours of
+optical forward-pass time).</p>
+<h3 id="loss-landscape-arch-15">8.2 Loss Landscape (ARCH-15)</h3>
+<p>The photonic loss (intensity measurement) and the digital loss
+(cross-entropy or MSE) are related but not identical:</p>
+<pre><code>L_optical = ∫ |E_out(t) - E_target(t)|² dt
+L_digital = Σ_i ||y_pred_i - y_target_i||²</code></pre>
+<p>L_optical ≈ L_digital when amplitude matches normalized prediction
+and target phase encoding tracks cavity mode phase. Phase mismatch can
+create spurious minima in L_optical not present in L_digital.
+Mitigation: pre-calibrate target phase encoding to track cavity
+resonance condition throughout training.</p>
+<p>Training stability requires signal-to-gradient ratio &gt;10:1
+(satisfied at 40dB SNR: gradient noise ~1%), learning rate &lt;0.1 per
+epoch, and batch size &gt;&gt;1 (batch accumulation before each write,
+as specified in §5.3).</p>
+<hr />
+<h2 id="decision-log">9. Decision Log</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Date</th>
+<th style="text-align: left;">Decision</th>
+<th style="text-align: left;">Rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">2026-04-19</td>
+<td style="text-align: left;">ARCH-1 LOCKED: Fabry-Perot cavity as
+RNN</td>
+<td style="text-align: left;">Hughes 2019 exact mapping: wave eq = RNN
+update</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-19</td>
+<td style="text-align: left;">ARCH-1 LOCKED: PTR glass as weight
+medium</td>
+<td style="text-align: left;">Psaltis 1990 + Glass Brain validation.
+Non-volatile.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-19</td>
+<td style="text-align: left;">ARCH-1 LOCKED: 850nm wavelength</td>
+<td style="text-align: left;">GaAs VCSEL OTS maturity, Si PD response,
+PTR transparency. Glass Brain continuity.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-19</td>
+<td style="text-align: left;">Embedded/single-tenant constraint</td>
+<td style="text-align: left;">No HBM3, no scheduling. One model, static
+weights.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-20</td>
+<td style="text-align: left;">ARCH-2 LOCKED</td>
+<td style="text-align: left;">L=20mm, R=0.9990, τ=133.3ps, T_op=100.
+Coherent regime.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-20</td>
+<td style="text-align: left;">ARCH-3 LOCKED</td>
+<td style="text-align: left;">512 spatial modes, 2.5mm aperture, single
+vertical polarization.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-20</td>
+<td style="text-align: left;">ARCH-4 LOCKED</td>
+<td style="text-align: left;">75M tok/s (13.3ns/token).</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-20</td>
+<td style="text-align: left;">ARCH-5 LOCKED</td>
+<td style="text-align: left;">SNR 40dB ≥ 38dB target.
+Shot-noise-limited.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-20</td>
+<td style="text-align: left;">ARCH-7 LOCKED</td>
+<td style="text-align: left;">Rank-50 U·V^T, 51.2k weights/layer, 1.23M
+total.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-20</td>
+<td style="text-align: left;">ARCH-8 LOCKED</td>
+<td style="text-align: left;">All-optical layer coupling, passive relay
+optics only. No MZIs in coupling path.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-20</td>
+<td style="text-align: left;">ARCH-9 LOCKED</td>
+<td style="text-align: left;">Kerr SPM (χ³ in PTR glass), φ_NL=0.2-1
+rad/pass.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-27</td>
+<td style="text-align: left;">ARCH-9 REVISED</td>
+<td style="text-align: left;">Kerr SPM retired.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-27</td>
+<td style="text-align: left;">ARCH-9 LOCKED</td>
+<td style="text-align: left;">Activation: ReLU on intensity
+P_out=A²·max(0,P_in−θ). A²=1.2, θ=0.5mW. TIA R_f=667Ω (corrected from
+100kΩ). Computational basis: intensity.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-20</td>
+<td style="text-align: left;">ARCH-10 LOCKED</td>
+<td style="text-align: left;">10×10×0.5mm plate, passive+active thermal
+management.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-24</td>
+<td style="text-align: left;">ARCH-14 LOCKED</td>
+<td style="text-align: left;">Photonic backprop exactness via adjoint
+(Hughes 2018, Pai 2023).</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-24</td>
+<td style="text-align: left;">ARCH-15 LOCKED</td>
+<td style="text-align: left;">Loss landscape: L_optical ≈ L_digital with
+phase calibration.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-26</td>
+<td style="text-align: left;">ARCH-16 LOCKED</td>
+<td style="text-align: left;">Rank ceiling 200, production target
+rank-100. Hybrid HG/LG basis above rank-100.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-26</td>
+<td style="text-align: left;">ARCH-11 RETRACTED</td>
+<td style="text-align: left;">Ephemeral weights via intra-cavity LiNbO3
+MZM: disqualifying. 0.1 dB/pass × T=100 = 10 dB cumulative insertion
+loss per token. Wipes SNR budget.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-26</td>
+<td style="text-align: left;">ARCH-11 (new) LOCKED</td>
+<td style="text-align: left;">Weight translation infeasible (sub-λ
+manufacturing error × T=100). In-situ training mandatory. Wavelength
+separation (532nm write, 850nm infer) is the only clean isolation
+mechanism — σ_r(850nm)≈0 is a physics argument, not a rate tradeoff.
+Pure-glass resonator. Batch gradient accumulation before each write.
+Thermal cure between epochs.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-26</td>
+<td style="text-align: left;">ARCH-12 REVISED</td>
+<td style="text-align: left;">Ensemble cavity arrays demoted to scaling
+option. Single-cavity phase budget (~24K tokens) adequate for LLM
+inference.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-26</td>
+<td style="text-align: left;">ARCH-13 REVISED</td>
+<td style="text-align: left;">Model update = glass swap. Write station
+at dedicated facility. Adjoint simulation + system identification
+loop.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2026-04-26</td>
+<td style="text-align: left;">ARCH-17 LOCKED</td>
+<td style="text-align: left;">Clone-and-fine-tune scaling strategy.
+Grating encodes W + cavity-specific correction (inseparable). Cloning
+transfers W approximately; fine-tuning corrects cavity mismatch.
+Efficiency conditional on manufacturing consistency. EXP-7 extended to
+validate.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">2026-04-26</td>
+<td style="text-align: left;">EXP-6 CLOSED</td>
+<td style="text-align: left;">LiNbO3 MZM removed from design.
+Single-pass insertion loss measurement no longer relevant.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="open-experiments">10. Open Experiments</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">ID</th>
+<th style="text-align: left;">Priority</th>
+<th style="text-align: left;">Description</th>
+<th style="text-align: left;">Blocks</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">EXP-1</td>
+<td style="text-align: left;">CLOSED 2026-04-27</td>
+<td style="text-align: left;">PTR χ³ (n₂) at 850nm — no longer required.
+Kerr SPM retired. Activation function is detector-squaring via VCSEL
+driver.</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EXP-2</td>
+<td style="text-align: left;">HIGH</td>
+<td style="text-align: left;">Two-wavelength photosensitivity: PTR under
+532nm write + 850nm read simultaneously. Confirm σ_r(850nm)≈0
+empirically.</td>
+<td style="text-align: left;">ARCH-11 isolation claim</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">EXP-3</td>
+<td style="text-align: left;">HIGH</td>
+<td style="text-align: left;">Grating growth rate: Δn vs. 532nm exposure
+time at accessible intensities. Sets write epoch duration.</td>
+<td style="text-align: left;">ARCH-11 timeline</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EXP-4</td>
+<td style="text-align: left;">HIGH</td>
+<td style="text-align: left;">Thermal lensing: cavity stability under
+2-3W CW 850nm intra-cavity. Acceptable drift &lt;5 mrad/hour.</td>
+<td style="text-align: left;">ARCH-5 SNR margin</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">EXP-5</td>
+<td style="text-align: left;">MED</td>
+<td style="text-align: left;">Homodyne phase-lock stability: VCSEL PID
+lock over 1-hour inference run.</td>
+<td style="text-align: left;">ARCH-12 phase budget</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">EXP-6</td>
+<td style="text-align: left;">CLOSED</td>
+<td style="text-align: left;">LiNbO3 MZM insertion loss at 850nm. Closed
+2026-04-26: MZM removed from design.</td>
+<td style="text-align: left;">—</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">EXP-7</td>
+<td style="text-align: left;">HIGH</td>
+<td style="text-align: left;">In-situ training convergence +
+clone-and-fine-tune validation. See §10.1 below.</td>
+<td style="text-align: left;">ARCH-11, ARCH-17</td>
+</tr>
+</tbody>
+</table>
+<h3
+id="exp-7-in-situ-training-convergence-and-clone-validation-expanded">10.1
+EXP-7: In-Situ Training Convergence and Clone Validation (Expanded)</h3>
+<p><strong>Objective:</strong> Validate the two core claims of the
+training architecture — that in-situ iterative write-develop training
+converges in a tractable number of cycles, and that clone-and-fine-tune
+is viable as a scaling strategy.</p>
+<p><strong>Phase A — Convergence rate.</strong> Build a minimal
+single-layer holographic RNN at rank-10. Train from a blank PTR glass
+plate using the in-situ two-wavelength protocol with batch gradient
+accumulation and iterative thermal development. Measure loss
+vs. write-develop cycle number. Target: convergence to within 2% of the
+digital baseline (simulated rank-10 RNN on the same task) in ≤5 cycles.
+If convergence is slower, identify the dominant error source from the
+following candidates: (a) gradient encoding fidelity — does the 532nm
+write pattern accurately reproduce the computed ∂L/∂Δn? (b) thermal
+development precision — does the furnace cycle faithfully convert latent
+image to crystallographic grating without distortion? (c) cavity
+reinstallation error — does the kinematic mount reproduce the cavity
+mode structure to sufficient precision?</p>
+<p><strong>Phase B — Clone-and-fine-tune.</strong> After Phase A
+produces a converged unit 01, optically copy the trained grating to a
+fresh PTR blank using contact holographic printing (or equivalent
+duplication method). Install the clone in a second, independently-built
+cavity (unit 02) with nominally identical but physically distinct
+specifications. Measure the initial loss of unit 02 with the cloned
+grating (no fine-tuning). Then run the fine-tuning protocol (iterative
+write-develop cycles starting from the cloned grating) and measure loss
+vs. cycle number. Compare the number of fine-tuning cycles required for
+unit 02 to the number of full training cycles required for unit 01.</p>
+<p><strong>Success criteria:</strong> - Phase A: ≤5 write-develop cycles
+to within 2% of digital baseline. - Phase B: Clone initializes unit 02
+at lower loss than blank glass. Fine-tuning converges in ≤2 cycles
+(vs. ≤5 for full training). Confirms that clone-and-fine-tune is
+meaningfully cheaper than full training.</p>
+<p><strong>Secondary measurements:</strong> - Batch size sensitivity:
+run Phase A at batch sizes of 100, 1000, 10000 tokens per write.
+Characterize crosstalk degradation vs. batch size. Identify the minimum
+batch size at which training is stable. - Manufacturing consistency:
+measure cavity length, mirror figure, and glass homogeneity of unit 01
+and unit 02. Correlate inter-unit physical differences with the initial
+loss of the cloned unit 02 and the number of fine-tuning cycles
+required. This establishes the manufacturing tolerance requirement for
+clone-and-fine-tune to be efficient.</p>
+<hr />
+<h2 id="architecture-summary">11. Architecture Summary</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">ARCH</th>
+<th style="text-align: left;">Component</th>
+<th style="text-align: left;">Status</th>
+<th style="text-align: left;">Key Result</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">Wave eq → RNN</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">Hughes 2019 exact mapping. Resonator IS an
+RNN.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">Cavity geometry</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">L=20mm, R=0.9990, Finesse=3140, τ=133ps,
+T_op=100</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">Mode structure</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">512 HG modes, 2.5mm aperture, 50µm VCSEL
+pitch</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">Throughput</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">75M tok/s, 13.3ns/token</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">SNR budget</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">40dB achieved, 38dB required, 2dB
+margin</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">Training (old)</td>
+<td style="text-align: left;">✗ SUPERSEDED</td>
+<td style="text-align: left;">Replaced by ARCH-11</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">7</td>
+<td style="text-align: left;">Weight capacity</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">Rank-50, 51.2k weights/layer, 1.23M
+total</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">8</td>
+<td style="text-align: left;">Layer coupling</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">Passive relay optics. No MZIs. Incoherent
+between layers.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">9</td>
+<td style="text-align: left;">Activation function</td>
+<td style="text-align: left;">✓ LOCKED 2026-04-27</td>
+<td style="text-align: left;">ReLU on intensity: P_out=A²·max(0,P_in−θ).
+A²=1.2, θ=0.5mW. VCSEL threshold. Intensity computational basis.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">Thermal management</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">10×10×0.5mm plate, Peltier optional</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">11</td>
+<td style="text-align: left;">In-situ training</td>
+<td style="text-align: left;">✓ LOCKED (2026-04-26)</td>
+<td style="text-align: left;">Pure-glass resonator. 532nm write / 850nm
+infer. Batch accumulation + thermal cure per epoch. Weight translation
+infeasible; training must be in-situ.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">12</td>
+<td style="text-align: left;">Deployment</td>
+<td style="text-align: left;">✓ LOCKED (2026-04-26)</td>
+<td style="text-align: left;">Single cavity. Glass swap = model update.
+~24K token phase budget.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">13</td>
+<td style="text-align: left;">Training infra</td>
+<td style="text-align: left;">✓ LOCKED (2026-04-26)</td>
+<td style="text-align: left;">Write station + adjoint simulation. System
+identification loop. ~1 day/update.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">14</td>
+<td style="text-align: left;">Convergence proof</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">Adjoint backprop exact (Hughes 2018).
+Empirical: 94% MNIST (Pai 2023).</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">15</td>
+<td style="text-align: left;">Loss landscape</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">L_optical ≈ L_digital with phase
+calibration. Batch size &gt;1 required.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">16</td>
+<td style="text-align: left;">Rank scaling</td>
+<td style="text-align: left;">✓ LOCKED</td>
+<td style="text-align: left;">Production rank-100, ceiling rank-200.
+Hybrid HG/LG basis.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">17</td>
+<td style="text-align: left;">Clone scaling</td>
+<td style="text-align: left;">✓ LOCKED (2026-04-26)</td>
+<td style="text-align: left;">Clone-and-fine-tune viable conditional on
+manufacturing consistency. EXP-7B validates.</td>
+</tr>
+</tbody>
+</table>
+<h1 id="architecture-cross-check">Architecture Cross-Check</h1>
+<p>All architecture decisions validated for mutual consistency by
+<code>analyze/arch_crosscheck.py</code>.</p>
+<pre><code>================================================================================
+ARCHITECTURE CROSS-CHECK: ARCH-1 through ARCH-10
+================================================================================
+
+ARCH-1 ↔ ARCH-2      ✓ PASS     ARCH-1 ↔ ARCH-2: Resonator geometry supports wave RNN primitive
+ARCH-2 ↔ ARCH-3      ✓ PASS     ARCH-2 ↔ ARCH-3: Geometry supports 512 modes with 14.5× margin
+ARCH-3 ↔ ARCH-4      ✓ PASS     ARCH-3 ↔ ARCH-4: 512 modes transport 75M tok/s with 13.3ns latency
+ARCH-4 ↔ ARCH-5      ✓ PASS     ARCH-4 ↔ ARCH-5: 75M tok/s achieves 40dB SNR with 2.5mW input
+ARCH-5 ↔ ARCH-6      ✓ PASS     ARCH-5 ↔ ARCH-6: 40dB SNR supports coherent Hebbian via 532nm
+ARCH-6 ↔ ARCH-7      ✓ PASS     ARCH-6 ↔ ARCH-7: Rank-50 factorization (1.23M params) fits in 1000 multiplexed gratings
+ARCH-7 ↔ ARCH-8      ✓ PASS     ARCH-7 ↔ ARCH-8: Holographic weights readable via Homodyne detection
+ARCH-8 ↔ ARCH-9      ✓ PASS     ARCH-8 ↔ ARCH-9: ReLU on intensity. A²=1.20, θ=0.5mW, V_TIA=1000mV ✓
+ARCH-9 ↔ ARCH-10     ✓ PASS     ARCH-9 ↔ ARCH-10: VCSEL external to cavity (15K rise is glass, not VCSEL). VCSEL self-heating ~7.6K → ΔI_th~3.8mA, compensated by APC loop.
+Full Integration     ✓ PASS     ARCH-1 through ARCH-10 fully integrated and mutually consistent
+NARG Compat          ✓ PASS     NARG: disabled (baseline mode)
+PTYCH Compat         ✓ PASS     PTYCHOGRAPHY: disabled (standard holography)
+NARG+PTYCH           ✓ PASS     NARG+PTYCH: not both enabled (no interaction)
+
+================================================================================
+RESULT: All architecture decisions LOCKED and mutually consistent.
+Ready for experimental validation phase (EXP-2 through EXP-5, EXP-7).
+================================================================================</code></pre>
+<h1 id="experimental-validation-tasks">Experimental Validation
+Tasks</h1>
+<h1 id="tasks">Tasks</h1>
+<h2 id="convention">Convention</h2>
+<ul>
+<li><code>[ ]</code> open</li>
+<li><code>[x]</code> done</li>
+<li>Priority: HIGH / MED / LOW</li>
+</ul>
+<hr />
+<h2 id="literature-investigation">Literature Investigation</h2>
+<h3 id="from-onn-review-fu-et-al.-2024-light-sci.-appl.">From ONN Review
+(Fu et al. 2024, Light: Sci. &amp; Appl.)</h3>
+<p><strong>Foundational papers — HIGH priority</strong> - [ ] Lin et
+al. 2018, Science — “All-optical machine learning using diffractive deep
+neural networks” — D2NN original. Rayleigh-Sommerfeld propagation as
+forward pass. Training via backprop on phase masks. Key for
+understanding D2NN geometry and its limits. - [ ] Shen et al. 2017,
+Nature Photonics — “Deep learning with coherent nanophotonic circuits” —
+MZI mesh ONN, SVD-based weight decomposition, first integrated ONN chip.
+Establishes unitary constraint and its consequences. - [ ] Psaltis et
+al. 1990, Nature — “Holography in artificial neural networks” —
+Foundational. Photoreactive crystals for nonlinearity in ONNs. Directly
+relevant: holography + NN from first principles. - [ ] Farhat et
+al. 1985, Appl. Opt. — “Optical implementation of the Hopfield model” —
+First optical neural network. Understand the original motivation and
+what was achieved. - [ ] Reck et al. 1994, Phys. Rev. Lett. —
+“Experimental realization of any discrete unitary operator” — Beam
+splitter + phase shifter decomposition of arbitrary unitary. Foundation
+of MZI mesh approach.</p>
+<p><strong>Nonlinearity papers — HIGH priority</strong> - [ ] Feldmann
+et al. 2019, Nature — “All-optical spiking neurosynaptic networks with
+self-learning capabilities” — PCM + MRR spiking ONN. Nonlinearity via
+PCM state switch. Understand endurance limits. - [ ] Feldmann et
+al. 2021, Nature — “Parallel convolutional processing using an
+integrated photonic tensor core” — PCM + microcomb, TOPS-scale.
+Understand architecture and why PCM failed for our use case. - [ ] Zhong
+et al. 2023, Nature Communications — “Graphene/silicon heterojunction
+for reconfigurable phase-relevant activation function” — All-optical
+nonlinearity without PCM. Promising alternative. Investigate saturation
+behavior, loss, bandwidth.</p>
+<p><strong>Reservoir computing — MED priority</strong> - [ ] Duport et
+al. 2012, Opt. Express — “All-optical reservoir computing” — SOA
+delay-loop reservoir. First all-optical reservoir. Understand connection
+to resonator recurrence. - [ ] Hughes et al. 2019, Sci. Adv. — “Wave
+physics as an analog recurrent neural network” — Scattering matrix of a
+wave medium IS an RNN. Directly relevant to resonator-as-computation
+concept.</p>
+<p><strong>Integrated platforms — MED priority</strong> - [ ] Bogaerts
+et al. 2020, Nature — “Programmable photonic circuits” — State of art
+programmable PICs. Understand what’s achievable in integrated optics. -
+[ ] Xu et al. 2021, Nature — “11 TOPS photonic convolutional
+accelerator” — Optical frequency comb + WDM for convolution.
+Time-wavelength interleaving. Key for throughput comparison.</p>
+<p><strong>Scaling / energy — LOW priority (but read abstracts)</strong>
+- [ ] Xu et al. 2024, Science — “Large-scale photonic chiplet Taichi
+empowers 160-TOPS/W” — Latest energy efficiency benchmark for optical
+compute.</p>
+<hr />
+<h3
+id="from-dual-comb-holography-vicentini-et-al.-2021-nat.-photonics">From
+Dual-Comb Holography (Vicentini et al. 2021, Nat. Photonics)</h3>
+<p><strong>HIGH priority</strong> - [ ] Picqué &amp; Hänsch 2019, Nat.
+Photonics — “Frequency comb spectroscopy” — Review of dual-comb
+technique. Essential for understanding frequency-multiplex token
+encoding. - [ ] Shams-Ansari et al. 2020, arXiv:2003.04533 — “Integrated
+lithium-niobate electro-optic platform for spectrally tailored dual-comb
+spectroscopy” — TFLN micro-ring dual-comb. Directly bridges our
+modulator platform to frequency-comb encoding.</p>
+<p><strong>MED priority</strong> - [ ] Coddington et al. 2009, Nat.
+Photonics — “Rapid and precise absolute distance measurements” —
+Dual-comb ranging. Understand coherence and precision limits. - [ ]
+Ideguchi et al. 2013, Nature — “Coherent Raman spectro-imaging with
+laser frequency combs” — Dual-comb with nonlinear process. Nonlinear
+optics + comb = interesting for all-optical nonlinearity.</p>
+<hr />
+<h2 id="architecture-derivation-tasks">Architecture Derivation
+Tasks</h2>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="" />ARCH-1: Identify the
+optical primitive — What is the natural optical operation corresponding
+to MVM? Compare: (a) 4f holographic diffraction, (b) MZI interference,
+(c) resonant mode coupling, (d) parametric interaction. Derive from
+Maxwell’s equations, not analogy.</label></li>
+<li><label><input type="checkbox" />ARCH-2: Resonator geometry choice —
+Fabry-Perot vs ring vs bowtie vs Sagnac. Criteria: (a) round-trip loss
+budget, (b) mode volume, (c) FSR vs token bandwidth, (d) mechanical
+stability.</label></li>
+<li><label><input type="checkbox" checked="" />ARCH-3: Nonlinearity
+mechanism — CLOSED 2026-04-27. Activation function is intensity squaring
+via VCSEL driver (I_drive ∝ I_detected). No optical nonlinearity
+required. Kerr, saturable absorber, EIT all retired.</label></li>
+<li><label><input type="checkbox" />ARCH-4: Token encoding — How does a
+token embedding vector enter the resonator? Map options to optical
+degrees of freedom.</label></li>
+<li><label><input type="checkbox" />ARCH-5: Learning mechanism — Are
+weights static (fab-time) or in-situ tunable? What does “learning” mean
+physically for a resonator?</label></li>
+</ul>
+<hr />
+<h2 id="experimental-validation-tasks-1">Experimental Validation
+Tasks</h2>
+<ul class="task-list">
+<li><p><label><input type="checkbox" checked="" />EXP-1 (CLOSED
+2026-04-27): PTR χ³ @ 850nm CW — CLOSED. Kerr SPM retired from
+architecture (ARCH-9 revised). Activation function is now intensity
+squaring via VCSEL driver electronics. PTR n₂ measurement no longer
+architecturally relevant.</label></p></li>
+<li><p><label><input type="checkbox" />EXP-2 (HIGH): Two-wavelength
+photosensitivity — PTR @ 532nm write + 850nm read simultaneously.
+Confirm no cross-sensitization degrading the read
+signal.</label></p></li>
+<li><p><label><input type="checkbox" />EXP-3 (HIGH): Hebbian grating
+growth rate — measure Δn vs. 532nm exposure time. Target: reach Δn =
+5×10⁻³ in &lt; 1000 inference passes.</label></p></li>
+<li><p><label><input type="checkbox" />EXP-4 (HIGH): Thermal lensing
+dn/dT — measure cavity stability under 2-3W CW intra-cavity load.
+Acceptable drift: &lt; 5 mrad/hour.</label></p></li>
+<li><p><label><input type="checkbox" />EXP-5 (MED): Homodyne phase-lock
+stability — VCSEL frequency lock margin vs. thermal drift. Target: PID
+lock stable over 1-hour inference run.</label></p></li>
+<li><p><label><input type="checkbox" checked="" />EXP-6 (CLOSED
+2026-04-26): LiNbO3 MZM insertion loss @ 850nm — CLOSED. MZM removed
+from design (ARCH-11 revised). Intra-cavity MZM disqualified: 0.1
+dB/pass × T=100 = 10 dB cumulative loss. No longer
+relevant.</label></p></li>
+<li><p><label><input type="checkbox" />EXP-7 (HIGH): In-situ training
+convergence rate — train a small holographic RNN (rank-10, single layer)
+using the two-wavelength iterative write-develop protocol. Measure loss
+vs. write-develop cycle number. Target: convergence to within 2% of
+digital baseline in ≤5 cycles. If slower, characterize dominant error
+source: gradient encoding fidelity vs. thermal development precision
+vs. cavity reinstallation repeatability (kinematic
+mount).</label></p></li>
+<li><p><label><input type="checkbox" />INFRA-1: Add PDF fetching to
+generate_sysdoc.py — download full PDFs where DOI is available, store in
+citations/</label></p></li>
+<li><p><label><input type="checkbox" />INFRA-2: Add
+design/render_resonator.py — placeholder renderer for resonator geometry
+diagrams</label></p></li>
+<li><p><label><input type="checkbox" />INFRA-3: Set up conversations/
+log rotation — one file per session</label></p></li>
+</ul>
+<hr />
+<h2 id="architecture-derivation-tasks-derived-from-arch-1">Architecture
+Derivation Tasks (derived from ARCH-1)</h2>
+<ul class="task-list">
+<li><label><input type="checkbox" checked="" />ARCH-1: Optical primitive
+LOCKED — Fabry-Perot resonator as wave RNN (Hughes 2019
+mapping)</label></li>
+<li><label><input type="checkbox" />ARCH-2: Resonator geometry — derive
+L, mirror R, round-trips T_max from loss budget and SNR
+requirement</label></li>
+<li><label><input type="checkbox" />ARCH-3: Mode structure — derive
+aperture size from d=512 embedding; confirm N ≥ 512 orthogonal modes
+fit</label></li>
+<li><label><input type="checkbox" />ARCH-4: Token throughput — derive
+token rate from L and T (tau = 2L/c, rate = 1/T*tau)</label></li>
+<li><label><input type="checkbox" />ARCH-5: SNR budget — derive noise
+accumulation over T round trips; confirm 6-bit precision
+achievable</label></li>
+<li><label><input type="checkbox" />ARCH-6: Training pipeline — adjoint
+method for wave dynamics; compute UV hologram from Δn(x,y)</label></li>
+<li><label><input type="checkbox" />ARCH-7: Hologram capacity — how many
+weight matrix parameters fit in PTR plate at 50um pitch?</label></li>
+<li><label><input type="checkbox" />ARCH-8: Interposer — confirm Glass
+Brain design reusable; derive changes needed for resonator
+vs. feedforward</label></li>
+</ul>
+<h1 id="material-properties">Material Properties</h1>
+<h3 id="ptr_glass"><code>ptr_glass</code></h3>
+<p><em>Photo-thermo-refractive glass for holographic recording</em></p>
+<ul>
+<li><strong>wavelength_range_nm</strong>: [300, 3000]</li>
+<li><strong>max_refractive_index_change</strong>: 0.005</li>
+<li><strong>absorption_coefficient_per_cm</strong>: 0.01</li>
+<li><strong>diffraction_efficiency_max</strong>: 0.99</li>
+<li><strong>write_wavelength_nm</strong>: 325</li>
+<li><strong>erase_wavelength_nm</strong>: 0</li>
+<li><strong>thermal_stability_C</strong>: 400</li>
+</ul>
+<blockquote>
+<p>Cite: Glebov 2010, Proc. SPIE 7504, doi:10.1117/12.838767</p>
+</blockquote>
+<h3 id="linbo3_tfln"><code>linbo3_tfln</code></h3>
+<p><em>Thin-film lithium niobate electro-optic modulator
+platform</em></p>
+<ul>
+<li><strong>half_wave_voltage_V</strong>: 1.5</li>
+<li><strong>bandwidth_GHz</strong>: 100</li>
+<li><strong>propagation_loss_dB_per_cm</strong>: 0.27</li>
+<li><strong>coupling_loss_dB</strong>: 0.5</li>
+<li><strong>pockels_coefficient_r33_pm_per_V</strong>: 30.9</li>
+</ul>
+<blockquote>
+<p>Cite: Wang et al. 2018, Nature, doi:10.1038/s41586-018-0551-y</p>
+</blockquote>
+<h3 id="sin_pic_a150"><code>sin_pic_a150</code></h3>
+<p><em>Ligentec A150 silicon nitride PIC platform, NIR
+optimized</em></p>
+<ul>
+<li><strong>wavelength_range_nm</strong>: [700, 1060]</li>
+<li><strong>propagation_loss_dB_per_m</strong>: 3.0</li>
+<li><strong>minimum_bend_radius_um</strong>: 10</li>
+<li><strong>coupling_loss_fiber_to_chip_dB</strong>: 1.5</li>
+<li><strong>platform</strong>: Ligentec A150</li>
+</ul>
+<blockquote>
+<p>Cite: Ligentec A150 PDK documentation,
+https://www.ligentec.com/products/a150/</p>
+</blockquote>
+<h3 id="gaas_vcsel_850nm"><code>gaas_vcsel_850nm</code></h3>
+<p><em>GaAs vertical-cavity surface-emitting laser at 850nm</em></p>
+<ul>
+<li><strong>threshold_current_mA</strong>: 0.5</li>
+<li><strong>slope_efficiency_W_per_A</strong>: 0.6</li>
+<li><strong>wall_plug_efficiency</strong>: 0.35</li>
+<li><strong>linewidth_MHz</strong>: 50</li>
+<li><strong>coherence_length_m</strong>: 3.0</li>
+<li><strong>modulation_bandwidth_GHz</strong>: 10</li>
+</ul>
+<blockquote>
+<p>Cite: Iga 2000, IEEE J. Sel. Top. Quantum Electron.,
+doi:10.1109/2944.902166</p>
+</blockquote>
+<h3 id="ingaas_pin_detector"><code>ingaas_pin_detector</code></h3>
+<p><em>InGaAs PIN photodetector, telecom/NIR</em></p>
+<ul>
+<li><strong>responsivity_A_per_W</strong>: 0.85</li>
+<li><strong>bandwidth_GHz</strong>: 50</li>
+<li><strong>dark_current_nA</strong>: 1.0</li>
+<li><strong>noise_equivalent_power_W_per_rtHz</strong>: 1e-14</li>
+</ul>
+<blockquote>
+<p>Cite: Bowers &amp; Burrus 1987, J. Lightwave Technol.,
+doi:10.1109/JLT.1987.1075507</p>
+</blockquote>
+<h3 id="si_pin_detector_850nm"><code>si_pin_detector_850nm</code></h3>
+<p><em>Silicon PIN photodetector at 850nm</em></p>
+<ul>
+<li><strong>responsivity_A_per_W</strong>: 0.6</li>
+<li><strong>bandwidth_GHz</strong>: 10</li>
+<li><strong>dark_current_nA</strong>: 0.1</li>
+</ul>
+<blockquote>
+<p>Cite: Saleh &amp; Teich, Fundamentals of Photonics, 3rd Ed., Ch.
+18</p>
+</blockquote>
+<h3 id="silica_fiber_smf28"><code>silica_fiber_smf28</code></h3>
+<p><em>Corning SMF-28 single-mode fiber</em></p>
+<ul>
+<li><strong>attenuation_dB_per_km_1550nm</strong>: 0.18</li>
+<li><strong>attenuation_dB_per_km_1310nm</strong>: 0.35</li>
+<li><strong>attenuation_dB_per_km_850nm</strong>: 2.5</li>
+<li><strong>core_diameter_um</strong>: 8.2</li>
+<li><strong>numerical_aperture</strong>: 0.14</li>
+</ul>
+<blockquote>
+<p>Cite: Corning SMF-28 Ultra datasheet, 2023,
+https://www.corning.com/media/worldwide/coc/documents/Fiber/SMF-28%20Ultra.pdf</p>
+</blockquote>
+<h3
+id="gaas_vcsel_850nm_single_mode"><code>gaas_vcsel_850nm_single_mode</code></h3>
+<p><em>Single-mode GaAs VCSEL at 850nm with narrow linewidth for
+coherent resonator operation</em></p>
+<ul>
+<li><strong>linewidth_MHz</strong>: 10</li>
+<li><strong>coherence_length_m</strong>: 30.0</li>
+<li><strong>threshold_current_mA</strong>: 1.0</li>
+<li><strong>modulation_bandwidth_GHz</strong>: 5</li>
+</ul>
+<blockquote>
+<p>Note: Oxide-confined single-mode VCSEL. Broader multimode VCSEL
+(50MHz, 6m l_c) insufficient for T&gt;60 at L=20mm.</p>
+</blockquote>
+<blockquote>
+<p>Cite: Larsson 2011, IEEE J. Sel. Top. Quantum Electron. 17(6):1551,
+doi:10.1109/JSTQE.2011.2114837</p>
+</blockquote>
+<h1 id="design-parameters">Design Parameters</h1>
+<h3 id="optical"><code>optical</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">wavelength_nm</td>
+<td style="text-align: left;"><code>850</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="token_embedding"><code>token_embedding</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">dimension</td>
+<td style="text-align: left;"><code>512</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="resonator"><code>resonator</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">geometry</td>
+<td style="text-align: left;"><code>Fabry-Perot</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">medium</td>
+<td style="text-align: left;"><code>PTR_glass</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">round_trips_T</td>
+<td style="text-align: left;"><code>100</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">cavity_length_L_mm</td>
+<td style="text-align: left;"><code>20</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">mirror_reflectivity_R</td>
+<td style="text-align: left;"><code>0.999</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="spatial"><code>spatial</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">pixel_pitch_um</td>
+<td style="text-align: left;"><code>50</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">aperture_mm</td>
+<td style="text-align: left;"><code>2.5</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="snr"><code>snr</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">target_bits</td>
+<td style="text-align: left;"><code>6</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">target_snr_dB</td>
+<td style="text-align: left;"><code>38.0</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="interposer"><code>interposer</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">detector</td>
+<td style="text-align: left;"><code>Si_PIN_850nm</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">amplifier</td>
+<td style="text-align: left;"><code>TIA_180nm_CMOS</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">nonlinearity</td>
+<td style="text-align: left;"><code>analog_comparator_GeLU</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">emitter</td>
+<td style="text-align: left;"><code>GaAs_VCSEL_850nm</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">latency_ns_per_layer</td>
+<td style="text-align: left;"><code>67</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">power_W_per_head</td>
+<td style="text-align: left;"><code>1.32</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="model"><code>model</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">target_params</td>
+<td style="text-align: left;"><code>TBD</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">layers</td>
+<td style="text-align: left;"><code>TBD</code></td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">embedding_dim</td>
+<td style="text-align: left;"><code>512</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="power"><code>power</code></h3>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Parameter</th>
+<th style="text-align: left;">Value</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">facility_W</td>
+<td style="text-align: left;"><code>TBD</code></td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">target_per_token_mJ</td>
+<td style="text-align: left;"><code>TBD</code></td>
+</tr>
+</tbody>
+</table>
+<h1 id="economic-analysis-5-year-tco">Economic Analysis (5-Year
+TCO)</h1>
+<pre><code>================================================================================
+HYPERSCALE vs. QRI ECONOMIC COMPARISON
+================================================================================
+
+--- CAPITAL COSTS ---
+Compute/Hardware                            $100.0B              $800.0M
+Memory/Networking                            $42.5B                    —
+Assembly                                          —              $200.0M
+Control Electronics                               —                $2.0M
+Facilities                                  $900.0M               $38.5M
+----------------------------------------------------------------------
+TOTAL CAPITAL                               $143.4B                $1.0B
+Capital Advantage (ratio)       Hyperscale baseline         138× cheaper
+
+--- ANNUAL OPERATIONS ---
+Energy                                        $1.8B               $30.9M
+Personnel                                   $225.0M                $2.2M
+Maintenance                                  $28.7B               $40.0M
+----------------------------------------------------------------------
+ANNUAL OpEx                                  $30.8B               $73.1M
+OpEx Advantage (ratio)          Hyperscale baseline         422× cheaper
+
+--- 5-YEAR TOTAL COST OF OWNERSHIP ---
+Capital                                     $143.4B                $1.0B
+OpEx ({} years)                             $154.0B              $365.3M
+----------------------------------------------------------------------
+TOTAL 5-YEAR TCO                           $297.4B                $1.4B
+TCO Advantage (ratio)           Hyperscale baseline         212× cheaper
+
+--- COST PER TOKEN (amortized over 5 years) ---
+Cost per token                             2.51e-05             1.19e-07
+Token Cost Advantage            Hyperscale baseline         212× cheaper
+
+--- POWER &amp; ENVIRONMENTAL IMPACT ---
+Annual energy (kWh)                         1.5e+10              3.5e+08
+Annual CO₂ (kg @ 0.4kg/kWh)                 6.1e+09              1.4e+08
+Carbon Reduction Ratio          Hyperscale baseline            44× lower
+
+--- THROUGHPUT EFFICIENCY ---
+Total power draw (W)                        1.8e+09           40000016.0
+Tokens/sec per Watt                             0.0                    2
+Efficiency Advantage            Hyperscale baseline           44× better
+
+--- PAYBACK PERIOD ---
+Annual savings vs hyperscale                 $30.7B
+QRI capital investment                        $1.0B
+Payback period (100% efficiency)           0.4 months
+Payback period (50% efficiency)           0.8 months
+
+================================================================================</code></pre>
+<h1 id="performance-scenarios">Performance Scenarios</h1>
+<pre><code>========================================================================================================================
+QRI PERFORMANCE: Baseline vs. Path A/B/C
+========================================================================================================================
+
+Metric                         Baseline             Path A (Cons)        Path B (Rec)         Path C (Agg)        
+------------------------------------------------------------------------------------------------------------------------
+SNR (dB)                       40.0                 40.0                 48.0                 48.0                
+NARG positions                 1                    16                   128                  128                 
+Throughput (M tok/s)           75.0                 75.0                 75.0                 75.0                
+Latency per-pos (ns)           13.30                0.831                0.104                0.104               
+Latency gain (×)               —                    16.0                 128.0                128.0               
+Parameters (M)                 1.23                 1.23                 1.23                 2.46                
+Power (mW)                     86.0                 94.6                 99.6                 101.6               
+Efficiency gain (×)            —                    0.91                 0.86                 0.85                
+Write overhead (%)             0                    10                   10                   13                  
+Timeline (weeks)               0                    2                    6                    8                   
+Cost ($k)                      0                    0                    5                    6                   
+Ptychography                   No                   No                   No                   ✓ Yes (2×)          
+
+========================================================================================================================
+
+RECOMMENDATION: Path B (SNR upgrade + NARG 128)
+  • 8-16× latency improvement
+  • Realistic electronics (no exotic parts)
+  • Unlocks ptychography as well (marginal write SNR)
+  • $5k cost, 4-6 week timeline
+  • Medium risk (TIA fab), medium-high reward
+
+========================================================================================================================</code></pre>
+<hr />
+<p><em>End of document. Generated by
+<code>analyze/build_pdf_report.py</code> on 2026-04-28.</em></p>
+</body>
+</html>

@@ -247,6 +247,7 @@ This is ReLU with gain A² = 1.2 and threshold θ = 0.5 mW. The gain > 1 is inte
 | Intra-cavity nonlinear element | None | — |
 | Cavity detuning | On-resonance (δ = 0) | Maximize finesse buildup |
 | Computational basis | Intensity (power) | Phase erased at each boundary |
+| VCSEL bias stabilization | APC loop (automatic power control) | Standard driver IC feature; compensates I_th thermal drift (~3.8mA at 7.6K self-heating) |
 | VCSEL PID lock bandwidth | ~1 kHz | Thermal drift correction only |
 
 ### 4.7 SNR and Noise Budget (ARCH-5)
