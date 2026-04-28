@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,900;1,700&family=Familjen+Grotesk:ital,wght@0,400;0,500;0,700;1,400&display=swap');
+
+/* ─── Primitive tokens ─────────────────────────────────────── */
+:root {
+  /* Acid accent — lawn-destruction green */
+  --acid:          oklch(78% 0.22 128);
+  --acid-dim:      oklch(65% 0.18 128);
+  --acid-faint:    oklch(78% 0.08 128);
+
+  /* Spacing — 4pt base */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Type scale — perfect fourth (1.333) */
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.25rem;
+  --text-xl:   clamp(1.5rem, 2.5vw + 0.5rem, 2rem);
+  --text-2xl:  clamp(2rem, 4vw + 0.5rem, 3rem);
+  --text-3xl:  clamp(2.75rem, 6vw + 0.5rem, 5rem);
+  --text-4xl:  clamp(4rem, 9vw + 0.5rem, 8rem);
+
+  /* Fonts */
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body:    'Familjen Grotesk', 'Helvetica Neue', sans-serif;
+
+  /* Transition */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ─── Light mode ────────────────────────────────────────────── */
+:root, [data-theme="light"] {
+  --bg-base:      oklch(97% 0.005 128);
+  --bg-raised:    oklch(93% 0.008 128);
+  --bg-sunken:    oklch(91% 0.010 128);
+
+  --text-primary:   oklch(12% 0.005 128);
+  --text-secondary: oklch(38% 0.008 128);
+  --text-tertiary:  oklch(55% 0.006 128);
+
+  --border:       oklch(78% 0.010 128);
+  --border-heavy: oklch(45% 0.010 128);
+
+  --ink:          oklch(10% 0.005 128);   /* Near-black for display */
+  --rule:         oklch(20% 0.008 128);   /* Heavy rule lines */
+}
+
+/* ─── Dark mode ─────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-base:      oklch(13% 0.008 128);
+    --bg-raised:    oklch(18% 0.008 128);
+    --bg-sunken:    oklch(10% 0.005 128);
+
+    --text-primary:   oklch(93% 0.006 128);
+    --text-secondary: oklch(68% 0.008 128);
+    --text-tertiary:  oklch(50% 0.006 128);
+
+    --border:       oklch(28% 0.010 128);
+    --border-heavy: oklch(55% 0.010 128);
+
+    --ink:          oklch(96% 0.006 128);
+    --rule:         oklch(85% 0.008 128);
+  }
+}
+
+/* ─── Reset & base ──────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-base);
+  transition: background 0.2s var(--ease-out), color 0.2s var(--ease-out);
+}
+
+/* ─── Typography utilities ──────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+p {
+  max-width: 65ch;
+  line-height: 1.65;
+}
+
+abbr {
+  font-variant-caps: all-small-caps;
+  text-decoration: none;
+}
+
+strong { font-weight: 700; }
+
+/* ─── Rule lines ─────────────────────────────────────────────── */
+.rule {
+  border: none;
+  border-top: 2px solid var(--rule);
+  margin: 0;
+}
+
+.rule--thin {
+  border-top-width: 1px;
+  border-color: var(--border);
+}
+
+.rule--acid {
+  border-top-color: var(--acid);
+  border-top-width: 3px;
+}
+
+/* ─── Links ──────────────────────────────────────────────────── */
+a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--acid);
+  text-decoration-thickness: 2px;
+  transition: color 0.15s;
+}
+
+a:hover {
+  color: var(--acid-dim);
+}
+
+/* ─── Print base ─────────────────────────────────────────────── */
+@media print {
+  :root {
+    --bg-base: white;
+    --text-primary: black;
+    --ink: black;
+    --border: #ccc;
+    --acid: #4a7c00;
+  }
+
+  body { font-size: 11pt; }
+  a { color: inherit; text-decoration: none; }
+}
