@@ -1,33 +1,35 @@
-/* Inherits design tokens from parent site */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg:         #0f0f0f;
-  --surface:    #1a1a1a;
-  --border:     #2a2a2a;
-  --text:       #e0e0e0;
-  --muted:      #888;
-  --accent:     #5fa86e;
-  --link:       #7ec9a0;
-  --link-hover: #b2dfc0;
-  --max-w:      640px;
-  --gap:        2.5rem;
+  --bg:          oklch(11% 0.006 145);
+  --surface:     oklch(16% 0.007 145);
+  --border:      oklch(23% 0.008 145);
+  --text:        oklch(85% 0.010 145);
+  --muted:       oklch(52% 0.010 145);
+  --accent:      oklch(64% 0.12  145);
+  --accent-dim:  oklch(54% 0.10  145);
+  --link:        oklch(72% 0.10  145);
+  --link-hover:  oklch(82% 0.09  145);
+  --max-w:       640px;
+  --gap:         2.75rem;
+  --font-display: 'Epilogue', 'Arial Narrow', sans-serif;
+  --font-body:    'Lora', Georgia, serif;
+  --font-mono:    ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
 }
 
 html {
   font-size: 17px;
   background: var(--bg);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  font-family: Georgia, "Times New Roman", serif;
-  line-height: 1.7;
-  padding: 3rem 1.25rem 5rem;
+  font-family: var(--font-body);
+  line-height: 1.72;
+  padding: 3rem 1.5rem 6rem;
 }
 
 main {
@@ -38,7 +40,7 @@ main {
   gap: var(--gap);
 }
 
-/* Nav */
+/* ── Nav ──────────────────────────────────────────────────────── */
 nav {
   display: flex;
   align-items: baseline;
@@ -47,157 +49,107 @@ nav {
 }
 
 nav a {
-  color: var(--link);
+  color: var(--muted);
   text-decoration: none;
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
   border-bottom: 1px solid transparent;
-  transition: border-color 0.15s, color 0.15s;
+  padding-bottom: 1px;
+  transition: color 0.15s, border-color 0.15s;
 }
 
 nav a:hover {
   color: var(--link-hover);
-  border-bottom-color: var(--link-hover);
+  border-bottom-color: var(--accent-dim);
 }
 
-nav .home {
-  color: var(--muted);
-}
+/* ── Header ───────────────────────────────────────────────────── */
+header { display: flex; flex-direction: column; gap: 0.4rem; }
 
-/* Header */
 header h1 {
-  font-size: 2rem;
-  font-weight: normal;
-  letter-spacing: -0.01em;
-  color: #fff;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -0.025em;
+  color: oklch(96% 0.008 145);
 }
 
 .tagline {
-  margin-top: 0.35rem;
   color: var(--muted);
-  font-size: 0.95rem;
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
 }
 
-/* Section labels */
+/* ── Section label ────────────────────────────────────────────── */
 .label {
-  font-size: 0.7rem;
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--accent);
-  margin-bottom: 1.25rem;
   display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
 }
 
-/* Entry list (index page) */
-.entries {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
+/* ── Entry list ───────────────────────────────────────────────── */
+.entries { list-style: none; }
 
 .entry-card {
-  padding: 1.25rem 1.5rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 4px;
+  padding: 1.75rem 0;
+  border-top: 1px solid var(--border);
 }
+
+.entry-card:last-child { border-bottom: 1px solid var(--border); }
 
 .entry-card a {
   text-decoration: none;
 }
 
 .entry-card h2 {
-  font-size: 1rem;
-  font-weight: normal;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
   color: var(--link);
-  margin-bottom: 0.35rem;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin-bottom: 0.4rem;
   transition: color 0.15s;
 }
 
-.entry-card a:hover h2 {
-  color: var(--link-hover);
-}
+.entry-card a:hover h2 { color: var(--link-hover); }
 
-.entry-card .date {
-  font-size: 0.78rem;
+.date {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
   color: var(--muted);
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
+  letter-spacing: 0.04em;
   margin-bottom: 0.6rem;
 }
 
-.entry-card p {
-  font-size: 0.9rem;
-  color: var(--muted);
-  line-height: 1.6;
+.entry-card > p {
+  font-size: 0.97rem;
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 60ch;
 }
 
-/* Entry page prose */
-article header {
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 1.5rem;
-}
-
-article header h1 {
-  font-size: 1.6rem;
+/* ── Tags ──────────────────────────────────────────────────────── */
+.entry-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  color: var(--accent-dim);
   margin-bottom: 0.5rem;
 }
 
-article header .date {
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
-}
-
-article section {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-article p {
-  color: var(--text);
-  font-size: 1rem;
-}
-
-article a {
-  color: var(--link);
-  text-decoration: none;
-  border-bottom: 1px solid var(--border);
-  transition: color 0.15s, border-color 0.15s;
-}
-
-article a:hover {
-  color: var(--link-hover);
-  border-bottom-color: var(--link-hover);
-}
-
-article code {
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
-  font-size: 0.85em;
-  color: var(--accent);
-  background: var(--surface);
-  padding: 0.1em 0.3em;
-  border-radius: 2px;
-}
-
-.back-link {
-  font-family: ui-monospace, "Cascadia Code", "Source Code Pro", monospace;
-  font-size: 0.8rem;
-  color: var(--muted);
-  text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.back-link:hover {
-  color: var(--link-hover);
-  border-bottom-color: var(--link-hover);
-}
-
+/* ── Responsive ───────────────────────────────────────────────── */
 @media (max-width: 480px) {
   html { font-size: 16px; }
-  header h1 { font-size: 1.6rem; }
+  body { padding: 2rem 1.1rem 5rem; }
+  header h1 { font-size: 1.9rem; }
 }

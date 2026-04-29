@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abolish Lawns: A Coming-Out Project — Dev Journal</title>
+  <meta name="description" content="Building abolish-lawns: manifesto, factsheet, three zines, and a deployment pipeline. The most controversial thing I've made, apparently.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="/dev-journal/">Journal</a>
+    </nav>
+
+    <header>
+      <h1>Abolish Lawns: A Coming-Out Project</h1>
+      <p class="tagline">April 28, 2026</p>
+    </header>
+
+    <section>
+      <p>
+        I've been sitting on the lawn argument for years. It connects to everything
+        I care about — commons theory, land use, water rights, the political economy
+        of suburban conformity — and it's somehow the most controversial position
+        I hold. More controversial than the anarchism. More controversial than
+        the AI commons arguments. People take the lawn personally.
+      </p>
+
+      <p>
+        Today we launched <a href="/abolish-lawns/">abolish-lawns</a>. Here's what
+        went into it.
+      </p>
+
+      <h2>The argument</h2>
+
+      <p>
+        The American residential lawn is not a neutral aesthetic choice. It's an
+        enforced land use regime backed by HOA covenants, municipal weed ordinances,
+        chemical industry lobbying, and a century of suburban ideology. It converts
+        40 million acres of potentially productive, biodiverse, community-serving
+        land into sterile performative monoculture. It's an enclosure. It should
+        be abolished.
+      </p>
+
+      <p>
+        The environmental case against lawns is well-established. What's less often
+        made is the commons argument: the lawn forecloses collective land use, mandates
+        private maintenance at individual expense, and punishes deviation. The
+        Olmsted-era design vision was continuous unfenced green space — a genuine
+        commons structure. What was built instead has the spatial structure of a
+        commons and the governance structure of private enforcement. It looks like
+        shared space. It functions as a mandate.
+      </p>
+
+      <p>
+        Michael Pollan wrote the liberal homeowner version of this argument in 1989.
+        It's excellent and ends with him planting a hedge and hiring a teenager to
+        mow what's left. We're going further.
+      </p>
+
+      <h2>The build</h2>
+
+      <p>
+        The site is SvelteKit with <code>adapter-static</code>, deployed as a git
+        submodule of <code>jason-edelman.org</code> via Workers Assets. The parent
+        repo's <code>scripts/build.mjs</code> assembles <code>public/</code> from
+        static files and submodule build outputs. Push to main triggers GitHub
+        Actions → wrangler deploy. The pattern scales: future subprojects plug in
+        by adding an entry to the SUBPROJECTS array and a git submodule.
+      </p>
+
+      <p>
+        The design system is what I'm calling "policy brief from hell" — Barlow
+        Condensed display, Familjen Grotesk body, acid green accent, OKLCH tinted
+        neutrals throughout, both light and dark modes. The manifesto is five
+        sections: indictment, enforcement mechanism, commons argument, anticipated
+        objections, and demands. Demand zero is "act without permission" — the
+        anarchist framing, not the policy framing.
+      </p>
+
+      <h2>The zines</h2>
+
+      <p>
+        Three zines built with reportlab and Pillow, all A5 half-letter format
+        (5.5" × 8.5"), designed to print on one sheet of letter paper folded in half.
+      </p>
+
+      <p>
+        Zine No. 01 uses a Home Depot product-packaging decoy aesthetic. The hook
+        is "HATE MOWING YOUR LAWN?" — looks like something you'd find at a hardware
+        store. The slightly-wrong details (SKU: LAWN-ABOLITION-001, active ingredient:
+        class consciousness) reward a second look. The caption under the cover image
+        is "EVERY SATURDAY, UNTIL YOU DIE." which got an immediate response.
+      </p>
+
+      <p>
+        Zine No. 02 is a municipal utility bill parody. Water bills are up 24% in
+        five years. Fifty to seventy percent of a summer water bill is lawn irrigation.
+        Half that water evaporates before reaching roots, and then most utilities
+        charge sewer rates on water that never entered a drain. The visual language
+        is institutional blue — looks like utility authority correspondence.
+      </p>
+
+      <p>
+        Zine No. 03 is for environmentalists already writing their senators about
+        AI data center water use. US lawns consume approximately 170 times more water
+        than all US data centers combined (Lawrence Berkeley Lab 2023; EPA WaterSense).
+        The argument isn't "stop worrying about AI" — it's "your anger is correct
+        and misdirected at the national scale." The back page connects both problems
+        to the same commons framework: extraction of shared resources for private
+        benefit with costs externalized onto communities.
+      </p>
+
+      <p>
+        All three zines have a <code>build-zine.md</code> guidelines document
+        committed to the repo — design system, font choices, image sourcing protocol,
+        prose rules, stats sourcing requirements. The goal is that anyone (including
+        a future session of Claude with no memory of this one) can produce a
+        consistent zine from the guidelines.
+      </p>
+
+      <h2>The numbers</h2>
+
+      <p>
+        One thing I didn't expect: the public stats on lawns are worse than I thought,
+        and several of the commonly-cited figures are stale or wrong. The $40B annual
+        spend figure circulating in environmental writing is from early-2000s data.
+        Current landscaping industry revenue is $153-188B. The "3 billion gallons
+        of water per day" figure is similarly outdated — EPA WaterSense puts
+        residential landscape irrigation at nearly 9 billion gallons per day.
+      </p>
+
+      <p>
+        The research backlog (<code>research-backlog.md</code>, committed to the repo)
+        lists every claim currently live without a primary source, prioritized by
+        urgency. Three P1 items: a specific survey for the "homeowners describe
+        lawn maintenance as a chore" claim, a legal database count of weed
+        ordinance prevalence, and documented case studies from jurisdictions
+        that have relaxed lawn ordinances. The Doug Tallamy work on insects
+        and native plants is the most important P2.
+      </p>
+
+      <h2>What's next</h2>
+
+      <p>
+        The HOA entry-point page is the highest-value content gap — that's the
+        Millennial audience who is most ready to act and most needs tactical
+        documentation. After that: the Norfolk case study, which is going to
+        require some original reporting on the two failed mall sites the city owns.
+        And eventually a blog for documenting the neighborhood fights as they
+        actually happen.
+      </p>
+
+      <p>
+        This is a coming-out project. The lawn argument is the most radical
+        position I hold in terms of daily-life implication, and it connects
+        directly to the commons framework running through everything else.
+        If you have a lawn and you hate it, you were right. Stop watering.
+      </p>
+    </section>
+  </main>
+</body>
+</html>
