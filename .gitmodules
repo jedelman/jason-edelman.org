@@ -1,3 +1,9 @@
 [submodule "abolish-lawns"]
 	path = abolish-lawns
 	url = https://github.com/jedelman/abolish-lawns.git
+[submodule "ghent-streets"]
+	path = ghent-streets
+	url = https://github.com/jedelman/ghent-zoning-reform.git
+[submodule "mithlond"]
+	path = mithlond
+	url = https://github.com/jedelman/mithlond.git

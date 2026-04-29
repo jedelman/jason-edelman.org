@@ -25,14 +25,27 @@ const STATIC = [
   '.well-known',
 ];
 
-// Subprojects: { dir, buildCmd, outDir }
-// outDir is relative to the subproject dir, copied to public/<dir>/
+// Subprojects: { name, dir, buildCmd, outDir }
+// outDir is relative to the subproject dir, copied to public/<name>/
+// For plain static HTML projects, set buildCmd to null and outDir to '.'
 const SUBPROJECTS = [
   {
     name: 'abolish-lawns',
     dir: 'abolish-lawns',
     buildCmd: 'npm install && npm run build',
     outDir: 'build',
+  },
+  {
+    name: 'ghent-streets',
+    dir: 'ghent-streets',
+    buildCmd: null,   // plain static HTML — no build step needed
+    outDir: '.',
+  },
+  {
+    name: 'mithlond',
+    dir: 'mithlond',
+    buildCmd: null,   // plain static HTML — no build step needed
+    outDir: '.',
   },
 ];
 
@@ -53,11 +66,23 @@ for (const project of SUBPROJECTS) {
   const outDir = resolve(projectDir, project.outDir);
   const destDir = resolve(PUBLIC, project.name);
 
-  console.log(`\n🔨 Building ${project.name}`);
-  execSync(project.buildCmd, { cwd: projectDir, stdio: 'inherit' });
+  if (project.buildCmd) {
+    console.log(`\n🔨 Building ${project.name}`);
+    execSync(project.buildCmd, { cwd: projectDir, stdio: 'inherit' });
+  } else {
+    console.log(`\n📋 ${project.name} (static — no build step)`);
+  }
 
-  console.log(`📦 Copying ${project.name} build → public/${project.name}/`);
-  cpSync(outDir, destDir, { recursive: true });
+  console.log(`📦 Copying ${project.name} → public/${project.name}/`);
+  cpSync(outDir, destDir, { recursive: true,
+    filter: (src) => {
+      // Exclude git internals, node_modules, and data-only dirs from static copy
+      const rel = src.replace(projectDir, '');
+      return !rel.startsWith('/.git') &&
+             !rel.startsWith('/node_modules') &&
+             !rel.startsWith('/.wrangler');
+    }
+  });
 }
 
 console.log('\n✅ public/ ready for deployment');
