@@ -24,36 +24,48 @@
 		</p>
 	</header>
 
-	<!-- § 01 THE INDICTMENT -->
+	<!-- § 01 LAWNS ARE A WASTELAND -->
 	<section class="section">
 		<div class="section__header">
 			<span class="section__number">§ 01</span>
-			<h2 class="section__title">The Indictment</h2>
+			<h2 class="section__title">Lawns Are a Wasteland</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
 		<div class="stat-row">
 			<div class="stat">
 				<span class="stat__figure">40M</span>
-				<span class="stat__label">acres of lawn — more than any single irrigated crop in the country</span>
-			</div>
-			<div class="stat">
-				<span class="stat__figure">$153B</span>
-				<span class="stat__label">annual US landscaping services industry revenue — larger than the film industry</span>
+				<span class="stat__label">acres of lawn — <strong>10× all US vegetable farmland combined</strong>, and more than any single irrigated food crop in the country</span>
 			</div>
 			<div class="stat">
 				<span class="stat__figure">9B</span>
-				<span class="stat__label">gallons of water used for residential landscape irrigation every day</span>
+				<span class="stat__label">gallons of water used for lawn irrigation every day — <strong>nearly one quarter of the entire US public water supply</strong></span>
+			</div>
+			<div class="stat">
+				<span class="stat__figure">170×</span>
+				<span class="stat__label">more water per year than all US data centers combined — lawns consume 2.9 trillion gallons annually; data centers, 17 billion</span>
 			</div>
 		</div>
 
 		<div class="prose">
 			<p>
-				Lawns receive more pesticide and herbicide per acre than any
-				agricultural crop grown in this country. They produce nothing
-				edible, support almost no wildlife, sequester negligible carbon,
-				and return almost no economic value to the households that maintain
-				them. What they produce, exclusively, is the appearance of conformity.
+				The United States grows roughly 4 million acres of vegetables for
+				human consumption. It maintains 40 million acres of lawn —
+				the same land base, ten times over, growing nothing edible,
+				supporting almost no wildlife, and sequestering negligible carbon.
+				Lawns also receive more pesticide and herbicide per acre than any
+				agricultural crop in the country. The ratio is not a coincidence.
+				It is a policy outcome.
+			</p>
+			<p>
+				When commentators worry about data centers draining aquifers,
+				they are describing a real but smaller problem. All US data centers
+				combined consume roughly 17 billion gallons of water per year.
+				Lawn irrigation consumes 2.9 trillion — 170 times more, for grass.
+				The US public water supply delivers about 39 billion gallons per day.
+				Lawns absorb nearly 9 billion of it, every day of the irrigation season.
+				One in four gallons of public water goes to a monoculture that
+				produces nothing and feeds no one.
 			</p>
 			<p>
 				The financial cost is direct and growing. Water and sewer rates
