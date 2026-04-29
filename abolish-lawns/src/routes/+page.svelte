@@ -56,6 +56,14 @@
 				them. What they produce, exclusively, is the appearance of conformity.
 			</p>
 			<p>
+				The financial cost is direct and growing. Water and sewer rates
+				have risen 24% over five years — faster than inflation. Fifty to
+				seventy percent of a summer water bill goes to lawn irrigation.
+				Half of that water evaporates before reaching roots. Most utilities
+				then charge sewer rates on water that never entered a drain.
+				You are paying to treat water that went into the sky.
+			</p>
+			<p>
 				The ecological cost is not incidental. It is the point. The lawn
 				is legible as respectability <em>because</em> it is wasteful.
 				A lawn that cost nothing to maintain would signal nothing.
@@ -215,12 +223,14 @@
 			</div>
 			<div class="objection">
 				<p class="objection__q">"This isn't realistic. People love their lawns."</p>
-				<p class="objection__a">The polling data is more ambiguous than the lawn
-				care industry would like you to believe. Survey after survey finds
-				that homeowners describe lawn maintenance as a chore, not a pleasure.
-				The lawn persists not because people love it but because the legal
-				and social infrastructure makes deviation costly. Remove the mandate,
-				and you will discover what people actually want from their land.</p>
+				<p class="objection__a">The evidence is more ambiguous than the lawn
+				care industry would like you to believe. Homeowners consistently
+				describe lawn maintenance as a chore performed under social and legal
+				pressure, not a chosen pleasure. The lawn persists not because people
+				love it but because the infrastructure makes deviation costly.
+				Remove the mandate, and you will discover what people actually want
+				from their land. The evidence from jurisdictions that have relaxed
+				lawn ordinances is consistent: most people choose something else.</p>
 			</div>
 		</div>
 	</section>
@@ -234,6 +244,20 @@
 		<hr class="rule rule--acid" />
 
 		<div class="demands">
+			<div class="demand-item">
+				<span class="demand-item__n">0</span>
+				<div>
+					<h3>Act without permission</h3>
+					<p>Stop watering. Stop mowing. Pull it out.
+					Plant something — food, native plants, clover, bare earth.
+					Do it in the front yard where it is visible.
+					Document the pushback. Every HOA notice and code enforcement
+					letter is evidence that the mandate exists and
+					free advertising for why it should not.
+					Direct action precedes policy change.
+					It also works without it.</p>
+				</div>
+			</div>
 			<div class="demand-item">
 				<span class="demand-item__n">1</span>
 				<div>
