@@ -30,6 +30,8 @@
 			<a href="#ecology">Ecology</a>
 			<a href="#enforcement">Enforcement</a>
 			<a href="#commons">The commons argument</a>
+			<a href="#waterbills">Water bills</a>
+			<a href="#datacenters">Lawns vs. data centers</a>
 			<a href="#alternatives">Alternatives</a>
 			<a href="#sources">Sources</a>
 		</nav>
@@ -286,10 +288,130 @@
 		</div>
 	</section>
 
+	<!-- ══ WATER BILLS ════════════════════════════════════════════════════════ -->
+	<section class="section" id="waterbills">
+		<div class="section__header">
+			<span class="section__number">05</span>
+			<h2 class="section__title">The water bill</h2>
+		</div>
+		<hr class="rule rule--thin" />
+
+		<div class="fact-block">
+			<div class="fact">
+				<div class="fact__figure">50–70%</div>
+				<div class="fact__claim">of a summer residential water bill goes to lawn irrigation</div>
+				<div class="fact__source">EPA WaterSense; Bluefield Research. In arid western regions, outdoor water use reaches 60–70% of total household consumption during summer months.</div>
+			</div>
+			<div class="fact">
+				<div class="fact__figure">+24%</div>
+				<div class="fact__claim">increase in US water and sewer rates over five years (2019–2024)</div>
+				<div class="fact__source">Bluefield Research, US Municipal Water and Wastewater Rates Survey (2024). Faster than general inflation over the same period. Rate increases are projected to continue as infrastructure ages and climate pressures intensify.</div>
+			</div>
+			<div class="fact">
+				<div class="fact__figure">$765</div>
+				<div class="fact__claim">per quarter — one New Jersey homeowner's summer water bill, attributed to lawn irrigation</div>
+				<div class="fact__source">Forum testimony, aroundtheyard.com: "$765.44 for the quarter... $56.70 per month per thousand square feet of lawn." Illustrative of real household cost; individual bills vary widely by region, lot size, and water pricing structure.</div>
+			</div>
+		</div>
+
+		<div class="prose">
+			<p>
+				The hidden mechanism in most water bills is the sewer charge.
+				Most utilities calculate sewer fees based on total water consumed —
+				including water used for outdoor irrigation that soaks into the ground
+				or evaporates and never enters a drain. Homeowners pay sewage treatment
+				rates on water that the sewage system never touches.
+			</p>
+			<p>
+				Some utilities offer irrigation meters or seasonal sewer adjustments
+				to address this. Most do not. The result: the lawn raises your water
+				bill twice — once for the water, once for sewer fees on water
+				that went into the sky.
+			</p>
+			<p>
+				The single most documented water-saving intervention available to
+				homeowners is lawn removal. One California homeowner reported summer
+				water usage falling to 10–15% of prior levels after lawn removal,
+				with rebates covering approximately half the conversion cost.
+				(Bogleheads.org forum; consistent with EPA and academic literature
+				on outdoor water use reduction from native plant conversion.)
+			</p>
+		</div>
+	</section>
+
+	<!-- ══ LAWNS VS DATA CENTERS ══════════════════════════════════════════════ -->
+	<section class="section" id="datacenters">
+		<div class="section__header">
+			<span class="section__number">06</span>
+			<h2 class="section__title">Lawns vs. data centers</h2>
+		</div>
+		<hr class="rule rule--thin" />
+
+		<div class="prose">
+			<p>
+				Public concern about AI and data center water use is legitimate and growing.
+				It is also, at the national scale, significantly misdirected.
+				The comparison below is not an argument that data center water use
+				doesn't matter — it does, especially locally. It is an argument
+				about where individual leverage exists.
+			</p>
+		</div>
+
+		<div class="fact-block">
+			<div class="fact">
+				<div class="fact__figure">~2.9T</div>
+				<div class="fact__claim">gallons per year — US residential and commercial lawn irrigation</div>
+				<div class="fact__source">EPA WaterSense (9B gallons/day × seasonal adjustment); Heath Scott (2026), Substack. Consistent with Milesi et al. (2005) acreage × per-acre irrigation estimates.</div>
+			</div>
+			<div class="fact">
+				<div class="fact__figure">~17B</div>
+				<div class="fact__claim">gallons per year — all US data centers, direct cooling water consumption (2023)</div>
+				<div class="fact__source">Shehabi et al. (2024), Lawrence Berkeley National Laboratory. Direct cooling water only. Indirect consumption via electricity generation adds ~211B gallons (methodology contested — see Construction Physics, 2025).</div>
+			</div>
+			<div class="fact">
+				<div class="fact__figure">~170×</div>
+				<div class="fact__claim">more water from US lawns than all US data centers combined (direct)</div>
+				<div class="fact__source">Calculated: 2,900B ÷ 17B = ~170. US-to-US comparison, direct water consumption only. If indirect electricity water is included for data centers (~211B gallons), ratio narrows to ~14×. If compared to global AI data centers (~260B gallons), ratio is ~11×. All ratios favor the same conclusion.</div>
+			</div>
+		</div>
+
+		<div class="prose">
+			<p>
+				The data center water problem is real in specific contexts.
+				A single Meta data center in Newton County, Georgia uses 500,000 gallons
+				per day — 10% of the entire county's water consumption.
+				Northern Virginia data centers consumed approximately 2 billion gallons
+				in 2023, a 63% increase from 2019, straining local utilities.
+				These are not abstract national statistics for the communities affected.
+				(Lincoln Institute of Land Policy, 2026; EESI, 2024.)
+			</p>
+			<p>
+				The national comparison nonetheless stands: at aggregate scale,
+				lawns consume vastly more water than data centers, with no productive
+				output, under legal compulsion, on land that is privately owned
+				and could be used differently. The correct framework applies the
+				same commons critique to both: extraction of shared water resources
+				for private or corporate benefit, with costs externalized onto
+				communities. Both deserve the same analysis. The lawn is the one
+				most people have direct leverage over.
+			</p>
+		</div>
+
+		<div class="theory-box">
+			<h3 class="theory-box__head">On using this comparison honestly</h3>
+			<ul class="theory-list">
+				<li>Always specify US-to-US when citing the 170× ratio. The "11×" figure compares US lawns to <em>global</em> AI data centers — a different scope.</li>
+				<li>The indirect water figure for data centers (211B gallons) is methodologically contested. Use the direct figure (17B) for defensible comparisons.</li>
+				<li>Local data center water impacts are real and should not be dismissed. The national ratio does not negate concentrated local harm.</li>
+				<li>Hyperscalers (Google, Amazon, Meta, Microsoft) claim 100% renewable electricity, which affects the indirect calculation. See Shehabi et al. (2024) and Potter (2025) for methodology.</li>
+			</ul>
+		</div>
+	</section>
+
 	<!-- ══ ALTERNATIVES ═══════════════════════════════════════════════════════ -->
 	<section class="section" id="alternatives">
 		<div class="section__header">
-			<span class="section__number">05</span>
+			<span class="section__number">07</span>
 			<h2 class="section__title">What replaces the lawn</h2>
 		</div>
 		<hr class="rule rule--thin" />
@@ -342,7 +464,7 @@
 	<!-- ══ SOURCES ════════════════════════════════════════════════════════════ -->
 	<section class="section" id="sources">
 		<div class="section__header">
-			<span class="section__number">06</span>
+			<span class="section__number">08</span>
 			<h2 class="section__title">Key sources</h2>
 		</div>
 		<hr class="rule rule--thin" />
@@ -365,8 +487,29 @@
 			<div class="source-item">
 				<span class="source-item__type">Government</span>
 				<div>
+					<p class="source-item__ref">Shehabi, A. et al. (2024). <em>United States Data Center Energy Usage Report.</em> Lawrence Berkeley National Laboratory, LBNL-2001643.</p>
+					<p class="source-item__note">Primary source for US data center water consumption: 17 billion gallons direct, 211 billion gallons indirect (2023). The indirect figure is methodologically contested — see Potter (2025). Projects doubling or quadrupling by 2028.</p>
+				</div>
+			</div>
+			<div class="source-item">
+				<span class="source-item__type">Government</span>
+				<div>
 					<p class="source-item__ref">Oklahoma State University Extension (2017). "Pesticides in Residential Areas — Protecting the Environment." Fact Sheet.</p>
-					<p class="source-item__note">Extension service source for pesticide intensity comparison. More credible than advocacy org citations for this specific claim.</p>
+					<p class="source-item__note">Extension service source for pesticide intensity comparison.</p>
+				</div>
+			</div>
+			<div class="source-item">
+				<span class="source-item__type">Government</span>
+				<div>
+					<p class="source-item__ref">MOST Policy Initiative (2025). "Data Center Water Use." mostpolicyinitiative.org/science-note/data-center-water-use/</p>
+					<p class="source-item__note">Most current policy synthesis. Confirms 17.4B gallons direct consumption 2023. Projects 38–73B gallons by 2028.</p>
+				</div>
+			</div>
+			<div class="source-item">
+				<span class="source-item__type">Industry</span>
+				<div>
+					<p class="source-item__ref">Bluefield Research (2024). US Municipal Water and Wastewater Rates Survey. bluefieldresearch.com</p>
+					<p class="source-item__note">Source for the 24% water rate increase over five years (2019–2024).</p>
 				</div>
 			</div>
 			<div class="source-item">
@@ -380,7 +523,14 @@
 				<span class="source-item__type">Industry</span>
 				<div>
 					<p class="source-item__ref">National Association of Landscape Professionals / IBIS World (2025). Landscape Industry Statistics. landscapeprofessionals.org</p>
-					<p class="source-item__note">Source for $188.8B market size figure. NALP figure; IBIS World is a commercial research firm. Independent estimates range $153–188B depending on scope.</p>
+					<p class="source-item__note">Source for $153–188B market size figure. NALP figure; IBIS World is a commercial research firm.</p>
+				</div>
+			</div>
+			<div class="source-item">
+				<span class="source-item__type">Policy</span>
+				<div>
+					<p class="source-item__ref">Lincoln Institute of Land Policy (2026). "Data Drain: The Land and Water Impacts of the AI Boom." <em>Land Lines Magazine.</em> lincolninst.edu</p>
+					<p class="source-item__note">Documents lawns vs. data centers comparison and Newton County, GA case study (Meta data center = 10% of county water). Source of Zine No. 03 quote on "well-documented addiction to green grass."</p>
 				</div>
 			</div>
 			<div class="source-item">
@@ -395,6 +545,13 @@
 				<div>
 					<p class="source-item__ref">Pollan, M. (1989). "Why Mow? The Case Against Lawns." <em>New York Times Magazine,</em> May 28. Reprinted in <em>Second Nature</em> (Grove Press, 1991).</p>
 					<p class="source-item__note">Historical and ideological context; Olmsted history; Buffalo scholar case (unverified from independent primary source — attributed to Pollan 1989 only).</p>
+				</div>
+			</div>
+			<div class="source-item">
+				<span class="source-item__type">Analysis</span>
+				<div>
+					<p class="source-item__ref">Potter, B. (2025). "I Was Wrong About Data Center Water Consumption." <em>Construction Physics</em> (Substack). construction-physics.com</p>
+					<p class="source-item__note">Important methodology correction on the Lawrence Berkeley Lab indirect water figures. Use when citing indirect data center water consumption — the 211B figure is more contested than the 17B direct figure.</p>
 				</div>
 			</div>
 		</div>
