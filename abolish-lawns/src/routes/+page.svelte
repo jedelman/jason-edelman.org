@@ -24,11 +24,11 @@
 		</p>
 	</header>
 
-	<!-- § 01 LAWNS ARE A WASTELAND -->
+	<!-- § 01 WATER CONSUMPTION -->
 	<section class="section">
 		<div class="section__header">
 			<span class="section__number">§ 01</span>
-			<h2 class="section__title">Lawns Are a Wasteland</h2>
+			<h2 class="section__title">We Use a Quarter of Our Water for Lawns</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -93,7 +93,7 @@
 	<section class="section">
 		<div class="section__header">
 			<span class="section__number">§ 02</span>
-			<h2 class="section__title">The Enforcement Mechanism</h2>
+			<h2 class="section__title">If People Really Want Lawns, Why Do We Have to Force Them to Grow Them?</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -151,7 +151,7 @@
 	<section class="section section--accent">
 		<div class="section__header">
 			<span class="section__number">§ 03</span>
-			<h2 class="section__title">The Commons Argument</h2>
+			<h2 class="section__title">We Are Choosing Starvation Over Sharing</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
