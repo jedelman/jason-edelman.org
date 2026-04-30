@@ -41,7 +41,7 @@
 	<section class="section" id="scale">
 		<div class="section__header">
 			<span class="section__number">01</span>
-			<h2 class="section__title">Scale</h2>
+			<h2 class="section__title">Lawns Are Infrastructure, Not Choice</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -90,7 +90,7 @@
 	<section class="section" id="ecology">
 		<div class="section__header">
 			<span class="section__number">02</span>
-			<h2 class="section__title">Ecological costs</h2>
+			<h2 class="section__title">Lawns Are Ecological Deserts</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -143,7 +143,7 @@
 	<section class="section" id="enforcement">
 		<div class="section__header">
 			<span class="section__number">03</span>
-			<h2 class="section__title">The enforcement architecture</h2>
+			<h2 class="section__title">Four Laws Enforce the Lawn</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -211,7 +211,7 @@
 	<section class="section section--accent" id="commons">
 		<div class="section__header">
 			<span class="section__number">04</span>
-			<h2 class="section__title">The principled argument: enclosure</h2>
+			<h2 class="section__title">The Lawn Is Enclosure</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -292,7 +292,7 @@
 	<section class="section" id="waterbills">
 		<div class="section__header">
 			<span class="section__number">05</span>
-			<h2 class="section__title">The water bill</h2>
+			<h2 class="section__title">You Pay to Treat Water That Evaporated</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -343,7 +343,7 @@
 	<section class="section" id="datacenters">
 		<div class="section__header">
 			<span class="section__number">06</span>
-			<h2 class="section__title">Lawns vs. data centers</h2>
+			<h2 class="section__title">Lawns Use 170× More Water Than Data Centers</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -412,7 +412,7 @@
 	<section class="section" id="alternatives">
 		<div class="section__header">
 			<span class="section__number">07</span>
-			<h2 class="section__title">What replaces the lawn</h2>
+			<h2 class="section__title">What Grows Instead</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
