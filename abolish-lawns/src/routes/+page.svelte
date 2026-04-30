@@ -199,7 +199,7 @@
 	<section class="section">
 		<div class="section__header">
 			<span class="section__number">§ 04</span>
-			<h2 class="section__title">Anticipated Objections</h2>
+			<h2 class="section__title">You Can't Justify Lawns</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
@@ -251,7 +251,7 @@
 	<section class="section section--demand">
 		<div class="section__header">
 			<span class="section__number">§ 05</span>
-			<h2 class="section__title">The Demand</h2>
+			<h2 class="section__title">We Can Win This Fight</h2>
 		</div>
 		<hr class="rule rule--acid" />
 
@@ -324,7 +324,7 @@
 	<section class="section">
 		<div class="section__header">
 			<span class="section__number">→</span>
-			<h2 class="section__title">Where to go from here</h2>
+			<h2 class="section__title">We Need Your Help</h2>
 		</div>
 		<hr class="rule rule--thin" />
 
