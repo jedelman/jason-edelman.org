@@ -189,6 +189,64 @@ section h2 {
   border-radius: 2px;
 }
 
+/* ── Astrology Readings ─────────────────────────────────────────── */
+#astrology { display: flex; flex-direction: column; gap: 0; }
+
+.readings-callout {
+  border: 1px solid var(--border);
+  padding: 1.75rem;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  transition: border-color 0.15s;
+}
+
+.readings-callout:hover {
+  border-color: var(--accent-dim);
+}
+
+.readings-intro {
+  color: var(--text);
+  font-size: 0.97rem;
+  line-height: 1.7;
+  max-width: 62ch;
+}
+
+.readings-intro + .readings-cta { margin-top: 0.75rem; }
+
+.readings-cta {
+  color: var(--muted);
+  font-size: 0.87rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.contact-links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.contact-link {
+  font-family: var(--font-display);
+  font-size: 0.97rem;
+  font-weight: 600;
+  color: var(--link);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: 3px;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+
+.contact-link:hover {
+  color: var(--link-hover);
+  border-color: var(--accent);
+  background: oklch(18% 0.007 145);
+}
+
 /* ── Dev journal callout ─────────────────────────────────────────── */
 .journal-callout {
   border: 1px solid var(--border);
@@ -268,6 +326,9 @@ section h2 {
   .projects-grid {
     grid-template-columns: 1fr;
   }
+  .readings-callout {
+    flex-direction: column;
+  }
 }
 
 @media (max-width: 480px) {
@@ -276,4 +337,7 @@ section h2 {
   header h1 { font-size: 2rem; }
   .project-header { flex-direction: column; gap: 0.25rem; align-items: flex-start; }
   .project-card { padding: 1.25rem; }
+  .readings-callout { padding: 1.25rem; }
+  .contact-links { flex-direction: column; }
+  .contact-link { width: 100%; text-align: center; }
 }
