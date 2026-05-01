@@ -328,7 +328,24 @@ section h2 {
   border-bottom-color: var(--accent-dim);
 }
 
-/* ── Responsive ─────────────────────────────────────────────────── */
+/* ── Page load animation ────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  main > * {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: arrive 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  main > header        { animation-delay: 0.05s; }
+  main > #about        { animation-delay: 0.18s; }
+  main > #projects     { animation-delay: 0.30s; }
+  main > #astrology    { animation-delay: 0.42s; }
+  main > #writing      { animation-delay: 0.52s; }
+  main > #links        { animation-delay: 0.60s; }
+
+  @keyframes arrive {
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
 @media (max-width: 768px) {
   .projects-grid {
     grid-template-columns: 1fr;
