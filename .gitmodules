@@ -7,3 +7,6 @@
 [submodule "mithlond"]
 	path = mithlond
 	url = https://github.com/jedelman/mithlond.git
+[submodule "qri"]
+	path = qri
+	url = https://github.com/jedelman/quantum-resonator-inference.git

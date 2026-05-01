@@ -49,6 +49,12 @@ const SUBPROJECTS = [
     buildCmd: null,   // plain static HTML — no build step needed
     outDir: '.',
   },
+  {
+    name: 'qri',
+    dir: 'qri',
+    buildCmd: 'node ../scripts/build-qri.mjs',
+    outDir: '.',
+  },
 ];
 
 // ── Clean ─────────────────────────────────────────────────────────────────────
