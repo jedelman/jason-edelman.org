@@ -23,11 +23,10 @@
         technology and who bears its costs.
       </p>
       <p>
-        I was a software engineer from 2004 to 2014. For the five years after that,
-        my wife and I ran <a href="https://grandiflorawine.com/">Grandiflora</a>, a
-        vegetarian restaurant and wine bar in the South. I'm also a practicing
-        astrologer — I use it as a lens on character and timing, and I'm building
-        software at that intersection.
+        I was a software engineer from 2004 to 2014. From 2019–2026, my wife and I ran
+        <a href="https://grandiflorawine.com/">Grandiflora</a>, a natural wine bar in
+        Norfolk. I'm also a practicing astrologer — I use it as a lens on character
+        and timing, and I'm building software at that intersection.
       </p>
       <p>
         My background in environmental education shapes how I think about collective
@@ -39,9 +38,21 @@
 
     <section id="projects">
       <h2>Projects</h2>
-      <ul class="projects">
+      <div class="projects-grid">
 
-        <li>
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-tag">commons · education</span>
+          </div>
+          <a href="https://power-explained.jason-edelman.org/">
+            <h3>Power Explained</h3>
+          </a>
+          <p>An educational resource examining power structures, capitalism, and
+          commons-based alternatives. The argument: systemic problems are design
+          features, and meaningful change happens by building alternatives.</p>
+        </div>
+
+        <div class="project-card">
           <div class="project-header">
             <span class="project-tag">commons · advocacy</span>
           </div>
@@ -52,21 +63,9 @@
           land use regime — backed by HOA covenants, municipal weed ordinances,
           and a century of suburban ideology. Manifesto, factsheet, zines, and
           policy briefs. The lawn is an enclosure. It should be abolished.</p>
-        </li>
+        </div>
 
-        <li>
-          <div class="project-header">
-            <span class="project-tag">commons · education</span>
-          </div>
-          <a href="https://power-explained.jason-edelman.org/">
-            <h3>Power Explained</h3>
-          </a>
-          <p>An educational resource examining power structures, capitalism, and
-          commons-based alternatives. The argument: systemic problems are design
-          features, and meaningful change happens by building alternatives.</p>
-        </li>
-
-        <li>
+        <div class="project-card">
           <div class="project-header">
             <span class="project-tag">commons · civic</span>
           </div>
@@ -76,9 +75,9 @@
           <p>A community advocacy campaign for zoning reform in Norfolk, Virginia's
           HC-G2 historic district — to allow street-level commercial activity by right
           and restore pedestrian vitality to the neighborhood.</p>
-        </li>
+        </div>
 
-        <li>
+        <div class="project-card">
           <div class="project-header">
             <span class="project-tag">commons · infrastructure</span>
           </div>
@@ -88,13 +87,58 @@
           <p>Community compute for Hampton Roads. Applying a commons framework to
           AI-era data center infrastructure: who owns it, who bears the environmental
           costs, and whether local communities see structural economic benefit.</p>
-        </li>
+        </div>
 
-        <!-- TODO: Add Astro Persona when live -->
-        <!-- TODO: Add green-norfolk when live -->
-        <!-- TODO: Add Holdfast when live -->
+        <div class="project-card in-progress">
+          <div class="project-header">
+            <span class="project-tag">astrology · ai</span>
+            <span class="status-badge">in progress</span>
+          </div>
+          <a href="#">
+            <h3>Astro Persona</h3>
+          </a>
+          <p>A persona engine serving astrological AI agents. LLM-powered agents access
+          sign, house, natal, and transit personas via MCP — allowing AI systems to engage
+          the full depth of astrological character and timing. Stripe-integrated SaaS.</p>
+        </div>
 
-      </ul>
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-tag">ai · theory</span>
+          </div>
+          <a href="https://github.com/jedelman/design-patterns-skill">
+            <h3>Design Patterns Skill</h3>
+          </a>
+          <p>A pattern language extracted from the C2 Portland Pattern Repository,
+          bundled into 13 pattern language corpora. Force-directed graph-based selection
+          for LLM-driven architecture and design work.</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-tag">atproto · agent</span>
+          </div>
+          <a href="https://bsky.app/profile/scout-two.bsky.social">
+            <h3>Scout Two</h3>
+          </a>
+          <p>Autonomous Bluesky agent with a git-native memory harness. Thinks, acts,
+          responds, and publishes using <code>tap</code> firehose and Claude runtime.
+          Open infrastructure for agent behavior research.</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-tag">computing · photonics</span>
+          </div>
+          <a href="https://github.com/jedelman/pure-light-inference-device">
+            <h3>Glass Brain (PLID)</h3>
+          </a>
+          <p>Photonic inference engine using PTR glass holographic plates at 850nm
+          with CMOS interposer. Targets 78ns per-token latency and 405K tok/J efficiency.
+          Adversarial architecture review completed; locked specs committed.</p>
+        </div>
+
+      </div>
     </section>
 
     <section id="writing">

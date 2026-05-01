@@ -102,21 +102,49 @@ section h2 {
 #about a:hover { color: var(--link-hover); }
 
 /* ── Projects ───────────────────────────────────────────────────── */
-.projects { list-style: none; }
-
-.projects li {
-  padding: 1.75rem 0;
-  border-top: 1px solid var(--border);
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.75rem;
 }
 
-.projects li:last-child { border-bottom: 1px solid var(--border); }
+.project-card {
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.project-card:hover {
+  border-color: var(--accent-dim);
+  background: oklch(18% 0.007 145);
+}
+
+.project-card.in-progress {
+  position: relative;
+  border-color: var(--accent-dim);
+  background: oklch(14% 0.009 145);
+}
+
+.status-badge {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--accent);
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: 2px;
+  white-space: nowrap;
+}
 
 .project-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.6rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .project-tag {
@@ -145,11 +173,20 @@ section h2 {
 
 .projects a:hover h3 { color: var(--link-hover); }
 
-.projects p {
+.project-card p {
   font-size: 0.97rem;
   color: var(--text);
   line-height: 1.7;
   max-width: 60ch;
+}
+
+.project-card p code {
+  font-family: var(--font-mono);
+  font-size: 0.87em;
+  color: var(--accent);
+  background: oklch(12% 0.007 145);
+  padding: 0.2em 0.4em;
+  border-radius: 2px;
 }
 
 /* ── Dev journal callout ─────────────────────────────────────────── */
@@ -227,10 +264,16 @@ section h2 {
 }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 480px) {
   html { font-size: 16px; }
   body { padding: 2.5rem 1.1rem 5rem; }
   header h1 { font-size: 2rem; }
-  .project-header { flex-direction: column; gap: 0.25rem; }
-  .project-tag { margin-bottom: 0.15rem; }
+  .project-header { flex-direction: column; gap: 0.25rem; align-items: flex-start; }
+  .project-card { padding: 1.25rem; }
 }
