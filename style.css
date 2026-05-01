@@ -59,6 +59,13 @@ header h1 {
   line-height: 1.0;
   letter-spacing: -0.025em;
   color: oklch(96% 0.008 145);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease;
+  cursor: pointer;
+}
+
+header h1:hover {
+  transform: scale(1.04);
+  color: oklch(98% 0.012 145);
 }
 
 .tagline {
