@@ -980,3 +980,101 @@ Dynamic range is binding at all thicknesses ($R_\text{dynamic} < R_\text{angular
 **Resolved.** The exact Kogelnik solution changes the rank ceiling by 0.3% — within numerical noise of any physical measurement. The weak approximation is valid here because the dynamic-range constraint forces $\nu_i = \kappa_i d = 0.1003$, which is squarely in the regime where $\tanh(x) \approx x$. The approximation is self-consistently valid at the operating point it defines.
 
 Open assumptions 1, 3, and 4 from §7.8 remain open.
+
+---
+
+## 9. Gas Standing Wave Weight Grating: Cs Vapor at 852nm
+
+**Status:** Derived 2026-05-08  
+**Purpose:** Evaluates whether a gas medium (Cs vapor, 852nm D2 line) in a Fabry-Perot cavity can encode weight gratings via spatial hole burning (SHB) of the standing wave. Answers whether gas replaces or augments PTR glass as a weight medium.  
+**Note:** HeNe at 632.8nm flagged for parallel evaluation — same physics applies, with additional wavelength mismatch penalty. See §9.6.
+
+### 9.1 Physical Mechanism
+
+In a Fabry-Perot cavity, the forward and backward waves interfere to create a standing wave with period $\lambda/2$. In a gas medium with population inversion (or absorption), this intensity pattern creates **spatial hole burning** (SHB): gain/absorption is depleted at antinodes, preserved at nodes. The resulting periodic modulation of population inversion $\Delta N(z)$ produces, via the Kramers-Kronig relation, a periodic index modulation $\Delta n(z)$ — the weight grating.
+
+**Ring cavities do not support this mechanism** — traveling-wave operation produces no standing wave and no SHB grating. Fabry-Perot is required.
+
+### 9.2 Cs D2 Line Parameters
+
+All values from Steck (2010), *Cesium D Line Data*:
+
+| Parameter | Value |
+|:----|:----|
+| $\lambda$ | 852.1 nm |
+| $\tau_\text{upper}$ | 30.5 ns |
+| $\gamma_\text{sp}/(2\pi)$ | 5.22 MHz (natural linewidth) |
+| $d_\text{dipole}$ | $3.213 \times 10^{-29}$ C·m |
+| $\sigma_0 = 3\lambda^2/2\pi$ | $3.47 \times 10^{-13}$ m² (resonant cross-section) |
+
+**Doppler broadening** at $T = 350\,\text{K}$ (typical Cs cell):
+
+$$\Delta\nu_D = \frac{c_0}{\lambda}\sqrt{\frac{8k_BT\ln 2}{m}} = 1.23 \times 10^{11}\,\text{Hz} \tag{9.1}$$
+
+$$\frac{\Delta\nu_D}{\Delta\nu_\text{nat}} = 2.35 \times 10^{10} \tag{9.2}$$
+
+This ratio is the fundamental problem. Every atom in a gas at 350K has a velocity-shifted resonance, distributing absorption over $2.35 \times 10^{10}$ natural linewidths. The effective cross-section available to a monochromatic field is diluted by this factor.
+
+### 9.3 SHB Grating Amplitude
+
+The saturation parameter at intra-cavity intensity $I$:
+
+$$s = \frac{I}{I_\text{sat,eff}}, \quad I_\text{sat,eff} = I_\text{sat} \cdot \frac{\Delta\nu_D}{\Delta\nu_\text{nat}} \tag{9.3}$$
+
+For our cavity ($P_\text{in} = 1\,\text{mW}$, Finesse = 3140, aperture 2.5mm): $I_\text{incav} = 2.0 \times 10^5\,\text{W/m}^2$, $I_\text{sat,eff} = 2.6 \times 10^{11}\,\text{W/m}^2$, giving $s = 7.9 \times 10^{-7}$.
+
+The SHB grating amplitude is $\Delta N_\text{grating} = \Delta N_0 \cdot s/2$. Via Kramers-Kronig:
+
+$$\Delta n_\text{gas} = \frac{\Delta\alpha \cdot \lambda}{4\pi} = \frac{\sigma_0 \cdot N \cdot s \cdot \lambda}{4\pi} \cdot \frac{\Delta\nu_\text{nat}}{\Delta\nu_D} \tag{9.4}$$
+
+At $T = 350\,\text{K}$, $N = 4.0 \times 10^{18}\,\text{m}^{-3}$: $\Delta n_\text{gas} = 3.2 \times 10^{-18}$.
+
+**This is $6 \times 10^{-16}$ times the PTR value** of $5 \times 10^{-3}$.
+
+### 9.4 Grating Lifetime
+
+Three competing decay mechanisms:
+
+| Mechanism | Timescale | Expression |
+|:----|:----|:----|
+| Spontaneous emission | $\tau_\text{sp} = 30.5\,\text{ns}$ | Radiative decay |
+| Transit across grating period | $\tau_\text{transit} = \lambda/(2v_\text{th}) = 2.0\,\text{ns}$ | $v_\text{th} = 209\,\text{m/s}$ at 350K |
+| Collisional dephasing | $\tau_\text{col} \gg \tau_\text{sp}$ at $p = 0.02\,\text{Pa}$ | Not binding |
+
+**Binding mechanism: transit.** Thermal motion washes out the $\lambda/2$ grating in 2.0 ns — faster than one token processing time ($13.3\,\text{ns}$ at $T = 100$, $133\,\text{ps}$ at $T = 1$). Even at $T = 1$, the grating lifetime is only 15× the round-trip time.
+
+### 9.5 Rank Ceiling and Rescue Scenarios
+
+Applying the §8 Kogelnik framework with $\Delta n_\text{gas}$ and $L = 20\,\text{mm}$:
+
+$$R_\text{dynamic} = \frac{\pi \cdot \Delta n_\text{gas} \cdot L}{\lambda \cdot \text{arctanh}(\sqrt{\eta_\text{threshold}})} \approx 0 \tag{9.5}$$
+
+The gas grating rank is negligible at any standard operating condition. Three rescue scenarios evaluated:
+
+**Scenario A — High-temperature Cs:** Increasing $T$ raises vapor pressure faster than Doppler broadening grows (pressure $\propto e^{-1/T}$, Doppler $\propto T^{1/2}$). At $T = 1200\,\text{K}$, $\Delta n \approx 7.9 \times 10^{-5}$, giving $R \approx 58$. Within 1.6× of the PTR 0.5mm baseline rank of 92 — but requires a 1200K oven and Cs containment, which is an extreme engineering constraint.
+
+**Scenario B — EIT (electromagnetically induced transparency):** A coupling field creates a narrow transparency window, suppressing absorption while preserving dispersive response. The EIT index modulation (dark-state coherence, not population inversion) reaches $\Delta n_\text{EIT} \sim 2.8 \times 10^{-3}$ — within a factor of 2 of PTR. However: (1) EIT suppresses the absorption that drives SHB, so the weight-writing mechanism changes fundamentally; (2) the grating is written in atomic coherence, not population inversion, with lifetime set by ground-state decoherence ($\sim\mu$s in buffer-gas cells); (3) read/write wavelength separation becomes non-trivial. EIT warrants a separate derivation before architectural conclusions.
+
+**Scenario C — Rare-earth doped crystal:** $\text{Pr}^{3+}:\text{Y}_2\text{SiO}_5$ or $\text{Er}^{3+}:\text{YSO}$ have inhomogeneous broadening ~GHz with homogeneous linewidth ~kHz — effectively "frozen gas" with no transit broadening. Spectral hole burning gives $\Delta n \sim 10^{-4}$, rank $\sim 73$ at 20mm. Grating lifetime reaches ms–s. This is a solid-state medium, not a gas, but inherits the standing-wave encoding concept.
+
+### 9.6 HeNe Note (632.8nm)
+
+Ne has $\Delta\nu_D/\Delta\nu_\text{nat} = 2.8 \times 10^{11}$ (lighter atom, hotter discharge, higher dilution ratio than Cs). $\Delta n_\text{HeNe}(s=1) \approx 10^{-9}$, transit time $\tau \approx 0.55\,\text{ns}$ (faster — Ne is 6× lighter than Cs). Both $\Delta n$ and $\tau$ are worse than Cs. Additionally, $\lambda = 632.8\,\text{nm}$ requires full redesign of VCSEL, detector, and PTR operating point. HeNe is not a viable weight medium for ORI.
+
+### 9.7 Architectural Verdict
+
+| Medium | $\Delta n$ | Rank (20mm) | $\tau_\text{grating}$ | Viable? |
+|:----|:----|:----|:----|:----|
+| PTR glass (0.5mm, permanent) | $5\times10^{-3}$ | 92 | Permanent | **Yes — baseline** |
+| PTR glass (2mm, permanent) | $5\times10^{-3}$ | 368 | Permanent | **Yes — T=1 target** |
+| Cs SHB at 350K | $3\times10^{-18}$ | $\approx 0$ | 2 ns | No |
+| Cs SHB at 1200K | $8\times10^{-5}$ | 58 | $<2\,\text{ns}$ | No (engineering) |
+| Cs EIT at 350K | $\sim3\times10^{-3}$ | $\sim2200$ | $\mu$s–ms | Possibly — separate derivation needed |
+| Rare-earth crystal | $\sim10^{-4}$ | 73 | ms–s | Possibly — different architecture |
+| HeNe at 632.8nm | $10^{-9}$ | $\approx 0$ | 0.55 ns | No |
+
+**Gas weight encoding via SHB is not viable for ORI** at any practically accessible operating condition. The Doppler broadening dilution factor of $\sim 10^{10}$ is a fundamental atomic physics constraint, not an engineering problem.
+
+**The gas medium role that is viable:** inter-cavity gain amplification (the role suggested by the cascaded-gain-coupling paper). A Cs or HeNe discharge between PTR cavities acts as a gain element compensating inter-stage coupling loss — analogous to the SOA inter-stage amplifier in the T=1 FFN architecture (§7), but at gas-laser wavelengths. This is the correct architectural role for gas in ORI.
+
+**EIT Cs is the one exception worth pursuing separately.** $\Delta n_\text{EIT} \sim 3\times10^{-3}$ is within 2× of PTR, with $\mu$s grating lifetime and all-optical write/erase. The mechanism is fundamentally different (coherence grating vs population grating) and requires a dedicated derivation. Flagged as a potential future architecture branch.
