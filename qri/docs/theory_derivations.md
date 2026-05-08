@@ -1239,3 +1239,83 @@ This architecture supports both online learning (EIT) and permanent weight stora
 | Geometry | Fabry-Perot | Ring | Ring |
 | Rank scaling lever | Plate thickness | Cavity length/NA | Cavity length/NA |
 | Architecture status | Locked (baseline) | Open derivations remain | Open derivations remain |
+
+---
+
+## 11. EIT Ring Cavity: Length Limits, Co-Propagating Geometry, and Reference Design
+
+**Status:** Derived 2026-05-08  
+**Purpose:** Establishes length limits for the EIT ring cavity, identifies the correct coupling beam geometry (co-propagating, not counter-propagating), and specifies a reference design with rank exactly matching the 512-mode embedding dimension.
+
+### 11.1 Critical Geometry Correction: Co-Propagating Coupling Field
+
+Counter-propagating coupling (probe +k, coupling −k) has two-photon detuning $\delta_2 = (k_p + k_c) \cdot v \approx 2kv$. Only atoms with $v < \gamma_{12}/(2k) = 8.5 \times 10^{-3}\,\text{m/s}$ contribute — a fraction $f_\text{res} \sim 2 \times 10^{-5}$ of the thermal distribution. This is the same Doppler dilution that killed SHB in §9. Counter-propagating coupling is not viable in a warm vapor cell.
+
+**Co-propagating coupling** (probe +k, coupling at angle θ relative to probe, both traveling roughly forward) has two-photon detuning $\delta_2 = (k_p - k_c) \cdot v \approx 0$ for $\lambda_p \approx \lambda_c$. All velocity classes contribute — full Doppler-free EIT. The grating period is set by the beam crossing angle:
+
+$$\Lambda_\text{grating} = \frac{\lambda}{2\sin(\theta/2)} \tag{11.1}$$
+
+At $\theta = 1°$: $\Lambda = 48.8\,\mu\text{m}$. Rank in co-propagating geometry:
+
+$$R = \frac{2 \cdot \text{NA} \cdot L_\text{cell}}{\Lambda_\text{grating}} = \frac{4 \cdot \text{NA} \cdot L_\text{cell} \cdot \sin(\theta/2)}{\lambda} \tag{11.2}$$
+
+**Note:** rank is set by $L_\text{cell}$ and $\theta$, not by $L_\text{ring}$. The ring circumference determines round-trip time and stability, not rank.
+
+### 11.2 Length Constraints
+
+| Constraint | Expression | Limiting at |
+|:----|:----|:----|
+| Laser coherence | $L_\text{ring} < c/(\pi \Delta\nu_\text{laser})$ | $L > 10\,\text{km}$ (ECDL, $\Delta\nu = 10\,\text{kHz}$) |
+| Grating lifetime | $L_\text{ring}/c < \tau_\text{grating} = 1/\gamma_{12}$ | $L > 4800\,\text{km}$ (buffer gas) |
+| Diffraction / beam size | $w_0 \sim \sqrt{\lambda L_\text{ring}/(4\pi)}$ | Practical above $L \sim 10\,\text{m}$ |
+| Vibration isolation | Engineering | Practical above $L \sim 2\,\text{m}$ |
+
+**Practical sweet spot:** $L_\text{ring} = 0.5$–$2\,\text{m}$. Fits on an optical table, ECDL coherence is not limiting, beam waist $w_0 \approx 0.18$–$0.37\,\text{mm}$ manageable.
+
+### 11.3 Reference Design
+
+**Target:** rank = 512, matching the ORI embedding dimension. From eq. 11.2 with $\text{NA} = 0.0625$, $L_\text{cell} = 200\,\text{mm}$:
+
+$$\theta = 2\arcsin\!\left(\frac{R\lambda}{4 \cdot \text{NA} \cdot L_\text{cell}}\right) = 2\arcsin\!\left(\frac{512 \times 852\,\text{nm}}{4 \times 0.0625 \times 200\,\text{mm}}\right) = 1.0° \tag{11.3}$$
+
+| Parameter | Value | Rationale |
+|:----|:----|:----|
+| $L_\text{ring}$ | 1.0 m | Fits optical table, manageable beam size |
+| $L_\text{cell}$ | 200 mm | Sets rank jointly with $\theta$ |
+| $\theta$ (coupling angle) | 1.0° | Gives rank = 512 exactly |
+| $\Lambda_\text{grating}$ | 48.8 μm | $\lambda/(2\sin(0.5°))$ |
+| Rank | **512** | Matches embedding dimension |
+| $w_0$ at cell | 0.26 mm | Marginally stable bow-tie |
+| $\tau_\text{roundtrip}$ | 3.33 ns | $L_\text{ring}/c$ |
+| $\tau_\text{grating}$ | $\sim$16 μs | $1/\gamma_{12}$ buffer gas |
+| $\tau_\text{grating}/\tau_\text{RT}$ | $\sim$4800 | Grating survives many round trips |
+| Coupling laser | ECDL, $\Delta\nu < 10\,\text{kHz}$ | $L_\text{coh} = 9500\,\text{km} \gg L_\text{ring}$ |
+| Buffer gas | N₂ at 1 Torr | $\gamma_{12}/(2\pi) \approx 10\,\text{kHz}$ |
+
+**Bow-tie layout (component sequence):**
+1. Input coupler (flat, $T = 1\%$) — probe enters, coupling injected at 1°
+2. Curved mirror M1 ($R_c = 500\,\text{mm}$) — focuses into cell
+3. Cs vapor cell (200mm, N₂ buffer gas, 350K)
+4. Curved mirror M2 ($R_c = 500\,\text{mm}$) — recollimates
+5. Flat mirror M3 (HR, $R > 99.99\%$) — redirects, SOA in this arm
+6. Output coupler (flat, $T = 1\%$) — probe exits to detector or next stage
+7. Flat mirror M4 — closes ring
+
+### 11.4 PTR Glass Removed
+
+PTR glass is dropped from this architecture. Rationale:
+
+- PTR rank ceiling at 0.5mm plate is 92 — below EIT rank of 512
+- PTR requires furnace development — not all-optical
+- EIT coherence grating is all-optical write/erase with $\tau \sim 16\,\mu\text{s}$
+- Ephemeral weights are acceptable: $\tau_\text{grating} \gg \tau_\text{roundtrip}$ by 4800×
+- Weight refresh via coupling laser at $\gamma_{12} = 10\,\text{kHz}$ — continuous write sustains grating
+
+PTR is retained in the baseline ORI Fabry-Perot architecture (ARCH-1 through ARCH-17) as the permanent weight medium. The ring EIT architecture is a separate branch.
+
+### 11.5 Open Derivations
+
+1. Maxwell-Bloch $\kappa_\text{eff}$ for coherence grating (§10.9 item 1) — still required
+2. Angular multiplexing in extended gas (vs thin grating) — still required  
+3. Coupling beam spatial mode structure for 512 independent modes
+4. SOA placement in ring and SNR budget for ring cavity
