@@ -885,3 +885,98 @@ At T=1, increasing plate thickness directly increases rank without SNR penalty. 
 2. Weak-grating approximation (eq. 7.8) assumes $\kappa d / R \ll 1$. Valid when $R \gg \kappa d / \pi$; at $d = 2\,\text{mm}$, $\kappa d = 36.96$, $R = 370$, ratio $= 0.10$. Marginally valid — full Kogelnik coupled-wave solution should be used for final design.
 3. PTR glass uniformity and Δn_max at thicknesses > 1 mm unverified in literature at 850 nm. Glebov 2010 data is for ~0.5–2 mm samples.
 4. Multi-stage SOA SNR budget (inter-stage noise accumulation across N FFN layers) not yet derived. This is the binding SNR constraint for T=1 multi-cavity architecture.
+
+---
+
+## 8. Full Kogelnik Coupled-Wave Solution for Multiplexed Reflection Gratings
+
+**Status:** Derived 2026-05-08  
+**Purpose:** Replaces the weak-grating approximation in §7 with the exact Kogelnik (1969) coupled-wave solution for the PTR reflection grating. Validates §7 rank results and resolves the open assumption in §7.8 item 2.
+
+### 8.1 Why the Weak Approximation Was Flagged
+
+In §7, eq. 7.8 used the weak-grating limit $\eta_i \approx (\kappa_i d)^2$, valid when $\kappa_i d \ll 1$. At $d = 2\,\text{mm}$ with $R = 370$ gratings, the per-grating coupling parameter was:
+
+$$\kappa_i d = \frac{\pi \Delta n_\text{max}}{R \lambda} \cdot d \approx 0.100$$
+
+The rule of thumb $\kappa_i d \ll 1$ is conventionally taken as $\kappa_i d < 0.1$. Our operating point sits exactly at this boundary — marginal validity, flagged for resolution.
+
+### 8.2 Exact Kogelnik Solution: Reflection Grating
+
+For an **unslanted reflection grating** in a medium with index modulation $\Delta n$ and amplitude absorption $\alpha_s = \alpha/2$, the exact coupled-wave solution at the Bragg condition (zero phase mismatch) gives (Kogelnik 1969, eq. 57; Solymar & Cooke, *Volume Holography*):
+
+$$\eta = \frac{\tanh^2\!\left(\sqrt{\nu^2 - \xi^2}\right)}{1 - \left(\xi/\nu\right)^2} \tag{8.1}$$
+
+where the dimensionless parameters are:
+
+$$\nu = \kappa d = \frac{\pi \Delta n \, d}{\lambda} \quad \text{(grating strength)} \tag{8.2}$$
+
+$$\xi = \alpha_s d = \frac{\alpha d}{2} \quad \text{(absorption parameter)} \tag{8.3}$$
+
+**In the lossless limit** ($\xi \to 0$, which holds for PTR glass at 850nm with $\alpha = 0.01\,\text{cm}^{-1}$, giving $\xi < 5\times10^{-4}$ at $d = 10\,\text{mm}$):
+
+$$\eta = \tanh^2(\nu) = \tanh^2\!\left(\frac{\pi \Delta n \, d}{\lambda}\right) \tag{8.4}$$
+
+This is the governing equation for the PTR reflection grating. The $\sin^2(\nu)$ form used in §7 Step 2 is the **transmission** grating result — a different geometry. For a reflection grating in the lossless regime: $\tanh^2$, not $\sin^2$.
+
+**Note on single full-strength grating:** at $d = 0.5\,\text{mm}$, $\nu = \kappa d = 9.24 \gg 1$, so $\tanh^2(9.24) \approx 1.000$ — the grating is saturated, diffracting nearly 100% at full $\Delta n_\text{max}$. The $\sin^2$ approximation gave $\eta = 0.034$, which was dramatically wrong for the single-grating case. This error cancels in the multiplexed-grating rank calculation (as shown below), but using $\tanh^2$ throughout is correct.
+
+### 8.3 Multiplexed Gratings: Exact Rank Ceiling
+
+When $R$ gratings are written with equal strength $\Delta n_i = \Delta n_\text{max} / R$, each has:
+
+$$\nu_i = \frac{\pi \Delta n_\text{max}}{R \lambda} \cdot d \tag{8.5}$$
+
+The exact diffraction efficiency per grating is $\eta_i = \tanh^2(\nu_i)$. Setting $\eta_i \geq \eta_\text{threshold}$ and solving for $R$:
+
+$$\tanh(\nu_i) \geq \sqrt{\eta_\text{threshold}}$$
+
+$$\nu_i \geq \text{arctanh}\!\left(\sqrt{\eta_\text{threshold}}\right)$$
+
+$$\frac{\pi \Delta n_\text{max} \, d}{R \, \lambda} \geq \text{arctanh}\!\left(\sqrt{\eta_\text{threshold}}\right)$$
+
+$$\boxed{R_\text{dynamic} = \frac{\pi \Delta n_\text{max} \, d}{\lambda \cdot \text{arctanh}\!\left(\sqrt{\eta_\text{threshold}}\right)}} \tag{8.6}$$
+
+Compare with the §7 weak-approximation result (eq. 7.9):
+
+$$R_\text{dynamic,weak} = \frac{\pi \Delta n_\text{max} \, d}{\lambda \cdot \sqrt{\eta_\text{threshold}}} \tag{8.7}$$
+
+The ratio is:
+
+$$\frac{R_\text{exact}}{R_\text{weak}} = \frac{\sqrt{\eta_\text{threshold}}}{\text{arctanh}\!\left(\sqrt{\eta_\text{threshold}}\right)} \tag{8.8}$$
+
+This ratio depends **only on $\eta_\text{threshold}$**, not on $d$, $\lambda$, or $\Delta n_\text{max}$. For $\eta_\text{threshold} = 0.01$:
+
+$$\frac{\sqrt{0.01}}{\text{arctanh}(\sqrt{0.01})} = \frac{0.1000}{0.10034} = 0.9967$$
+
+**The weak approximation overestimates rank by 0.3%.** This is negligible at any engineering precision. The §7 results stand.
+
+### 8.4 The Invariant Operating Point
+
+A key structural insight from eq. 8.6: at the dynamic-range rank ceiling, every grating operates at exactly:
+
+$$\kappa_i d = \nu_i = \text{arctanh}\!\left(\sqrt{\eta_\text{threshold}}\right) = 0.1003 \tag{8.9}$$
+
+This is a **fixed operating point** determined entirely by $\eta_\text{threshold}$. It does not depend on plate thickness, wavelength, or $\Delta n_\text{max}$. Increasing $d$ does not change where each grating operates — it increases how many gratings fit at that operating point. The rank ceiling scales linearly with $d$ because $R_\text{dynamic} \propto d$ while $\nu_i$ stays fixed.
+
+Physical interpretation: the system self-organizes so that every hologram diffracts at exactly the threshold. Adding thickness adds capacity without changing the per-hologram operating condition.
+
+### 8.5 Corrected Rank Table
+
+| $d$ | $R_\text{weak}$ (§7) | $R_\text{exact}$ | $\Delta$ | $\eta_i$ at $R_\text{exact}$ |
+|:----|:----|:----|:----|:----|
+| 0.5 mm | 92 | **92** | −0.3% | 1.000% |
+| 1.0 mm | 185 | **184** | −0.3% | 1.000% |
+| 2.0 mm | 370 | **368** | −0.3% | 1.000% |
+| 5.0 mm | 924 | **921** | −0.3% | 1.000% |
+| 10.0 mm | 1848 | **1842** | −0.3% | 1.000% |
+
+Dynamic range is binding at all thicknesses ($R_\text{dynamic} < R_\text{angular}$). The 2 mm plate recommendation from §7 is confirmed: $R = 368$.
+
+### 8.6 Resolution of §7.8 Open Assumption 2
+
+*"Weak-grating approximation (eq. 7.8) assumes $\kappa d / R \ll 1$... Marginally valid — full Kogelnik coupled-wave solution should be used for final design."*
+
+**Resolved.** The exact Kogelnik solution changes the rank ceiling by 0.3% — within numerical noise of any physical measurement. The weak approximation is valid here because the dynamic-range constraint forces $\nu_i = \kappa_i d = 0.1003$, which is squarely in the regime where $\tanh(x) \approx x$. The approximation is self-consistently valid at the operating point it defines.
+
+Open assumptions 1, 3, and 4 from §7.8 remain open.
