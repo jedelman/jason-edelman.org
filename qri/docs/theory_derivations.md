@@ -1959,3 +1959,130 @@ They can be composed: PTR layer computes a linear projection; SOA layer then app
 SOA bulk gain slab (Option C) is the candidate for further development. Architecture is **PROPOSED**. The key insight — that SOA naturally implements attention-class rather than SSM-class computation — is a fundamental architecture branch point. Formal labeling: **ARCH-20: Gain Hologram Attention Layer**.
 
 ---
+
+---
+
+## 17. ARCH-20 Full Derivation: Gain Hologram Attention — Computation, Basis Dependence, and Multi-Head Scaling
+
+**Status:** Derived 2026-05-08.  
+**Purpose:** Establishes what the SOA bulk gain slab actually computes from first principles. Resolves the small-signal apparent contradiction, identifies the correct operating regime, and derives the operation in different spatial mode bases.
+
+### 17.1 Small-Signal Consistency Check
+
+The total phase accumulated through the gain slab is $k \Delta n L = (2\pi/852\,\text{nm}) \times 3.75\times10^{-3} \times 4\,\text{mm} = 110\,\text{rad}$. This appears to violate the small-signal approximation ($k\Delta n L \ll 1$) underlying the linear output formula.
+
+Resolution: the total $\Delta n$ is shared among $R$ superimposed Bragg gratings:
+
+$$\Delta n_\text{per} = \frac{\Delta n_\text{total}}{R} = \frac{3.75\times10^{-3}}{551} = 6.8\times10^{-6} \tag{17.1}$$
+
+$$k \Delta n_\text{per} L = \frac{110}{551} = 0.20\,\text{rad} \quad \checkmark \tag{17.2}$$
+
+Each individual grating operates in the small-signal regime. The Kogelnik coupled-wave framework remains valid. The total $k\Delta n_\text{total} L = 110\,\text{rad}$ is the coherent sum of 551 gratings each contributing 0.2 rad, consistent with $\eta = \sin^2(\kappa L) = \sin^2(0.10) = 1\%$ per grating at threshold.
+
+The bulk gain slab operates as a **volume phase hologram** (Bragg regime, $L \gg \Lambda^2/\lambda$) with small-signal individual gratings and weak amplitude modulation ($\Delta g_\text{per} L = 0.10 \ll 1$).
+
+### 17.2 Carrier Diffusion and Grating Stability
+
+The carrier diffusion length in GaAlAs:
+
+$$L_\text{diff} = \sqrt{D_n \tau_c} = \sqrt{(10\,\text{cm}^2/\text{s})(1\,\text{ns})} = 1\,\mu\text{m} \tag{17.3}$$
+
+The grating period at 1° crossing angle: $\Lambda = \lambda/\sin(1°) = 49\,\mu\text{m}$.
+
+$$L_\text{diff} / \Lambda = 1\,\mu\text{m} / 49\,\mu\text{m} = 0.02 \ll 1 \tag{17.4}$$
+
+Carrier diffusion does not wash out the grating. Spatial hole burning survives, and the gain slab operates at full rank $R = 551$ — not the rank-1 limit that would apply if the carrier pool were perfectly homogeneous.
+
+### 17.3 What the Gain Slab Computes
+
+Let the input spatial field be decomposed in an orthonormal mode basis $\{\psi_j(\mathbf{r})\}$:
+
+$$E(\mathbf{r}) = \sum_j a_j \psi_j(\mathbf{r}) \tag{17.5}$$
+
+**Write step:** the intensity pattern of the context field $E_c$ depletes carriers and creates an index grating:
+
+$$\Delta n(\mathbf{r}) = C \cdot |E_c(\mathbf{r})|^2 = C \sum_{j,k} c_j c_k^* \psi_j(\mathbf{r})\psi_k^*(\mathbf{r}) \tag{17.6}$$
+
+**Read step:** the query field $E_q$ accumulates phase through $\Delta n(\mathbf{r})$:
+
+$$E_\text{out}(\mathbf{r}) = E_q(\mathbf{r})\left(1 + i k L \cdot \Delta n(\mathbf{r})\right) \tag{17.7}$$
+
+**Output mode amplitudes:**
+
+$$b_i = \langle \psi_i | E_\text{out} \rangle = q_i + i k L C \sum_{j,k,l} c_j c_k^* q_l \underbrace{\int \psi_i^* \psi_j \psi_k^* \psi_l \, d\mathbf{r}}_{T_{ijkl}} \tag{17.8}$$
+
+The 4th-order overlap tensor $T_{ijkl}$ encodes the mode structure. **The spatial basis determines what computation is performed.**
+
+### 17.4 Basis-Dependent Operations
+
+**Fourier (plane wave) basis** $\psi_j(\mathbf{r}) \propto e^{i\mathbf{k}_j \cdot \mathbf{r}}$:
+
+$$T_{ijkl} = \delta(\mathbf{k}_i - \mathbf{k}_j + \mathbf{k}_k - \mathbf{k}_l) \quad [\text{momentum conservation}] \tag{17.9}$$
+
+$$b_i = q_i + ikLC \cdot [\text{autocorr}(c) \ast q]_i \tag{17.10}$$
+
+where $[\text{autocorr}(c)]_m = \sum_k c_{k+m} c_k^*$. The gain slab computes a **dynamic convolution** of the query with the autocorrelation of the context. Properties:
+
+1. Translationally equivariant (kernel depends only on $i-j$, not absolute index)
+2. Hermitian-symmetric kernel (autocorrelation is self-adjoint)
+3. Global receptive field (autocorrelation spans all $H$ mode pairs)
+4. Context-conditioned: kernel changes per token
+
+**Localized (pixel) basis** $\psi_j(\mathbf{r}) = \delta(\mathbf{r} - \mathbf{r}_j)$:
+
+$$T_{ijkl} = \delta_{ij}\delta_{kl}\delta_{ik} \tag{17.11}$$
+
+$$b_i = q_i \left(1 + ikLC \cdot |c_i|^2\right) \tag{17.12}$$
+
+Element-wise multiplication: each output mode is gated by the local context intensity. This is a **context-conditioned activation** (optically analogous to SiLU or sigmoid gating).
+
+**The correct basis for attention:** a lens placed before the gain slab transforms Hermite-Gaussian input modes to plane waves in the Fourier plane. In this configuration, the gain slab computes the dynamic convolution (eq. 17.10) with global receptive field — the closest optical analog to dot-product attention.
+
+### 17.5 The Associative Memory Interpretation
+
+With context $c$ as a stored pattern and query $q$ as a noisy probe, the output in the Fourier basis recovers the stored pattern weighted by the overlap:
+
+$$b \approx c \cdot \langle c, q \rangle / \|c\|^2 + q \cdot (1 - \langle c, c \rangle / \|c\|^2) \tag{17.13}$$
+
+The gain slab performs **one-step Hopfield retrieval** at full rank in a single optical pass (~47 ps). At $R = 551$ superimposed patterns, the storage capacity matches the Hopfield bound ($\sim 0.14 R \approx 77$ orthogonal patterns before crosstalk dominates). This is a distinct operating mode from attention.
+
+### 17.6 Multi-Head Scaling
+
+Each gain slab has an independent carrier pool — independent heads by construction. An 8-head ARCH-20 block uses 8 parallel slabs:
+
+| Quantity | Value |
+|:---|:---|
+| $\Delta n_\text{material}$ | $3.75\times10^{-3}$ |
+| $L_\text{slab}$ | 4 mm |
+| $R_\text{dyn}$ per slab | 551 |
+| Effective parameters (full-rank $W$, $H=512$) | $512^2 = 262{,}144$ per head |
+| 8 heads | 2,097,152 parameters |
+| Single-slab latency ($nL/c$) | 47 ps |
+| 8-head block latency (parallel) | 47 ps |
+| 8-head block latency (serial) | 373 ps |
+
+Parallel heads require a beam-splitting stage before the slab array and a combining stage after — standard interferometric optics.
+
+### 17.7 Relationship to PTR Architecture
+
+ARCH-20 is **not** a replacement for the PTR recurrent system. They compute categorically different functions:
+
+| | PTR (ARCH-1–17) | Gain hologram (ARCH-20) |
+|:---|:---|:---|
+| Operation | $W \mathbf{a}$ (linear, fixed $W$) | $[\text{autocorr}(c) \ast q]$ (dynamic convolution) |
+| Computational class | SSM / RNN | Attention / associative memory |
+| $W$ origin | Holographic grating (trained) | Carrier grating (context-written per token) |
+| Depth | $T = 100$ recurrent passes | $T = 1$ single pass |
+| Memory | Hidden state $\mathbf{h}$ (implicit) | Context field $E_c$ (explicit) |
+| Nonlinearity | VCSEL threshold (inter-layer) | Carrier saturation (intra-layer) |
+
+**Composition:** PTR layer followed by ARCH-20 layer computes $\text{Attention}(W_\text{PTR} \cdot \mathbf{a})$ — an optically complete transformer block. This is the Gen 3 direction.
+
+### 17.8 Open Items
+
+1. **Full $T_{ijkl}$ calculation for Hermite-Gaussian basis.** The Fourier and pixel bases are analytic; the HG basis requires explicit overlap integrals. This determines whether HG modes naturally implement attention or require a lens pre-stage.
+2. **Saturation and nonlinear corrections.** Eq. 17.7 is first-order in $\Delta\phi$. The corrections (higher-order terms) create additional nonlinear operations that may be beneficial (or detrimental). Need to bound these.
+3. **Write/read timing.** At T=1, write and read are simultaneous — the same photon writes and reads the grating. This requires careful analysis: the grating builds up as the beam propagates, not instantaneously at the input. For $L = 4$ mm at $c/n = 8.6\times10^{10}$ m/s, the transit time is 47 ps — much shorter than $\tau_c = 1$ ns. The grating is quasi-static during the read pass. ✓
+4. **Experimental rank measurement.** The Kogelnik prediction of $R = 551$ assumes ideal bulk material. Free-carrier scattering and spectral inhomogeneity in GaAlAs may reduce this. Direct measurement is EXP-9.
+
+---
