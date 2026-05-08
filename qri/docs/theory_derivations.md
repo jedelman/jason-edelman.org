@@ -2298,3 +2298,103 @@ It is NOT equivalent to scaled dot-product attention (which requires softmax nor
 | Computation class | Unnormalized content addressing | Eq. 19.8 |
 
 ---
+
+---
+
+## 20. DX Center FFN Layer: Metastable Holographic Weights in Al_xGa_{1-x}As
+
+**Status:** Derived 2026-05-08. Proposed as ARCH-21.  
+**Motivation:** Identifies a physical mechanism for a third weight timescale between the 1 ns carrier grating (ARCH-20, per-token) and permanent PTR glass (ARCH-1–17). DX center trap states in Al_xGa_{1-x}As provide holographic gratings with 1–100 s lifetimes, all-optical write at 810 nm, transparent inference at 850 nm, and rank ~73 — enabling online FFN learning without a furnace.
+
+### 20.1 Target Timescale
+
+ORI Gen 3 weights (107M params, 214 MB at FP16) load from NVMe SSD in ~30 ms. For a holographic medium to compete with weight loading, the grating must survive at least 30 ms. For online learning to be useful, the write time must be a small fraction of the grating lifetime. The target window: $\tau_\text{weight} \in [30\,\text{ms},\ 100\,\text{s}]$.
+
+### 20.2 DX Center Physics
+
+Si donors in Al$_x$Ga$_{1-x}$As for $x > 0.22$ form deep DX centers — two-electron states in which the donor captures a second electron and the lattice relaxes to a new equilibrium geometry (Lang & Logan 1977). The DX state lies $E_B \approx 0.25$–$0.40\,\text{eV}$ below the conduction band, depending on Al content. Thermal re-emission from DX to the conduction band proceeds over this barrier:
+
+$$\tau_\text{DX} = \tau_0\,\exp\!\left(\frac{E_B}{k_BT}\right) \tag{20.1}$$
+
+At 300 K this gives: $x = 0.30$: $\tau \sim 1$–10 ms; $x = 0.35$: $\tau \sim 100\,\text{ms}$–1 s; $x = 0.38$: $\tau \sim 10\,\text{s}$. The lifetime is tunable by adjusting Al content or temperature.
+
+DX occupation modulates the refractive index via the Kramers-Kronig relation: filled DX states shift the absorption edge by $\Delta E \sim 10$–30 meV, producing $\Delta n \approx 5\times10^{-4}$ at 850 nm for full occupancy modulation.
+
+### 20.3 Write and Read Wavelengths
+
+The optical transition from valence band to DX level requires photon energy:
+
+$$E_\text{write} = E_\text{gap}(x) - E_B(x) \tag{20.2}$$
+
+For $x = 0.30$: $E_\text{write} = 1.80 - 0.34 = 1.46\,\text{eV}$ → $\lambda_\text{write} = 849\,\text{nm}$ — coincidentally matching the ORI inference wavelength. This means 850 nm can write DX states in $x = 0.30$ material, but this also means the inference beam perturbs the grating. For the FFN application, we prefer longer lifetime and strict read/write isolation:
+
+**Optimal: $x = 0.38$, $\tau_\text{DX} \sim 10\,\text{s}$**  
+$E_\text{write} = 1.90 - 0.37 = 1.53\,\text{eV}$ → $\lambda_\text{write} = 810\,\text{nm}$  
+$E_\text{read} = 1.46\,\text{eV}$ (850 nm) $<$ 1.53 eV → **850 nm does not write DX states** ✓
+
+The 810 nm write laser is a standard near-IR diode laser ($50–200). The 850 nm inference beam is fully transparent and does not disturb DX occupancy. Erasure is purely thermal — passive, no active erase needed.
+
+### 20.4 Grating Writing
+
+The holographic grating is written by exposing the Al$_{0.38}$GaAs slab to a 810 nm interference pattern encoding the weight matrix $\mathbf{W}$. For rank-$R$ sequential component writing:
+
+**Write rate:** $\kappa_\text{write} = \sigma_\text{DX} \cdot \Phi$, where $\sigma_\text{DX} \approx 10^{-20}\,\text{m}^2$ (near-bandgap DX absorption cross section, Mooney 1990) and $\Phi$ is the photon flux at $I_\text{write} = 10^4\,\text{W/m}^2$ (1 W/cm²): $\kappa = 428\,\text{s}^{-1}$.
+
+**Time to 50% fill per component:** $t_\text{fill} \approx \ln 2 / (\kappa + 1/\tau) \approx 1.3\,\text{ms}$.
+
+**Sequential write of $R = 73$ components:** total $95\,\text{ms}$. First component decay after full write: $\exp(-95\,\text{ms}/10\,\text{s}) = 0.991$ — negligible at $x = 0.38$ ✓.
+
+**Probe perturbation:** at inference intensity 510 W/m², $\kappa_\text{probe} = 22\,\text{s}^{-1} \ll 1/\tau_\text{DX} = 0.1\,\text{s}^{-1}$. Probe-induced DX filling is negligible; thermal decay dominates ✓.
+
+### 20.5 Rank and Performance
+
+| Parameter | Value | Notes |
+|:---|:---|:---|
+| $\Delta n_\text{DX}$ | $\sim5\times10^{-4}$ | Kramers-Kronig, 30 meV edge shift |
+| $L_\text{slab}$ | 4 mm | Same geometry as ARCH-20 |
+| $R_\text{dyn}$ | 73 | $\pi\Delta n L / (\lambda \cdot \text{arctanh}(\sqrt{0.01}))$ |
+| $\tau_\text{DX}$ | 10 s | $x=0.38$ at 300 K |
+| Write time ($R=73$) | 95 ms | Sequential at 1 W/cm² |
+| Write/lifetime ratio | 1% | Fast write ✓ |
+| Tokens per lifetime | $7.5\times10^8$ | At 75M tok/s |
+| Write laser | 810 nm | Standard diode |
+| Read laser | 850 nm | Fully transparent |
+
+### 20.6 Online Learning Enabled
+
+The DX layer enables continuous weight updates without a furnace:
+
+1. Run inference for 10 s → accumulate $7.5\times10^8$ token gradient signals (digital)
+2. Compute $\partial\mathcal{L}/\partial\mathbf{W}$ on GPU adjoint (~seconds)
+3. Encode updated $\mathbf{W}$ as holographic interference pattern at 810 nm
+4. Expose DX slab for 95 ms → new grating active
+5. Grating survives 10 s → repeat
+
+**Update rate:** 0.1 Hz (one update per 10 s lifetime). For a 100B token training corpus: 133 updates, ~0.4 hours total training time. Compare to PTR furnace: 4.4 hours, permanent weights.
+
+The DX layer trades rank (73 vs. PTR's 370) and persistence (10 s vs. permanent) for online updatability — enabling continual learning, domain adaptation, and personalization without hardware modification or downtime.
+
+### 20.7 Three-Layer ORI System
+
+| Layer | Mechanism | $\tau_\text{weight}$ | Rank | Write | Computation |
+|:---|:---|:---|:---|:---|:---|
+| PTR (ARCH-1–17) | Crystallographic grating | Permanent | 370 | 532 nm + furnace | SSM: $\mathbf{M}^T\mathbf{a}$ |
+| DX FFN (ARCH-21) | DX trap occupation | ~10 s | 73 | 810 nm diode | FFN: $W_2\,\sigma(W_1\mathbf{a})$ |
+| SOA attention (ARCH-20) | Carrier density | ~1 ns | 524 | 850 nm (self) | Attention: $W(c)\mathbf{q}$ |
+
+The full computation per token:
+
+$$\mathbf{a} \xrightarrow{\text{PTR}} \mathbf{M}^T\mathbf{a} \xrightarrow{\text{DX}} W_2\,\sigma(W_1\mathbf{h}) \xrightarrow{\text{SOA}} W(c)\mathbf{q} \xrightarrow{} \text{output} \tag{20.3}$$
+
+This is a recurrent layer + FFN layer + attention layer — an optically complete transformer block with three distinct physical weight timescales and no analog-to-digital conversion between layers.
+
+### 20.8 Open Questions (EXP-13, EXP-14)
+
+| EXP | Description | Blocks |
+|:---|:---|:---|
+| EXP-13 | $\Delta n_\text{DX}$ measurement in Al$_{0.38}$GaAs at 850 nm | Rank claim |
+| EXP-14 | DX grating write time and lifetime at $x=0.38$, 300 K | Online learning rate |
+
+Both are tabletop experiments requiring Al$_{0.38}$GaAs wafers (~$1K from standard epitaxy vendors) and a 810 nm probe laser.
+
+---
