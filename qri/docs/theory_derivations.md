@@ -1746,3 +1746,216 @@ The extra order of magnitude vs the 25mm 5.6 OoM case comes from needing 4 rings
 - Establishing inter-ring alignment protocols before scaling aperture
 
 **Upgrade path:** Build 4-ring system at 25mm. Validate. Replace Cs cells and mirrors with 100mm equivalents. In-situ training recalibrates automatically — no grating rewrite needed.
+
+---
+
+## 15. EIT Absorption Correction and Media Re-Evaluation
+
+**Status:** Derived 2026-05-08. Retracts §10–§14 EIT ring architecture pending SOA investigation.  
+**Trigger:** Cell-length optimization for 300mm aperture revealed a fatal absorption constraint omitted from §10–§14.
+
+### 15.1 Critical Error: §10–§14 Omitted EIT Absorption
+
+The §10 derivation correctly computed the **real part** of the EIT susceptibility (index modulation Δn = 0.012) but did not evaluate the **imaginary part** (absorption coefficient α_EIT). These are coupled through the same density-matrix susceptibility. Omitting absorption produced rank estimates that cannot physically be realized.
+
+**Correct EIT residual absorption formula** (Lukin 2003, Fleischhauer et al. RMP 2005):
+
+$$\alpha_\text{EIT} = \alpha_D \cdot \frac{\gamma_{12} \cdot \Gamma_e}{\Omega_c^2} \tag{15.1}$$
+
+where $\alpha_D$ is the Doppler-averaged peak absorption coefficient, $\gamma_{12}$ is the ground-state decoherence rate, $\Gamma_e$ is the excited-state linewidth, and $\Omega_c$ is the coupling Rabi frequency.
+
+For warm Cs at 350K with N₂ buffer gas ($N = 4\times10^{18}\ \text{m}^{-3}$, $\gamma_{12}/(2\pi) = 10\ \text{kHz}$, $\Gamma_e/(2\pi) = 5.22\ \text{MHz}$, $\Omega_c/(2\pi) = 1\ \text{MHz}$):
+
+$$\alpha_D = N \cdot \sigma_D \approx 2{,}770\ \text{m}^{-1} \tag{15.2}$$
+
+$$\alpha_\text{EIT} \approx 145\ \text{m}^{-1} \tag{15.3}$$
+
+At the §11 reference design ($L_\text{cell} = 200\ \text{mm}$):
+
+$$\alpha_\text{EIT} \cdot L = 145 \times 0.2 = 29 \quad \Rightarrow \quad T = e^{-29} \approx 2\times10^{-13} \quad (126\ \text{dB loss}) \tag{15.4}$$
+
+The §11 ring cavity is completely opaque. The signal is zero.
+
+### 15.2 The Ω_c / Rank Invariance
+
+The fatal structure: Δn and α_EIT share the same Ω_c dependence.
+
+$$\Delta n \propto \frac{1}{\Omega_c^2}, \qquad \alpha_\text{EIT} \propto \frac{1}{\Omega_c^2} \tag{15.5}$$
+
+The absorption-limited cell length scales as $L_\text{max} \propto \Omega_c^2$. Therefore the rank at the operating point:
+
+$$R_\text{dyn} = \frac{\pi \cdot \Delta n \cdot L_\text{max}}{\lambda \cdot \text{arctanh}(\sqrt{\eta})} \propto \frac{1}{\Omega_c^2} \cdot \Omega_c^2 = \text{constant} \tag{15.6}$$
+
+**Rank is independent of Ω_c.** Increasing coupling power does not help. The medium has a fundamental rank ceiling set by material constants:
+
+$$R_\text{ceiling} = \frac{\pi \cdot C_{\Delta n} \cdot (\alpha L)_\text{budget}}{K_\text{abs} \cdot \lambda \cdot \text{arctanh}(\sqrt{\eta})} \tag{15.7}$$
+
+where $C_{\Delta n} = \Delta n \cdot \Omega_c^2 = 4.74\times10^{11}\ \text{rad}^2/\text{s}^2$ and $K_\text{abs} = \alpha_D \cdot \gamma_{12} \cdot \Gamma_e = 5.71\times10^{15}\ \text{rad}^2/\text{s}^3$.
+
+| αL budget | R_ceiling (N₂ buffer gas, 350K) |
+|:---|:---|
+| 0.1 (1 dB) | ~305 |
+| 0.5 (4 dB) | ~1,500 |
+| 1.0 (9 dB) | ~3,000 |
+
+The only material lever is $\gamma_{12}$: $R \propto 1/\gamma_{12}$. Paraffin-coated cells achieve $\gamma_{12}/(2\pi) \sim 100\ \text{Hz}$, raising the ceiling to ~30,000 — but paraffin melts at 340K, right at the operating temperature. Atom density (temperature) does not help: both $\alpha_D$ and $\Delta n$ scale linearly with $N$, so the ratio is fixed.
+
+### 15.3 Affected Sections
+
+| Section | Status | Action |
+|:---|:---|:---|
+| §10 EIT coherence grating | **RETRACTED** | Δn derivation correct; absorption omitted; rank ceiling wrong by ~100× |
+| §11 EIT ring reference design | **RETRACTED** | Built on §10 rank; all throughput/cost numbers invalid |
+| §12 T=1 daisy-chain (EIT) | **RETRACTED** | Inherits §11 error |
+| §13 Apples-to-apples comparison | **RETRACTED** | EIT numbers used in comparison |
+| §14 100mm aperture (EIT) | **RETRACTED** | Same base error; constraint flip analysis also invalid |
+| ARCH-19 EIT ring | **RETRACTED** | Physical basis invalid until absorption closure |
+
+PTR Fabry-Perot baseline (ARCH-1–17) is **unaffected**. PTR glass has no analogous absorption constraint at 850nm — σ_r(850nm) ≈ 0 is the locked physics argument.
+
+### 15.4 Ephemeral Weight Media: Full Re-Evaluation
+
+Following the EIT retraction, all candidate ephemeral optical write media were evaluated against four constraints:
+1. Transparent at 852nm (inference wavelength) for read beam
+2. Writable at or near 852nm (no full wavelength redesign)
+3. Δn > ~5×10⁻⁴ at mm-scale (R > 100)
+4. Grating lifetime τ_grating > τ_rt (survives one round trip)
+
+**Tier 0 — Eliminated (fatal physics):**
+
+| Medium | Fatal constraint |
+|:---|:---|
+| EIT warm Cs (all geometries) | αL >> 1 at any Ω_c/L; rank ceiling ~300 (§15.2) |
+| SHB warm Cs | Doppler dilution, Δn ~ 10⁻¹⁸ (§9, locked) |
+| GaAs:SI (photorefractive) | 850nm above bandgap (870nm); α ~ 10⁴ m⁻¹ |
+| Pr³⁺:YSO | Write at 606nm; Δn at 852nm ≈ 10⁻²⁶ via K-K (negligible) |
+| Tm³⁺:YAG | Write at 793nm; same detuning problem; cryo required |
+| Bacteriorhodopsin | Write at 570nm; high absorption at 852nm |
+| Azobenzene | UV write; high absorption at 852nm |
+| CS₂ Kerr (χ³) | Δn ~ 10⁻¹³ at practical intensity (I = 1 MW/m²) |
+| SESAM | High absorption; ps lifetime (shorter than τ_rt) |
+| HeNe gas | Wrong wavelength; worse Δn than Cs (§9, locked) |
+| Liquid crystal | Not all-optical write; ms response |
+
+**Tier 1 — Viable, constraints quantified:**
+
+**InP:Fe (photorefractive):** Δn ~ 5×10⁻⁵ passive, ~5×10⁻⁴ with applied electric field. Write at 850nm (near-bandgap photorefractive effect). Grating lifetime µs–ms. InP bandgap is 924nm — 850nm is below gap, so α is lower than GaAs. Residual absorption from Fe trap states: α ~ 100–1000 m⁻¹ (αL ~ 0.5–5 at L=5mm). Marginal — measurable but requires experimental characterization. R ~ 92 at L=5mm with field enhancement. This is the EXP candidate for photorefractive ephemeral weights.
+
+**SOA carrier-density grating (850nm QW):** Δn ~ 5×10⁻³ from carrier density modulation in a quantum-well active region pumped to transparency or gain. Write mechanism is self-writing (cross-gain saturation by the inference field itself — no separate write laser). Read beam sees net-zero or net-gain medium at the operating wavelength. Grating lifetime τ_c ~ 0.3–3 ns (carrier recombination). R ~ 550 at L = 3mm. Two open questions: (1) τ_c vs τ_rt timing; (2) angular multiplexing rank in a semiconductor gain chip. This is the highest-potential ephemeral candidate and the subject of §16.
+
+**Cold atoms (MOT EIT):** Eliminates Doppler broadening → α_EIT is benign (αL ~ 0.01 at L=20mm). But MOT density N ~ 10¹⁶ m⁻³ is 200× lower than thermal vapor → Δn ~ 3×10⁻⁵ → R ~ 20 at L=20mm. Engineering complexity (MOT inside ring cavity) is severe. Not competitive on rank.
+
+### 15.5 Architecture Status After Retraction
+
+The permanent-weight PTR Fabry-Perot system (ARCH-1–17) is the validated architecture. The EIT ring branch (ARCH-19) is retracted. The SOA carrier grating is the new candidate for the ephemeral weight layer and is a qualitatively different geometry — it is a **gain chip inside a ring cavity**, not a gas cell. Derivation of the SOA rank ceiling and ring geometry follows in §16.
+
+---
+
+---
+
+## 16. SOA Carrier-Density Grating: Rank Ceiling, Geometry, and Computational Primitive
+
+**Status:** Derived 2026-05-08. Major geometry shift. Identifies SOA as the correct ephemeral weight medium and establishes a new computational primitive distinct from the PTR recurrent architecture.
+
+### 16.1 Physical Mechanism
+
+A quantum-well SOA pumped above transparency has a quasi-equilibrium carrier density $N_0$. An intensity pattern $I(x,y)$ spatially depletes carriers via stimulated recombination:
+
+$$\Delta N(x,y) = -\frac{N_0 \cdot I(x,y)}{I_\text{sat}(1 + I/I_\text{sat})} \approx -\frac{N_0}{I_\text{sat}} I(x,y) \quad (I \ll I_\text{sat}) \tag{16.1}$$
+
+This carrier depletion modulates the refractive index via the Kramers-Kronig relation (linewidth enhancement):
+
+$$\Delta n = \frac{dn}{dN} \cdot \Delta N, \qquad \frac{dn}{dN} \approx -1\times10^{-26}\ \text{m}^3 \quad (\text{GaAs QW, 850 nm, Coldren \& Corzine 1995}) \tag{16.2}$$
+
+For $\Delta N = N_\text{tr}/2$ (50% saturation of transparency density, $N_\text{tr} \approx 1.5\times10^{24}\ \text{m}^{-3}$):
+
+$$\Delta n_\text{material} = 1\times10^{-26} \times 7.5\times10^{23} \approx 7.5\times10^{-3} \tag{16.3}$$
+
+With modulation depth $s = 0.5$ (holographic fringe visibility): $\Delta n_\text{grating} \approx 3.75\times10^{-3}$.
+
+### 16.2 The Confinement Factor Bottleneck
+
+The QW active region is $d_\text{active} \approx 80\ \text{nm}$ (5 QWs × 16 nm each). The optical mode height in the waveguide is $w_\text{mode} \approx 2\ \mu\text{m}$. The **modal** $\Delta n$ experienced by the propagating field is:
+
+$$\Delta n_\text{modal} = \Gamma \cdot \Delta n_\text{material}, \qquad \Gamma = \frac{d_\text{active}}{w_\text{mode}} \approx \frac{80\ \text{nm}}{2\ \mu\text{m}} = 0.04 \tag{16.4}$$
+
+$$\Delta n_\text{modal} \approx 0.04 \times 3.75\times10^{-3} = 1.5\times10^{-4} \tag{16.5}$$
+
+This is the binding constraint. The rank from dynamic range at $L_\text{chip} = 4\ \text{mm}$:
+
+$$R_\text{dyn} = \frac{\pi \cdot \Delta n_\text{modal} \cdot L}{\lambda \cdot \text{arctanh}(\sqrt{\eta_\text{th}})} \approx \frac{\pi \times 1.5\times10^{-4} \times 4\times10^{-3}}{852\times10^{-9} \times 0.100} \approx 22 \tag{16.6}$$
+
+$R_\text{dyn} = 22$ for a QW waveguide SOA — well below the PTR baseline of $R = 370$.
+
+### 16.3 Geometry Options and Their Rank Ceilings
+
+**Option A: QW waveguide SOA (current standard)**  
+$\Gamma = 0.04$, $L = 4\ \text{mm}$, $\Delta n_\text{modal} = 1.5\times10^{-4}$ → $R = 22$. The waveguide confines the mode vertically, achieving low-threshold gain but killing the modal index modulation. Not competitive for holographic rank.
+
+**Option B: Broad-area SOA, multi-chip chain**  
+Stack $N$ chips: $R \propto N \times R_\text{per chip}$ (dynamic range adds; angular rank saturates). To reach $R = 370$ requires $\sim 17$ chips — impractical for a compact system.
+
+**Option C: Bulk gain slab (no waveguide)**  
+Remove the waveguide cladding: $\Gamma \to 1$, $\Delta n \approx 3.75\times10^{-3}$, $R \approx 550$ at $L = 4\ \text{mm}$. The pump must hold the bulk material at transparency ($\alpha = 0$) or into gain ($\alpha < 0$). This is a **gain hologram** — a known configuration in semiconductor optics (Goodman & Liu 1988, Kwong et al. 1993). The probe beam traverses the gain slab in free space; absorption is zero or negative. Rank is comparable to the PTR 2mm plate ($R = 370$) while providing gain.
+
+Bulk gain slab is the viable geometry. Key unknowns: electrical pumping uniformity across the slab area, lateral heat management, and whether angular multiplexing rank in a bulk semiconductor matches the Kogelnik prediction.
+
+**Option D: Vertical cavity (normal incidence through QW planes)**  
+Effective length $L_\text{eff} = d_\text{active} \times T = 80\ \text{nm} \times T$. At $T = 100$: $L_\text{eff} = 8\ \mu\text{m}$ → $R \approx 1$. Ruled out entirely.
+
+| Geometry | $\Delta n_\text{eff}$ | $L$ | $R$ | Absorption |
+|:---|:---|:---|:---|:---|
+| QW waveguide SOA | $1.5\times10^{-4}$ | 4 mm | 22 | Zero (gain) |
+| Bulk gain slab | $3.75\times10^{-3}$ | 4 mm | 551 | Zero or negative (gain) |
+| Vertical cavity | $\sim10^{-4}$ | 8 µm | ~1 | — |
+| PTR glass (ref.) | $5\times10^{-4}$ | 2 mm | 370 | Zero (850nm) |
+
+### 16.4 Grating Lifetime and Timing Constraint
+
+The carrier lifetime $\tau_c \sim 0.3$–$3\ \text{ns}$ in a pumped SOA. The ring round-trip time for a compact cavity ($L_\text{ring} \sim 600\ \text{mm}$) is $\tau_\text{rt} \sim 2\ \text{ns}$.
+
+At $T > 1$ (recurrent inference): the grating decays by $\exp(-T \cdot \tau_\text{rt}/\tau_c)$ between passes. At $T = 2$: $e^{-2 \times 2/1} = e^{-4} \approx 0.018$ — 98% of the grating is gone. **The SOA carrier grating is incompatible with the recurrent (T > 1) Fabry-Perot design.**
+
+At $T = 1$ (single-pass): the grating is written and read in the same pass. The grating lifetime is irrelevant. Write and read are simultaneous.
+
+This enforces a **T=1 single-pass architecture** for SOA-based gratings.
+
+### 16.5 New Computational Primitive: Optical Cross-Phase Modulation
+
+The T=1 constraint opens a qualitatively different computational primitive. At T=1:
+
+1. **Write beam** (intensity $I_\text{write}$) writes the carrier grating: $\Delta n(\mathbf{r}) \propto I_\text{write}(\mathbf{r}) = |\sum_j a_j \psi_j(\mathbf{r})|^2$
+2. **Read beam** (field $E_\text{read}$) accumulates phase: $\Delta E(\mathbf{r}) = i k \Delta n(\mathbf{r}) L \cdot E_\text{read}(\mathbf{r})$
+3. **Output** (projected to mode basis): $b_i = \langle \psi_i | \Delta n | E_\text{read} \rangle$
+
+**Case 1 — Write = Read (self-grating):**  
+$I_\text{write} = I_\text{read} = |E|^2$. Output is $b_i \propto \sum_{jk} T_{ijk} a_j^* a_k$, a bilinear form. This implements a **quadratic operation** in the mode amplitudes: equivalent to unnormalized self-attention.
+
+**Case 2 — Write ≠ Read (cross-grating):**  
+Separate write beam (context, field $E_c$) sets $\Delta n(\mathbf{r}) \propto |E_c(\mathbf{r})|^2$. Read beam (query, field $E_q$) probes the grating. Output: $b_i \propto \langle \psi_i | |E_c|^2 | E_q \rangle$. This implements **optical cross-attention** — context-conditioned weighting applied to the query.
+
+Neither of these is what the PTR recurrent system computes (which is linear matrix-vector multiplication repeated $T$ times). The SOA enables **nonlinear single-pass attention-like operations** without requiring learned weight storage in a holographic medium at all.
+
+### 16.6 Relationship to PTR Architecture
+
+The SOA bulk gain slab does **not** replace PTR. It computes a different function:
+
+| Layer | Medium | Computation | Lifetime |
+|:---|:---|:---|:---|
+| PTR weight layer | PTR glass | $W \cdot a$ (linear, fixed $W$) | Permanent |
+| SOA gain layer | Bulk gain slab | $|E_c|^2 \cdot E_q$ (bilinear, token-conditioned) | ~1 ns (per-token) |
+
+They can be composed: PTR layer computes a linear projection; SOA layer then applies a context-dependent nonlinearity. This is architecturally closer to a full transformer block than the pure-SSM PTR design.
+
+### 16.7 Open Questions (EXP candidates)
+
+1. **Bulk gain slab pumping uniformity**: Can a bulk GaAlAs slab be uniformly pumped electrically or optically to transparency over a 5×5 mm² aperture? Current literature on broad-area VCSELs and gain chips suggests yes, but not at this geometry.
+2. **Angular multiplexing rank in bulk semiconductor**: Kogelnik predicts $R \approx 550$. Semiconductor holograms achieve much lower rank in practice due to free-carrier scattering and spectral bandwidth. Needs experimental measurement.
+3. **Cross-attention fidelity**: The bilinear operation $\langle \psi_i | |E_c|^2 | E_q \rangle$ approximates attention only in the linear (weak saturation) regime. At strong drive, saturation introduces higher-order nonlinearities. Need to bound the approximation error.
+4. **Temporal multiplexing**: Can multiple context gratings be superimposed (one per attention head) by writing multiple wavelengths or polarizations simultaneously? This is the route to multi-head attention.
+
+### 16.8 Status
+
+SOA bulk gain slab (Option C) is the candidate for further development. Architecture is **PROPOSED**. The key insight — that SOA naturally implements attention-class rather than SSM-class computation — is a fundamental architecture branch point. Formal labeling: **ARCH-20: Gain Hologram Attention Layer**.
+
+---

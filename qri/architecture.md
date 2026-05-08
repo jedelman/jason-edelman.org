@@ -659,8 +659,10 @@ Training stability requires signal-to-gradient ratio >10:1 (satisfied at 40dB SN
 
 ## 19. EIT Ring Cavity — All-Optical Ephemeral Weights (ARCH-19)
 
-**Status:** PROPOSED 2026-05-08 — open derivations remain (§10.9); not locked  
-**Motivation:** PTR glass training requires a 30-minute furnace development cycle per epoch, fundamentally limiting online learning. EIT coherence gratings in Cs vapor offer all-optical write/erase in microseconds at Δn ~ 10⁻² — exceeding PTR — with rank scaling via cavity geometry rather than plate thickness.
+**Status:** ~~PROPOSED 2026-05-08~~ → **RETRACTED 2026-05-08**  
+**Retraction reason:** EIT absorption was omitted from §10–§14. Residual absorption α_EIT ≈ 145 m⁻¹ at Ω_c = 1 MHz gives αL = 29 at L = 200mm (126 dB loss per pass). The design is physically opaque. The rank ceiling with N₂ buffer gas is ~300 at any Ω_c (see theory_derivations.md §15). Full derivation of the correction is in §15.
+
+~~**Motivation:** PTR glass training requires a 30-minute furnace development cycle per epoch, fundamentally limiting online learning. EIT coherence gratings in Cs vapor offer all-optical write/erase in microseconds at Δn ~ 10⁻² — exceeding PTR — with rank scaling via cavity geometry rather than plate thickness.~~
 
 **Core physics:** Cs Λ-system (|1⟩ = 6S₁/₂ F=3, |2⟩ = 6S₁/₂ F=4, |3⟩ = 6P₃/₂). Coupling field at 852nm creates dark-state coherence ρ₁₂(z) spatially modulated at period λ/2 by the standing wave. This coherence grating encodes the weight matrix as a spatially varying index modulation Δn_grating ≈ 10⁻² at Ω_c/(2π) ~ 1 MHz with buffer gas (see theory_derivations.md §10).
 
@@ -710,3 +712,54 @@ Training stability requires signal-to-gradient ratio >10:1 (satisfied at 40dB SN
 4. Coupling field spatial mode capacity for 512-mode weight encoding
 
 **Note on PTR:** PTR glass does not scale beyond rank ~368 (2mm plate, dynamic-range limited) without engineering breakthroughs in PTR uniformity at >2mm thickness. EIT ring is the proposed scaling path beyond PTR for Gen 2+ architectures. PTR remains the locked baseline for Phase 1.
+
+---
+
+## 20. Gain Hologram Attention Layer (ARCH-20)
+
+**Status:** PROPOSED 2026-05-08 — derivation in theory_derivations.md §16; open experiments listed in §16.7  
+**Motivation:** Following the retraction of ARCH-19 (EIT ring), re-evaluation of ephemeral weight media identified the SOA carrier-density grating as the only candidate satisfying all four constraints: (a) transparent at 852nm, (b) writable at 852nm, (c) Δn > 10⁻⁴ at mm-scale, (d) τ_grating > τ_rt. However, the SOA medium enables a qualitatively different computational primitive from the PTR recurrent design.
+
+**Core physics:** A bulk GaAlAs gain slab pumped above transparency stores a carrier-density grating via intensity-dependent stimulated recombination. Carrier depletion modulates the refractive index: Δn_material ≈ 3.75×10⁻³ at 50% saturation. Unlike the QW waveguide SOA (Γ = 0.04, R ≈ 22), a bulk gain slab achieves Γ ≈ 1, giving R ≈ 550 at L = 4mm (theory_derivations.md §16.2–16.3).
+
+**Timing constraint (T=1 enforced):** Carrier lifetime τ_c ~ 1 ns. Ring τ_rt ~ 2 ns. At T > 1, the grating decays to < 2% of initial value before the next pass reads it. The SOA carrier grating is structurally incompatible with the recurrent (T > 1) architecture. It enforces T=1 single-pass operation.
+
+**Computational primitive — optical cross-attention:**  
+At T=1, the grating is written and read in the same pass. For separate write (context $E_c$) and read (query $E_q$) beams:
+
+$$b_i \propto \langle \psi_i | |E_c(\mathbf{r})|^2 | E_q(\mathbf{r}) \rangle \tag{ARCH-20.1}$$
+
+This is optical cross-attention: the context field sets a spatially-varying gain grating that acts as a token-conditioned weight matrix applied to the query. It is not a linear matrix-vector multiply with a fixed weight matrix — it is a bilinear form conditioned on the context token.
+
+This maps to the attention mechanism (without softmax normalization) rather than an SSM layer. **ARCH-20 is an attention-class architecture; ARCH-1–17 (PTR) is an SSM-class architecture.** They compute different functions and can be composed.
+
+**Geometry:**
+```
+[Bulk GaAlAs gain slab, 4-5mm × ~5mm aperture, electrically pumped to transparency]
+        ↓ write beam (context, 852nm) — sets carrier grating Δn(r) ∝ |E_c|²
+        ↓ read beam (query, 852nm, same pass) — probes grating
+        ↓ output field — b_i = ⟨ψ_i | Δn | E_q⟩  (attention output)
+[Si PIN detector array — intensity readout]
+```
+
+**Relationship to PTR baseline:**
+
+| Parameter | PTR (ARCH-1–17) | Gain hologram (ARCH-20) |
+|:---|:---|:---|
+| Computation | Linear (W·a, fixed W) | Bilinear (W(context)·query) |
+| Class | SSM / recurrent | Attention-like |
+| Δn | 5×10⁻⁴ (2mm plate) | 3.75×10⁻³ (4mm slab) |
+| Rank | 370 | ~550 |
+| Weight lifetime | Permanent | ~1 ns (per-token) |
+| Training | 30 min furnace cycle | Self-writing (no separate training pass) |
+| T | 100 (recurrent) | 1 (single-pass, enforced) |
+| Architecture status | Locked (ARCH-1–17) | Proposed — 4 open EXPs (§16.7) |
+
+**Open questions before locking (from §16.7):**
+1. Bulk gain slab pumping uniformity across 5×5mm² aperture
+2. Experimental rank ceiling in bulk semiconductor (Kogelnik predicts 550; free-carrier scattering may reduce this)
+3. Cross-attention fidelity vs. saturation depth (linear approximation bounds)
+4. Multi-head attention via wavelength or polarization multiplexing
+
+**Note on composition:** ARCH-20 does not replace the PTR system. A hybrid architecture — PTR recurrent layer (SSM) composed with gain hologram layer (attention) — could implement a full transformer-like block optically. This is the Gen 3 architecture direction.
+
