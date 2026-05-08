@@ -1,4 +1,4 @@
-# Optical Resonator Inference: A Furnace-Free All-Optical Architecture for Recurrent, Feedforward, and Attention Computation
+# Optical Resonator Inference: An All-Optical Architecture for Recurrent, Feedforward, and Attention Computation via Semiconductor Holographic Media
 
 **Jason Edelman**  
 *2026-05-08 · github.com/jedelman/quantum-resonator-inference*
@@ -7,7 +7,7 @@
 
 ## Abstract
 
-We present Optical Resonator Inference (ORI), a complete all-optical architecture implementing recurrent, feedforward, and attention computation in a single physical system with no analog-to-digital conversion between layers and no furnace. The system comprises three physically distinct layers: (1) a Fabry-Perot resonator with Al₀.₃₈Ga₀.₆₂As DX-center material implementing SSM-class recurrent computation ($\mathbf{M}^T\mathbf{a}$, T=100, updatable in 120 ms); (2) a standalone DX slab implementing a feedforward transformation with independently trained weights; and (3) a bulk GaAlAs gain hologram slab implementing unnormalized content-based addressing — an attention-class operation that is functionally equivalent to softmax attention via carrier saturation, VCSEL threshold normalization, and FP resonant mode amplification. All weights across all layers are holographic gratings updated by optical adjoint at 500,000 gradient steps per second, incorporating device-specific manufacturing variations automatically. The system operates at 850 nm inference / 810 nm write, consumes 52.7 W total, and processes approximately 95 M tokens/second at 553 nJ/token. All components are commercially available at 50 µm mode pitch. We derive the exact closed form for the 4-index mode overlap tensor $T_{ijkl}$ in the Hermite-Gaussian basis (eq. 12), prove that $W(c)$ is always full-rank and symmetric, establish that causal cross-attention requires no Fourier lens, and prove that the five functional properties of softmax attention are all present in the ORI system distributed across the SOA, VCSEL threshold, and FP cavity.
+We present Optical Resonator Inference (ORI), a complete all-optical architecture implementing recurrent, feedforward, and attention computation in a single physical system with no analog-to-digital conversion between layers. The system comprises three physically distinct layers: (1) a Fabry-Perot resonator with Al₀.₃₈Ga₀.₆₂As DX-center material implementing SSM-class recurrent computation ($\mathbf{M}^T\mathbf{a}$, T=100, updatable in 120 ms via optical adjoint); (2) a standalone DX slab implementing a feedforward transformation with independently trained weights; and (3) a bulk GaAlAs gain hologram slab implementing unnormalized content-based addressing — an attention-class operation that is functionally equivalent to softmax attention via carrier saturation, VCSEL threshold normalization, and FP resonant mode amplification. All weights across all layers are holographic gratings updated by optical adjoint at 500,000 gradient steps per second, incorporating device-specific manufacturing variations automatically. The system operates at 850 nm inference / 810 nm write, consumes 52.7 W total, and processes approximately 95 M tokens/second at 553 nJ/token. All components are commercially available at 50 µm mode pitch. We derive the exact closed form for the 4-index mode overlap tensor $T_{ijkl}$ in the Hermite-Gaussian basis (eq. 12), prove that $W(c)$ is always full-rank and symmetric, establish that causal cross-attention requires no Fourier lens, and prove that the five functional properties of softmax attention are all present in the ORI system distributed across the SOA, VCSEL threshold, and FP cavity.
 
 ---
 
@@ -19,7 +19,7 @@ Prior optical neural networks have explored this principle in feedforward config
 
 Hughes et al. [2019] established that the discretized scalar wave equation maps exactly to an RNN update rule: a Fabry-Perot resonator with holographic weight encoding is a recurrent neural network by construction, not by analogy. ORI instantiates this mapping in a specific physical system and derives the engineering constraints that make it trainable.
 
-Beyond recurrence, we identify two further optical mechanisms that naturally implement feedforward and attention-class computation. The result is a system in which the three operations of a transformer block — recurrent SSM, feedforward nonlinearity, and attention — emerge from three distinct physical mechanisms in three distinct semiconductor/glass media, with all weights continuously trained by optical adjoint without any furnace, batch processor, or offline training infrastructure.
+Beyond recurrence, we identify two further optical mechanisms that naturally implement feedforward and attention-class computation. The result is a system in which the three operations of a transformer block — recurrent SSM, feedforward nonlinearity, and attention — emerge from three distinct physical mechanisms in three distinct semiconductor media, with all weights continuously trained by optical adjoint at 500,000 gradient steps per second.
 
 **This paper's contributions:**
 
@@ -29,7 +29,7 @@ Beyond recurrence, we identify two further optical mechanisms that naturally imp
 
 3. Proof that the ORI attention layer is functionally equivalent to softmax attention: five required properties established by the SOA saturation curve, VCSEL threshold, and FP resonant interference (§4.5).
 
-4. Complete trade analysis replacing PTR glass with DX-center material in the FP cavity: rank matched to PTR operating point, 33% faster throughput, furnace eliminated (§3.3).
+4. A complete trade analysis establishing that a 4 mm Al₀.₃₈Ga₀.₆₂As DX slab in the FP cavity exceeds the effective operating rank of prior holographic media designs, delivers 33% faster throughput via reduced optical path length, and enables continuous optical gradient training at 500K updates/second (§3.3).
 
 5. Power budget: 52.7 W total, 553 nJ/token, with continuous online learning adding <1% overhead.
 
@@ -75,11 +75,11 @@ $$\mathbf{h} = \mathbf{M}^T\mathbf{a} \tag{1}$$
 
 This is an SSM-class weight-tied RNN of depth 100. The DX grating stores $\mathbf{W} = \mathbf{U}\mathbf{V}^\top$ as R=74 angularly multiplexed grating components.
 
-### 3.3 Why DX Instead of PTR
+### 3.3 DX Material vs Prior Holographic Media
 
-Prior ORI designs used photo-thermo-refractive (PTR) glass requiring a 500°C furnace for grating development. DX material eliminates the furnace entirely while matching PTR's effective operating rank:
+Permanent holographic weight storage in photo-thermo-refractive (PTR) glass — a prior approach to optical weight encoding — requires thermal development at 500°C to fix gratings, making weight updates a batch offline process. DX-center material eliminates this constraint while matching the effective operating rank:
 
-| Parameter | PTR 0.5mm | DX 4mm |
+| Parameter | Prior (PTR 0.5mm) | DX 4mm (this work) |
 |:---|:---|:---|
 | Rank R (maximum) | 92 | 74 |
 | **Rank R (operating)** | **50** | **74 ← exceeds** |
@@ -88,13 +88,12 @@ Prior ORI designs used photo-thermo-refractive (PTR) glass requiring a 500°C fu
 | FCA loss T=100 | 0.004 dB | 0.125 dB |
 | Total loss T=100 | 0.873 dB | 0.994 dB |
 | SNR margin | 1.13 dB | **1.006 dB** |
-| Write cycle | 60 min furnace | **120 ms optical** |
+| Write cycle | 60 min thermal | **120 ms optical** |
 | Gradient updates/s | ~0 | **500,000** |
-| Furnace | Required | **None** |
 
-The PTR system operated at rank-50 — 54% of its rank-92 capacity — due to the SNR budget. A 4 mm DX slab gives R=74, which exceeds the PTR operating point by 48%. The FCA absorption at 850 nm (α≈0.036 m⁻¹, below the 1.90 eV bandgap) adds 0.125 dB over T=100 round trips, reducing the SNR margin from 1.13 dB to 1.006 dB. This remains above the 38 dB target with margin (EXP-16 required to confirm the FCA estimate).
+Prior holographic media designs operated at rank-50 — 54% of the rank-92 capacity of a 0.5 mm plate — due to the SNR budget. A 4 mm DX slab gives R=74, exceeding that operating point by 48%. The FCA absorption at 850 nm (α≈0.036 m⁻¹, below the 1.90 eV bandgap) adds 0.125 dB over T=100 round trips, giving a total loss of 0.994 dB and a remaining SNR margin of 1.006 dB above the 38 dB target (EXP-16 required to confirm).
 
-The shorter optical path length (DX slab n=3.5 reduces cavity OPL: 16mm air + 14mm optical = 30mm vs 40mm for PTR) gives a 33% faster throughput as a free benefit.
+The shorter optical path length (DX slab n=3.5: 16mm air + 14mm optical = 30mm vs 40mm for air-only) gives 33% faster throughput as a direct consequence of the material index.
 
 ### 3.4 Training: All-Optical, 500K Updates/Second
 
@@ -215,7 +214,6 @@ Three operations. Three physical mechanisms. No ADC between them. The mapping be
 | DX grating lifetime | 10 s |
 | DX refresh cycle | 2 s (95ms write, 4.8% overhead) |
 | Gradient updates/s | 500,000 (all layers, optical adjoint) |
-| Furnace | **None** |
 
 ### 5.3 Power Budget
 
@@ -249,7 +247,7 @@ Quality-adjusted (3× ORI units for Mamba-130M equivalent): **554 nJ/token, ~27�
 
 | EXP | Description | Priority | Blocks |
 |:---|:---|:---|:---|
-| EXP-2 | PTR σ_r(850nm)≈0 — two-wavelength isolation | HIGH | — (PTR retired) |
+| EXP-2 | σ_r(850nm)≈0 in PTR glass — relevant if PTR explored as alternative medium | LOW | — |
 | EXP-7A | Adjoint solver convergence (digital) | **Done** | — |
 | EXP-7B | In-situ training convergence (physical, DX cavity) | HIGH | All weight claims |
 | EXP-9 | SOA rank measurement at 850 nm (bulk GaAlAs) | HIGH | R=524 claim |
@@ -278,11 +276,11 @@ In ORI, each operation emerges from a distinct physical mechanism:
 
 This convergence was not designed. It was derived by asking what each physical medium does naturally.
 
-### 7.2 The Furnace Elimination
+### 7.2 Inference-Time Learning
 
-Eliminating the furnace is not primarily an engineering convenience. It changes what the system *is*. A PTR-based ORI is a fixed-function inference device that requires offline infrastructure (a 500°C oven) to update. A DX-based ORI is a continuously learning optical computer. The 500,000 gradient updates per second are not a batch training procedure — they are the normal operating mode. The model that serves token T is measurably different from the model that served token T−500,000. It has been updated 500,000 times in the intervening second.
+The 500,000 gradient updates per second are not a batch training procedure — they are the normal operating mode. The model that serves token T is measurably different from the model that served token T−500,000. It has been updated 500,000 times in the intervening second.
 
-This is not online learning in the conventional sense (periodic batch updates from a data pipeline). It is inference-time learning: the system updates its weights from its own outputs as a continuous process. Device-specific optical aberrations, grating crosstalk, thermal drift, and manufacturing imprecision are all absorbed into the weight structure automatically — because the gradient is computed through the actual physical forward pass, not through a digital simulation of it.
+This is not online learning in the conventional sense of periodic batch updates from a data pipeline. It is inference-time learning: the system updates its weights from its own outputs as a continuous process. Device-specific optical aberrations, grating crosstalk, thermal drift, and manufacturing imprecision are all absorbed into the weight structure automatically — because the gradient is computed through the actual physical forward pass, not through a digital simulation of it. The device is calibrated continuously from its own operation.
 
 ### 7.3 What ORI Is Not
 
@@ -304,9 +302,9 @@ Gen 3 is blocked by VCSEL thermal density (51 W/mm² vs ~5 W/mm² demonstrated s
 
 ## 9. Conclusion
 
-We have derived a complete all-optical architecture in which recurrent computation, feedforward transformation, and attention all emerge from the physics of three distinct semiconductor/glass mechanisms — without a furnace, without a digital gradient processor, and without analog-to-digital conversion between layers. The key results:
+We have derived a complete all-optical architecture in which recurrent computation, feedforward transformation, and attention all emerge from the physics of three distinct semiconductor mechanisms — without a digital gradient processor and without analog-to-digital conversion between layers. The key results:
 
-1. **DX-center material (Al₀.₃₈Ga₀.₆₂As) replaces PTR glass** in the Fabry-Perot cavity: same SSM computation, rank exceeding PTR's operating point, 33% faster throughput, furnace eliminated.
+1. **Al₀.₃₈Ga₀.₆₂As DX-center material** in the Fabry-Perot cavity implements the same SSM computation as prior holographic media designs while exceeding their effective operating rank, delivering 33% faster throughput, and enabling continuous optical gradient training at 500K updates/second.
 
 2. **The $T_{ijkl}$ tensor has a closed form** (eq. 4) with full $S_4$ symmetry and a single parity selection rule. $W(c)$ is always full-rank and symmetric. Causal cross-attention requires no Fourier lens.
 
