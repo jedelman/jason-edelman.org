@@ -173,7 +173,7 @@ $$T_\text{coh} = \frac{c_0}{2L \cdot \Delta\nu} = \frac{3 \times 10^8}{2 \times 
 
 at single-mode VCSEL linewidth $\Delta\nu = 10$ MHz. The coherence condition requires $T \ll T_\text{coh} = 750$.
 
-**SNR budget.** Each round trip incurs loss from mirror reflectivity ($-0.023$ dB per round trip at
+**SNR budget.** Each round trip incurs loss from mirror reflectivity ($-0.00869$ dB per round trip, both mirrors at
 $R = 0.9990$), PTR glass absorption (specification: $< 0.01$ cm$^{-1}$ at 850 nm over 0.5 mm
 thickness, contributing $< 0.001$ dB per pass), and residual scattering (estimated $< 0.005$ dB
 per pass from surface roughness). The dominant loss is mirror reflectivity. Total round-trip loss:
@@ -798,7 +798,7 @@ $$y_j = \left|\int \psi_j^*(\mathbf{x}) \cdot \left[M \cdot u_\text{in}\right](\
 
 where M is the single-pass transfer function of the grating. This is a feedforward optical transformation — not a recurrent computation. Depth requires stacking independent cavities with SOA inter-stage amplification; weight-tying across round trips does not apply.
 
-Crucially, the SNR accumulation over T=100 round trips (2.3 dB total loss) is replaced by single-pass loss of 0.023 dB. The rank constraint shifts entirely from SNR budget to grating angular multiplexing capacity.
+Crucially, the SNR accumulation over T=100 round trips (0.869 dB total mirror loss) is replaced by single-pass loss of 0.00869 dB. The rank constraint shifts entirely from SNR budget to grating angular multiplexing capacity.
 
 ### 7.2 Kogelnik Coupling Constant
 
