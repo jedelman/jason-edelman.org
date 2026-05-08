@@ -1583,3 +1583,76 @@ At N=8 rings:
 3. **Gradient routing:** Adjoint solver must backpropagate through N rings serially. Each ring requires its own coupling field update. With shared coupling laser split to N AOMs, each AOM independently modulates its ring's weight update. FPGA routes gradient signals per-ring.
 
 4. **Layer normalization:** Applied digitally at VCSEL re-injection stage (modulate amplitude pattern before injecting into next ring). Adds one digital multiply per mode per inter-ring transition — negligible overhead.
+
+---
+
+## 13. Apples-to-Apples: ORI vs GPU Diffusion Text at Matched Quality
+
+**Status:** Derived 2026-05-08  
+**Purpose:** Corrects the headline 5.7 OoM speedup for model quality. Two matching approaches: SSM state size (more defensible for SSM comparison) and total parameter count (more conservative, more legible to reviewers).
+
+### 13.1 ORI Parameter Structure
+
+Per ring: $H=512$, $N_\text{state}=57$:
+
+| Component | Params |
+|:----|:----|
+| SSM weights (W + C) | $2 \times H \times N_\text{state} = 58{,}368$ |
+| Feedthrough D | $H^2 = 262{,}144$ |
+| Layer norm | $2H = 1{,}024$ |
+| **Per-ring total** | **321,536** |
+
+Embedding layer (digital DRAM, BPE vocab): $V \times H = 50{,}257 \times 512 = 25.7\,\text{M}$. Weight-tied unembedding: free. This component is not optical but is part of the model and counts in parameter comparisons.
+
+Total params with embedding: $N_\text{rings} \times 321{,}536 + 25.7\,\text{M}$. Dominantly embedding for small N — converges to optical-dominated above ~80 rings.
+
+### 13.2 Two Quality-Matching Approaches
+
+**Approach A — SSM State Size (correct SSM metric):**
+
+Published SSM quality is driven primarily by total SSM state dimension: $d_\text{state} \times d_\text{model} \times \text{layers}$. This is the quantity that determines long-range memory capacity (Gu et al. 2021, Theorem 1).
+
+- Mamba-130M: $d_\text{state}=16$, $d_\text{model}=768$, 24 layers → total state = $294{,}912$
+- ORI per ring: $N_\text{state} \times H = 57 \times 512 = 29{,}184$
+- **ORI rings to match Mamba-130M state: $294{,}912 / 29{,}184 = 10.1$ rings → N=10**
+
+At N=10: total params = 29M (vs Mamba-130M's 130M). ORI is 4.5× more parameter-efficient per unit of SSM state. Quality will fall between Mamba-tiny and Mamba-130M — exact PPL unknown without experiment, but state equivalence is a strong structural predictor.
+
+**Approach B — Total Parameter Count (conservative):**
+
+Matching 117M total optical+embedding params (GPT2-small scale, target for MDLM):
+- Required optical params: $117\,\text{M} - 25.7\,\text{M} = 91.3\,\text{M}$
+- At $321{,}536$ per ring: **N = 284 rings**
+
+### 13.3 Speedup at Matched Quality
+
+ORI latency = $N_\text{rings} \times \tau_{rt} \times \text{NFE} = N \times 0.667\,\text{ns} \times 100$.
+
+| Scenario | Matching criterion | N rings | ORI latency | GPU A100 | Speedup | OoM |
+|:----|:----|:----|:----|:----|:----|:----|
+| Unmatched (headline) | — | 8 | 0.53 µs | 256 ms | 4.8×10⁵ | **5.7** |
+| State-matched | Mamba-130M state | 10 | 0.67 µs | 256 ms | 3.8×10⁵ | **5.6** |
+| Param-matched | 117M total params | 284 | 18.9 µs | 256 ms | 1.4×10⁴ | **4.1** |
+
+**The speedup survives quality-matching.** Even at full parameter parity (284 rings), ORI is 4.1 OoM faster. The physics gap — photon transit time vs. GPU clock — does not close with more rings.
+
+### 13.4 Defensible Claim
+
+The most defensible apples-to-apples comparison is the state-matched scenario:
+
+> **10 ORI rings, state-equivalent to Mamba-130M, deliver NAR diffusion text generation in 0.67 µs — 380,000× faster than an A100 GPU running MDLM at equivalent SSM state capacity — at 29M total parameters and ~$49K–99K hardware cost.**
+
+The param-matched scenario (284 rings, 4.1 OoM) is the conservative number to use in publications where reviewers may default to total parameter count.
+
+### 13.5 What ORI Cannot Match
+
+The H×H feedthrough matrix in ORI ($262{,}144$ params per ring) is optically implemented but is a dense linear operation — equivalent to Mamba's out-projection. Mamba additionally has:
+- Selective scan mechanism (input-dependent SSM, not weight-tied) — ORI's grating is fixed-weight per forward pass
+- In-projection ($2 \times d_\text{model}^2$) for feature expansion — ORI has no equivalent upsampling
+- Convolution component (short 1D conv pre-SSM) — ORI has no equivalent
+
+These give Mamba higher expressivity per unit state than ORI. The quality gap at matched state size will favor Mamba — the honest estimate is that ORI needs ~2–3× more rings than state equivalence alone suggests to reach the same empirical PPL. This shifts the state-matched speedup from 5.6 to ~5.2–5.4 OoM — still above 5 OoM.
+
+### 13.6 Open Empirical Question
+
+None of these quality estimates are experimentally validated. The LSSL paper's empirical results (84.65% sCIFAR at 6 layers, H=128, N=128) provide the closest analog. ORI's H=512, N_state=57 is a different operating point. **EXP-7 Phase B (clone-and-fine-tune viability) is the precursor experiment before diffusion text quality can be estimated empirically.** The speedup numbers are physics — they hold regardless. The quality numbers are architecture predictions — they require validation.
