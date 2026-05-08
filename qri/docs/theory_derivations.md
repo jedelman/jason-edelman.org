@@ -2589,3 +2589,69 @@ The DX FFN slab (Layer 2) retains value: it computes a different function (FFN v
 **ARCH-22 (PROPOSED):** DX Fabry-Perot as SSM recurrent layer. Supersedes PTR glass in the Layer 1 role. Parameters: 4mm Al₀.₃₈Ga₀.₆₂As slab, same FP geometry, dichroic mirrors (HR@850nm, HT@810nm), AR-coated slab faces, TE controller ±1°C.
 
 ---
+
+---
+
+## 24. Softmax Closure: Does ORI Implement Sufficient Attention Nonlinearity?
+
+**Status:** Derived 2026-05-08. Closes the softmax gap identified in §16–18.
+
+### 24.1 The Gap
+
+The SOA gain hologram (ARCH-20) computes unnormalized content-based addressing: $b_i = \sum_l W_{il}(c)\,q_l$ without softmax normalization. Standard transformer attention is $\text{softmax}(QK^T/\sqrt{d})\cdot V$. The question: is the SOA's nonlinearity sufficient for sequence modeling, or is the specific exponential shape of softmax load-bearing?
+
+### 24.2 What the SOA Actually Does at Saturation
+
+At exact transparency (phase-only operation), the SOA output field is:
+
+$$E_\text{out}(\mathbf{r}) = E_\text{query}(\mathbf{r})\cdot\exp\!\left(i\,C\,\frac{I_\text{context}(\mathbf{r})}{I_\text{context}(\mathbf{r}) + I_\text{sat}}\right) \tag{24.1}$$
+
+where $C = kL\Delta n_\text{max}$ is the maximum phase accumulation at full saturation.
+
+**Small signal** ($I_c \ll I_\text{sat}$): exponential linearizes → recovers the $T_{ijkl}$ tensor contraction of §17–19.
+
+**Large signal** ($I_c \gg I_\text{sat}$): phase saturates at $C$ regardless of context intensity. The phase profile $\phi(\mathbf{r}) \to \{0, C\}$ — a binary spatial mask. Strong context creates a phase-shifted region; weak context leaves the query unperturbed. This is a **holographic matched filter**: the context sets a spatial template and the query is selectively phase-shifted where they overlap.
+
+### 24.3 Why Phase Modulation Is Not Lost at the Detector
+
+A pure phase shift on a detected intensity ($|e^{i\phi}|^2 = 1$) seems useless. But the SOA output is not immediately detected — it feeds into the next DX/FP layer as a coherent field input. Phase differences between modes create **interference patterns** in the subsequent round trips. The FP cavity is a coherent system: the grating reads out the full complex field amplitude, not just intensity. The phase modulation from the SOA actively changes which grating components couple on the next round trip, implementing selective mode amplification through constructive/destructive interference.
+
+This is richer than softmax: while standard attention produces a convex combination of value vectors (weighted average), SOA phase modulation can create constructive or destructive interference between modes — selectively amplifying or canceling mode pairs in the coherent field domain.
+
+### 24.4 What Softmax Provides and How ORI Covers It
+
+| Softmax property | ORI mechanism | Coverage |
+|:---|:---|:---|
+| Non-negative weights | Phase/amplitude modulation → non-negative intensity | ✓ |
+| Bounded output | SOA saturates at $C$ (max phase) | ✓ |
+| Monotone in score | $\phi(\mathbf{r})$ monotone in $I_c$ | ✓ |
+| Global normalization ($\sum w_i = 1$) | VCSEL threshold: hard energy ceiling per mode | ✓ at layer boundary |
+| Exponential amplification of differences | FP cavity T=100: exponential mode selection via resonance | ✓ distributed over T |
+
+The VCSEL threshold provides the global normalization that softmax provides algebraically. The FP cavity provides the exponential amplification of modal differences that softmax provides in a single operation. They are distributed across the system rather than concentrated in one operation, but they are present.
+
+### 24.5 The Attention Temperature
+
+The specific functional form of the nonlinearity sets the **attention temperature** — how sharply the system selects winning modes over losing modes. For softmax: temperature is the scaling factor $1/\sqrt{d}$ in $QK^T/\sqrt{d}$. For the SOA: temperature is determined by the ratio $I_\text{context}/I_\text{sat}$ and the coupling depth $C = kL\Delta n_\text{max}$.
+
+This is a hyperparameter of the physical system, controllable by:
+- Pump current (sets operating point relative to $I_\text{sat}$)
+- Input power (sets $I_\text{context}/I_\text{sat}$)
+- Slab length $L$ (sets maximum phase $C$)
+
+In-situ training automatically finds the operating point where the attention temperature is appropriate for the task — the same way softmax temperature is tuned in digital systems. The physical mechanism is different; the functional role is identical.
+
+### 24.6 Formal Statement
+
+**Claim:** the ORI SOA layer implements a saturating monotone spatial nonlinearity with:
+1. Bounded response (saturation at $C$) ✓
+2. Monotone in context intensity ✓
+3. Spatial specificity (pointwise in $\mathbf{r}$) ✓
+4. Global energy normalization (via VCSEL threshold at layer boundary) ✓
+5. Differential mode amplification (via FP coherent interference over T=100) ✓
+
+These are the five properties that make softmax functionally effective for sequence modeling. The specific exponential shape is not load-bearing — as confirmed by the extensive ML literature on attention variants (linear attention, kernel attention, RBF attention) that replace softmax with other saturating nonlinearities at near-identical perplexity on most benchmarks (Tay et al. 2020, Katharopoulos et al. 2020, Shen et al. 2021).
+
+**The softmax gap is closed.** The ORI system implements all functionally required properties of attention nonlinearity through physically distinct mechanisms distributed across the SOA, VCSEL threshold, and FP cavity. The specific shape is a hyperparameter set by operating conditions, not a structural limitation.
+
+---
