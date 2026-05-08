@@ -624,3 +624,89 @@ Training stability requires signal-to-gradient ratio >10:1 (satisfied at 40dB SN
 | 15 | Loss landscape | ✓ LOCKED | L_optical ≈ L_digital with phase calibration. Batch size >1 required. |
 | 16 | Rank scaling | ✓ LOCKED | Production rank-100, ceiling rank-200. Hybrid HG/LG basis. |
 | 17 | Clone scaling | ✓ LOCKED (2026-04-26) | Clone-and-fine-tune viable conditional on manufacturing consistency. EXP-7B validates. |
+
+---
+
+## 18. Variable-T Inference as Learned Timescale (ARCH-18)
+
+**Status:** PROPOSED 2026-05-08 — pending derivation and experimental validation  
+**Motivation:** LSSL paper (Gu et al. 2021, arXiv:2110.13985) proves that the gating mechanism of LSTMs/GRUs is equivalent to learning the discretization timescale Δt of an underlying continuous-time ODE. ORI's round-trip time τ_rt = 133ps is fixed by cavity geometry, making Δt non-learnable — identical to the LSSL-fixed limitation identified in the paper (Table 5: fixed Δt causes ~2% accuracy degradation on sCIFAR).
+
+**Proposal:** Variable number of round trips T per token class implements learned Δt optically.
+
+**Mechanism:** Early exit via output confidence threshold. After each round trip, the readout detector evaluates an output confidence metric (e.g., peak intensity ratio, mode purity). If confidence exceeds threshold θ_exit, inference terminates at T_actual < T_max = 100. Simple tokens (common words, punctuation, whitespace) converge in T_actual ~ 10–20. Complex tokens (rare vocabulary, ambiguous context) require T_actual ~ 100.
+
+**LSSL correspondence:**
+- Fixed T=100: equivalent to LSSL-fixed (non-trainable Δt)
+- Variable T per token: equivalent to LSSL with learned Δt (the gating mechanism)
+- The effective timescale seen by token class k: τ_eff(k) = T_actual(k) × τ_rt
+- This spans T_actual ∈ [1, 100] → τ_eff ∈ [133ps, 13.3ns] — a 100× dynamic range
+
+**Throughput impact:** If mean T_actual = 30 (optimistic for mixed vocabulary), effective throughput:
+- 1/(30 × 133ps) = 250M tok/s — 3.3× above locked 75M tok/s
+- If mean T_actual = 60: 125M tok/s — 1.67×
+- Conservative assumption (mean T_actual = 80): 94M tok/s — 1.25×
+
+**Open questions:**
+1. What is the correct confidence metric detectable at the cavity output?
+2. Does early exit disturb the hidden state h_t for the next token? (It should not — state is reset per token in ORI's single-tenant model.)
+3. Can T_actual be conditioned on input token identity (lookup table) rather than computed dynamically? Simpler engineering.
+4. HiPPO matrix compatibility: does variable T still span the quasiseparable matrix class that guarantees long-range memory (Gu et al. Theorem 1)?
+
+**Relation to T=1 FFN architecture (§7–8):** T=1 is the extreme case of variable-T where all tokens exit after one round trip. The variable-T proposal generalizes both T=1 (feedforward) and T=100 (full RNN depth) into a single unified architecture.
+
+---
+
+## 19. EIT Ring Cavity — All-Optical Ephemeral Weights (ARCH-19)
+
+**Status:** PROPOSED 2026-05-08 — open derivations remain (§10.9); not locked  
+**Motivation:** PTR glass training requires a 30-minute furnace development cycle per epoch, fundamentally limiting online learning. EIT coherence gratings in Cs vapor offer all-optical write/erase in microseconds at Δn ~ 10⁻² — exceeding PTR — with rank scaling via cavity geometry rather than plate thickness.
+
+**Core physics:** Cs Λ-system (|1⟩ = 6S₁/₂ F=3, |2⟩ = 6S₁/₂ F=4, |3⟩ = 6P₃/₂). Coupling field at 852nm creates dark-state coherence ρ₁₂(z) spatially modulated at period λ/2 by the standing wave. This coherence grating encodes the weight matrix as a spatially varying index modulation Δn_grating ≈ 10⁻² at Ω_c/(2π) ~ 1 MHz with buffer gas (see theory_derivations.md §10).
+
+**Geometry:** Ring cavity required (not Fabry-Perot). Unidirectional probe (inference field, 852nm) reads grating without writing. Counter-propagating coupling field (852nm) writes grating independently. Ring eliminates the probe/write coupling problem of Fabry-Perot: inference field does not overwrite weights on each pass.
+
+**Rank:** Angularly limited, not dynamic-range limited.
+- $R = d/\lambda$ where d is mirror aperture diameter (length cancels in ring)
+- d = 2.5mm → R = 2934; d = 25mm → R = 29,342
+- Mirror aperture is the scaling lever — standard optical components
+
+**Training cycle:** Adjoint gradient → coupling field amplitude update → grating written in ~1µs. No furnace. No 532nm system. Training cycle collapses from 30 minutes to microseconds per gradient step.
+
+**Weight lifetime:** τ_grating ~ 100µs (buffer gas, 1 Torr N₂), extendable to ms–s (paraffin-coated cell). At 75M tok/s: 7,500 tokens per grating lifetime. Sufficient for batch inference; requires periodic refresh for continuous deployment.
+
+**Architecture:**
+```
+[Cs buffer gas ring cavity, ~20–200mm circumference]
+        ↓ probe (852nm, unidirectional, inference)
+[Counter-propagating coupling laser (852nm) — weight write/update]
+        ↓
+[SOA inter-stage gain (GaAs/AlGaAs, 850nm) — coupling loss compensation]
+        ↓
+[Si PIN detector array, ≤50µm pixel pitch — intensity readout]
+        ↓
+[VCSEL array (852nm) — re-injection for next layer]
+```
+
+**Comparison with PTR baseline:**
+
+| Parameter | PTR (locked baseline) | EIT ring (proposed) |
+|:---|:---|:---|
+| Δn | 5×10⁻³ | ~10⁻² |
+| Rank (current geometry) | 92–368 | 2934–29,342 |
+| Rank scaling lever | Plate thickness | Mirror aperture |
+| Weight persistence | Permanent | 100µs–ms |
+| Training cycle | 30 min (furnace) | ~1µs (optical) |
+| Write wavelength isolation | Physics (σ_r≈0 at 850nm) | Spectral (weaker) |
+| Geometry | Fabry-Perot | Ring |
+| Architecture status | Locked | Open — 4 derivations pending |
+
+**LSSL connection:** EIT ring with counter-propagating coupling implements the convolutional training view (coupling field writes grating in parallel across spatial modes) while probe executes recurrent inference view. This maps exactly to the LSSL dual-view architecture (Gu et al. 2021, Fig. 1).
+
+**Open derivations before locking (from §10.9):**
+1. Maxwell-Bloch coupled-wave κ_eff for coherence grating (rank formula approximate)
+2. Read-induced grating decay rate under inference probe
+3. Angular selectivity formula for extended gas medium (not thin-grating Kogelnik)
+4. Coupling field spatial mode capacity for 512-mode weight encoding
+
+**Note on PTR:** PTR glass does not scale beyond rank ~368 (2mm plate, dynamic-range limited) without engineering breakthroughs in PTR uniformity at >2mm thickness. EIT ring is the proposed scaling path beyond PTR for Gen 2+ architectures. PTR remains the locked baseline for Phase 1.
