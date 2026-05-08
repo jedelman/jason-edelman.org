@@ -2525,3 +2525,67 @@ Demonstrated VCSEL array thermal management: $\lesssim 5\,\text{W/mm}^2$ (Michal
 Gen 1 validates all optical physics: DX grating write/read/refresh, optical adjoint, SNR at $T=100$, cavity alignment. Skipping to Gen 3 means solving a thermal engineering problem before the optical physics is experimentally confirmed. Wrong order.
 
 ---
+
+---
+
+## 23. DX Cavity as PTR Replacement: Complete Trade Analysis
+
+**Status:** Derived 2026-05-08. Supersedes PTR as Layer 1 if adopted. ARCH-22 proposed.
+
+### 23.1 The Question
+
+Can Al₀.₃₈Ga₀.₆₂As DX-center material replace PTR glass in the Fabry-Perot cavity, implementing the same SSM recurrent computation (M^T a) while eliminating the furnace and enabling online learning?
+
+### 23.2 Key Numbers
+
+**Rank matching:** PTR maximum rank R=92 at d=0.5mm (Δn=5×10⁻³). DX material with Δn=5×10⁻⁴ requires d=5mm to achieve R=92. A 5mm slab fits within the Rayleigh range (z_R=10mm for w₀=52µm) — no relay lens required. However, the PTR *operating point* is rank-50 (54% of capacity). A 4mm DX slab gives R=74, which exceeds rank-50 by 48% — **no rank compromise relative to actual PTR operation**.
+
+**Absorption:** Al₀.₃₈Ga₀.₆₂As bandgap = 1.90 eV ≫ 1.46 eV (850nm) → no interband absorption. Free-carrier absorption (FCA) at N~5×10²² m⁻³: α_FCA ≈ 0.036 m⁻¹. Over T=100 round trips (double pass, 4mm): 0.125 dB additional loss.
+
+**SNR margin:** Mirror loss (T=100) = 0.869 dB. FCA (4mm DX, T=100) = 0.125 dB. Total = 0.994 dB. Remaining margin: 2.0 − 0.994 = **1.006 dB** (target 38 dB, achieved 38.99 dB). This is tighter than PTR's 1.13 dB margin but above specification. Requires EXP-16 to measure actual α_FCA — the estimate is approximate.
+
+**Round-trip time:** DX slab (n=3.5, 4mm) inside 20mm air cavity: OPL = 16mm + 14mm = 30mm. τ_rt = 100ps. Throughput = 100M tok/s (**33% faster than PTR at 75M tok/s**).
+
+### 23.3 Complete Comparison (4mm DX slab, recommended)
+
+| Parameter | PTR 0.5mm | DX 4mm cavity |
+|:---|:---|:---|
+| Rank R (max) | 92 | 74 |
+| Rank R (operating) | 50 | 74 (exceeds PTR operating) |
+| Computation | M^T a | M^T a — identical |
+| τ_rt | 133 ps | 100 ps |
+| Throughput | 75M tok/s | **100M tok/s** |
+| FCA loss T=100 | 0.004 dB | 0.125 dB |
+| Total loss T=100 | 0.873 dB | 0.994 dB |
+| SNR margin | 1.13 dB | **1.006 dB** |
+| Weight lifetime | Permanent | 10 s |
+| Write cycle | 60 min furnace | 120 ms optical |
+| Gradient updates/s | ~0.0003 Hz | **500,000 Hz** |
+| Furnace required | **YES** | NO |
+| AR coat (slab) | Not needed | Yes (31% Fresnel, SiNx) |
+| Dichroic mirrors | No | Yes (+$300/mirror) |
+| TE controller | Optional | Required (±1°C) |
+| Extra BOM vs PTR | — | ~$600 |
+
+### 23.4 Write Beam Geometry
+
+The 810nm write beam enters the 20mm FP cavity through dichroic mirrors (R=0.9990 @ 850nm, T≈0.99 @ 810nm, achievable with IBS coatings over 40nm separation). The 850nm inference field is resonant (3140× buildup); the 810nm write beam is non-resonant and makes a single pass through the DX slab. No mutual interference (Δλ=40nm ≫ cavity bandwidth ~0.27 pm). The backward 810nm adjoint beam for optical gradient enters from the output side and also makes a single pass — writing the gradient into the DX grating directly.
+
+### 23.5 Implications for Three-Layer Architecture
+
+If Layer 1 is DX cavity (replacing PTR):
+- Layer 1 (DX FP): SSM recurrent, M^T a, 10s updatable, 100M tok/s, optical gradient 500K/s
+- Layer 2 (DX FFN slab): standalone feedforward, W₂σ(W₁h), 10s updatable, independent weights
+- Layer 3 (SOA): attention W(c)q, 1ns, self-writing
+
+The DX FFN slab (Layer 2) retains value: it computes a different function (FFN vs recurrent) with independently trained weights. The timescale is the same (10s) but the computational primitive and weight values differ. The three-timescale argument collapses to two (10s + 1ns), but the three distinct computations (recurrent + FFN + attention) remain.
+
+**The system has no permanent layer.** All weights are ephemeral and continuously trained. The furnace is eliminated entirely.
+
+### 23.6 Open Items
+
+**EXP-16 (new, HIGH):** Measure α_FCA in Al₀.₃₈Ga₀.₆₂As at 850nm. The 0.036 m⁻¹ estimate is from a scaling formula; the actual value in the specific epitaxial material will determine whether the 1.0 dB SNR margin is safely above target or requires mitigation (thinner slab, higher input power, or different Al content).
+
+**ARCH-22 (PROPOSED):** DX Fabry-Perot as SSM recurrent layer. Supersedes PTR glass in the Layer 1 role. Parameters: 4mm Al₀.₃₈Ga₀.₆₂As slab, same FP geometry, dichroic mirrors (HR@850nm, HT@810nm), AR-coated slab faces, TE controller ±1°C.
+
+---
