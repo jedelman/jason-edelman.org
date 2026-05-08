@@ -1319,3 +1319,120 @@ PTR is retained in the baseline ORI Fabry-Perot architecture (ARCH-1 through ARC
 2. Angular multiplexing in extended gas (vs thin grating) — still required  
 3. Coupling beam spatial mode structure for 512 independent modes
 4. SOA placement in ring and SNR budget for ring cavity
+
+---
+
+## 11. EIT Ring Cavity: Diffusion Model Fit, Economics, and Power Budget
+
+**Status:** Derived 2026-05-08  
+**Geometry:** 25mm aperture × 200mm circumference ring cavity, Cs buffer gas (1 Torr N₂), T=100, λ=852.1nm
+
+### 11.1 Ring Cavity Timing Correction
+
+The 200mm ring has round-trip time $\tau_{rt} = L/c_0 = 0.667\,\text{ns}$ (one-way, not $2L/c$). This gives:
+
+$$\tau_\text{token} = T \times \tau_{rt} = 100 \times 0.667\,\text{ns} = 66.7\,\text{ns}$$
+
+$$\text{AR throughput} = 1/\tau_\text{token} = 15\,\text{M tok/s}$$
+
+This is lower than the Fabry-Perot 75M tok/s (which used $\tau_{rt} = 2L/c = 133\,\text{ps}$ at $L=20\,\text{mm}$). The ring is slower per token in AR mode but has rank 29,342 vs 92 — the tradeoff is rank for throughput. At variable-T with mean T=10, throughput recovers to 150M tok/s.
+
+### 11.2 ORI as Diffusion Text Model Backbone
+
+**Diffusion text model operation:** A denoising network $f_\theta(x_t, t)$ predicts clean text $\hat{x}_0$ from noisy input $x_t$ at noise level $t$. Each denoising step is a non-autoregressive full-sequence forward pass. With 100–1000 NFEs (neural function evaluations) per generation, the NFE count dominates latency.
+
+**ORI mapping:** $f_\theta$ maps directly to ORI's convolutional (NAR) view. All $L$ input tokens enter simultaneously; $T$ round trips compute the SSM forward pass; all $L$ output tokens read simultaneously. Latency is $T \times \tau_{rt} = 66.7\,\text{ns}$ independent of $L$.
+
+**NFE timing at T=100:**
+
+| NFEs | Total latency | Notes |
+|:----|:----|:----|
+| 10 | 0.67 µs | Aggressive (lower quality) |
+| 50 | 3.33 µs | Typical fast diffusion |
+| 100 | 6.67 µs | Standard |
+| 1000 | 66.7 µs | High quality |
+
+GPU comparison at 100 NFEs, L=256: ~1–10 seconds. ORI: 6.67 µs. Speedup: $\sim10^5\times$.
+
+### 11.3 State Decomposition at R=29,342
+
+The LSSL state dimension decomposes as $R = H \times N_\text{state}$. Natural ORI decomposition:
+
+$$H = 512 \text{ (spatial modes = feature dimension)}, \quad N_\text{state} = \lfloor 29342/512 \rfloor = 57$$
+
+Parameters per ORI layer: $H \times N + H \times N + H^2 = 2 \times (512 \times 57) + 512^2 = 320{,}512$.
+
+A 6-layer ORI network: $\sim1.9\,\text{M}$ parameters. Comparable to Mamba-130M in state depth ($N_\text{state}=57$ vs Mamba's $N_\text{state}=16$) but far fewer total parameters. Quality comparable to small language model, not GPT-3 class.
+
+### 11.4 Hard Limits at R=29,342
+
+**Sequence length (NAR mode):** Each token occupies one round trip slot. $L_\text{max} \approx T = 100$ tokens per NAR forward pass at $T=100$. For $L=256$: need $T=256$ round trips, giving $\tau_\text{token}=171\,\text{ns}$ and AR throughput of 5.9M tok/s. $T=256 \ll T_\text{coh}=750$: still coherent.
+
+**Model capacity:** ~2M parameters at 6 layers is small. State-of-the-art diffusion text models use 300M–3B parameters. ORI is adequate for sentence-level tasks, not long-form generation. Scaling requires more ring cavities in series (each ring = one SSM layer), with linear cost.
+
+**Cross-attention for conditioning:** Not implementable optically (O(N²) — same wall as transformer attention). Conditioning must be injected as initial state amplitude or FiLM-style bias on the input field. Self-conditioning (standard in diffusion) maps to self-recurrence — fine.
+
+**Vocabulary projection:** Embedding matrix $W_e \in \mathbb{R}^{V \times H}$ ($V=50{,}257$, $H=512$) is a digital component, stored in DRAM, applied by CMOS interposer. Not implemented optically.
+
+### 11.5 Power Budget
+
+Required probe power for SNR=40 dB (shot-noise limited):
+
+$$P_\text{min} = \frac{\text{SNR} \cdot \hbar\omega}{\eta \cdot \tau_{rt}} = \frac{10^4 \times 2.33\times10^{-19}}{0.6 \times 0.667\,\text{ns}} = 5.8\,\mu\text{W per mode}$$
+
+At 10× margin and 35% VCSEL WPE: 167 µW electrical per element × 512 = **85 mW total VCSEL array**.
+
+| Component | Power |
+|:----|:----|
+| Cs cell heater (350K, ~77°C above ambient) | 10.0 W |
+| Coupling laser (10 mW optical, 5% WPE) | 0.2 W |
+| VCSEL probe array (512 modes, 10× margin, 35% WPE) | 0.085 W |
+| SOA inter-stage | 0.5 W |
+| Detector array + TIA | 1.0 W |
+| FPGA + control | 5.0 W |
+| Thermal PID | 0.5 W |
+| **Total** | **17.3 W** |
+
+**Energy per token (AR, 15M tok/s):** $17.3\,\text{W} / 15\times10^6\,\text{tok/s} = 1.15\,\mu\text{J/tok}$.
+
+**Honest comparison:** GPU inference is ~1–10 µJ/tok. ORI EIT ring is ~1 µJ/tok — approximately equivalent, not dramatically better. The heater (10W) and FPGA (5W) dominate and are independent of throughput. The efficiency advantage appears only at high throughput (more tokens per joule) via NAR mode or higher T.
+
+**The dominant cost is thermal, not optical.** At 15M tok/s, the heater alone costs 667 nJ/tok. If throughput increases 10× (variable-T, NAR, or NARG), energy/tok drops proportionally. Efficiency is a throughput problem, not a power problem.
+
+### 11.6 Hardware Cost
+
+Single-layer EIT ring cavity, prototype: **$12K–$34K**.
+
+Primary cost drivers: coupling laser ($1.5K–$4K), VCSEL array ($2K–$8K), detector array ($1.5K–$5K). The Cs cell itself is inexpensive ($800–$2K). Buffer gas and thermal control are negligible.
+
+**Realistic Phase 1 shortcut:** Begin with N=16 or N=32 spatial modes. A 16-element VCSEL array at 850nm is off-the-shelf (<$500). Validates EIT grating formation, coherence time, and read/write isolation at $5K–$10K total before committing to 512-mode architecture.
+
+### 11.7 Laser Sourcing at 852nm
+
+**Coupling field** (weight write, single-mode, <1 MHz linewidth):
+- Vescent D2-100 DBR 852nm: 50 mW, <100 kHz linewidth, ~$8K–12K. Best cost/performance.
+- Toptica DL pro 852nm ECDL: 80–100 mW, <1 MHz, ~$15K–20K. Research standard.
+- Homebuilt Littrow ECDL: 50 mW, ~500 kHz–1 MHz, ~$1.5K–3K. Requires servo, higher risk.
+
+Required power is only 277 µW (at $\Omega_c/2\pi = 1\,\text{MHz}$, 25mm aperture) — any of these options is vastly overpowered. The power budget is not a constraint. Single-mode and linewidth are the critical specs.
+
+**Probe array** (inference field, 512 modes, 852nm):
+Phase 1: single SM VCSEL (Vixar 850nm, ~$50) + Meadowlark SLM ($15K–25K) for mode encoding. SLM refresh rate (~100 Hz) limits weight update rate but is adequate for validation.
+Phase 2: custom 2D VCSEL array (II-VI/Lumentum), 512-element, ~$5K–15K prototype NRE.
+
+### 11.8 EIT Ring vs PTR Fabry-Perot Summary
+
+| Parameter | PTR F-P (Phase 1, locked) | EIT Ring (proposed) |
+|:----|:----|:----|
+| Hardware cost | $1,200 | $12K–$34K |
+| System power | ~5W (est.) | 17.3W |
+| Energy/token | ~300 nJ/tok (est.) | 1,150 nJ/tok |
+| Training cycle | 30 min (furnace) | ~1 µs (optical) |
+| Rank | 92 (0.5mm PTR) | 29,342 (25mm aperture) |
+| AR throughput | 75M tok/s | 15M tok/s |
+| Weight persistence | Permanent | 100 µs–ms |
+| TRL | 3–4 | 2–3 |
+| NAR diffusion (100 NFE, L=100) | N/A (F-P is causal) | 6.67 µs total |
+| Primary advantage | Cost, simplicity, permanence | Rank, training speed, NAR mode |
+
+**Bottom line:** EIT ring is 10–25× more expensive, 4× less efficient per token in AR mode, and one TRL level lower than PTR F-P. Its advantages are: 318× higher rank, $10^6\times$ faster training cycle, and NAR parallel inference enabling diffusion text model use case. For Phase 1 validation, PTR F-P remains the correct starting point. EIT ring is the Gen 2 architecture once PTR physics are validated.
