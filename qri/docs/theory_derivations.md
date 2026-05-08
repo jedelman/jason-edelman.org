@@ -1436,3 +1436,150 @@ Phase 2: custom 2D VCSEL array (II-VI/Lumentum), 512-element, ~$5K–15K prototy
 | Primary advantage | Cost, simplicity, permanence | Rank, training speed, NAR mode |
 
 **Bottom line:** EIT ring is 10–25× more expensive, 4× less efficient per token in AR mode, and one TRL level lower than PTR F-P. Its advantages are: 318× higher rank, $10^6\times$ faster training cycle, and NAR parallel inference enabling diffusion text model use case. For Phase 1 validation, PTR F-P remains the correct starting point. EIT ring is the Gen 2 architecture once PTR physics are validated.
+
+---
+
+## 12. T=1 NAR Diffusion: Daisy-Chain Architecture and Economics
+
+**Status:** Derived 2026-05-08  
+**Context:** At T=1, each ring executes one round trip per forward pass. N rings daisy-chained = N SSM layers, matching the deep LSSL architecture (Gu et al. 2021, Appendix B.4). This is the target architecture for NAR diffusion text generation.
+
+### 12.1 T=1 Timing
+
+$$\tau_{rt} = L/c_0 = 200\,\text{mm}/3\times10^8 = 0.667\,\text{ns}$$
+$$\tau_\text{token}(T=1) = 0.667\,\text{ns}, \quad \text{AR throughput} = 1.5\,\text{B tok/s}$$
+
+In NAR mode, all $L$ tokens are processed in one round trip. Latency per NFE = $0.667\,\text{ns}$ independent of $L$:
+
+| NFEs | Latency | Notes |
+|:----|:----|:----|
+| 10 | 6.7 ns | Aggressive |
+| 100 | 66.7 ns | Standard |
+| 1000 | 667 ns | High quality |
+
+Effective NAR throughput at 100 NFEs: $L / (100 \times 0.667\,\text{ns})$. At $L=256$: **3.84B tok/s**. At $L=1024$: **15.4B tok/s**.
+
+### 12.2 Why One Ring Is Insufficient
+
+At T=1, the computation is a single linear projection through the holographic weight grating plus detector nonlinearity — one SSM layer. A diffusion denoising network $f_\theta(x_t, t) \to \hat{x}_0$ requires multiple layers of representation learning. The LSSL paper demonstrates 4–6 layers are needed for competitive sequence modeling. One ring cannot support this.
+
+### 12.3 Daisy-Chain = Deep LSSL
+
+N rings in series implements the deep LSSL architecture exactly:
+
+```
+[Input tokens, L×H]
+    ↓
+[Ring 1: T=1, R=29342] → SOA → [Ring 2] → SOA → ... → [Ring N]
+    ↓
+[Output tokens, L×H]
+```
+
+Each ring applies one round-trip operator with learned grating weights + intensity nonlinearity at readout. The SOA provides inter-layer gain. This is the physical instantiation of LSSL with N layers, residual connections implementable via beam splitter before/after each ring (partial bypass), and layer normalization applied digitally at the VCSEL re-injection stage.
+
+Parameter count: $N \times 320\text{K} \approx 1.3\text{M}$ at $N=4$, $3.2\text{M}$ at $N=10$.
+
+### 12.4 Daisy-Chain Economics
+
+**Shared infrastructure (buy once):**
+- Coupling laser (split via fiber): \$1.5K–4K
+- FPGA controller: \$500–2K
+- Optical bench: \$400–800
+- Multi-channel temperature controller: \$300–600
+- AOM + isolators: \$1K–2K
+- **Total fixed: \$4.2K–10.1K**
+
+**Per-ring marginal cost:**
+- Cs cell (quartz, AR-coated, reservoir): \$800–1,200
+- Ring mirrors (4×, 25mm, high-R): \$600–1,000
+- Kinematic mounts (4×): \$300–500
+- Heater assembly: \$100–200
+- SOA inter-stage (GaAs/AlGaAs, 850nm): \$600–1,000
+- Si PIN detector array (512-pixel): \$1,000–2,500
+- VCSEL re-injection array: \$500–2,000
+- Beam steering optics: \$300–500
+- **Total marginal: \$4.2K–8.9K per ring**
+
+| N rings | Total cost | Cost/ring (avg) | NFE latency |
+|:----|:----|:----|:----|
+| 1 | \$8.4K–19K | \$8.4K–19K | 0.7 ns |
+| 4 | \$21K–46K | \$5.3K–11.4K | 2.7 ns |
+| 8 | \$38K–81K | \$4.7K–10.2K | 5.3 ns |
+| 16 | \$71K–153K | \$4.5K–9.5K | 10.7 ns |
+| 32 | \$139K–295K | \$4.3K–9.2K | 21.3 ns |
+
+Marginal cost per ring converges rapidly as fixed infrastructure is amortized. At N=4–8, the marginal ring costs \$4.2K–8.9K — comparable to a good mid-range scientific instrument per additional layer.
+
+### 12.5 Thermal Bottleneck and Shared Enclosure
+
+Per-ring thermal power (Cs cell at 350K, ~77°C above ambient): ~10W. This scales linearly and dominates the power budget. The mitigation is a **shared thermal enclosure** for all N cells:
+
+| N cells | Linear thermal (W) | Shared enclosure (est.) | Savings |
+|:----|:----|:----|:----|
+| 1 | 10 | 10 | 0% |
+| 4 | 40 | 20 | 50% |
+| 8 | 80 | 30 | 62% |
+| 16 | 160 | 45 | 72% |
+
+With shared enclosure, all N Cs cells occupy the same heated volume (a single resistively-heated aluminum block with bores for each cell). Heat loss scales with surface area, not cell count. This is a standard technique in multi-cell atomic physics experiments.
+
+### 12.6 Power and Efficiency at T=1, N Rings (Shared Enclosure)
+
+At N=4 rings, shared thermal enclosure:
+
+| Component | Power |
+|:----|:----|
+| Shared enclosure (4 cells, 350K) | 20 W |
+| VCSEL arrays (4×, 85 mW each) | 0.34 W |
+| SOA inter-stage (4×, 0.5W) | 2.0 W |
+| Detector arrays (4×, 1W) | 4.0 W |
+| Coupling laser (shared) | 0.2 W |
+| FPGA + control | 5.0 W |
+| **Total** | **31.5 W** |
+
+NAR throughput ($L=256$, 100 NFEs): $256 / (100 \times 4 \times 0.667\,\text{ns}) = 960\,\text{M tok/s}$
+
+$$\text{Energy/token} = 31.5\,\text{W} / 960\,\text{M tok/s} = 33\,\text{nJ/tok}$$
+
+**GPU comparison: 1 µJ/tok → ORI 4-ring is 30× more efficient.** At 10 µJ/tok (large GPU inference): 300× more efficient.
+
+At N=8 rings:
+- Shared enclosure: ~30W; total system: ~43W
+- NAR throughput ($L=256$, 100 NFEs): 480M tok/s
+- Energy/token: ~90 nJ/tok → 11–110× GPU
+
+### 12.7 Recommended Configuration
+
+**Minimum viable (4 rings):**
+- Cost: \$21K–46K
+- Layers: 4 SSM layers, ~1.3M parameters
+- NFE latency (100 NFEs): 2.7 ns
+- NAR throughput ($L=256$): 960M tok/s
+- Energy/token: ~33 nJ/tok (30× GPU)
+- Capability: sentence-level diffusion, classification, encoding
+
+**Production target (8 rings):**
+- Cost: \$38K–81K
+- Layers: 8 SSM layers, ~2.6M parameters
+- NFE latency (100 NFEs): 5.3 ns
+- NAR throughput ($L=256$): 480M tok/s
+- Energy/token: ~90 nJ/tok (11× GPU)
+- Capability: paragraph-level diffusion, competitive with Mamba-small
+
+**Aspirational (16 rings):**
+- Cost: \$71K–153K
+- Layers: 16 SSM layers, ~5.1M parameters
+- NFE latency (100 NFEs): 10.7 ns
+- NAR throughput ($L=256$): 240M tok/s
+- Energy/token: ~210 nJ/tok (5× GPU)
+- Capability: approaches Mamba-130M quality
+
+### 12.8 Open Engineering Questions
+
+1. **Shared enclosure thermal design:** Must maintain ±0.1K uniformity across all N cells to prevent grating drift between layers. Multi-zone PID with thermistors at each cell. Feasible with standard multi-channel temperature controller.
+
+2. **Inter-ring alignment:** VCSEL re-injection between rings must couple into the next ring's spatial mode basis. Mode-matching optics (micro-lens array) between each SOA output and next ring input. Alignment sensitivity is the same as EXP-8 (kinematic mount reinstallation: ~212nm required).
+
+3. **Gradient routing:** Adjoint solver must backpropagate through N rings serially. Each ring requires its own coupling field update. With shared coupling laser split to N AOMs, each AOM independently modulates its ring's weight update. FPGA routes gradient signals per-ring.
+
+4. **Layer normalization:** Applied digitally at VCSEL re-injection stage (modulate amplitude pattern before injecting into next ring). Adds one digital multiply per mode per inter-ring transition — negligible overhead.
