@@ -24,16 +24,13 @@ const htmlPath = path.join(rendersDir, htmlFile);
 const targetPdf = path.join(qriOutDir, 'system-doc.pdf');
 const targetHtml = path.join(qriOutDir, 'system-doc.html');
 
-// Remove old symlinks if they exist
 if (fs.existsSync(targetPdf)) fs.unlinkSync(targetPdf);
 if (fs.existsSync(targetHtml)) fs.unlinkSync(targetHtml);
 
-// Create symlinks (or copy if on Windows)
 try {
   fs.symlinkSync(pdfPath, targetPdf, 'file');
   fs.symlinkSync(htmlPath, targetHtml, 'file');
 } catch (e) {
-  // Fallback to copy on Windows or if symlink fails
   fs.copyFileSync(pdfPath, targetPdf);
   fs.copyFileSync(htmlPath, targetHtml);
 }
@@ -44,30 +41,33 @@ const indexHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QRI — Quantum Resonance Inference</title>
-  <meta name="description" content="Photonic inference engine using PTR glass holographic plates. 78ns per-token latency, 405K tok/J efficiency.">
+  <title>ORI — Optical Resonator Inference</title>
+  <meta name="description" content="A coherent all-optical resonator that learns and executes token inference from first principles. PTR glass holographic weight encoding at 850nm, 75M tok/s, 40dB SNR.">
   <link rel="stylesheet" href="../style.css">
   <style>
-    #qri-header {
+    #ori-header {
       margin-bottom: 2.5rem;
     }
-    #qri-header h1 {
+    #ori-header h1 {
       font-size: clamp(2rem, 5vw, 2.8rem);
       margin-bottom: 0.5rem;
     }
-    .qri-meta {
+    .ori-meta {
       color: var(--muted);
       font-family: var(--font-mono);
       font-size: 0.82rem;
       letter-spacing: 0.02em;
     }
-    .qri-meta span {
+    .ori-meta span {
       display: inline-block;
       margin-right: 1.5rem;
     }
-    #qri-intro {
+    #ori-intro {
       max-width: 62ch;
       margin-bottom: 2rem;
+    }
+    #ori-intro p {
+      margin-bottom: 1rem;
     }
     .doc-links {
       display: flex;
@@ -107,7 +107,7 @@ const indexHtml = `<!DOCTYPE html>
     }
     .specs-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 1.5rem;
     }
     .spec-item {
@@ -129,7 +129,7 @@ const indexHtml = `<!DOCTYPE html>
       color: var(--link);
     }
     @media (max-width: 480px) {
-      #qri-header h1 { font-size: 1.8rem; }
+      #ori-header h1 { font-size: 1.8rem; }
       .doc-links { flex-direction: column; }
       .doc-link { width: 100%; text-align: center; }
       .specs-grid { grid-template-columns: 1fr; }
@@ -144,29 +144,31 @@ const indexHtml = `<!DOCTYPE html>
       </nav>
     </header>
 
-    <section id="qri-header">
-      <h1>QRI</h1>
-      <h2 style="font-family: var(--font-mono); font-size: 0.9rem; font-weight: 400; color: var(--muted); margin: 0;">Quantum Resonance Inference</h2>
-      <div class="qri-meta">
-        <span>📋 Photonics</span>
-        <span>⚡ Computing</span>
-        <span>🔬 In Progress</span>
+    <section id="ori-header">
+      <h1>ORI</h1>
+      <h2 style="font-family: var(--font-mono); font-size: 0.9rem; font-weight: 400; color: var(--muted); margin: 0 0 0.75rem;">Optical Resonator Inference</h2>
+      <div class="ori-meta">
+        <span>Photonics</span>
+        <span>Computing</span>
+        <span>In Progress</span>
       </div>
     </section>
 
-    <section id="qri-intro">
+    <section id="ori-intro">
       <p>
-        A photonic inference engine using PTR glass holographic plates at 850nm with CMOS electronic interposer.
-        The architecture targets token-level inference latency in the 78ns range with 12.7M tok/s conditional throughput,
-        operating at 31.5W system power for 405K tok/J efficiency.
+        A Fabry-Perot holographic resonator is an exact physical RNN. The refractive index
+        distribution of a PTR glass medium encodes model weights as holographic gratings.
+        T=100 round trips through the cavity compute the T-th power of the round-trip
+        operator — a weight-tied recurrent network derived from Maxwell's equations, not
+        by analogy to digital systems.
       </p>
       <p>
-        Adversarial architecture review completed. Locked specifications committed. Full system documentation
-        and technical derivations available below.
+        Architecture locked through ARCH-17. Full theoretical derivations complete.
+        Phase 1 lab validation pending.
       </p>
       <div class="doc-links">
-        <a href="./system-doc.pdf" class="doc-link">📄 System Document (PDF)</a>
-        <a href="./system-doc.html" class="doc-link">🌐 System Document (HTML)</a>
+        <a href="./system-doc.pdf" class="doc-link">System Document (PDF)</a>
+        <a href="./system-doc.html" class="doc-link">System Document (HTML)</a>
       </div>
     </section>
 
@@ -174,20 +176,28 @@ const indexHtml = `<!DOCTYPE html>
       <h3>Locked Specifications</h3>
       <div class="specs-grid">
         <div class="spec-item">
-          <span class="spec-label">Per-Token Latency</span>
-          <span class="spec-value">78.14 ns</span>
+          <span class="spec-label">Throughput</span>
+          <span class="spec-value">75M tok/s</span>
         </div>
         <div class="spec-item">
-          <span class="spec-label">Pipelined Throughput</span>
-          <span class="spec-value">12.7M tok/s</span>
+          <span class="spec-label">Round Trips</span>
+          <span class="spec-value">T = 100</span>
         </div>
         <div class="spec-item">
-          <span class="spec-label">System Power</span>
-          <span class="spec-value">31.5W</span>
+          <span class="spec-label">SNR</span>
+          <span class="spec-value">40 dB</span>
         </div>
         <div class="spec-item">
-          <span class="spec-label">Efficiency</span>
-          <span class="spec-value">405K tok/J</span>
+          <span class="spec-label">Spatial Modes</span>
+          <span class="spec-value">512</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">Wavelength</span>
+          <span class="spec-value">850 nm</span>
+        </div>
+        <div class="spec-item">
+          <span class="spec-label">Params / Expert</span>
+          <span class="spec-value">1.254M</span>
         </div>
       </div>
     </section>
@@ -197,7 +207,7 @@ const indexHtml = `<!DOCTYPE html>
 </html>`;
 
 fs.writeFileSync(path.join(qriOutDir, 'index.html'), indexHtml);
-console.log('✓ QRI build complete');
+console.log('✓ ORI build complete');
 console.log('  - Symlinked latest PDF:', pdfFile);
 console.log('  - Symlinked latest HTML:', htmlFile);
 console.log('  - Generated index.html');
