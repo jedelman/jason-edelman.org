@@ -1,88 +1,157 @@
-# System Design Parameters
+# ORI System Design Parameters
 # RULE: Every entry MUST have an explicit rationale.
-# Rationale must reference either physics derivation, experimental data, or constraint from architecture.
-# No arbitrary numbers.
+# Rationale must reference either a physics derivation, experimental data,
+# or a constraint from architecture. No arbitrary numbers.
+# Stale entries from retracted architectures (LiNbO3 MZM, Glass Brain interposer)
+# have been removed. See architecture.md for full derivation chain.
 
 [optical]
 wavelength_nm = 850
 # Rationale: GaAs VCSEL OTS maturity at 850nm. PTR glass transparent 300-3000nm.
-# Si PD responsivity 0.6 A/W at 850nm. Fiber abundant. Glass Brain validated choice.
-# Consistent with Glass Brain 2026-04-17 session locked decision.
-
-[token_embedding]
-dimension = 512
-# Rationale: Placeholder for target model. Must equal number of spatial modes N excited
-# at resonator input. N ≥ 512 requires aperture supporting 512 orthogonal TEM_mn modes.
-# At 850nm, aperture ~ 22.6mm for 50um mode spacing (TBD in ARCH-3).
+# Si PD responsivity ~0.6 A/W at 850nm. 532nm write / 850nm infer wavelength isolation
+# is physics-grounded: sigma_r(850nm) ~= 0 in PTR glass (EXP-2 open assumption).
+# ARCH-1 locked.
 
 [resonator]
-# All TBD pending ARCH-2 derivation. Do not insert placeholder values.
 geometry = "Fabry-Perot"
-# Rationale: ARCH-1 LOCKED. Simplest geometry, well-characterized standing-wave modes,
-# retroreflection naturally implements the u_{t-1} term in wave equation RNN (eq. 1).
-# Hughes 2019 exact mapping applies directly.
+# Rationale: Simplest geometry with well-characterized standing-wave modes.
+# Retroreflection naturally implements the u_{t-1} term in the wave equation RNN (eq. 1.2).
+# Hughes 2019 exact mapping applies directly. ARCH-1 locked.
 
 medium = "PTR_glass"
-# Rationale: ARCH-1 LOCKED. Non-volatile holographic weight storage. Δn(x,y) = trained
-# weight distribution. Thermally fixed. Transparent at 850nm. Psaltis 1990 + Glebov 2010.
-
-round_trips_T = 100
-# Rationale: T_op=100 << T_coh=750 (single-mode VCSEL lw=10MHz, L=20mm). Coherent regime.
-# Rationale: Depends on round-trip loss budget. T_max = -log(SNR_threshold) / log(1/R_eff)
-# where R_eff = product of all round-trip losses (mirror R, PTR absorption, diffraction).
-# Derive in ARCH-2.
+# Rationale: Non-volatile holographic weight storage. Delta_n(x,y) = trained weight grating.
+# Thermally fixed after 532nm development. Transparent at 850nm. sigma_r(850nm) ~= 0 gives
+# read/write wavelength isolation without rate/overlap tradeoffs.
+# Psaltis 1990 + Glebov 2010. ARCH-1 locked.
 
 cavity_length_L_mm = 20
-# Rationale: T_coh=750 at SM-VCSEL linewidth. tau=133ps. 75M tok/s at T=100.
-# Rationale: Sets FSR = c/2L and round-trip time tau = 2L/c.
-# Token throughput = 1 / (T * tau). Must satisfy tau << 1/token_rate.
-# Derive in ARCH-4.
+# Rationale: Sets round-trip time tau = 2L/c = 133 ps.
+# T_coh = c / (2L * delta_nu) = 750 round trips at SM-VCSEL linewidth delta_nu = 10 MHz.
+# T_op = 100 << T_coh = 750: coherent regime confirmed.
+# Token throughput = 1/(T * tau) = 75M tok/s. ARCH-4 locked.
 
 mirror_reflectivity_R = 0.9990
-# Rationale: Practical dielectric HR @ 850nm. Finesse=3140. 0.023dB round-trip loss.
-# Rationale: Drives round-trip loss budget. Higher R → more round trips (depth) but
-# harder to in/out-couple. Typical high-reflectivity: R > 0.99. Derive in ARCH-2.
+# Rationale: Practical dielectric HR at 850nm. Finesse = pi*sqrt(R)/(1-R) ~= 3140.
+# Round-trip loss = 0.023 dB. Drives SNR budget over T=100 round trips.
+# ARCH-5 locked.
+
+round_trips_T = 100
+# Rationale: T_op derived from intersection of two constraints:
+#   (1) Coherence: T << T_coh = 750 (SM-VCSEL, L=20mm)
+#   (2) SNR budget: cumulative round-trip loss over T=100 leaves 2 dB margin above 38 dB target
+# T=100 satisfies both. See theory_derivations.md §1.3. ARCH-5 locked.
+
+finesse = 3140
+# Rationale: Derived from R=0.9990: F = pi*sqrt(R)/(1-R). Informational — not independently set.
 
 [spatial]
+modes_N = 512
+# Rationale: Target embedding dimension. One mode per embedding component.
+# Hermite-Gaussian basis at 850nm, 50um mode spacing, 2.5mm aperture -> 529 modes available.
+# ARCH-3 locked.
+
 pixel_pitch_um = 50
-# Rationale: Conservative choice. Matches Glass Brain plate spec.
-# Safety margin: 50um >> lambda/2 = 0.425um (117x diffraction limit).
-# Allows 512 modes across ~25mm aperture.
+# Rationale: Conservative choice well above diffraction limit (lambda/2 = 0.425um).
+# Mode-matched detector pixel pitch <=50um required for field-basis readout.
+# ARCH-3 / theory_derivations.md §3 locked.
 
 aperture_mm = 2.5
-# Rationale: 23x23=529 modes >= 512 at 50um spacing -> 1.15mm min. 2.5mm gives 2x margin.
-# Rationale: Must support N = 512 modes with 50um spacing → ~25.6mm minimum.
-# Actual aperture set by PTR glass availability and Fabry-Perot mirror size.
-# Derive in ARCH-3.
+# Rationale: 23x23 = 529 modes >= 512 at 50um spacing -> 1.15mm minimum.
+# 2.5mm gives 2x margin for alignment tolerance. PTR plate is 10x10x0.5mm.
+# ARCH-3 locked.
+
+ptr_plate_mm = "10x10x0.5"
+# Rationale: Standard PTR glass substrate. Aperture (2.5mm) fits with margin.
+# Thickness 0.5mm sets grating depth and coupling tensor integral bounds.
+# ARCH-2 locked.
 
 [snr]
-target_bits = 6
-# Rationale: 6-bit precision sufficient for transformer inference.
-# Established by quantization literature: Dettmers et al. 2022 (LLM.int8()),
-# Frantar et al. 2022 (GPTQ). 6-bit: SNR_required = 6.02*6 + 1.76 = 37.9 dB.
 target_snr_dB = 38.0
+# Rationale: 6-bit inference precision requires SNR >= 6.02*6 + 1.76 = 37.9 dB.
+# Rounded to 38.0 dB. Dettmers 2022, Frantar 2022. ARCH-5 locked.
 
-[interposer]
-# Reuse Glass Brain interposer design (validated 2026-04-17)
-detector = "Si_PIN_850nm"
-amplifier = "TIA_180nm_CMOS"
-nonlinearity = "analog_comparator_GeLU"
-emitter = "GaAs_VCSEL_850nm"
-latency_ns_per_layer = 67
-# Rationale: Glass Brain derivation: 67ns/block. Identical architecture reused.
-power_W_per_head = 1.32
-# Rationale: Glass Brain derivation: 1.32W/head (256 neurons). Reused.
+achieved_snr_dB = 40.0
+# Rationale: Noise budget closure with R=0.9990, T=100, 512 modes, rank-50 baseline.
+# 2 dB margin above 38 dB target. Gates rank ceiling and scaling decisions.
+# ARCH-5 locked.
 
-[model]
-# Target embedded model parameters (TBD — depends on resonator capacity from ARCH-7)
-target_params = "TBD"
-layers = "TBD"
-embedding_dim = 512
-# Rationale: Placeholder. Set to match [token_embedding].dimension above.
+snr_margin_dB = 2.0
+# Rationale: achieved - target. Fundamental constraint for all scaling decisions.
+# Rank ceiling, NARG parallelism, ptychography feasibility all reduce to this margin.
 
-[power]
-# TBD — derive after resonator geometry and layer count are locked
-# Key constraint: embedded device. Power budget << server GPU.
-facility_W = "TBD"
-target_per_token_mJ = "TBD"
+[weights]
+encoding = "permanent_holographic_PTR"
+# Rationale: Ephemeral LiNbO3 MZM approach retracted. 0.1 dB/pass * 100 passes = 10 dB loss
+# consumes entire SNR budget by deterministic arithmetic. PTR permanent holography is the
+# only viable weight encoding scheme given the SNR constraint. ARCH locked.
 
+write_wavelength_nm = 532
+# Rationale: PTR glass photosensitivity peak ~532nm. sigma_r(850nm) ~= 0 gives isolation.
+# Only scheme grounded in a physics argument (not rate/overlap tradeoff). EXP-2 validates.
+
+training = "in_situ_mandatory"
+# Rationale: Sub-wavelength manufacturing imprecision compounds over T=100 round trips.
+# Weight translation from digital simulation to physical cavity is fundamentally infeasible.
+# In-situ training is a physical necessity, not a design choice. ARCH locked.
+
+[rank]
+baseline = 50
+# Rationale: Safe operating point. SNR margin >= 2 dB confirmed at rank-50.
+# 1.254M parameters per expert module (differential encoding, 512 modes, rank-50).
+
+production_target = 100
+# Rationale: 1-2% accuracy loss vs baseline. SNR margin tighter but within budget.
+# Gated on EXP-6 (LiNbO3 MZM insertion loss) confirming rank-100 SNR margin.
+
+ceiling = 200
+# Rationale: All SNR margins consumed. Not recommended for production.
+
+params_per_expert = 1254000
+# Rationale: Differential encoding (x_i = x_i_plus - x_i_minus on two spatial modes,
+# input layer only). Corrected from earlier 1.23M estimate after differential encoding fix.
+# Derivation: theory_derivations.md §4. ARCH locked.
+
+[throughput]
+tokens_per_second = 75000000
+# Rationale: 1/(T * tau) = 1/(100 * 133ps) = 75M tok/s. ARCH-4 locked.
+
+round_trip_time_ps = 133
+# Rationale: tau = 2L/c = 2*0.020/3e8 = 133 ps at L=20mm. ARCH-4 locked.
+
+[training_cycle]
+furnace_development_min = 30
+# Rationale: PTR glass 532nm exposure + furnace development cycle dominates training
+# cost per epoch — not optical exposure time. At 75M tok/s, enables massive training
+# corpora per furnace cycle.
+
+[activation]
+mechanism = "VCSEL_threshold_intensity"
+# Rationale: ReLU on intensity via VCSEL threshold nonlinearity.
+# Kerr SPM proven negligible at operating intensity (~1e-15 rad/pass).
+# ARCH-9 retracted (Kerr SPM). ARCH-10 locked.
+
+[scaling]
+strategy = "clone_and_fine_tune"
+# Rationale: ARCH-17. Trained gratings encode W plus cavity-specific corrections.
+# Cloning transfers W approximately; fine-tuning corrects cavity mismatch in fewer
+# cycles than full training from scratch. Lab validation pending (EXP-7 Phase B).
+
+[open]
+# Parameters genuinely TBD — pending experiments or future architecture decisions.
+# Do not insert placeholder values here.
+
+ptr_chi3_at_850nm = "TBD — EXP-1"
+# Required to confirm Kerr SPM negligibility at production intensity.
+
+two_wavelength_photosensitivity = "TBD — EXP-2"
+# sigma_r(850nm) ~= 0 assumption. Critical for write/read wavelength isolation.
+
+thermal_lensing_dn_dT = "TBD — EXP-4"
+# dn/dT under intra-cavity CW power. Affects mode stability at T=100.
+
+kinematic_mount_reinstallation_um = "TBD — EXP-8"
+# Actual reinstallation precision: ~1um. Required: ~212nm. Engineering gap not yet closed.
+
+model_layer_count = "TBD — depends on target model"
+model_target_params = "TBD — depends on target model"
+system_power_W = "TBD — post Phase 1 experiments"
