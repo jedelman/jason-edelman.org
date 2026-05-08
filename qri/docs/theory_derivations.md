@@ -782,3 +782,106 @@ required.
 *References: Hughes et al. 2019 (wave eq = RNN); Psaltis et al. 1990 (holographic MVM); Yariv 1973
 (coupled-mode theory); Glebov 2010 (PTR glass capacity); Larsson 2011 (VCSEL linewidth); Hornik
 1991 / Leshno 1993 (universal approximation); Pai et al. 2023 (in-situ photonic backprop).*
+
+---
+
+## 7. T=1 Single-Pass Rank Derivation
+
+**Status:** Derived 2026-05-08  
+**Purpose:** Establishes rank ceiling for T=1 feedforward mode as a function of PTR plate thickness. Distinct from T=100 rank (SNR-limited); T=1 rank is grating-capacity-limited.
+
+### 7.1 Physical Regime
+
+At T=1, the field makes one pass through the PTR holographic grating. The computation is a holographic correlation:
+
+$$y_j = \left|\int \psi_j^*(\mathbf{x}) \cdot \left[M \cdot u_\text{in}\right](\mathbf{x})\, d\mathbf{x}\right|^2 \tag{7.1}$$
+
+where M is the single-pass transfer function of the grating. This is a feedforward optical transformation — not a recurrent computation. Depth requires stacking independent cavities with SOA inter-stage amplification; weight-tying across round trips does not apply.
+
+Crucially, the SNR accumulation over T=100 round trips (2.3 dB total loss) is replaced by single-pass loss of 0.023 dB. The rank constraint shifts entirely from SNR budget to grating angular multiplexing capacity.
+
+### 7.2 Kogelnik Coupling Constant
+
+For an unslanted reflection grating in PTR glass, the coupling constant from Kogelnik (1969) coupled-wave theory is:
+
+$$\kappa = \frac{\pi \cdot \Delta n_\text{max}}{\lambda} \tag{7.2}$$
+
+With $\Delta n_\text{max} = 5 \times 10^{-3}$ (Glebov 2010) and $\lambda = 850\,\text{nm}$:
+
+$$\kappa = \frac{\pi \times 5 \times 10^{-3}}{850 \times 10^{-9}} = 18{,}480\,\text{m}^{-1} \tag{7.3}$$
+
+Peak diffraction efficiency for a single grating of thickness $d$ at exact Bragg condition:
+
+$$\eta_\text{peak} = \sin^2(\kappa d) \tag{7.4}$$
+
+At $d = 0.5\,\text{mm}$: $\eta_\text{peak} = 0.034$ (3.4%). At $d = 5\,\text{mm}$: $\eta_\text{peak} = 0.925$ (92.5%). Absorption penalty $T_\text{abs} = e^{-2\alpha d}$ with $\alpha = 1\,\text{m}^{-1}$ is negligible at all thicknesses ($< 0.1\,\text{dB}$ at $d = 10\,\text{mm}$).
+
+### 7.3 Bragg Angular Selectivity
+
+The angular half-width (first null) of the Bragg response for a thick grating in the paraxial regime (Goodman, *Fourier Optics*, 4th ed.):
+
+$$\Delta\theta_\text{Bragg} = \frac{\lambda}{n_0 \cdot d} \tag{7.5}$$
+
+with $n_0 = 1.49$ for PTR glass. This is the minimum angular separation between independently resolvable holographic gratings.
+
+| $d$ | $\Delta\theta_\text{Bragg}$ |
+|:----|:----|
+| 0.5 mm | 1.14 mrad |
+| 2.0 mm | 0.285 mrad |
+| 5.0 mm | 0.114 mrad |
+
+### 7.4 Angular Multiplexing Capacity
+
+The total angular range available for multiplexing is set by the cavity NA:
+
+$$\Delta\theta_\text{total} = 2 \cdot \text{NA} = \frac{\text{aperture}}{L_\text{cav}} = \frac{2.5\,\text{mm}}{20\,\text{mm}} = 0.125\,\text{rad} \tag{7.6}$$
+
+The number of angularly resolvable gratings (Mok 1993, *Opt. Lett.* 18:915):
+
+$$R_\text{angular} = \frac{\Delta\theta_\text{total}}{\Delta\theta_\text{Bragg}} = \frac{2 \cdot \text{NA} \cdot n_0 \cdot d}{\lambda} \tag{7.7}$$
+
+### 7.5 Dynamic Range Constraint
+
+When $R$ gratings are written with equal strength, the available $\Delta n_\text{max}$ is divided among them: $\Delta n_i = \Delta n_\text{max} / R$. The diffraction efficiency per grating in the weak-grating limit ($\kappa d \ll 1$) is:
+
+$$\eta_i = \left(\frac{\pi \cdot \Delta n_\text{max}}{R \cdot \lambda}\right)^2 d^2 \tag{7.8}$$
+
+Requiring $\eta_i \geq \eta_\text{threshold} = 0.01$ (1% minimum for 38 dB readout SNR) gives the dynamic-range rank limit (Psaltis 1994):
+
+$$R_\text{dynamic} = \frac{\pi \cdot \Delta n_\text{max} \cdot d}{\lambda \cdot \sqrt{\eta_\text{threshold}}} \tag{7.9}$$
+
+### 7.6 Binding Constraint and Results
+
+The actual rank is $R = \min(R_\text{angular},\, R_\text{dynamic})$. At all evaluated thicknesses, $R_\text{dynamic} < R_\text{angular}$: **dynamic range is the binding constraint.**
+
+| $d$ | $R_\text{angular}$ | $R_\text{dynamic}$ | $R_\text{actual}$ | $\eta_i$ at $R_\text{actual}$ |
+|:----|:----|:----|:----|:----|
+| 0.5 mm | 110 | 92 | **92** | 1.0% |
+| 1.0 mm | 219 | 185 | **185** | 1.0% |
+| 2.0 mm | 438 | 370 | **370** | 1.0% |
+| 5.0 mm | 1096 | 924 | **924** | 1.0% |
+| 10.0 mm | 2191 | 1848 | **1848** | 1.0% |
+
+**Key results:**
+
+- Current 0.5 mm plate: $R = 92$. Exceeds T=100 rank-50 baseline but falls short of rank-100 production target. Insufficient for T=1 production use.
+- **2.0 mm plate: $R = 370$.** Conservative upgrade. Exceeds T=100 rank-100 production target by 3.7×. Absorption loss 0.017 dB (negligible). PTR glass available at this thickness.
+- 5.0 mm plate: $R = 924$. Strong headroom but requires verification of thermal gradient stability and fabrication quality at this thickness.
+
+### 7.7 Comparison with T=100 Rank
+
+| Regime | Rank ceiling | Binding constraint |
+|:----|:----|:----|
+| T=100, 0.5mm plate | 200 (hard ceiling) | SNR margin exhausted |
+| T=1, 0.5mm plate | 92 | Dynamic range ($\eta_i$) |
+| T=1, 2.0mm plate | 370 | Dynamic range ($\eta_i$) |
+| T=1, 5.0mm plate | 924 | Dynamic range ($\eta_i$) |
+
+At T=1, increasing plate thickness directly increases rank without SNR penalty. The SNR headroom recovered by eliminating 99 round trips is not available to increase rank within the same plate — it is available to tolerate inter-stage SOA noise figure (~7 dB NF per SOA) in a multi-cavity FFN stack.
+
+### 7.8 Open Assumptions
+
+1. $\eta_\text{threshold} = 0.01$ assumed from SNR target. Actual threshold depends on intra-cavity power, detector NEP, and SOA noise — requires closure against the 38 dB SNR budget (EXP open).
+2. Weak-grating approximation (eq. 7.8) assumes $\kappa d / R \ll 1$. Valid when $R \gg \kappa d / \pi$; at $d = 2\,\text{mm}$, $\kappa d = 36.96$, $R = 370$, ratio $= 0.10$. Marginally valid — full Kogelnik coupled-wave solution should be used for final design.
+3. PTR glass uniformity and Δn_max at thicknesses > 1 mm unverified in literature at 850 nm. Glebov 2010 data is for ~0.5–2 mm samples.
+4. Multi-stage SOA SNR budget (inter-stage noise accumulation across N FFN layers) not yet derived. This is the binding SNR constraint for T=1 multi-cavity architecture.

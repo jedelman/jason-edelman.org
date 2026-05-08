@@ -155,3 +155,57 @@ kinematic_mount_reinstallation_um = "TBD — EXP-8"
 model_layer_count = "TBD — depends on target model"
 model_target_params = "TBD — depends on target model"
 system_power_W = "TBD — post Phase 1 experiments"
+
+[t1_architecture]
+# T=1 single-pass feedforward mode — alternative to T=100 RNN inference.
+# Each cavity performs one holographic matrix-vector multiply; depth comes
+# from stacking cavities with SOA inter-stage amplification, not recirculation.
+# Derived 2026-05-08. See theory_derivations.md §7.
+
+inter_stage_amplifier = "GaAs_AlGaAs_SOA_850nm"
+# Rationale: EDFAs operate at 1530-1625nm (fixed by Er atomic physics — not
+# tunable to 850nm). GaAs/AlGaAs SOAs are commercially available at 780-870nm
+# (Thorlabs, Innolume). Gain ~20-30dB, NF ~6-8dB, saturation power ~10mW.
+# SOA NF adds to inter-stage SNR budget but does not consume it at T=1 since
+# per-stage loss is 0.023dB vs 2.3dB accumulated over T=100 round trips.
+
+ptr_plate_thickness_t1_mm = 2.0
+# Rationale: At T=1, rank is grating-capacity-limited (not SNR-limited).
+# Binding constraint is dynamic range: R = (π·Δn_max·d/λ) / sqrt(η_threshold)
+# with η_threshold = 0.01 (1% min diffraction efficiency for 38dB readout SNR).
+# d=0.5mm → R=92; d=2.0mm → R=370; d=5.0mm → R=924.
+# 2.0mm chosen as conservative step: R=370 > T=100 rank-100 production target,
+# absorption loss negligible (0.017dB), PTR glass available at this thickness.
+# Full derivation: theory_derivations.md §7.
+
+rank_t1_at_2mm = 370
+# Rationale: min(R_angular=438, R_dynamic=370) at d=2mm.
+# R_angular = 2·NA·n₀·d/λ = 2×0.0625×1.49×2e-3/850e-9 = 438 (Mok 1993)
+# R_dynamic = (π·Δn_max·d/λ)/sqrt(η_threshold) = 370 (Psaltis 1994)
+# Dynamic range is binding. η_per_grating = 1.0% at R=370.
+
+rank_t1_at_0p5mm = 92
+# Rationale: Current PTR plate geometry. R_dynamic=92 at d=0.5mm.
+# Still exceeds T=100 rank-50 baseline, but below rank-100 production target.
+# 0.5mm plate insufficient for T=1 production use — upgrade to 2mm required.
+
+eta_threshold_t1 = 0.01
+# Rationale: 1% minimum diffraction efficiency per hologram ensures signal
+# at readout detector exceeds noise floor for 38dB SNR target.
+# Conservative lower bound — actual threshold depends on detector NEP and
+# intra-cavity power (EXP open).
+
+snr_margin_t1_dB = ">>2"
+# Rationale: At T=1, cumulative round-trip loss = 0.023dB (vs 2.3dB at T=100).
+# Essentially the entire SNR budget is preserved for spatial mode capacity.
+# Inter-stage SOA NF ~7dB adds noise at each stage boundary — this is the
+# binding SNR constraint for multi-stage T=1 FFN, not intra-cavity loss.
+# Full multi-stage SNR budget TBD (EXP open).
+
+t1_sequence_modeling = "none"
+# Rationale: At T=1, each token is processed independently. No hidden state
+# h_t persists across tokens — the RNN temporal dynamics require T>>1.
+# T=1 implements a feedforward layer, not a sequence model.
+# Implication: T=1 cavities cannot replace T=100 RNN for autoregressive
+# inference. Role is FFN layers within a hybrid architecture, or
+# single-pass associative retrieval tasks.
