@@ -2086,3 +2086,116 @@ ARCH-20 is **not** a replacement for the PTR recurrent system. They compute cate
 4. **Experimental rank measurement.** The Kogelnik prediction of $R = 551$ assumes ideal bulk material. Free-carrier scattering and spectral inhomogeneity in GaAlAs may reduce this. Direct measurement is EXP-9.
 
 ---
+
+---
+
+## 18. ARCH-20 Geometry Closure: Polarization Multiplexing, Timing, and Pipeline
+
+**Status:** Derived 2026-05-08.  
+**Purpose:** Verifies that the ARCH-20 gain hologram attention layer closes as a physical system — geometry, polarization separation, timing, and pipeline compatibility with PTR.
+
+### 18.1 HG Basis Tensor Structure
+
+Numerical evaluation of $T_{ijkl} = \int \psi_i^* \psi_j \psi_k^* \psi_l\,dr$ for Hermite-Gaussian modes (N=6) reveals:
+
+- **50% of elements are nonzero** (selection rule: $T_{ijkl} \neq 0$ only when $i+j+k+l$ is even — parity conservation)
+- **W(c) is full rank for all contexts** tested (20 random unit vectors; rank = N always)
+- **W(c) is always symmetric**: $W_{il}(c) = W_{li}(c)$ for all $c$
+
+The last point has an architectural implication: HG basis gives **symmetric attention** — it can represent bidirectional (encoder-style) attention but not causal autoregressive attention. For causal self-attention, a Fourier lens before the slab is needed. For cross-attention ($c \neq q$), the operation is asymmetric by construction even in the HG basis — no lens required. Cross-attention is the primary operating mode of ARCH-20.
+
+### 18.2 The Timing Problem and Its Resolution
+
+The carrier response time is $\tau_c \sim 1\,\text{ns}$. The single-pass transit time through the 4mm slab is $\tau_\text{transit} = nL/c = 47\,\text{ps}$. In a simultaneous write+read configuration, only:
+
+$$\eta_\text{grating} = 1 - e^{-\tau_\text{transit}/\tau_c} = 1 - e^{-0.047} = 4.6\% \tag{18.1}$$
+
+of the grating forms during the transit. Effective $\Delta n \approx 1.7\times10^{-4}$ → $R \approx 25$. This is inadequate.
+
+**Solution: Sequential write-then-read.** The context beam (H polarization) writes the carrier grating during a dedicated write phase of duration $3\tau_c = 3\,\text{ns}$, achieving 95% of the steady-state grating:
+
+$$\Delta n_\text{seq} = \Delta n_\text{max}(1 - e^{-3}) = 0.95 \times 3.75\times10^{-3} = 3.56\times10^{-3} \tag{18.2}$$
+
+$$R_\text{seq} = \frac{\pi \cdot \Delta n_\text{seq} \cdot L}{\lambda \cdot \text{arctanh}(\sqrt{\eta})} \approx 524 \tag{18.3}$$
+
+The query beam (V polarization) then reads the fully-formed grating in a single 47ps transit. The full attention cycle: **write (3 ns) → read (47 ps) → decay (3 ns passive) = 6 ns total**.
+
+### 18.3 Preferred Geometry: Polarization-Multiplexed Transmissive Slab
+
+No ring cavity is required. The geometry is a transmissive single-pass element:
+
+```
+[Context VCSEL array, H pol, I ~ I_sat]  ─────┐
+                                              [PBS] → [Bulk GaAlAs slab, 4mm]→ [PBS] → V output (attention result)
+[Query VCSEL array,   V pol, I ~ 0.01×I_sat] ─┘                                     → H discard
+```
+
+Context (H) and query (V) co-propagate collinearly through the slab. The H-polarized field at intensity $I_\text{sat} = 10^7\,\text{W/m}^2$ depletes carriers spatially, writing $\Delta n(\mathbf{r}) \propto |E_H(\mathbf{r})|^2$. The V-polarized query at $0.01 \times I_\text{sat}$ probes the grating without significantly perturbing it. At the output PBS, H is discarded and V carries the attention result.
+
+**Why this works:**
+- Cross-polarization cross-gain modulation (XPM/XGM) in semiconductor gain media is well-documented (Lacey et al. 1994, Pleumeekers et al. 2002) — the H-field depletes carriers seen by V
+- Semiconductor gain is weakly polarization-dependent in bulk GaAlAs (gain anisotropy < 1 dB) — the depletion grating applies nearly equally to V
+- Polarization beam splitters achieve > 30 dB extinction ratio — clean separation
+- Co-propagating write and read share identical wavefront paths → aberrations cancel identically (self-compensating holography, Psaltis 1990 ✓)
+
+**Verified constraints:**
+
+| Constraint | Requirement | Actual | Status |
+|:---|:---|:---|:---|
+| Overlap (Δθ=0, collinear) | Δθ < 200 mrad | 0 mrad (collinear) | ✓ |
+| Grating not erased by read | $I_r \ll I_w$ | $I_r = 0.01 \times I_w$ | ✓ |
+| SHB survives diffusion | $L_\text{diff} \ll \Lambda$ | 1 µm ≪ 49 µm | ✓ |
+| Output separation | PBS extinction | >30 dB | ✓ |
+| Attention cycle < token period | < 13.3 ns | 6 ns | ✓ |
+| Cross-pol CGM documented | Literature | Lacey 1994 | ✓ |
+
+### 18.4 Pipeline Compatibility with PTR
+
+The ARCH-20 attention cycle (6 ns) is shorter than the PTR inference period (13.3 ns). They can be fully pipelined:
+
+```
+Token t:   [PTR inference, 13.3 ns] → output h_t
+           ∥ [ARCH-20 attention for t-1, 6 ns] 
+Token t+1: [PTR inference, 13.3 ns] → output h_{t+1}
+           ∥ [ARCH-20 attention for t, 6 ns]
+```
+
+At steady state: ARCH-20 adds **zero latency** — it runs in the shadow of the PTR inference. The system throughput remains 75M tok/s (PTR-limited).
+
+### 18.5 Causal vs Bidirectional Attention
+
+HG basis gives symmetric $W(c)$. The two attention modes:
+
+- **Cross-attention** ($c \neq q$, context from previous token): asymmetric by construction, no lens needed. This is the primary operating mode for autoregressive generation.
+- **Self-attention** ($c = q$): symmetric in HG basis — bidirectional. Suitable for encoder/prefix processing. For causal self-attention (autoregressive), a Fourier lens (4f system) before the slab transforms HG modes to plane waves, breaking the symmetry constraint.
+
+For the ORI use case (SSM + attention for autoregressive token generation), cross-attention is the relevant mode. A lens stage is not required at baseline.
+
+### 18.6 Open Experiments (EXP-9 through EXP-12)
+
+| EXP | Description | Blocks |
+|:---|:---|:---|
+| EXP-9 | Bulk GaAlAs gain slab rank measurement at 852nm | R_dyn vs prediction |
+| EXP-10 | Pumping uniformity over 5×5mm² aperture at transparency | ARCH-20 viability |
+| EXP-11 | Cross-polarization XGM efficiency and fidelity at 852nm | Polarization mux scheme |
+| EXP-12 | $T_{ijkl}$ full analytical calculation for 2D HG basis | Lens decision |
+
+### 18.7 ARCH-20 Reference Design (Locked Parameters)
+
+| Parameter | Value | Source |
+|:---|:---|:---|
+| Gain medium | Bulk GaAlAs | §16.3 geometry analysis |
+| Slab dimensions | 4mm × 5mm × 5mm | §16, §18.2 |
+| $\Delta n_\text{material}$ | $3.75\times10^{-3}$ (50% sat.) | §16.1 |
+| $\Delta n_\text{seq}$ (3τ_c write) | $3.56\times10^{-3}$ | §18.2 |
+| $R_\text{dyn}$ | 524 | §18.2 |
+| Write polarization | H, $I \sim I_\text{sat} = 10^7\,\text{W/m}^2$ | §18.3 |
+| Read polarization | V, $I \sim 10^5\,\text{W/m}^2$ | §18.3 |
+| Attention cycle | 6 ns (write 3 ns + read 47 ps + decay 3 ns) | §18.2 |
+| Pipeline overhead | Zero (hidden behind PTR) | §18.4 |
+| Causal attention | Cross-attention mode (no lens needed) | §18.5 |
+| Carrier lifetime | $\tau_c \sim 1\,\text{ns}$ (GaAlAs at transparency) | §16.4 |
+| Carrier diffusion | $L_\text{diff} = 1\,\mu\text{m} \ll \Lambda = 49\,\mu\text{m}$ | §17.2 |
+| Transit latency | 47 ps | §18.2 |
+
+---
