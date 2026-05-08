@@ -2462,3 +2462,66 @@ Quality-adjusted (3× ORI units for Mamba-130M equivalent): 738 nJ/tok, 20× bet
 The physics has not run out of room: the Landauer limit for 512 modes at 6-bit precision is $\sim 9\,\text{aJ/tok}$ — $10^{11}\times$ below current operation.
 
 ---
+
+---
+
+## 22. Optical Gradient Computation and Generation Roadmap
+
+**Status:** Derived 2026-05-08.
+
+### 22.1 Optical Gradient for DX Cavity
+
+The adjoint variable method (Hughes et al. 2018) gives the gradient of any loss $\mathcal{L}$ with respect to the index modulation $\Delta n(\mathbf{r})$:
+
+$$\frac{\partial\mathcal{L}}{\partial\Delta n(\mathbf{r})} \propto \text{Re}\!\left[E_\text{adj}^*(\mathbf{r})\cdot E_\text{fwd}(\mathbf{r})\right] \tag{22.1}$$
+
+This is an interference term between the forward field and the time-reversed adjoint field. For the DX cavity, this can be realized **all-optically**:
+
+1. **Forward pass** (850 nm, 13.3 ns): inference runs normally; 850 nm does not write DX states.
+2. **Loss gradient** (digital, $<1\,\mu\text{s}$): compute $\delta = \partial\mathcal{L}/\partial\mathbf{y}$ on microcontroller.
+3. **Adjoint pass** (810 nm, 13.3 ns): encode $\delta$ onto an 810 nm beam via AOM; inject backward through the cavity. The 810 nm field is above the DX write threshold, so it writes DX states proportionally to the interference pattern with the residual forward field — i.e., proportionally to the gradient.
+4. **DX grating updates** directly from the adjoint exposure. No separate write step.
+
+**Total cycle:** $\sim 2\,\mu\text{s}$ per gradient step, versus 40 ms for digital gradient computation on Jetson Orin. **500,000 gradient updates per second**, or one update per token.
+
+**Power change:** replace Jetson Orin (1 W average) with AOM driver (0.5 W) — net $-0.5\,\text{W}$. The power benefit is marginal; the computational benefit is qualitative: the system moves from batch SGD to **continuous per-token adaptation**.
+
+This regime — gradient step every 2 µs, batch size 1 — is noisy but at 500K Hz the central limit theorem applies rapidly. It is equivalent to online stochastic gradient descent with continuous annealing. It enables:
+- True per-token personalization without an explicit training phase
+- Continuous adaptation to distribution shift
+- Convergence to user-specific behavior within seconds of first interaction
+
+**Open question (EXP-15):** convergence stability of batch-1 optical SGD at 500K Hz in the DX cavity. The concern is that the interference term in eq. 22.1 is not exactly the gradient when the adjoint field also perturbs the grating it is writing — self-consistent convergence must be verified experimentally.
+
+### 22.2 Why Not Jump to Gen 3?
+
+**Gen 3 parameters:** $H = 6{,}000$ modes, 10 µm VCSEL pitch, 10 µm detector pitch, $\sim 0.77\,\text{mm}$ aperture.
+
+**Fatal blocker: VCSEL thermal density.**
+
+At 10 µm pitch with $H = 6{,}000$ VCSELs per layer and 24 layers, the electrical power density in the VCSEL array is:
+
+$$P_\text{density} = \frac{6{,}000 \times 5.1\,\text{mW}}{(0.77\,\text{mm})^2} \approx 51\,\text{W/mm}^2 \tag{22.2}$$
+
+Demonstrated VCSEL array thermal management: $\lesssim 5\,\text{W/mm}^2$ (Michalzik 2012). Gen 3 requires 10× beyond state of art — liquid cooling integrated into the VCSEL substrate, which does not currently exist at production scale. This is the binding constraint, independent of the optical physics.
+
+**Secondary blocker: VCSEL array availability.**
+
+10 µm pitch 850 nm VCSEL arrays require a custom foundry run: $50–200\,\text{K NRE}$, 6–12 month lead time. The pitch is achievable (6 µm demonstrated in research, Larsson 2021) but not commercially available.
+
+**What Gen 3 does NOT require:**
+- The optical aperture is *smaller* at Gen 3 (0.77 mm vs 1.15 mm), relaxing flatness requirements.
+- The DX/PTR material is the same — smaller area is easier.
+- Alignment tolerance is 5× tighter (2 µm vs 10 µm) but achievable with precision assembly.
+
+**Generation roadmap:**
+
+| Generation | Pitch | $H$ | Key blocker | NRE | Timeline |
+|:---|:---|:---|:---|:---|:---|
+| Gen 1 | 50 µm | 512 | None — OTS components | $<$5K materials | Now |
+| Gen 2 | 25 µm | 2,048 | Custom VCSEL array | $\sim$100K | 12–18 months |
+| Gen 3 | 10 µm | 6,000 | Thermal density (51 W/mm²) | $\sim$500K | 3–5 years |
+
+Gen 1 validates all optical physics: DX grating write/read/refresh, optical adjoint, SNR at $T=100$, cavity alignment. Skipping to Gen 3 means solving a thermal engineering problem before the optical physics is experimentally confirmed. Wrong order.
+
+---
