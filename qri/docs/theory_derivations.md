@@ -1656,3 +1656,93 @@ These give Mamba higher expressivity per unit state than ORI. The quality gap at
 ### 13.6 Open Empirical Question
 
 None of these quality estimates are experimentally validated. The LSSL paper's empirical results (84.65% sCIFAR at 6 layers, H=128, N=128) provide the closest analog. ORI's H=512, N_state=57 is a different operating point. **EXP-7 Phase B (clone-and-fine-tune viability) is the precursor experiment before diffusion text quality can be estimated empirically.** The speedup numbers are physics — they hold regardless. The quality numbers are architecture predictions — they require validation.
+
+---
+
+## 14. 100mm Aperture: Scale Factor, Constraint Flip, and Noise Limits
+
+**Status:** Derived 2026-05-08  
+**Motivation:** In-situ EIT training self-calibrates wavefront aberrations, relaxing the aperture flatness requirement from λ/10 to ~λ/2 and making 100mm physically achievable with standard optics.
+
+### 14.1 Why In-Situ Training Unlocks Larger Aperture
+
+For PTR glass (external write beam): the grating is written with one wavefront and read with another. At 100mm, achieving λ/10 flatness = 85nm over 100mm requires precision optics costing $10K–50K. Aberration mismatch between write and read paths causes weight errors that compound over T round trips.
+
+For EIT in-situ: the same field that performs inference writes the coherence grating via the adjoint (phase-reversed) field. Any wavefront aberration is seen identically by both forward and adjoint passes — errors cancel to first order. The requirement relaxes to λ/2 ≈ 426nm over 100mm, achievable with standard optical flats ($500–2K). This is self-calibrating holography (Psaltis 1990).
+
+### 14.2 Scale Factor: 25mm → 100mm
+
+| Quantity | 25mm | 100mm | Scale |
+|:----|:----|:----|:----|
+| Angular rank $R = d/\lambda$ | 29,339 | 117,357 | **4×** |
+| Spatial modes $H$ (1D, 50µm pitch) | 500 | 2,000 | 4× |
+| $N_\text{state}$ per ring ($R_\text{actual}/H$) | 58 | 44 | 0.76× |
+| SSM state per ring ($H \times N_\text{state}$) | 29,000 | 88,000 | **3×** |
+| Rings to match Mamba-130M state | 11 | **4** | 2.75× fewer |
+| Params per ring | 321K | 4.2M | 13× |
+
+Note: $N_\text{state}$ per ring is slightly lower at 100mm because the dynamic range constraint (not angular) becomes binding — see §14.3.
+
+### 14.3 Constraint Flip — The Key Finding
+
+At 25mm: angular rank binds ($R_\text{ang} = 29{,}339 < R_\text{dyn} = 88{,}189$).  
+At 100mm: **dynamic range binds** ($R_\text{dyn} = 88{,}189 < R_\text{ang} = 117{,}357$).
+
+$$R_\text{actual}(100\,\text{mm}) = \min(117{,}357,\ 88{,}189) = 88{,}189$$
+
+The 100mm aperture has unlocked more angular capacity than the EIT grating can fill. To access the full $R_\text{ang} = 117{,}357$, need $\Delta n > 0.016$ (current: 0.012 — a 1.3× gap). Two levers:
+
+- **Higher atom density** (increase Cs cell temperature above 350K): $\Delta n \propto N$ → modest temperature increase closes the gap.
+- **Longer ring circumference**: $R_\text{dynamic} \propto L_\text{ring}$. At $L = 800\,\text{mm}$: $R_\text{dyn} = 352{,}758 \gg R_\text{ang}$. Round-trip time $\tau_{rt} = 2.67\,\text{ns}$ — still fast. Latency at 4 rings, 100 NFEs: 1.07µs (vs 0.267µs for 200mm ring).
+
+### 14.4 Noise Limits at 100mm
+
+**Shot noise:** $P_\text{min}$ per mode unchanged at 3.7µW. 2000 modes: 7.4mW minimum, 210mW at 10× margin. Manageable (<1W). ✓
+
+**Diffraction:** $\theta_\text{diff} = \lambda/d = 8.5\,\mu\text{rad}$. Minimum resolvable spatial period at ring = 1.7µm $\ll$ 50µm mode pitch. ✓
+
+**Thermal lensing:** Aperture area 16× larger at same power → intensity 16× lower. Thermal lensing is REDUCED at 100mm, not increased. ✓
+
+**Spatial coherence:** $l_\text{coh} = c_0/\Delta\nu = 300\,\text{m} \gg 100\,\text{mm}$ at 1MHz coupling linewidth. EIT coherence uniform across aperture. ✓
+
+**Grating cross-talk:** Cross-talk SNR $\approx 10\log_{10}(R) = 50.7\,\text{dB} > 38\,\text{dB}$ target. Angular selectivity suppresses inter-grating leakage by $1/R^2$. ✓
+
+**Binding noise limit:** Dynamic range — $R_\text{dyn} = 88{,}189$ — driven by $\Delta n_\text{EIT}$ and ring path length $L$.
+
+### 14.5 Performance at 100mm
+
+**State-matched to Mamba-130M: 4 rings.**
+
+$$\tau_\text{latency} = 4 \times 0.667\,\text{ns} \times 100\,\text{NFE} = 267\,\text{ns} = 0.267\,\mu\text{s}$$
+
+$$\text{Speedup vs A100} = \frac{256\,\text{ms}}{0.267\,\mu\text{s}} = 9.6 \times 10^5 \approx \mathbf{6.0\,\text{OoM}}$$
+
+The extra order of magnitude vs the 25mm 5.6 OoM case comes from needing 4 rings instead of 10 at matched state — aperture scaling reduces ring count, reducing latency.
+
+### 14.6 Hardware Cost at 100mm
+
+| Component | 25mm cost | 100mm cost |
+|:----|:----|:----|
+| Cs cell (custom 100mm bore quartz) | \$800–2K | \$3K–6K |
+| Ring mirrors (4×, 100mm) | \$600–1K | \$2K–4K |
+| VCSEL array (2000 elements vs 512) | \$2K–8K | \$8K–20K |
+| Other (mounts, SOA, detector, optics) | \$1.9K–4.9K | \$3K–7K |
+| **Per-ring marginal** | **\$4.2K–8.9K** | **\$16K–37K** |
+
+4-ring system at 100mm: ~\$160K–300K total. Roughly 4–6× more expensive than 4 rings at 25mm (\$49K–99K), for 2.75× fewer rings needed at matched quality and 1.7× better latency.
+
+**Cost per unit of SSM state** is approximately the same — the 100mm ring is larger and more expensive but covers more state per ring. The economics are similar; the engineering challenge (larger optics, more aberration correction) is the real consideration.
+
+### 14.7 Recommendation
+
+100mm aperture is the right direction if:
+- Hardware cost ($160K–300K) is acceptable
+- 100mm precision optics are in scope (achievable with in-situ calibration)
+- Maximizing OoM speedup at matched quality is the priority (6.0 vs 5.6 OoM)
+
+25mm is the right starting point for:
+- Phase 1 validation ($49K–99K)
+- Proving EIT grating formation and coherence time
+- Establishing inter-ring alignment protocols before scaling aperture
+
+**Upgrade path:** Build 4-ring system at 25mm. Validate. Replace Cs cells and mirrors with 100mm equivalents. In-situ training recalibrates automatically — no grating rewrite needed.
