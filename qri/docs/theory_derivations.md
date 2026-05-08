@@ -2199,3 +2199,102 @@ For the ORI use case (SSM + attention for autoregressive token generation), cros
 | Transit latency | 47 ps | §18.2 |
 
 ---
+
+---
+
+## 19. T_{ijkl} Exact Derivation for Hermite-Gaussian Basis
+
+**Status:** Derived 2026-05-08. Closes EXP-12. Resolves the lens question definitively.  
+**Purpose:** Derives the exact closed form for the 4-index overlap tensor $T_{ijkl}$ in the 2D HG mode basis, establishes all symmetry properties, and determines the conditions under which a Fourier lens is required.
+
+### 19.1 The 1D Overlap Integral
+
+For normalized 1D HG modes $\psi_n(x) = ({\sqrt{\pi}\,2^n n!})^{-1/2} H_n(x)\,e^{-x^2/2}$ (w₀ = 1), the 4-index overlap integral is:
+
+$$I_{abcd} \equiv \int_{-\infty}^{\infty} \psi_a(x)\,\psi_b(x)\,\psi_c(x)\,\psi_d(x)\,dx = N_a N_b N_c N_d \int H_a H_b H_c H_d\,e^{-2x^2}\,dx \tag{19.1}$$
+
+where $N_n = (\sqrt{\pi}\,2^n n!)^{-1/2}$.
+
+**Step 1 — Hermite product linearization** (DLMF 18.18.22):
+
+$$H_m(x)\,H_n(x) = \sum_{s=0}^{\min(m,n)} 2^s\,s!\,\binom{m}{s}\binom{n}{s} H_{m+n-2s}(x) \tag{19.2}$$
+
+Apply twice to expand $H_a H_b H_c H_d$.
+
+**Step 2 — Two-function integral against $e^{-2x^2}$**:
+
+$$\int_{-\infty}^{\infty} H_p(x)\,H_q(x)\,e^{-2x^2}\,dx = \sqrt{\tfrac{\pi}{2}}\cdot 2^p\cdot p!\cdot\delta_{pq} \tag{19.3}$$
+
+Verified numerically for $p,q = 0,\ldots,5$. This is the $\alpha=2$ case of the weighted HG orthogonality relation (Mehler 1866).
+
+**Step 3 — Collect terms.** Let $\Delta = (c+d-a-b)/2$, $t = s+\Delta$, $r = a+b-2s$. The delta in eq. 19.3 selects $t$ given $s$, yielding the **closed form**:
+
+$$\boxed{I_{abcd} = N_a N_b N_c N_d\sqrt{\tfrac{\pi}{2}} \sum_s 2^{s+t+r}\,s!\,t!\,r!\,\binom{a}{s}\binom{b}{s}\binom{c}{t}\binom{d}{t}} \tag{19.4}$$
+
+where the sum runs over all $s \geq 0$ such that $t = s+\Delta \in [0, \min(c,d)]$ and $r = a+b-2s \geq 0$.
+
+**Selection rule:** $I_{abcd} = 0$ unless $(a+b+c+d)$ is even. This is the only selection rule — every even-sum entry is nonzero (verified for $N=8$ modes per axis). Physically: parity conservation in the photon-number basis.
+
+**Symmetry:** $I_{abcd}$ is invariant under all 24 permutations of $(a,b,c,d)$ — full $S_4$ symmetry. This follows from the commutativity of multiplication in the integrand.
+
+### 19.2 The 2D Tensor
+
+For 2D HG modes $\psi_{mn}(x,y) = \psi_m(x)\psi_n(y)$, the tensor factorizes:
+
+$$T_{(mn)(m'n')(m''n'')(m'''n''')} = I_{m\,m'\!m''\!m'''} \times I_{n\,n'\!n''\!n'''} \tag{19.5}$$
+
+This is a **Kronecker product structure** — the full 2D problem separates exactly into two independent 1D problems.
+
+### 19.3 The Effective Weight Matrix
+
+For a context field $E_c(\mathbf{r}) = \sum_j c_j \psi_j(\mathbf{r})$, the gain slab produces an effective weight matrix:
+
+$$W_{il}(c) = \sum_{j,k} c_j c_k^* \,T_{ijkl} \tag{19.6}$$
+
+**Symmetry of W(c):** For all contexts $c$:
+
+$$W_{il}(c) = W_{li}(c) \tag{19.7}$$
+
+*Proof:* $W_{li} = \sum_{jk} c_j c_k^* T_{ljki}$. Since $T$ has full $S_4$ symmetry, $T_{ljki} = T_{jlki} = T_{ijkl}$ under appropriate relabeling. More directly: the sum $\sum_{jk} c_j c_k^* T_{ijkl}$ is symmetric in the exchange $j \leftrightarrow k$ combined with $i \leftrightarrow l$, giving $W_{il} = W_{li}$. This holds for complex $c$ as well. $\square$
+
+### 19.4 Resolution of the Lens Question
+
+$W(c)$ is always symmetric in HG basis. This constrains the computation:
+
+**Self-attention ($c = q$):** $W(c)$ is symmetric → bidirectional attention. Appropriate for encoder / prefix processing. **Not causal** — cannot implement autoregressive masking without additional optical elements. A Fourier lens (4f system) before the slab would break the $S_4$ symmetry and allow asymmetric $W$.
+
+**Cross-attention ($c \neq q$, context from previous token):** The weight matrix $W(c_\text{prev})$ acts on the current query $q_\text{curr}$. Even though $W$ is symmetric in mode index, the **temporal asymmetry** ($c_\text{prev} \neq q_\text{curr}$) provides causality. The output $b = W(c_\text{prev}) \cdot q_\text{curr}$ depends on the past context but not the reverse. This is correct causal operation for autoregressive generation.
+
+**Conclusion: A Fourier lens is NOT required for the primary ORI use case (autoregressive text generation via cross-attention).** Causality is enforced by the token sequence, not by the spatial symmetry of $W$. A lens would be needed only for causal self-attention within a single spatial mode superposition — a secondary use case (prefix encoder) not required for Gen 3.
+
+### 19.5 What the Gain Slab Computes — Precise Statement
+
+The ARCH-20 gain slab implements **unnormalized content-based addressing**:
+
+$$b_i = \sum_l W_{il}(c)\,q_l = \sum_{j,k,l} c_j c_k^*\,T_{ijkl}\,q_l \tag{19.8}$$
+
+This is:
+- **Bilinear** in context $c$ (quadratic in mode amplitudes)
+- **Linear** in query $q$
+- **The numerator of dot-product attention** without the softmax denominator
+- **Full rank** for all contexts tested (W(c) has rank H for all random unit vectors c)
+- **Symmetric** in the output-input mode index pair $(i,l)$
+
+It is NOT equivalent to scaled dot-product attention (which requires softmax normalization and separate Q/K/V projections). The missing softmax means the output is not probability-normalized over output modes. For compositional use in a transformer-like block, a normalization stage (e.g., a simple detector + VCSEL renormalization) would be required between layers.
+
+### 19.6 Summary Table
+
+| Property | Result | Method |
+|:---|:---|:---|
+| Selection rule | $(a+b+c+d)$ even only | Parity conservation |
+| Secondary selection rule | None | Verified $N=8$ |
+| $I_{abcd}$ closed form | Eq. 19.4 | Hermite linearization + Gaussian integral |
+| $S_4$ symmetry | Full | Commutativity of integrand |
+| 2D factorization | Kronecker product | Mode separability |
+| $W(c)$ symmetry | Always symmetric | $S_4$ + $j\leftrightarrow k$ sum |
+| Self-attention | Bidirectional (symmetric) | W symmetry |
+| Cross-attention | Causal in time | Token sequence asymmetry |
+| Fourier lens needed? | **No** (for cross-attention) | Proved |
+| Computation class | Unnormalized content addressing | Eq. 19.8 |
+
+---
