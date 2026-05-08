@@ -1078,3 +1078,164 @@ Ne has $\Delta\nu_D/\Delta\nu_\text{nat} = 2.8 \times 10^{11}$ (lighter atom, ho
 **The gas medium role that is viable:** inter-cavity gain amplification (the role suggested by the cascaded-gain-coupling paper). A Cs or HeNe discharge between PTR cavities acts as a gain element compensating inter-stage coupling loss — analogous to the SOA inter-stage amplifier in the T=1 FFN architecture (§7), but at gas-laser wavelengths. This is the correct architectural role for gas in ORI.
 
 **EIT Cs is the one exception worth pursuing separately.** $\Delta n_\text{EIT} \sim 3\times10^{-3}$ is within 2× of PTR, with $\mu$s grating lifetime and all-optical write/erase. The mechanism is fundamentally different (coherence grating vs population grating) and requires a dedicated derivation. Flagged as a potential future architecture branch.
+
+---
+
+## 10. EIT Coherence Grating: Full Derivation and Geometry Analysis
+
+**Status:** Derived 2026-05-08  
+**Purpose:** Derives rank ceiling and scaling for EIT coherence gratings in Cs vapor as an all-optical writable weight medium. Resolves the Tier 3 candidate from §9.7. Unlocks geometry from Fabry-Perot to ring cavity where physically motivated.  
+**Note:** HeNe at 632.8nm flagged as parallel candidate — same formalism applies, λ mismatch penalty additional. Defer to future session.
+
+### 10.1 Physical Mechanism: Coherence Grating vs Population Grating
+
+The SHB grating of §9 stores weight information in population inversion modulation $\Delta N(z)$ — a real (absorptive) quantity that decays by spontaneous emission and atomic transit. The EIT coherence grating stores weight information in the ground-state atomic coherence $\rho_{12}(z)$ — a complex (dispersive) quantity that decays only by ground-state dephasing $\gamma_{12}$, which can be made orders of magnitude smaller than $\Gamma_e$.
+
+**The Cs $\Lambda$-system:**
+- $|1\rangle = 6S_{1/2}, F=3$ (probe ground state)
+- $|2\rangle = 6S_{1/2}, F=4$ (coupling ground state, $\Delta_{hf} = 9.193\,\text{GHz}$ above $|1\rangle$)
+- $|3\rangle = 6P_{3/2}$ (excited state, $\tau = 30.5\,\text{ns}$)
+- Probe: $|1\rangle \to |3\rangle$ at 852.1nm (inference field)
+- Coupling: $|2\rangle \to |3\rangle$ at 852.1nm (weight-writing field)
+
+### 10.2 EIT Susceptibility from Density Matrix
+
+For a weak probe field (Rabi frequency $\Omega_p$) with one-photon detuning $\delta_1$ and two-photon detuning $\delta_2$ (Fleischhauer, Imamoglu, Marangos, *Rev. Mod. Phys.* 2005, Eq. 4.2):
+
+$$\chi_p = -\frac{N d_{13}^2}{\varepsilon_0 \hbar} \cdot \frac{\gamma_{12} - i\delta_2}{\left(\frac{\Gamma_e}{2} - i\delta_1\right)\!\left(\gamma_{12} - i\delta_2\right) + \frac{\Omega_c^2}{4}} \tag{10.1}$$
+
+At line center and two-photon resonance ($\delta_1 = \delta_2 = 0$):
+
+$$\chi_p = -\frac{N d_{13}^2}{\varepsilon_0 \hbar} \cdot \frac{\gamma_{12}}{\frac{\Gamma_e}{2}\gamma_{12} + \frac{\Omega_c^2}{4}} \tag{10.2}$$
+
+**EIT condition:** when $\Omega_c^2 \gg \Gamma_e \gamma_{12}$, the denominator is dominated by $\Omega_c^2/4$, absorption vanishes, and the medium becomes transparent. The residual index: $\Delta n = \text{Re}[\chi_p]/(2n_0)$.
+
+### 10.3 Coherence Grating in Standing Wave Geometry
+
+In a Fabry-Perot with counter-propagating probe and coupling fields:
+
+$$\Omega_p(z) \propto \cos(kz), \quad \Omega_c(z) \propto \cos(kz)$$
+
+The product $\Omega_p(z)\cdot\Omega_c^*(z) \propto \cos^2(kz) = \frac{1}{2} + \frac{1}{2}\cos(2kz)$.
+
+The $\cos(2kz)$ term drives spatial modulation of the dark-state coherence $\rho_{12}$ at period $\lambda/2$ — the weight grating. The grating amplitude is the differential response of $\text{Re}[\chi_p]$ to coupling field modulation $\Delta\Omega_c = \Omega_{c0}/2$:
+
+$$\Delta n_\text{grating} = \left|\frac{\partial \text{Re}[\chi_p]}{\partial \Omega_c}\right| \cdot \frac{\Omega_c}{2} \cdot \frac{1}{2n_0} \tag{10.3}$$
+
+Evaluating the derivative from eq. 10.2:
+
+$$\Delta n_\text{grating} = \frac{N d_{13}^2}{\varepsilon_0 \hbar} \cdot \frac{\gamma_{12} \cdot \Omega_c^2/4}{\left[\frac{\Gamma_e}{2}\gamma_{12} + \frac{\Omega_c^2}{4}\right]^2} \cdot \frac{1}{2n_0} \tag{10.4}$$
+
+### 10.4 Optimal Coupling Field and Analytic Maximum
+
+Maximizing eq. 10.4 over $\Omega_c$:
+
+$$\frac{d(\Delta n_\text{grating})}{d\Omega_c} = 0 \implies \Omega_{c,\text{opt}} = \sqrt{\frac{2}{3}\Gamma_e \gamma_{12}} \tag{10.5}$$
+
+At this optimum, substituting back into eq. 10.4, **$\gamma_{12}$ cancels exactly**:
+
+$$\Delta n_\text{opt} = \frac{N d_{13}^2}{\varepsilon_0 \hbar} \cdot \frac{3}{32\,\Gamma_e} \cdot \frac{1}{n_0} \tag{10.6}$$
+
+This is independent of $\gamma_{12}$ — the optimal $\Delta n$ is set entirely by $N$, $d_{13}$, and $\Gamma_e$. At $N = 4.0 \times 10^{18}\,\text{m}^{-3}$ (Cs at 350K):
+
+$$\Delta n_\text{opt} \approx 1.3 \times 10^{-2} \tag{10.7}$$
+
+This exceeds PTR glass ($5 \times 10^{-3}$) by 2.6×. However, this optimum is subject to operational constraints examined below.
+
+### 10.5 Operational Constraints
+
+**Constraint 1 — EIT regime validity.** The EIT condition requires $\Omega_c^2 \gg \Gamma_e \gamma_{12}$. At $\Omega_{c,\text{opt}}$:
+
+$$\frac{\Omega_{c,\text{opt}}^2/4}{\Gamma_e \gamma_{12}/2} = \frac{1}{3}$$
+
+This is NOT in the EIT regime — it is at the crossover between EIT and optical pumping. The formula (eq. 10.1) remains valid, but the physics is dark-state preparation, not EIT transparency.
+
+**Constraint 2 — Ω_c,opt for buffer gas is unphysically weak.** With $\gamma_{12}/(2\pi) = 10\,\text{kHz}$ (buffer gas):
+
+$$\Omega_{c,\text{opt}}/(2\pi) = 187\,\text{kHz}$$
+
+Any real laser has frequency noise and linewidth exceeding 187 kHz. A practical coupling field requires $\Omega_c \gtrsim 1\,\text{MHz}$, which moves away from the optimum.
+
+**Constraint 3 — Free cell γ₁₂ ~ Γ_e.** Transit-limited dephasing gives $\gamma_{12} \approx \Gamma_e$, placing the system outside the EIT regime. The formula still applies, but the grating is equivalent to SHB — coherence dephases before it can store a weight pattern. $\tau_\text{grating} = 2\,\text{ns}$, same as §9.
+
+**Practical operating point:** buffer gas cell, $\Omega_c/(2\pi) = 1\,\text{MHz}$:
+
+$$\Delta n_\text{grating} \approx 1.2 \times 10^{-2}, \quad \tau_\text{grating} \sim 100\,\mu\text{s}$$
+
+### 10.6 Rank: Angular Constraint Dominates
+
+Applying the §8 Kogelnik framework (first approximation — see §10.9):
+
+$$R_\text{dynamic} = \frac{\pi \cdot \Delta n_\text{grating} \cdot L}{\lambda \cdot \text{arctanh}(\sqrt{\eta_\text{threshold}})} \approx 8580 \quad (L = 20\,\text{mm})$$
+
+$$R_\text{angular} = \frac{2 \cdot \text{NA} \cdot L}{\lambda} = \frac{2 \times 0.0625 \times 20\,\text{mm}}{852\,\text{nm}} = 2934$$
+
+**Angular constraint is binding.** $\Delta n_\text{grating}$ exceeds the PTR value — there is no dynamic range problem. The rank ceiling is set entirely by the cavity angular acceptance, not by grating strength. This is the opposite of PTR glass.
+
+$$R_\text{EIT} = 2934 \quad (20\,\text{mm cavity, NA}=0.0625) \tag{10.8}$$
+
+### 10.7 Scaling Relations
+
+From eq. 10.6 and $R_\text{angular} = 2\,\text{NA}\cdot L/\lambda$:
+
+$$R_\text{EIT} \propto \text{NA} \cdot L / \lambda \tag{10.9}$$
+
+Rank scales with cavity geometry, not atom density. The scaling levers are:
+
+| Lever | Effect | Rank scaling |
+|:----|:----|:----|
+| Increase $L$ (longer cavity) | $R_\text{angular} \propto L$ | Linear |
+| Increase NA (larger aperture) | $R_\text{angular} \propto \text{NA}$ | Linear |
+| Increase $N$ (hotter cell) | $\Delta n \propto N$, but already above angular limit | No gain |
+| Decrease $\lambda$ | $R_\text{angular} \propto 1/\lambda$ | Inverse |
+| Increase $\Omega_c$ | $\Delta n$ decreases, eventually becomes binding | Non-linear |
+
+**For a 200mm ring cavity:** $R_\text{angular} = 2 \times 0.0625 \times 200\,\text{mm} / 852\,\text{nm} = 29{,}339$.
+
+This is the key insight: **EIT coherence gratings are angular-limited, not dynamic-range-limited. Longer cavities unlock proportionally higher rank.**
+
+### 10.8 Geometry: Ring Cavity is Correct for EIT
+
+**Fabry-Perot problems with EIT:**
+1. Counter-propagating probe writes the grating on every inference pass — grating continuously being overwritten by the inference field itself
+2. No clean separation between read (inference) and write (weight update) operations
+3. Every round trip slightly modifies the coherence grating
+
+**Ring cavity advantages:**
+- Unidirectional probe (inference field) travels forward only
+- Counter-propagating coupling field writes the coherence grating independently
+- Probe reads the grating without writing — clean read/write separation
+- Grating period set by coupling field standing wave: $\Lambda = \lambda_c/2 = 426\,\text{nm}$
+- This is the geometry used in all experimental EIT slow-light and light storage demonstrations (Lukin et al. 2003, Fleischhauer & Lukin 2002)
+
+**Hybrid architecture (new proposal):** ring cavity with:
+- Cs vapor cell (EIT coherence grating — online learnable weights)
+- PTR glass plate at one mirror (permanent weight backup — survives power loss)
+- SOA on forward path (inter-stage gain compensation)
+- Coupling laser counter-propagating (weight write/update beam)
+
+This architecture supports both online learning (EIT) and permanent weight storage (PTR) in a single ring, with all-optical write for both.
+
+### 10.9 Open Derivations Required Before Locking
+
+1. **Coherence grating coupled-wave theory.** The Kogelnik rank formula (§8) applies to index gratings driven by index modulation $\Delta n$. For a coherence grating, the coupling constant $\kappa_\text{eff}$ must be derived from the Maxwell-Bloch equations, not coupled-wave theory. The rank formula eq. 10.8 is a first approximation — the correct $\kappa_\text{eff}$ may differ. This is a significant open derivation.
+
+2. **Read-induced grating decay in ring geometry.** Even in a ring, the forward probe partially disturbs the coherence via optical pumping. The decay rate $\gamma_\text{read} \propto \Omega_p^2 / \Gamma_e$ must be derived and compared to $\gamma_{12}$ to confirm $\tau_\text{grating} \sim 100\,\mu\text{s}$ holds under inference conditions.
+
+3. **Angular multiplexing in gas medium.** Equation 10.8 assumes the same angular selectivity as a PTR grating. In a gas, there is no Bragg selectivity in the usual sense — the medium is not localized to a thin plate. The angular acceptance is set by Doppler velocity classes, not grating thickness. A revised angular selectivity formula for extended gas media is needed.
+
+4. **Coupling field spatial mode structure.** To write 512 independent spatial mode weights, the coupling field must have 512 independently addressable spatial modes. The spatial mode capacity of the coupling beam is an unresolved design question.
+
+### 10.10 Comparison: EIT vs PTR at T=1 Architecture
+
+| Parameter | PTR 2mm plate | EIT Cs (ring, 20mm) | EIT Cs (ring, 200mm) |
+|:----|:----|:----|:----|
+| $\Delta n$ | $5\times10^{-3}$ | $1.2\times10^{-2}$ | $1.2\times10^{-2}$ |
+| Rank | 368 | **2934** | **29,339** |
+| Binding constraint | Dynamic range | Angular | Angular |
+| Persistence | Permanent | $\sim100\,\mu$s | $\sim100\,\mu$s |
+| Write mechanism | 532nm + furnace | Coupling laser (all-optical) | Coupling laser (all-optical) |
+| Erase mechanism | UV + heat | Optical pumping | Optical pumping |
+| Geometry | Fabry-Perot | Ring | Ring |
+| Rank scaling lever | Plate thickness | Cavity length/NA | Cavity length/NA |
+| Architecture status | Locked (baseline) | Open derivations remain | Open derivations remain |
