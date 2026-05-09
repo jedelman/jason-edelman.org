@@ -15,7 +15,7 @@ We present Optical Resonator Inference (ORI), a complete all-optical architectur
 
 Large language model inference is thermodynamically inefficient. Every token requires loading billions of weights through digital electronics — a memory bandwidth problem masquerading as a compute problem. Optical hardware offers a fundamental path around this: holographic gratings store weight matrices as refractive index distributions, and matrix-vector multiplication occurs via diffraction at the speed of light with no data movement.
 
-Prior optical neural networks have explored this principle in feedforward configurations [Lin 2018, Shen 2017, Feldmann 2021, Xu 2024]. All are stateless — they compute a fixed function of the input without carrying hidden state between tokens. Language model inference is sequential and stateful; this requirement cannot be satisfied by a feedforward optical system without digital recurrence overhead that eliminates the latency advantage.
+Prior optical neural networks have explored this principle in feedforward configurations [Lin 2018, Shen 2017, Feldmann 2021, Xu 2024]. All are stateless — they compute a fixed function of the input without carrying hidden state between tokens. Language model inference is sequential and stateful; this requirement cannot be satisfied by a feedforward optical system without digital recurrence overhead that eliminates the latency advantage. Recent work demonstrates that passive optical wave dynamics can also implement reservoir-class recurrence without any electronic feedback [Eşlik et al. 2026], confirming that photonic recurrence is physical rather than approximated — but without trained weights, reservoir systems are limited in expressivity. ORI implements trained holographic SSM recurrence, a strictly stronger class.
 
 Hughes et al. [2019] established that the discretized scalar wave equation maps exactly to an RNN update rule: a Fabry-Perot resonator with holographic weight encoding is a recurrent neural network by construction, not by analogy. ORI instantiates this mapping in a specific physical system and derives the engineering constraints that make it trainable.
 
@@ -49,7 +49,7 @@ Holographic gratings in photorefractive media implement matrix-vector multiplica
 
 ### 2.3 In-Situ Photonic Backpropagation
 
-The adjoint variable method applied to photonic systems gives $\partial\mathcal{L}/\partial\Delta n(\mathbf{r}) \propto \text{Re}[E_\text{adj}^*(\mathbf{r}) E_\text{fwd}(\mathbf{r})]$ [Hughes et al. 2018]. For the DX cavity, injecting an 810 nm backward adjoint beam writes this gradient directly into the DX grating in a single 13 ns pass. Pai et al. [2023] demonstrated in-situ photonic backpropagation achieving 94% MNIST accuracy. ORI applies this to all three layers.
+The adjoint variable method applied to photonic systems gives $\partial\mathcal{L}/\partial\Delta n(\mathbf{r}) \propto \text{Re}[E_\text{adj}^*(\mathbf{r}) E_\text{fwd}(\mathbf{r})]$ [Hughes et al. 2018]. For the DX cavity, injecting an 810 nm backward adjoint beam writes this gradient directly into the DX grating in a single 13 ns pass. Pai et al. [2023] demonstrated in-situ photonic backpropagation achieving 94% MNIST accuracy; Ashtiani et al. [2026] subsequently demonstrated full end-to-end on-chip backpropagation in a silicon photonic deep network, confirming that in-situ training is more robust to device variation than weight-loading from digital simulation. ORI applies this principle to all three layers via holographic DX grating updates.
 
 ### 2.4 DX Centers in AlGaAs
 
@@ -284,7 +284,7 @@ This is not online learning in the conventional sense of periodic batch updates 
 
 ### 7.3 What ORI Is Not
 
-ORI is not a drop-in replacement for H100 clusters running frontier LLMs. Gen 1 is sub-Mamba-130M class; GPT-4-class reasoning requires orders of magnitude more parameters and architectural capabilities (long-context attention, KV cache) that O(1) optical state cannot implement. The correct comparison is: for tasks where SSM-class quality is sufficient — local inference, edge deployment, streaming generation, real-time translation — ORI provides 27× better energy efficiency than GPU at matched throughput, in a device that continuously improves itself.
+ORI is not a drop-in replacement for H100 clusters running frontier LLMs. Gen 1 is sub-Mamba-130M class (sub-Mamba-3 [Gu et al. 2026]); GPT-4-class reasoning requires orders of magnitude more parameters and architectural capabilities (long-context attention, KV cache) that O(1) optical state cannot implement. Park & Park [2026a] independently establish this constraint from the photonic accelerator side: full-attention photonic computation inherits O(n) memory scaling with context length, and the photonic advantage for transformer inference lies in block-selection rather than attention compute itself. The correct comparison is: for tasks where SSM-class quality is sufficient — local inference, edge deployment, streaming generation, real-time translation — ORI provides 27× better energy efficiency than GPU at matched throughput, in a device that continuously improves itself.
 
 ---
 
@@ -336,6 +336,11 @@ The immediate next step is EXP-16: measuring the free-carrier absorption in Al�
 14. Feldmann, J., et al. (2021). Parallel convolutional processing using an integrated photonic tensor core. *Nature* 589, 52.
 15. Xu, X., et al. (2024). Large-scale photonic chiplet Taichi empowers 160-TOPS/W AGI. *Science* 384(6698), 202.
 16. Gu, A., Dao, T. (2023). Mamba: Linear-time sequence modeling with selective state spaces. *arXiv:2312.00752*.
+23. Ashtiani, F., Idjadi, M.H., Kim, K. (2026). Integrated photonic neural network with on-chip backpropagation training. *Nature* 651, 927–932. https://doi.org/10.1038/s41586-026-10262-8
+24. Park, H., Park, Y. (2026a). PRISM: Breaking the O(n) memory wall in long-context LLM inference via O(1) photonic block selection. *arXiv:2603.21576*.
+25. Park, H., Park, Y. (2026b). Photonic exponential approximation via cascaded TFLN microring resonators toward softmax. *arXiv:2603.12934*.
+26. Eşlik, D., et al. (2026). Recurrent neural networks implemented through spatiotemporal light propagation in optical fibers. *arXiv:2602.19246*.
+27. Gu, A., Dao, T., et al. (2026). Mamba-3: Improved sequence modeling using state space principles. *ICLR 2026*. *arXiv:2603.15569*.
 17. Katharopoulos, A., et al. (2020). Transformers are RNNs: Fast autoregressive transformers with linear attention. *ICML 2020*.
 18. Tay, Y., et al. (2020). Long range arena: A benchmark for efficient transformers. *arXiv:2011.04006*.
 19. Shen, Z., et al. (2021). Efficient attention: Attention with linear complexities. *WACV 2021*.
