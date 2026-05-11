@@ -1122,6 +1122,9 @@ function buildSVG(parcels, P, G, derived, MAP, proj) {
   svg.appendChild(edaG);
 
   // ── LAYER 4: DERIVED OVERLAY (constraint-solved geometry) ──
+  // Suppressed when pipeline T7 has rendered (pipeline zones replace these)
+  if (window._pipelineRendered) return;
+
   const D = derived;
 
   // Commons Spine (derived from MALL_CORE centroid + site bounds)
@@ -2540,27 +2543,67 @@ function computeEligibleUses(props) {
   const uses = [];
 
   if (props.in_setback) {
-    // Setback zones: only green or infrastructure
     uses.push('GREEN_ACTIVE', 'GREEN_PASSIVE', 'INFRASTRUCTURE');
     return uses;
   }
 
-  if (props.near_tide) {
-    uses.push('TRANSIT', 'PLAZA', 'RETAIL_GROUND', 'CIVIC');
+  // ── DISTRICT IDENTITY TAKES PRIORITY over spatial flags ──
+  // Check parcel spec first — a CLT parcel is always CLT regardless of
+  // where it sits in the site.
+  const specs = props.parcel_specs || [];
+  const isCLT    = specs.some(s => s && s.startsWith('CLT'));
+  const isCivic  = specs.some(s => s && (s.startsWith('CIVIC') || s === 'HOUSING_A_530'));
+  const isHsgB   = specs.some(s => s === 'HOUSING_B_S');
+  const isSponge = specs.some(s => s === 'SPONGE_PARCEL');
+  const isMallCore = specs.some(s => s === 'MALL_CORE');
+
+  if (isSponge) {
+    uses.push('GREEN_PASSIVE', 'GREEN_ACTIVE', 'RESEARCH');
+    return uses;
+  }
+
+  if (isCLT) {
+    uses.push('RESIDENTIAL_CLT_OWN', 'RESIDENTIAL_AFFORDABLE', 'GREEN_ACTIVE', 'CIVIC');
+    // Near main street: can have retail ground floor
+    if (props.in_main_st || props.road_adj.includes('VA_BEACH_BLVD'))
+      uses.push('RETAIL_GROUND', 'PLAZA');
+    return uses;
+  }
+
+  if (isCivic) {
+    uses.push('CIVIC', 'PLAZA', 'GREEN_ACTIVE', 'RESIDENTIAL_AFFORDABLE', 'RETAIL_GROUND');
+    return uses;
+  }
+
+  if (isHsgB) {
+    // HOUSING_B_S is always residential — tide adjacency adds transit but doesn't remove housing
+    uses.push('RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_CLT_OWN', 'GREEN_ACTIVE');
+    if (props.near_tide) uses.push('TRANSIT', 'PLAZA', 'RETAIL_GROUND');
+    return uses;
+  }
+
+  if (isMallCore) {
+    // Mall core can be anything — split east/west at spine guides initial use
+    uses.push('RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_MARKET', 'RESIDENTIAL_CLT_OWN',
+              'RETAIL_GROUND', 'CIVIC', 'PLAZA', 'GREEN_ACTIVE');
+    return uses;
+  }
+
+  // ── SPATIAL RULES for unrecognised zones ──
+
+  if (props.in_setback) {
+    uses.push('GREEN_ACTIVE', 'GREEN_PASSIVE', 'INFRASTRUCTURE');
     return uses;
   }
 
   if (props.near_sponge) {
     uses.push('GREEN_PASSIVE', 'GREEN_ACTIVE', 'RESEARCH');
-    // Housing only if zone is not in the sponge core
-    if (props.area_ac > 0.5) uses.push('RESIDENTIAL_AFFORDABLE');
+    if (props.area_ac > 0.3) uses.push('RESIDENTIAL_AFFORDABLE');
     return uses;
   }
 
   if (props.in_main_st) {
-    uses.push('RETAIL_GROUND', 'CIVIC', 'PLAZA');
-    // Main street can have residential above retail (mixed-use)
-    uses.push('RESIDENTIAL_MARKET', 'RESIDENTIAL_AFFORDABLE');
+    uses.push('RETAIL_GROUND', 'CIVIC', 'PLAZA', 'RESIDENTIAL_MARKET', 'RESIDENTIAL_AFFORDABLE');
     return uses;
   }
 
@@ -2569,20 +2612,22 @@ function computeEligibleUses(props) {
     return uses;
   }
 
-  // Highway-adjacent: restrict housing, allow only buffered uses
-  if (props.road_adj.includes('I264')) {
-    uses.push('INFRASTRUCTURE', 'GREEN_PASSIVE', 'GREEN_ACTIVE');
-    if (!props.road_adj.includes('N_MILITARY_HWY')) uses.push('TRANSIT');
+  if (props.road_adj.includes('I264') && !props.road_adj.includes('VA_BEACH_BLVD')) {
+    uses.push('INFRASTRUCTURE', 'GREEN_PASSIVE', 'GREEN_ACTIVE', 'TRANSIT');
     return uses;
   }
 
-  // General interior: all residential and civic uses eligible
+  // Near tide but not a known parcel type
+  if (props.near_tide && props.area_ac < 1.0) {
+    uses.push('TRANSIT', 'PLAZA', 'RETAIL_GROUND', 'CIVIC');
+    return uses;
+  }
+
+  // Default interior: full mix
   uses.push(
     'RESIDENTIAL_MARKET', 'RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_CLT_OWN',
     'RETAIL_GROUND', 'CIVIC', 'PLAZA', 'GREEN_ACTIVE'
   );
-
-  // Large zones near Military Hwy get civic uses
   if (props.road_adj.includes('N_MILITARY_HWY') && props.area_ac > 1.0) {
     uses.push('CIVIC');
   }
@@ -2628,12 +2673,13 @@ function selectInitialUse(eligible, parcel_specs, ctx) {
 
 // Reward function weights — the tunable knobs
 const DEFAULT_WEIGHTS = {
-  w_units:          0.25,  // total unit count (normalized to target)
-  w_affordable:     0.30,  // fraction affordable (vs 0.60 target)
-  w_green_connect:  0.20,  // green zone connectivity (corridor bonus)
-  w_walkability:    0.15,  // proximity of residential to transit/retail
-  w_conflict:      -0.05,  // conflict adjacency penalty (negative weight)
-  w_synergy:        0.05,  // synergy adjacency bonus
+  w_units:          0.20,  // total unit count (normalized to target)
+  w_affordable:     0.35,  // fraction affordable (vs 0.60 target) — increased
+  w_green_connect:  0.22,  // green corridor continuity — increased
+  w_walkability:    0.13,  // proximity of residential to transit/retail
+  w_conflict:      -0.06,  // conflict adjacency penalty
+  w_synergy:        0.04,  // synergy adjacency bonus
+  w_district_lock:  0.06,  // penalty for mutating away from district's intended use
 };
 
 function scoreCandidate(candidate, t1, weights) {
@@ -2702,6 +2748,24 @@ function scoreCandidate(candidate, t1, weights) {
   const conflict_score = n > 1 ? conflict_total / (n * n) : 0;
   const synergy_score  = n > 1 ? synergy_total  / (n * n) : 0;
 
+  // ── District lock score — reward keeping CLT/GP zones in intended use ──
+  let lock_score = 0;
+  const DISTRICT_LOCKS = {
+    'SPONGE':    ['GREEN_PASSIVE', 'GREEN_ACTIVE', 'RESEARCH'],
+    'CLT':       ['RESIDENTIAL_CLT_OWN', 'RESIDENTIAL_AFFORDABLE'],
+    'HOUSING_B': ['RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_CLT_OWN'],
+  };
+  let lock_total = 0, lock_count = 0;
+  for (const z of zones) {
+    const dist = z.district?.split('_')[0] + '_' + z.district?.split('_')[1] || '';
+    const baseDist = Object.keys(DISTRICT_LOCKS).find(k => z.district?.startsWith(k));
+    if (baseDist) {
+      lock_count++;
+      if (DISTRICT_LOCKS[baseDist].includes(z.use)) lock_total++;
+    }
+  }
+  lock_score = lock_count > 0 ? lock_total / lock_count : 1.0;
+
   // ── Weighted total ──
   const total =
     W.w_units         * units_score        +
@@ -2709,7 +2773,8 @@ function scoreCandidate(candidate, t1, weights) {
     W.w_green_connect * green_connect_score +
     W.w_walkability   * walkability_score  +
     W.w_conflict      * conflict_score     +  // negative weight
-    W.w_synergy       * synergy_score;
+    W.w_synergy       * synergy_score      +
+    (W.w_district_lock || 0.06) * lock_score;
 
   return {
     total, units_score, affordable_score, green_connect_score,
@@ -3336,12 +3401,15 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
   callbacks?.onStatus?.('T7: Rendering…');
   const svg = document.getElementById('site-plan');
   if (svg) {
-    // Use polygon renderer if decomp module loaded, else fall back to rect renderer
     if (window.EC_Decomp && t6Zones[0]?.poly?.svgPath) {
       window.EC_Decomp.renderT7Polygons(t6Zones, svg, params);
     } else {
       renderT7(t6Zones, svg, params);
     }
+    // Signal that pipeline has rendered — suppress old constraint overlay layer
+    window._pipelineRendered = true;
+    // Also remove old halo district layers from the halo group
+    svg.querySelectorAll('[data-overlay]').forEach(e => e.remove());
   }
 
   callbacks?.onComplete?.({
@@ -3772,8 +3840,13 @@ function buildT2PolygonZones(t1, params, derivedG) {
     }
   }
 
-  console.log(`T2 polygon decomposition: ${zones.length} zones from ${Object.keys(DISTRICT_DEFS).length} districts`);
-  return zones;
+  // Filter out degenerate zones (collapsed insets, tiny fragments)
+  const MIN_ZONE_AC = 0.05;
+  const filtered = zones.filter(z => z.area_ac >= MIN_ZONE_AC);
+  const dropped = zones.length - filtered.length;
+  if (dropped > 0) console.log(`T2: dropped ${dropped} degenerate zones (< ${MIN_ZONE_AC}ac)`);
+  console.log(`T2 polygon decomposition: ${filtered.length} zones from ${Object.keys(DISTRICT_DEFS).length} districts`);
+  return filtered;
 }
 
 // Inset a set of merged polygons to produce building footprint zones
@@ -3795,9 +3868,13 @@ function insetToZones(paths, districtName, def, inset_px, depth_px, PX_TO_AC, de
       continue;
     }
 
-    // Inset inward — negative delta = inward offset for properly-wound paths
+    // Inset inward — scale inset to parcel size
+    // Cap: inset cannot exceed 25% of the polygon's shorter axis
+    const outerBounds = polyBounds(outerPts);
+    const minAxis = Math.min(outerBounds.width, outerBounds.height);
+    const adaptiveInset = Math.min(inset_px, minAxis * 0.25);
     const insetPaths = clipperOffset(
-      [outerPath], -inset_px * CLIPPER_SCALE,
+      [outerPath], -adaptiveInset * CLIPPER_SCALE,
       ClipperLib.JoinType.jtMiter, 2.0
     );
 
