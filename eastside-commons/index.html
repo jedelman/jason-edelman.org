@@ -203,14 +203,15 @@ details[open] summary::before { content: '▼  '; }
   position: fixed;
   background: var(--surface);
   border: 1px solid var(--border);
-  padding: 0.28rem 0.55rem;
+  padding: 0.35rem 0.65rem;
   font-family: var(--font-mono);
   font-size: 0.62rem;
-  color: var(--accent);
+  color: var(--text);
   pointer-events: none;
   opacity: 0;
   z-index: 200;
   white-space: nowrap;
+  line-height: 1.6;
   transition: opacity 0.08s;
 }
 
@@ -413,6 +414,128 @@ details[open] summary::before { content: '▼  '; }
 .pipeline-results {
   background:var(--bg); border:1px solid var(--border); padding:0.5rem 0.6rem;
 }
+
+/* ── TWO-COLUMN PLAN TOOL ── */
+.plan-tool {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0;
+  height: calc(100vh - 220px);
+  min-height: 560px;
+  border: 1px solid var(--border);
+  margin-top: 1.5rem;
+}
+.ctrl-col {
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+}
+.map-col {
+  position: relative;
+  overflow: hidden;
+  background: #040402;
+  display: flex;
+  flex-direction: column;
+}
+.map-col .map-wrap {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+.map-col svg#site-plan {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  object-fit: contain;
+  preserveAspectRatio: xMidYMid meet;
+}
+/* Ctrl sections */
+.ctrl-section {
+  padding: 0.55rem 0.65rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.ctrl-section:last-child { border-bottom: none; }
+.ctrl-section-title {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+  margin-bottom: 0.4rem;
+}
+/* Map toolbar at top of map col */
+.map-toolbar {
+  display: flex;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  background: rgba(6,5,4,0.9);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+/* Results summary in ctrl col */
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 0.22rem;
+}
+.result-key {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+}
+.result-val {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--accent);
+  line-height: 1;
+}
+.result-val.warn { color: #c87020; }
+/* EA progress in ctrl col */
+.ea-mini-progress {
+  height: 2px;
+  background: var(--border);
+  margin: 0.4rem 0;
+}
+.ea-mini-bar {
+  height: 2px;
+  background: var(--accent);
+  width: 0%;
+  transition: width 0.15s;
+}
+.ea-status {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+/* Legend chips */
+.legend-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--muted);
+  margin: 0.12rem;
+}
+.legend-swatch {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+}
+@media (max-width: 700px) {
+  .plan-tool { grid-template-columns: 1fr; height: auto; }
+  .ctrl-col { border-right: none; border-bottom: 1px solid var(--border); max-height: 60vh; }
+}
 </style>
 </head>
 
@@ -450,229 +573,173 @@ details[open] summary::before { content: '▼  '; }
     </p>
   </div>
 
-  <!-- MAP -->
-  <div class="map-section">
-    <span class="map-label">Site plan — GIS parcel geometry + constraint-derived overlay</span>
-    <div class="map-wrap">
-      <svg id="site-plan" viewBox="0 0 960 760" xmlns="http://www.w3.org/2000/svg">
-        <!-- Rendered by constraint solver on load -->
-        <text x="480" y="380" font-family="monospace" font-size="14" fill="#2a2820" text-anchor="middle">Loading GIS data…</text>
-      </svg>
-    </div>
-    <div class="legend" id="legend">
-      <!-- Populated by solver -->
-    </div>
-  </div>
+  <!-- TWO-COLUMN PLAN TOOL -->
+  <div class="plan-tool">
 
+    <!-- LEFT: CONTROLS -->
+    <div class="ctrl-col">
 
-  <!-- INTERACTIVE TOOLS BAR -->
-  <div class="tools-bar">
-    <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--muted);padding:0.3rem 0.2rem;letter-spacing:0.1em;text-transform:uppercase;">Tools:</span>
-    <button class="tool-btn active" id="btn-select" onclick="setTool('select')">↖ Select</button>
-    <button class="tool-btn" id="btn-place" onclick="setTool('place')">▭ Place building</button>
-    <button class="tool-btn" id="btn-section" onclick="setTool('section')">⊸ Section cut</button>
-    <button class="tool-btn danger" id="btn-clear" onclick="clearBuildings()">✕ Clear buildings</button>
-    <button class="tool-btn" onclick="if(window.EC_Render)window.EC_Render.downloadPNG();" title="Export plan as PNG image">↓ PNG</button>
-    <button class="tool-btn" onclick="if(window.EC_Render)window.EC_Render.downloadGeoJSON();" title="Export as GeoJSON for QGIS/ArcGIS">↓ GeoJSON</button>
-    <span style="flex:1"></span>
-    <div class="overlay-controls">
-      <button class="overlay-btn on" data-overlay="superblock" onclick="toggleOverlay(this)">Superblock grid</button>
-      <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
-      <button class="overlay-btn" data-overlay="density" onclick="toggleOverlay(this)">Density heat</button>
-      <button class="overlay-btn on" data-overlay="plants" onclick="toggleOverlay(this)">Plant layer</button>
-    </div>
-  </div>
-
-  <!-- DENSITY METER (updated live) -->
-  <div class="density-panel" id="density-panel">
-    <div class="density-stat">
-      <span class="density-val" id="dv-units">1,600</span>
-      <span class="density-lbl">Target units</span>
-    </div>
-    <div class="density-stat">
-      <span class="density-val" id="dv-placed">0</span>
-      <span class="density-lbl">Placed units</span>
-    </div>
-    <div class="density-stat">
-      <span class="density-val" id="dv-far">—</span>
-      <span class="density-lbl">FAR (target 3.0–4.5)</span>
-    </div>
-    <div class="density-stat">
-      <span class="density-val" id="dv-walk">—</span>
-      <span class="density-lbl">Walk score est.</span>
-    </div>
-  </div>
-
-<!-- PIPELINE CONTROLS (injected into page) -->
-<div class="pipeline-panel" id="pipeline-panel">
-  <div class="pipeline-header">
-    <span class="pt-label">Spatial Decomposition Pipeline</span>
-    <span class="pt-label" style="color:var(--muted);">T1→T7</span>
-  </div>
-
-  <!-- T2 Parameters -->
-  <div class="param-section">
-    <div class="param-label">T2 — Zone decomposition</div>
-    <div class="param-row">
-      <label class="param-key">Block size</label>
-      <div class="param-control">
-        <input type="range" id="p-block-size" min="150" max="600" step="25" value="350"
-          oninput="document.getElementById('p-block-size-val').textContent=this.value+'ft'">
-        <span class="param-val" id="p-block-size-val">350ft</span>
+      <!-- Header -->
+      <div class="ctrl-section" style="padding:0.5rem 0.65rem 0.4rem;">
+        <div style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);">Plan tool</div>
+        <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--muted);margin-top:0.15rem;">T1–T7 spatial decomposition</div>
       </div>
-    </div>
-    <div class="param-row">
-      <label class="param-key">Strategy</label>
-      <div class="param-control">
-        <select id="p-strategy" class="param-select">
-          <option value="hybrid" selected>Hybrid (parcel edges + grid interior)</option>
-          <option value="grid">Grid (uniform)</option>
-          <option value="parcel">Parcel (follow GIS boundaries)</option>
-        </select>
+
+      <!-- T2: Zone decomposition params -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-title">T2 — Zone decomposition</div>
+        <div class="param-row">
+          <label class="param-key">Block size</label>
+          <div class="param-control">
+            <input type="range" id="p-block-size" min="150" max="600" step="25" value="350"
+              oninput="document.getElementById('p-block-size-val').textContent=this.value+'ft'"
+              onchange="schedulePipelineRegen()">
+            <span class="param-val" id="p-block-size-val">350ft</span>
+          </div>
+        </div>
+        <div class="param-row" style="margin-top:0.25rem;">
+          <label class="param-key">Strategy</label>
+          <div class="param-control">
+            <select id="p-strategy" class="param-select" onchange="schedulePipelineRegen()">
+              <option value="hybrid" selected>Hybrid</option>
+              <option value="grid">Grid</option>
+              <option value="parcel">Parcel</option>
+            </select>
+          </div>
+        </div>
+        <div class="param-row" style="margin-top:0.25rem;">
+          <label class="param-key">Courtyard inset</label>
+          <div class="param-control">
+            <input type="range" id="p-courtyard" min="30" max="120" step="10" value="60"
+              oninput="document.getElementById('p-courtyard-val').textContent=this.value+'ft'"
+              onchange="schedulePipelineRegen()">
+            <span class="param-val" id="p-courtyard-val">60ft</span>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- T3 EA Parameters -->
-  <div class="param-section">
-    <div class="param-label">T3 — Evolutionary algorithm</div>
-    <div class="param-row">
-      <label class="param-key">Rounds</label>
-      <div class="param-control">
-        <input type="range" id="p-rounds" min="5" max="30" step="5" value="15"
-          oninput="document.getElementById('p-rounds-val').textContent=this.value">
-        <span class="param-val" id="p-rounds-val">15</span>
+      <!-- T3: EA params -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-title">T3 — Evolutionary algorithm</div>
+        <div class="param-row">
+          <label class="param-key">Rounds</label>
+          <div class="param-control">
+            <input type="range" id="p-rounds" min="5" max="30" step="5" value="15"
+              oninput="document.getElementById('p-rounds-val').textContent=this.value"
+              onchange="schedulePipelineRegen()">
+            <span class="param-val" id="p-rounds-val">15</span>
+          </div>
+        </div>
+        <div class="param-row">
+          <label class="param-key">Mutation</label>
+          <div class="param-control">
+            <input type="range" id="p-mutation" min="5" max="30" step="1" value="10"
+              oninput="document.getElementById('p-mutation-val').textContent=this.value+'%'"
+              onchange="schedulePipelineRegen()">
+            <span class="param-val" id="p-mutation-val">10%</span>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="param-row">
-      <label class="param-key">Candidates</label>
-      <div class="param-control">
-        <input type="range" id="p-candidates" min="10" max="60" step="5" value="30"
-          oninput="document.getElementById('p-candidates-val').textContent=this.value">
-        <span class="param-val" id="p-candidates-val">30</span>
+
+      <!-- T3: Reward weights -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-title">T3 — Reward weights</div>
+        <div class="param-row">
+          <label class="param-key">Housing units</label>
+          <div class="param-control">
+            <input type="range" id="w-units" min="0" max="50" step="1" value="20"
+              oninput="document.getElementById('w-units-val').textContent=this.value+'%'"
+              onchange="schedulePipelineRegen()">
+            <span class="param-val" id="w-units-val">20%</span>
+          </div>
+        </div>
+        <div class="param-row">
+          <label class="param-key">Affordability</label>
+          <div class="param-control">
+            <input type="range" id="w-affordable" min="0" max="50" step="1" value="35"
+              oninput="document.getElementById('w-affordable-val').textContent=this.value+'%'"
+              onchange="schedulePipelineRegen()">
+            <span class="param-val" id="w-affordable-val">35%</span>
+          </div>
+        </div>
+        <div class="param-row">
+          <label class="param-key">Green corridors</label>
+          <div class="param-control">
+            <input type="range" id="w-green" min="0" max="40" step="1" value="22"
+              oninput="document.getElementById('w-green-val').textContent=this.value+'%'"
+              onchange="schedulePipelineRegen()">
+            <span class="param-val" id="w-green-val">22%</span>
+          </div>
+        </div>
+        <div class="param-row">
+          <label class="param-key">Walkability</label>
+          <div class="param-control">
+            <input type="range" id="w-walk" min="0" max="40" step="1" value="13"
+              oninput="document.getElementById('w-walk-val').textContent=this.value+'%'"
+              onchange="schedulePipelineRegen()">
+            <span class="param-val" id="w-walk-val">13%</span>
+          </div>
+        </div>
       </div>
-    </div>
-    <div class="param-row">
-      <label class="param-key">Mutation rate</label>
-      <div class="param-control">
-        <input type="range" id="p-mutation" min="5" max="30" step="1" value="10"
-          oninput="document.getElementById('p-mutation-val').textContent=this.value+'%'">
-        <span class="param-val" id="p-mutation-val">10%</span>
+
+      <!-- EA progress -->
+      <div class="ctrl-section" id="ea-progress-section" style="display:none;">
+        <div class="ctrl-section-title">Running…</div>
+        <div class="ea-mini-progress"><div class="ea-mini-bar" id="ea-progress-bar"></div></div>
+        <div class="ea-status" id="pipeline-status-text">Initializing…</div>
+        <div class="ea-status" id="score-history" style="max-height:5rem;overflow-y:auto;opacity:0.6;"></div>
       </div>
-    </div>
-  </div>
 
-  <!-- T3 Reward Weights -->
-  <div class="param-section">
-    <div class="param-label">T3 — Reward function weights</div>
-    <div class="param-row">
-      <label class="param-key">Housing units</label>
-      <div class="param-control">
-        <input type="range" id="w-units" min="0" max="50" step="1" value="25"
-          oninput="document.getElementById('w-units-val').textContent=this.value+'%'">
-        <span class="param-val" id="w-units-val">25%</span>
+      <!-- Results -->
+      <div class="ctrl-section" id="pipeline-results">
+        <div class="ctrl-section-title">Output</div>
+        <div class="result-row"><span class="result-key">Units placed</span><span class="result-val" id="res-units">—</span></div>
+        <div class="result-row"><span class="result-key">Affordable</span><span class="result-val" id="res-affordable">—</span></div>
+        <div class="result-row"><span class="result-key">Green cover</span><span class="result-val" id="res-green">—</span></div>
+        <div class="result-row"><span class="result-key">Avg FAR</span><span class="result-val" id="dv-far">—</span></div>
+        <div class="result-row"><span class="result-key">EA score</span><span class="result-val" id="res-score" style="font-size:0.75rem;">—</span></div>
       </div>
-    </div>
-    <div class="param-row">
-      <label class="param-key">Affordability</label>
-      <div class="param-control">
-        <input type="range" id="w-affordable" min="0" max="50" step="1" value="30"
-          oninput="document.getElementById('w-affordable-val').textContent=this.value+'%'">
-        <span class="param-val" id="w-affordable-val">30%</span>
+
+      <!-- Legend -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-title">Use legend</div>
+        <div id="legend-chips"></div>
       </div>
-    </div>
-    <div class="param-row">
-      <label class="param-key">Green corridors</label>
-      <div class="param-control">
-        <input type="range" id="w-green" min="0" max="40" step="1" value="20"
-          oninput="document.getElementById('w-green-val').textContent=this.value+'%'">
-        <span class="param-val" id="w-green-val">20%</span>
+
+      <!-- Downloads + tools at bottom -->
+      <div class="ctrl-section" style="margin-top:auto;">
+        <div class="ctrl-section-title">Export</div>
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+          <button class="tool-btn" onclick="if(window.EC_Render)window.EC_Render.downloadPNG()">↓ PNG</button>
+          <button class="tool-btn" onclick="if(window.EC_Render)window.EC_Render.downloadGeoJSON()">↓ GeoJSON</button>
+          <button class="tool-btn" id="run-pipeline-btn" onclick="triggerPipeline()" style="margin-left:auto;">↺ Re-run</button>
+        </div>
       </div>
-    </div>
-    <div class="param-row">
-      <label class="param-key">Walkability</label>
-      <div class="param-control">
-        <input type="range" id="w-walk" min="0" max="40" step="1" value="15"
-          oninput="document.getElementById('w-walk-val').textContent=this.value+'%'">
-        <span class="param-val" id="w-walk-val">15%</span>
+
+    </div><!-- /ctrl-col -->
+
+    <!-- RIGHT: MAP -->
+    <div class="map-col">
+
+      <!-- Toolbar -->
+      <div class="map-toolbar">
+        <button class="tool-btn active" id="btn-select" onclick="setTool('select')">↖ Select</button>
+        <button class="tool-btn" id="btn-section" onclick="setTool('section')">⊸ Section</button>
+        <span style="flex:1"></span>
+        <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
+        <button class="overlay-btn on" data-overlay="streets" onclick="toggleOverlay(this)">Streets</button>
       </div>
-    </div>
-  </div>
 
-  <!-- Run button -->
-  <button class="run-btn" id="run-pipeline-btn" onclick="triggerPipeline()">
-    ▶ Run pipeline
-  </button>
-
-  <!-- Progress display -->
-  <div id="pipeline-status" class="pipeline-status" style="display:none;">
-    <div class="status-text" id="pipeline-status-text">Initializing…</div>
-    <div class="ea-progress" id="ea-progress-bar-wrap" style="display:none;">
-      <div class="ea-progress-bar" id="ea-progress-bar"></div>
-    </div>
-    <div class="score-history" id="score-history"></div>
-  </div>
-
-  <!-- Zone detail panel (populated on hover) -->
-  <div id="zone-detail" class="zone-detail" style="display:none;">
-    <!-- Populated by T7 hover -->
-  </div>
-
-  <!-- Results summary -->
-  <div id="pipeline-results" class="pipeline-results" style="display:none;">
-    <div class="param-label">Results</div>
-    <div class="dr"><span class="dl">Total units</span><span class="dv" id="res-units">—</span></div>
-    <div class="dr"><span class="dl">Affordable</span><span class="dv" id="res-affordable">—</span></div>
-    <div class="dr"><span class="dl">Green coverage</span><span class="dv" id="res-green">—</span></div>
-    <div class="dr"><span class="dl">Zones</span><span class="dv" id="res-zones">—</span></div>
-    <div class="dr"><span class="dl">Best score</span><span class="dv" id="res-score">—</span></div>
-  </div>
-</div>
-
-  <!-- CONSTRAINT LOG -->
-  <details>
-    <summary>Constraint solver output</summary>
-    <div id="constraint-log">Running…</div>
-  </details>
-
-
-  <!-- ARCHITECTURAL RENDERS -->
-  <div class="map-section">
-    <span class="map-label">Section drawings — constraint-derived render zones</span>
-
-    <div style="display:flex;flex-direction:column;gap:0.75rem;">
-      <div style="background:#040402;border:1px solid var(--border);overflow:hidden;">
-        <img src="/eastside-commons/render-rzd.svg" alt="RZ·D Sponge Park edge section — west to east: bioswale → wetland → research pavilion → housing" style="display:block;width:100%;height:auto;">
+      <!-- SVG map -->
+      <div class="map-wrap">
+        <svg id="site-plan" viewBox="0 0 960 760" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+          <text x="480" y="380" font-family="monospace" font-size="14" fill="#2a2820" text-anchor="middle">Loading GIS data…</text>
+        </svg>
       </div>
-      <div style="background:#040402;border:1px solid var(--border);overflow:hidden;">
-        <img src="/eastside-commons/render-rza.svg" alt="RZ·A Housing A courtyard interior — perspective looking north" style="display:block;width:100%;height:auto;">
-      </div>
-    </div>
-  </div>
 
+    </div><!-- /map-col -->
 
-  <!-- LIVE SECTION VIEW -->
-  <div class="map-section" id="section-section" style="display:none;">
-    <span class="map-label" id="section-label-text">Section cut — draw a line on the plan above</span>
-    <div class="section-wrap" style="height:280px;">
-      <svg id="section-view" viewBox="0 0 960 280" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;">
-        <rect width="960" height="280" fill="#040402"/>
-        <text x="480" y="144" font-family="monospace" font-size="12" fill="#2a2820" text-anchor="middle">Draw a section cut on the plan above ↑</text>
-      </svg>
-      <div class="section-label-bar">
-        <span id="section-info">No cut active</span>
-        <span>W ←————→ E</span>
-      </div>
-    </div>
-  </div>
-
-  <!-- PLANT PALETTE -->
-  <div class="plant-palette">
-    <h3>Native plant palette — Hampton Roads (SE Virginia)</h3>
-    <div class="plant-list" id="plant-list">
-      <!-- Populated by JS -->
-    </div>
-  </div>
+  </div><!-- /plan-tool -->
 
   <!-- ZINE DOWNLOAD -->
   <a href="/eastside-commons/zine" target="_blank" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.85rem 1.1rem;background:var(--surface);border:1px solid var(--border);text-decoration:none;color:inherit;">
@@ -1317,6 +1384,7 @@ function buildLegend() {
     ['Context (private)', '#2a2820'],
   ];
   const container = document.getElementById('legend');
+  if (!container) return;
   container.innerHTML = items.map(([name,color])=>
     `<div class="legend-item"><div class="legend-swatch" style="background:${color}"></div>${name}</div>`
   ).join('');
@@ -1325,6 +1393,7 @@ function buildLegend() {
 // ── CONSTRAINT LOG RENDERER ──────────────────────────────────────
 function renderLog(log) {
   const el = document.getElementById('constraint-log');
+  if (!el) return;
   const passed = log.filter(l=>l.ok).length;
   const failed = log.filter(l=>!l.ok).length;
   el.innerHTML = `<div style="margin-bottom:0.5rem;color:var(--text)">${passed} PASS&nbsp;&nbsp;${failed} FAIL</div>` +
@@ -1587,7 +1656,7 @@ const PLANT_REGISTRY = {
 let CURRENT_TOOL = 'select';
 let PLACED_BUILDINGS = [];   // {x,y,w,h,floors,use,id}
 let SECTION_CUT = null;      // {x1,y1,x2,y2}
-let OVERLAYS = {superblock:true, walkability:true, density:false, plants:true};
+let OVERLAYS = {superblock:false, walkability:true, density:false, plants:false, streets:true};
 let DERIVED_G = null;        // set by main() after solve
 let PROJ = null;             // set by main()
 let MAP_BOUNDS = null;       // set by main()
@@ -1973,6 +2042,109 @@ function renderOverlays() {
     }
     svg.appendChild(wg);
   }
+
+  // ── STREETS + WALKING PATHS overlay ──
+  // Streets: the spine corridor and major internal routes (grey)
+  // Walking paths: courtyard-to-courtyard connections (warm brown)
+  if (OVERLAYS.streets && DERIVED_G && MAP_BOUNDS) {
+    const sg = document.createElementNS(ns, 'g');
+    sg.setAttribute('data-overlay', 'streets');
+
+    const G = DERIVED_G;
+    const MAP = MAP_BOUNDS;
+
+    // ── MAIN STREET (Va Beach Blvd frontage) — primary street, grey ──
+    if (G.BAND) {
+      const ms = document.createElementNS(ns, 'line');
+      ms.setAttribute('x1', MAP.x0); ms.setAttribute('y1', G.BAND.y + G.BAND.h);
+      ms.setAttribute('x2', MAP.x1); ms.setAttribute('y2', G.BAND.y + G.BAND.h);
+      ms.setAttribute('stroke', '#7a7878'); ms.setAttribute('stroke-width', '3');
+      ms.setAttribute('stroke-opacity', '0.7');
+      sg.appendChild(ms);
+      // Street label
+      const msl = document.createElementNS(ns, 'text');
+      msl.setAttribute('x', MAP.x0 + 12); msl.setAttribute('y', G.BAND.y + G.BAND.h - 5);
+      msl.setAttribute('font-family', 'DM Mono,monospace'); msl.setAttribute('font-size', '6');
+      msl.setAttribute('fill', '#7a7878'); msl.setAttribute('opacity', '0.7');
+      msl.textContent = 'MAIN ST CORRIDOR'; sg.appendChild(msl);
+    }
+
+    // ── COMMONS SPINE — pedestrian priority street, grey ──
+    if (G.SPINE) {
+      const sp = document.createElementNS(ns, 'rect');
+      sp.setAttribute('x', G.SPINE.x); sp.setAttribute('y', G.SPINE.y);
+      sp.setAttribute('width', G.SPINE.w); sp.setAttribute('height', G.SPINE.h);
+      sp.setAttribute('fill', '#5a5858'); sp.setAttribute('fill-opacity', '0.25');
+      sp.setAttribute('stroke', '#7a7878'); sp.setAttribute('stroke-width', '1.5');
+      sp.setAttribute('stroke-opacity', '0.5');
+      sg.appendChild(sp);
+      const spl = document.createElementNS(ns, 'text');
+      spl.setAttribute('x', G.SPINE.x + G.SPINE.w/2);
+      spl.setAttribute('y', G.SPINE.y + 14);
+      spl.setAttribute('font-family', 'DM Mono,monospace'); spl.setAttribute('font-size', '5.5');
+      spl.setAttribute('fill', '#9a9898'); spl.setAttribute('text-anchor', 'middle');
+      spl.setAttribute('letter-spacing', '0.15em');
+      spl.textContent = 'COMMONS SPINE'; sg.appendChild(spl);
+    }
+
+    // ── WALKING PATHS — courtyard centroid connections (warm brown) ──
+    // Connect green zones and courtyards that are adjacent
+    if (window._lastPipelineZones) {
+      const zones = window._lastPipelineZones;
+      const greenZones = zones.filter(z =>
+        z.use === 'GREEN_ACTIVE' || z.use === 'GREEN_PASSIVE' ||
+        z.district?.includes('COURTYARD')
+      );
+      const drawnPaths = new Set();
+      for (const a of greenZones) {
+        for (const b of greenZones) {
+          if (a === b) continue;
+          const key = [a.id, b.id].sort().join('|');
+          if (drawnPaths.has(key)) continue;
+          const dist = Math.hypot(a.centroid.x - b.centroid.x, a.centroid.y - b.centroid.y);
+          if (dist > 180) continue;  // only connect nearby green zones
+          drawnPaths.add(key);
+          const path = document.createElementNS(ns, 'line');
+          path.setAttribute('x1', a.centroid.x.toFixed(1)); path.setAttribute('y1', a.centroid.y.toFixed(1));
+          path.setAttribute('x2', b.centroid.x.toFixed(1)); path.setAttribute('y2', b.centroid.y.toFixed(1));
+          path.setAttribute('stroke', '#8a6840'); path.setAttribute('stroke-width', '2');
+          path.setAttribute('stroke-opacity', '0.55');
+          path.setAttribute('stroke-dasharray', '4,3');
+          path.setAttribute('clip-path', 'url(#mc)');
+          sg.appendChild(path);
+        }
+      }
+
+      // ── INTERNAL STREETS — edges between adjacent residential zones (grey) ──
+      // These are the shared edges of the courtyard ring blocks
+      const courtZones = zones.filter(z => z.district?.includes('FOOTPRINT') || z.district?.includes('COURTYARD'));
+      const drawnStreets = new Set();
+      for (const a of courtZones) {
+        for (const b of courtZones) {
+          if (a === b || a.district === b.district) continue;
+          const key = [a.id, b.id].sort().join('|');
+          if (drawnStreets.has(key)) continue;
+          const dist = Math.hypot(a.centroid.x - b.centroid.x, a.centroid.y - b.centroid.y);
+          if (dist > 140) continue;
+          drawnStreets.add(key);
+          // Draw a short street segment between the two zone centroids
+          const mx = (a.centroid.x + b.centroid.x) / 2;
+          const my = (a.centroid.y + b.centroid.y) / 2;
+          // Use a dashed grey line to indicate internal street/service lane
+          const street = document.createElementNS(ns, 'line');
+          street.setAttribute('x1', a.centroid.x.toFixed(1)); street.setAttribute('y1', a.centroid.y.toFixed(1));
+          street.setAttribute('x2', b.centroid.x.toFixed(1)); street.setAttribute('y2', b.centroid.y.toFixed(1));
+          street.setAttribute('stroke', '#686868'); street.setAttribute('stroke-width', '1.2');
+          street.setAttribute('stroke-opacity', '0.35');
+          street.setAttribute('stroke-dasharray', '2,4');
+          street.setAttribute('clip-path', 'url(#mc)');
+          sg.appendChild(street);
+        }
+      }
+    }
+
+    svg.appendChild(sg);
+  }
 }
 
 // ── SECTION CUT RENDERER ──
@@ -2256,17 +2428,17 @@ const PLANNING = {
 
 // ── USE TAXONOMY ──────────────────────────────────────────────────────────────
 const USES = {
-  RESIDENTIAL_MARKET:     { id:'RM', label:'Market-rate housing',     color:'#c88020', priority:2 },
-  RESIDENTIAL_AFFORDABLE: { id:'RA', label:'Affordable housing (CLT)',color:'#d4a840', priority:1 },
-  RESIDENTIAL_CLT_OWN:    { id:'RC', label:'CLT homeownership',       color:'#e0c060', priority:1 },
-  RETAIL_GROUND:          { id:'RG', label:'Ground-floor retail',     color:'#c85018', priority:3 },
-  CIVIC:                  { id:'CV', label:'Civic / community',       color:'#2070a0', priority:2 },
-  PLAZA:                  { id:'PZ', label:'Plaza / hardscape',       color:'#7090a0', priority:3 },
-  GREEN_ACTIVE:           { id:'GA', label:'Active park / recreation',color:'#48a858', priority:2 },
-  GREEN_PASSIVE:          { id:'GP', label:'Wetland / ecological',    color:'#308038', priority:1 },
-  RESEARCH:               { id:'RS', label:'Research station',        color:'#3898c0', priority:3 },
-  TRANSIT:                { id:'TR', label:'Transit / Tide station',  color:'#2878a0', priority:1 },
-  INFRASTRUCTURE:         { id:'IN', label:'Infrastructure / utility',color:'#5a5040', priority:3 },
+  RESIDENTIAL_MARKET:     { id:'RM', label:'Market-rate housing',     color:'#c87818', priority:2 },
+  RESIDENTIAL_AFFORDABLE: { id:'RA', label:'Affordable housing (CLT)',color:'#d4940c', priority:1 },
+  RESIDENTIAL_CLT_OWN:    { id:'RC', label:'CLT homeownership',       color:'#e8b820', priority:1 },
+  RETAIL_GROUND:          { id:'RG', label:'Ground-floor retail',     color:'#e83808', priority:3 },
+  CIVIC:                  { id:'CV', label:'Civic / community',       color:'#1868b8', priority:2 },
+  PLAZA:                  { id:'PZ', label:'Plaza / hardscape',       color:'#6888a8', priority:3 },
+  GREEN_ACTIVE:           { id:'GA', label:'Active park / recreation',color:'#22a838', priority:2 },
+  GREEN_PASSIVE:          { id:'GP', label:'Wetland / ecological',    color:'#0e7828', priority:1 },
+  RESEARCH:               { id:'RS', label:'Research station',        color:'#18a0c8', priority:3 },
+  TRANSIT:                { id:'TR', label:'Transit / Tide station',  color:'#0858b8', priority:1 },
+  INFRASTRUCTURE:         { id:'IN', label:'Infrastructure / utility',color:'#4a4038', priority:3 },
 };
 
 // Adjacency graph: which uses can mutate into which (T3 mutation operator)
@@ -4109,10 +4281,7 @@ function renderT7Polygons(zones, svg, params) {
     fill.setAttribute('fill-rule', 'evenodd');
     fill.setAttribute('data-zone', z.id);
     fill.setAttribute('data-use', z.use);
-    fill.style.cursor = 'pointer';
-    fill.addEventListener('mouseenter', () => {
-      if (window.EC_Pipeline) window.EC_Pipeline.showZoneTooltip?.(z);
-    });
+    fill.style.pointerEvents = 'none';  // unit layer handles interaction
     g.appendChild(fill);
 
     // Edge mutation: ground-floor retail stripe
@@ -4520,21 +4689,23 @@ function renderUnits(zones, svg, params) {
       u.setAttribute('data-unit', unit.id);
       u.setAttribute('data-floors', unit.floors);
       u.setAttribute('data-affordable', unit.is_affordable);
-      u.style.cursor = 'pointer';
+      u.style.cursor = 'crosshair';
 
-      // Tooltip
+      // Tooltip — rich unit + zone info
       u.addEventListener('mouseenter', e => {
         const tt = document.getElementById('tooltip');
-        if (tt) {
-          tt.style.opacity = 1;
-          tt.style.left = (e.clientX + 14) + 'px';
-          tt.style.top  = (e.clientY + 14) + 'px';
-          tt.textContent =
-            `${unit.id.split('_').slice(-2).join('-')}  ·  ` +
-            `${unit.floors}F  ·  ` +
-            `${unit.is_affordable ? 'affordable' : 'market-rate'}` +
-            (unit.ground_floor ? `  ·  ground: ${unit.ground_floor}` : '');
-        }
+        if (!tt) return;
+        const usedef = window.EC_Pipeline?.USES[zone.use];
+        tt.style.opacity = 1;
+        tt.style.left = (e.clientX + 14) + 'px';
+        tt.style.top  = (e.clientY - 8) + 'px';
+        tt.innerHTML =
+          `<span style='color:${usedef?.color||'#aaa'};font-weight:500'>${usedef?.id||'?'}</span>` +
+          ` <span style='opacity:0.65'>${usedef?.label||zone.use}</span><br>` +
+          `${unit.floors}F &middot; ` +
+          `<span style='color:${unit.is_affordable?'#22a838':'#c87818'}'>${unit.is_affordable?'affordable':'market-rate'}</span>` +
+          (unit.ground_floor ? ` &middot; <span style='color:#e83808'>retail GF</span>` : '') +
+          `<br><span style='opacity:0.4;font-size:0.52rem'>${zone.id.split('_').slice(0,3).join('_')}</span>`;
       });
       u.addEventListener('mouseleave', () => {
         const tt = document.getElementById('tooltip');
@@ -4787,21 +4958,21 @@ function initPipeline(parcels, proj, MAP, derivedG) {
 async function triggerPipeline() {
   if (!_pipelineParcels) { alert('Constraint solver must run first.'); return; }
   const btn = document.getElementById('run-pipeline-btn');
-  btn.disabled = true; btn.textContent = '⟳ Running…';
+  if (btn) { btn.disabled = true; btn.textContent = '⟳ Running…'; }
   const statusText = document.getElementById('pipeline-status-text');
   const progressBar = document.getElementById('ea-progress-bar');
   const scoreHistory = document.getElementById('score-history');
-  const results = document.getElementById('pipeline-results');
-  document.getElementById('pipeline-status').style.display = '';
-  document.getElementById('ea-progress-bar-wrap').style.display = '';
-  scoreHistory.innerHTML = ''; results.style.display = 'none';
+  const progSection = document.getElementById('ea-progress-section');
+  if (progSection) progSection.style.display = '';
+  if (scoreHistory) scoreHistory.innerHTML = '';
 
   const params = {
-    block_size_ft:  parseInt(document.getElementById('p-block-size').value),
-    strategy:       document.getElementById('p-strategy').value,
-    ea_rounds:      parseInt(document.getElementById('p-rounds').value),
-    ea_candidates:  parseInt(document.getElementById('p-candidates').value),
-    ea_mutation:    parseInt(document.getElementById('p-mutation').value) / 100,
+    block_size_ft:       parseInt(document.getElementById('p-block-size').value),
+    strategy:            document.getElementById('p-strategy').value,
+    courtyard_inset_ft:  parseInt(document.getElementById('p-courtyard')?.value || 60),
+    ea_rounds:           parseInt(document.getElementById('p-rounds').value),
+    ea_candidates:       30,
+    ea_mutation:         parseInt(document.getElementById('p-mutation').value) / 100,
     show_units:true, show_edges:true, show_labels:true, opacity:0.55,
     weights: {
       w_units:         parseInt(document.getElementById('w-units').value) / 100,
@@ -4816,13 +4987,16 @@ async function triggerPipeline() {
     await window.EC_Pipeline.runPipeline(
       _pipelineParcels, _pipelineProj, _pipelineMAP, window._derivedG, params,
       {
-        onStatus: (msg) => { statusText.textContent = msg; },
-        onT2Complete: (zones) => { statusText.textContent = `T2: ${zones.length} zones`; },
+        onStatus: (msg) => { if (statusText) statusText.textContent = msg; },
+        onT2Complete: (zones) => { if (statusText) statusText.textContent = `T2: ${zones.length} zones`; },
         onEAProgress: ({ round, total, best, history }) => {
-          progressBar.style.width = `${(round/total)*100}%`;
+          if (progressBar) progressBar.style.width = `${(round/total)*100}%`;
           const last = history[history.length-1];
-          scoreHistory.innerHTML += `<div>Round ${last.round}: score=${last.best.toFixed(3)}, units=${last.units}</div>`;
-          scoreHistory.scrollTop = scoreHistory.scrollHeight;
+          if (scoreHistory) {
+            scoreHistory.innerHTML += `<div>R${last.round} score=${last.best.toFixed(3)} · ${last.units}u</div>`;
+            scoreHistory.scrollTop = scoreHistory.scrollHeight;
+          }
+          if (statusText) statusText.textContent = `Round ${round}/${total} · best ${last.best.toFixed(3)}`;
         },
         onComplete: ({ zones, score }) => {
           window._lastPipelineZones = zones;  // for GeoJSON export
@@ -4835,11 +5009,14 @@ async function triggerPipeline() {
           document.getElementById('res-affordable').textContent =
             total_units>0 ? `${((affordable/total_units)*100).toFixed(0)}%` : '—';
           document.getElementById('res-green').textContent = (green_ac/73.4*100).toFixed(1)+'%';
-          document.getElementById('res-zones').textContent = zones.length;
+          const farEl = document.getElementById('dv-far');
+          if (farEl) farEl.textContent = score.realized_far_avg || '—';
           document.getElementById('res-score').textContent = score.total.toFixed(3);
-          results.style.display = '';
-          statusText.textContent = '\u2713 Pipeline complete';
-          btn.disabled=false; btn.textContent='\u25b6 Re-run pipeline';
+          if (progSection) progSection.style.display = 'none';
+          if (statusText) statusText.textContent = '\u2713 Complete';
+          if (btn) { btn.disabled=false; btn.textContent='\u21ba Re-run'; }
+          // Update legend chips
+          renderLegendChips();
         },
       }
     );
@@ -4849,6 +5026,27 @@ async function triggerPipeline() {
   }
 }
 
+
+// ── AUTO-REGEN on slider change ──────────────────────────────────────────────
+let _regenTimer = null;
+function schedulePipelineRegen() {
+  clearTimeout(_regenTimer);
+  _regenTimer = setTimeout(() => {
+    if (typeof triggerPipeline !== 'undefined') triggerPipeline();
+  }, 300);  // 300ms after last slider move
+}
+
+// ── LEGEND CHIPS ─────────────────────────────────────────────────────────────
+function renderLegendChips() {
+  const container = document.getElementById('legend-chips');
+  if (!container || !window.EC_Pipeline) return;
+  container.innerHTML = Object.entries(window.EC_Pipeline.USES).map(([key, def]) =>
+    `<span class="legend-chip">
+      <span class="legend-swatch" style="background:${def.color}"></span>
+      ${def.id} ${def.label}
+    </span>`
+  ).join('');
+}
 </script>
 
 </body>
