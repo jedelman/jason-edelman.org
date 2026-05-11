@@ -741,17 +741,21 @@ details[open] summary::before { content: '▼  '; }
         <button class="tool-btn active" id="btn-select" onclick="setTool('select')">↖ Select</button>
         <button class="tool-btn" id="btn-section" onclick="setTool('section')">⊸ Section</button>
         <button class="tool-btn" onclick="if(window.EC_PanZoom)window.EC_PanZoom.reset()" title="Reset zoom (or double-click map)">⊡ Reset view</button>
+        <button class="tool-btn" id="btn-3d" onclick="toggle3D()" title="Toggle 3D view">⬡ 3D</button>
         <span style="flex:1"></span>
         <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
         <button class="overlay-btn on" data-overlay="streets" onclick="toggleOverlay(this)">Streets</button>
         <button class="overlay-btn on" data-overlay="edges" onclick="toggleEdges(this)">Edges</button>
       </div>
 
-      <!-- SVG map -->
-      <div class="map-wrap">
+      <!-- SVG map + 3D canvas (toggled) -->
+      <div class="map-wrap" id="map-wrap-2d" style="position:relative;">
         <svg id="site-plan" viewBox="0 0 960 760" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
           <text x="480" y="380" font-family="monospace" font-size="14" fill="#2a2820" text-anchor="middle">Loading GIS data…</text>
         </svg>
+      </div>
+      <div class="map-wrap" id="map-wrap-3d" style="display:none;">
+        <canvas id="canvas-3d" style="display:block;width:100%;height:100%;"></canvas>
       </div>
 
     </div><!-- /map-col -->
@@ -804,6 +808,7 @@ details[open] summary::before { content: '▼  '; }
 
 <div id="tooltip"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
@@ -3664,8 +3669,6 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
       renderT7(t6Zones, svg, params);
     }
     window._pipelineRendered = true;
-    // Reinit pan/zoom after pipeline re-wraps SVG content
-    if (window.EC_PanZoom) window.EC_PanZoom.reinit();
     if (window.EC_Render) window.EC_Render.renderUnits(t6Zones, svg, params);
     // Build and render edge geometry
     if (window.EC_Edges) {
@@ -3673,6 +3676,8 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
       window.EC_Edges.renderEdges(edges, svg, {opacity: '0.8'});
       window._lastEdges = edges;
     }
+    // Reinit pan/zoom LAST — wraps all rendered content into viewport group
+    if (window.EC_PanZoom) window.EC_PanZoom.reinit();
   }
 
   callbacks?.onComplete?.({
@@ -5366,6 +5371,10 @@ async function triggerPipeline() {
           if (btn) { btn.disabled=false; btn.textContent='\u21ba Re-run'; }
           // Update legend chips
           renderLegendChips();
+          // Rebuild 3D if active
+          if (_3dActive && window.EC3D && window._lastPipelineZones) {
+            window.EC3D.buildScene(window._lastPipelineZones);
+          }
         },
       }
     );
@@ -5388,6 +5397,44 @@ function toggleEdges(btn) {
   if (show && !edgeGroup && window._lastPipelineZones && window.EC_Edges) {
     const edges = window.EC_Edges.buildEdges(window._lastPipelineZones, {bufferPx:5});
     window.EC_Edges.renderEdges(edges, svg, {opacity:'0.8'});
+  }
+}
+
+// ── 3D VIEW TOGGLE ──────────────────────────────────────────────────────────────
+let _3dActive = false;
+function toggle3D() {
+  _3dActive = !_3dActive;
+  const btn = document.getElementById('btn-3d');
+  const wrap2d = document.getElementById('map-wrap-2d');
+  const wrap3d = document.getElementById('map-wrap-3d');
+  if (!wrap2d || !wrap3d) return;
+
+  if (_3dActive) {
+    wrap2d.style.display = 'none';
+    wrap3d.style.display = '';
+    if (btn) btn.classList.add('on');
+
+    // Init Three.js if not already done
+    const canvas = document.getElementById('canvas-3d');
+    if (canvas && typeof THREE !== 'undefined') {
+      if (!window.EC3D.renderer) {
+        window.EC3D.init(canvas);
+      } else {
+        window.EC3D.resize();
+      }
+      // Build scene from current pipeline zones
+      if (window._lastPipelineZones) {
+        window.EC3D.buildScene(window._lastPipelineZones);
+      }
+    } else if (typeof THREE === 'undefined') {
+      alert('Three.js not loaded. Check network connection.');
+      _3dActive = false;
+      wrap2d.style.display = ''; wrap3d.style.display = 'none';
+    }
+  } else {
+    wrap2d.style.display = '';
+    wrap3d.style.display = 'none';
+    if (btn) btn.classList.remove('on');
   }
 }
 
@@ -5468,79 +5515,81 @@ function initPanZoom() {
     pzApply();
   }, {passive: false});
 
-  // ── DRAG: pan ──
-  svg.addEventListener('mousedown', e => {
-    // Only pan with middle button or when no tool is active (select mode)
-    if (e.button === 1 || (e.button === 0 && CURRENT_TOOL === 'select')) {
+  // ── UNIFIED POINTER EVENTS (mouse + touch + stylus) ──
+  // Touch-action: pan-y allows page scroll; none enables all gestures on the element
+  svg.style.touchAction = 'none';
+
+  // Active pointers map: pointerId → {x, y}
+  const activePointers = new Map();
+  let lastPinchDist = null;
+
+  svg.addEventListener('pointerdown', e => {
+    activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+    svg.setPointerCapture(e.pointerId);
+    if (activePointers.size === 1) {
       PZ.dragging = true;
       PZ.lastX = e.clientX;
       PZ.lastY = e.clientY;
       svg.style.cursor = 'grabbing';
-      e.preventDefault();
+    } else if (activePointers.size === 2) {
+      // Pinch starting
+      const pts = [...activePointers.values()];
+      lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      PZ.dragging = false;  // switch to pinch mode
     }
-  });
-
-  window.addEventListener('mousemove', e => {
-    if (!PZ.dragging) return;
-    const rect = svg.getBoundingClientRect();
-    const scaleX = 960 / rect.width;
-    const scaleY = 760 / rect.height;
-    PZ.tx += (e.clientX - PZ.lastX) * scaleX;
-    PZ.ty += (e.clientY - PZ.lastY) * scaleY;
-    PZ.lastX = e.clientX;
-    PZ.lastY = e.clientY;
-    pzApply();
-  });
-
-  window.addEventListener('mouseup', e => {
-    if (PZ.dragging) {
-      PZ.dragging = false;
-      const svg2 = document.getElementById('site-plan');
-      if (svg2) svg2.style.cursor = CURRENT_TOOL === 'select' ? 'grab' : 'default';
-    }
-  });
-
-  // ── TOUCH: pinch-to-zoom + pan ──
-  let lastTouchDist = null;
-  svg.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-      lastTouchDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-    } else if (e.touches.length === 1) {
-      PZ.dragging = true;
-      PZ.lastX = e.touches[0].clientX;
-      PZ.lastY = e.touches[0].clientY;
-    }
-  }, {passive: true});
-
-  svg.addEventListener('touchmove', e => {
     e.preventDefault();
-    if (e.touches.length === 2 && lastTouchDist) {
-      const newDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY
-      );
-      const factor = newDist / lastTouchDist;
-      PZ.scale = Math.min(PZ.MAX, Math.max(PZ.MIN, PZ.scale * factor));
-      lastTouchDist = newDist;
-      pzApply();
-    } else if (e.touches.length === 1 && PZ.dragging) {
+  });
+
+  svg.addEventListener('pointermove', e => {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+
+    if (activePointers.size === 2) {
+      // ── Pinch zoom ──
+      const pts = [...activePointers.values()];
+      const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      if (lastPinchDist) {
+        const midX = (pts[0].x + pts[1].x) / 2;
+        const midY = (pts[0].y + pts[1].y) / 2;
+        const rect = svg.getBoundingClientRect();
+        const vbW = 960, vbH = 760;
+        const mx = (midX - rect.left) / rect.width  * vbW;
+        const my = (midY - rect.top)  / rect.height * vbH;
+        const wx = (mx - PZ.tx) / PZ.scale;
+        const wy = (my - PZ.ty) / PZ.scale;
+        const factor = newDist / lastPinchDist;
+        PZ.scale = Math.min(PZ.MAX, Math.max(PZ.MIN, PZ.scale * factor));
+        PZ.tx = mx - wx * PZ.scale;
+        PZ.ty = my - wy * PZ.scale;
+        pzApply();
+      }
+      lastPinchDist = newDist;
+      // Also pan with pinch midpoint delta
+    } else if (activePointers.size === 1 && PZ.dragging) {
+      // ── Single-finger pan ──
       const rect = svg.getBoundingClientRect();
       const scaleX = 960 / rect.width;
       const scaleY = 760 / rect.height;
-      PZ.tx += (e.touches[0].clientX - PZ.lastX) * scaleX;
-      PZ.ty += (e.touches[0].clientY - PZ.lastY) * scaleY;
-      PZ.lastX = e.touches[0].clientX;
-      PZ.lastY = e.touches[0].clientY;
+      PZ.tx += (e.clientX - PZ.lastX) * scaleX;
+      PZ.ty += (e.clientY - PZ.lastY) * scaleY;
+      PZ.lastX = e.clientX;
+      PZ.lastY = e.clientY;
       pzApply();
     }
-  }, {passive: false});
+  });
 
-  svg.addEventListener('touchend', () => {
-    PZ.dragging = false;
-    lastTouchDist = null;
+  svg.addEventListener('pointerup', e => {
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) lastPinchDist = null;
+    if (activePointers.size === 0) {
+      PZ.dragging = false;
+      svg.style.cursor = CURRENT_TOOL === 'select' ? 'grab' : 'crosshair';
+    }
+  });
+
+  svg.addEventListener('pointercancel', e => {
+    activePointers.delete(e.pointerId);
+    if (activePointers.size === 0) { PZ.dragging = false; lastPinchDist = null; }
   });
 
   // ── DOUBLE-CLICK: reset view ──
@@ -5564,6 +5613,306 @@ function reinitPanZoom() {
 }
 
 window.EC_PanZoom = { init: initPanZoom, reinit: reinitPanZoom, reset: pzReset, state: PZ };
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EASTSIDE COMMONS — 3D VIEW
+//  Extrudes zone polygons by floor count using Three.js.
+//  Renders into a <canvas> that overlays the SVG map.
+//
+//  Coordinate system:
+//    SVG: x[139,841], y[163,653] → site is 702×490px
+//    3D:  SVG coords mapped to world XZ plane (Y is up)
+//         X = (svg_x - 490) * 0.5   (centered, scaled)
+//         Z = (svg_y - 408) * 0.5
+//         Y = height_units (extruded upward)
+//
+//  Camera: perspective, slight isometric tilt, orbitable
+//  Lighting: ambient + directional from NW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const EC3D = {
+  renderer: null, scene: null, camera: null,
+  animFrame: null, canvas: null,
+  orbitState: { dragging:false, lastX:0, lastY:0, theta: -Math.PI/6, phi: Math.PI/3.5, dist:520 },
+
+  // SVG to 3D world coords. Center of map = origin.
+  svgTo3D(x, y) {
+    const S = 0.45;
+    return [(x - 490) * S, (y - 408) * S];  // [worldX, worldZ]
+  },
+
+  // Hex color string to THREE.Color int
+  hexToInt(hex) {
+    return parseInt(hex.replace('#',''), 16);
+  },
+
+  // Build a THREE.Shape from a polygon's [x,y][] array
+  polyToShape(pts) {
+    if (!pts || pts.length < 3) return null;
+    const shape = new THREE.Shape();
+    const [x0, z0] = this.svgTo3D(pts[0][0], pts[0][1]);
+    shape.moveTo(x0, -z0);  // THREE: x,y in XY plane, flip Z
+    for (let i = 1; i < pts.length; i++) {
+      const [xi, zi] = this.svgTo3D(pts[i][0], pts[i][1]);
+      shape.lineTo(xi, -zi);
+    }
+    shape.closePath();
+
+    // Holes (courtyards)
+    if (pts._holes) {
+      for (const hole of pts._holes) {
+        if (hole.length < 3) continue;
+        const holePath = new THREE.Path();
+        const [hx0, hz0] = this.svgTo3D(hole[0][0], hole[0][1]);
+        holePath.moveTo(hx0, -hz0);
+        for (let i = 1; i < hole.length; i++) {
+          const [hxi, hzi] = this.svgTo3D(hole[i][0], hole[i][1]);
+          holePath.lineTo(hxi, -hzi);
+        }
+        holePath.closePath();
+        shape.holes.push(holePath);
+      }
+    }
+    return shape;
+  },
+
+  init(canvasEl) {
+    this.canvas = canvasEl;
+    const W = canvasEl.offsetWidth || 800;
+    const H = canvasEl.offsetHeight || 600;
+
+    // Renderer
+    this.renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true, alpha: true });
+    this.renderer.setSize(W, H);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.setClearColor(0x040402, 1);
+
+    // Scene
+    this.scene = new THREE.Scene();
+    this.scene.fog = new THREE.Fog(0x040402, 600, 1200);
+
+    // Camera
+    this.camera = new THREE.PerspectiveCamera(45, W/H, 1, 2000);
+    this.updateCamera();
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xc8c0b0, 0.6);
+    this.scene.add(ambient);
+
+    const sun = new THREE.DirectionalLight(0xfff8e0, 1.2);
+    sun.position.set(-200, 400, -100);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 1200;
+    sun.shadow.camera.left = sun.shadow.camera.bottom = -400;
+    sun.shadow.camera.right = sun.shadow.camera.top = 400;
+    this.scene.add(sun);
+
+    // Ground plane
+    const groundGeo = new THREE.PlaneGeometry(1400, 1400);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x0a0a08, side: THREE.DoubleSide });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    this.scene.add(ground);
+
+    // Pointer events for orbit
+    this.initOrbit(canvasEl);
+
+    // Resize observer
+    const ro = new ResizeObserver(() => this.resize());
+    ro.observe(canvasEl);
+
+    this.animate();
+    console.log('EC3D: initialized');
+  },
+
+  buildScene(zones) {
+    // Clear existing meshes (keep lights, ground, camera)
+    const toRemove = [];
+    this.scene.traverse(obj => {
+      if (obj.isMesh && obj !== this.scene.getObjectByName('ground')) {
+        toRemove.push(obj);
+      }
+    });
+    toRemove.forEach(obj => {
+      obj.geometry.dispose();
+      obj.material.dispose();
+      this.scene.remove(obj);
+    });
+
+    // Floor height in world units
+    const FLOOR_H = 4.5;
+    const MIN_H   = 0.8;  // green/plaza get a slight raise for visibility
+
+    for (const zone of zones) {
+      if (!zone.poly?.outer) continue;
+
+      const usedef = window.EC_Pipeline?.USES[zone.use];
+      const color  = this.hexToInt(usedef?.color || '#888888');
+      const floors = zone.units?.floors || 0;
+
+      // Height: residential/civic = floors × FLOOR_H; green = MIN_H; plaza = MIN_H*2
+      let height;
+      if (zone.use.startsWith('RESIDENTIAL') || zone.use === 'CIVIC') {
+        height = Math.max(FLOOR_H, floors * FLOOR_H);
+      } else if (zone.use === 'GREEN_ACTIVE' || zone.use === 'GREEN_PASSIVE') {
+        height = MIN_H;
+      } else if (zone.use === 'PLAZA' || zone.use === 'TRANSIT') {
+        height = MIN_H * 2;
+      } else if (zone.use === 'RETAIL_GROUND') {
+        height = FLOOR_H * 1.5;  // taller ground-floor retail
+      } else {
+        height = FLOOR_H * 2;
+      }
+
+      // Build shape with holes
+      const outerPts = zone.poly.outer;
+      outerPts._holes = (zone.poly.holes || []).filter(h => h.length >= 3);
+      const shape = this.polyToShape(outerPts);
+      if (!shape) continue;
+
+      const extrudeSettings = {
+        depth: height,
+        bevelEnabled: false,
+      };
+
+      const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+
+      // Faces: top is lighter, sides are base color, bottom skipped
+      const topColor    = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.25);
+      const sideColor   = new THREE.Color(color);
+      const edgeColor   = new THREE.Color(color).lerp(new THREE.Color(0x000000), 0.35);
+
+      // Use vertex color groups for top/side differentiation
+      const mat = new THREE.MeshLambertMaterial({
+        color: sideColor,
+        transparent: true,
+        opacity: 0.88,
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+      // ExtrudeGeometry creates shapes in XY, depth along Z.
+      // Rotate to lie in XZ plane (Y up).
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.y = 0;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData = { zone, usedef, height };
+      this.scene.add(mesh);
+
+      // Top cap: separate mesh, lighter color, no depth
+      const topGeo = new THREE.ShapeGeometry(shape);
+      const topMat = new THREE.MeshLambertMaterial({ color: topColor, side: THREE.DoubleSide });
+      const topMesh = new THREE.Mesh(topGeo, topMat);
+      topMesh.rotation.x = Math.PI / 2;
+      topMesh.position.y = height;
+      topMesh.receiveShadow = false;
+      this.scene.add(topMesh);
+
+      // Wireframe edge outline
+      const edgesGeo = new THREE.EdgesGeometry(geo, 15);
+      const edgesMat = new THREE.LineBasicMaterial({ color: edgeColor, linewidth: 1, transparent: true, opacity: 0.5 });
+      const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+      edges.rotation.x = Math.PI / 2;
+      this.scene.add(edges);
+    }
+
+    console.log(`EC3D: scene built with ${zones.length} zones`);
+  },
+
+  updateCamera() {
+    const { theta, phi, dist } = this.orbitState;
+    this.camera.position.set(
+      dist * Math.sin(phi) * Math.sin(theta),
+      dist * Math.cos(phi),
+      dist * Math.sin(phi) * Math.cos(theta)
+    );
+    this.camera.lookAt(0, 0, 0);
+    this.camera.up.set(0, 1, 0);
+  },
+
+  initOrbit(canvas) {
+    const s = this.orbitState;
+    canvas.style.touchAction = 'none';
+
+    const activePointers = new Map();
+    let lastPinchDist3d = null;
+
+    canvas.addEventListener('pointerdown', e => {
+      activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+      canvas.setPointerCapture(e.pointerId);
+      s.dragging = true;
+      s.lastX = e.clientX; s.lastY = e.clientY;
+    });
+
+    canvas.addEventListener('pointermove', e => {
+      if (!activePointers.has(e.pointerId)) return;
+      activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+
+      if (activePointers.size === 2) {
+        // Pinch to zoom
+        const pts = [...activePointers.values()];
+        const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+        if (lastPinchDist3d) {
+          s.dist = Math.max(80, Math.min(1000, s.dist * (lastPinchDist3d/dist)));
+        }
+        lastPinchDist3d = dist;
+      } else if (activePointers.size === 1 && s.dragging) {
+        const dx = e.clientX - s.lastX;
+        const dy = e.clientY - s.lastY;
+        s.theta += dx * 0.008;
+        s.phi    = Math.max(0.15, Math.min(Math.PI/2 - 0.05, s.phi - dy * 0.008));
+        s.lastX = e.clientX; s.lastY = e.clientY;
+      }
+      this.updateCamera();
+    });
+
+    canvas.addEventListener('pointerup', e => {
+      activePointers.delete(e.pointerId);
+      if (activePointers.size < 2) lastPinchDist3d = null;
+      if (activePointers.size === 0) s.dragging = false;
+    });
+    canvas.addEventListener('pointercancel', e => {
+      activePointers.delete(e.pointerId);
+      if (activePointers.size === 0) { s.dragging = false; lastPinchDist3d = null; }
+    });
+
+    canvas.addEventListener('wheel', e => {
+      e.preventDefault();
+      s.dist = Math.max(80, Math.min(1000, s.dist * (e.deltaY > 0 ? 1.1 : 0.9)));
+      this.updateCamera();
+    }, {passive: false});
+  },
+
+  animate() {
+    this.animFrame = requestAnimationFrame(() => this.animate());
+    this.renderer.render(this.scene, this.camera);
+  },
+
+  resize() {
+    if (!this.canvas || !this.renderer || !this.camera) return;
+    const W = this.canvas.offsetWidth;
+    const H = this.canvas.offsetHeight;
+    if (W < 10 || H < 10) return;
+    this.renderer.setSize(W, H);
+    this.camera.aspect = W / H;
+    this.camera.updateProjectionMatrix();
+  },
+
+  destroy() {
+    if (this.animFrame) cancelAnimationFrame(this.animFrame);
+    this.renderer?.dispose();
+    this.renderer = null; this.scene = null; this.camera = null;
+  },
+};
+
+window.EC3D = EC3D;
+
 </script>
 
 </body>
