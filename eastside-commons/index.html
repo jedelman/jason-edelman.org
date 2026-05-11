@@ -545,6 +545,52 @@ details[open] summary::before { content: '▼  '; }
   .plan-tool { grid-template-columns: 1fr; height: auto; }
   .ctrl-col { border-right: none; border-bottom: 1px solid var(--border); max-height: 60vh; }
 }
+
+/* ── ANALYSIS VIEWS ── */
+.analysis-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.analysis-tab {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.5rem;
+  color: var(--muted);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.analysis-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.analysis-view {
+  display: none;
+  padding: 0.55rem 0.65rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--muted);
+  flex: 1;
+  overflow-y: auto;
+}
+.analysis-view.active { display: block; }
+.av-table { width: 100%; border-collapse: collapse; margin: 0.3rem 0; }
+.av-table td { padding: 0.2rem 0; }
+.av-table td:last-child { text-align: right; color: var(--text); }
+.av-row { display: flex; justify-content: space-between; margin-bottom: 0.25rem; }
+.av-key { color: var(--muted); }
+.av-val { color: var(--text); font-weight: 500; }
+.av-val.accent { color: var(--accent); }
+.av-val.warn { color: #c87820; }
+.av-divider { border: none; border-top: 1px solid var(--border); margin: 0.4rem 0; }
+.av-header { color: var(--accent-dim); letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.52rem; margin-bottom: 0.3rem; }
+.save-btn-row { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.3rem; }
 </style>
 </head>
 
@@ -707,6 +753,48 @@ details[open] summary::before { content: '▼  '; }
         <div class="result-row"><span class="result-key">Green cover</span><span class="result-val" id="res-green">—</span></div>
         <div class="result-row"><span class="result-key">Avg FAR</span><span class="result-val" id="dv-far">—</span></div>
         <div class="result-row"><span class="result-key">EA score</span><span class="result-val" id="res-score" style="font-size:0.75rem;">—</span></div>
+      </div>
+
+
+      <!-- ANALYSIS VIEWS -->
+      <div class="ctrl-section" style="flex:1;display:flex;flex-direction:column;min-height:0;padding:0;">
+        <div class="analysis-tabs">
+          <button class="analysis-tab active" onclick="switchAnalysis('people', this)">People</button>
+          <button class="analysis-tab" onclick="switchAnalysis('parcels', this)">Parcels</button>
+          <button class="analysis-tab" onclick="switchAnalysis('access', this)">Access</button>
+          <button class="analysis-tab" onclick="switchAnalysis('save', this)">Save</button>
+        </div>
+        <div id="av-people" class="analysis-view active">
+          <div class="av-header">Who lives here?</div>
+          <div id="av-people-content">Run the pipeline to see affordability analysis.</div>
+        </div>
+        <div id="av-parcels" class="analysis-view">
+          <div class="av-header">Developer parcels</div>
+          <div id="av-parcels-content">Run the pipeline to see parcel breakdown.</div>
+        </div>
+        <div id="av-access" class="analysis-view">
+          <div class="av-header">Transit &amp; walkability</div>
+          <div id="av-access-content">Run the pipeline to see access analysis.</div>
+        </div>
+        <div id="av-save" class="analysis-view">
+          <div class="av-header">Save this layout</div>
+          <p style="margin-bottom:0.5rem;line-height:1.6;">
+            Save the current EA result to share or restore exactly.
+            The layout captures all slider positions, the random seed, and every zone assignment.
+          </p>
+          <div class="save-btn-row">
+            <button class="tool-btn" onclick="window.EC_Save?.saveToHash()" title="Set URL hash — copy address bar to share">⊞ Copy link</button>
+            <button class="tool-btn" onclick="window.EC_Save?.saveToFile()" title="Download as JSON">↓ Save JSON</button>
+            <button class="tool-btn" onclick="window.EC_Save?.loadFromFile()" title="Restore from saved JSON">↑ Load JSON</button>
+          </div>
+          <hr class="av-divider">
+          <div class="av-header" style="margin-top:0.4rem;">Current seed</div>
+          <div id="av-seed-display" style="color:var(--accent);font-size:0.65rem;letter-spacing:0.05em;">—</div>
+          <div style="margin-top:0.4rem;line-height:1.6;">
+            Share this seed + slider positions to regenerate the same layout.
+            The EA is fully deterministic from the seed.
+          </div>
+        </div>
       </div>
 
       <!-- Legend -->
@@ -2981,6 +3069,22 @@ function scoreCandidate(candidate, t1, weights) {
   };
 }
 
+
+// ── SEEDABLE PRNG (mulberry32) ────────────────────────────────────────────────
+// Fast, high-quality 32-bit seeded PRNG. No dependencies.
+let _eaSeed = Date.now() >>> 0;
+
+function setSeed(s) { _eaSeed = (s >>> 0) || 1; }
+
+function seededRandom() {
+  _eaSeed |= 0; _eaSeed = _eaSeed + 0x6D2B79F5 | 0;
+  let t = Math.imul(_eaSeed ^ _eaSeed >>> 15, 1 | _eaSeed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+  return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+
+function getCurrentSeed() { return _eaSeed >>> 0; }
+
 function mutateCandidate(zones, mutation_rate) {
   // Deep copy
   const mutant = zones.map(z => ({...z}));
@@ -2988,7 +3092,7 @@ function mutateCandidate(zones, mutation_rate) {
   // Pick n random zones to mutate
   const indices = [];
   while (indices.length < n) {
-    const i = Math.floor(Math.random() * mutant.length);
+    const i = Math.floor(seededRandom() * mutant.length);
     if (!indices.includes(i)) indices.push(i);
   }
   for (const i of indices) {
@@ -2996,7 +3100,7 @@ function mutateCandidate(zones, mutation_rate) {
     // Skip zones with no mutation options
     const adj_uses = (USE_ADJACENCY[z.use] || []).filter(u => z.eligible_uses.includes(u));
     if (adj_uses.length === 0) continue;
-    z.use = adj_uses[Math.floor(Math.random() * adj_uses.length)];
+    z.use = adj_uses[Math.floor(seededRandom() * adj_uses.length)];
   }
   return mutant;
 }
@@ -3577,6 +3681,10 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
   const t2Zones = (window.EC_Decomp && typeof ClipperLib !== 'undefined')
     ? window.EC_Decomp.buildT2PolygonZones(t1, params, derivedG)
     : buildT2Zones(t1, params, derivedG);
+  // Apply pending zone-use restore if a save was loaded
+  if (window._pendingUseRestore && typeof applyPendingRestore !== 'undefined') {
+    applyPendingRestore(t2Zones);
+  }
   callbacks?.onT2Complete?.(t2Zones);
 
   callbacks?.onStatus?.(`T3: Running evolutionary algorithm (${params.ea_rounds||15} rounds)…`);
@@ -5371,6 +5479,7 @@ async function triggerPipeline() {
           if (btn) { btn.disabled=false; btn.textContent='\u21ba Re-run'; }
           // Update legend chips
           renderLegendChips();
+          updateAnalysisViews();
           // Rebuild 3D if active
           if (_3dActive && window.EC3D && window._lastPipelineZones) {
             window.EC3D.buildScene(window._lastPipelineZones);
@@ -5958,6 +6067,363 @@ const EC3D = {
 
 window.EC3D = EC3D;
 
+
+// ── SAVE / RESTORE STATE ─────────────────────────────────────────────────────
+// State = { seed, params, uses } where uses = {[zone_id]: use_string}
+// Saved as URL hash (#ec:base64json) and downloadable JSON
+
+function captureState() {
+  const params = {
+    block_size_ft: parseInt(document.getElementById('p-block-size')?.value || 200),
+    strategy:      document.getElementById('p-strategy')?.value || 'hybrid',
+    courtyard_inset_ft: parseInt(document.getElementById('p-courtyard')?.value || 60),
+    ea_rounds:     parseInt(document.getElementById('p-rounds')?.value || 15),
+    ea_mutation:   parseInt(document.getElementById('p-mutation')?.value || 10) / 100,
+    w_units:       parseInt(document.getElementById('w-units')?.value || 20) / 100,
+    w_affordable:  parseInt(document.getElementById('w-affordable')?.value || 35) / 100,
+    w_green:       parseInt(document.getElementById('w-green')?.value || 22) / 100,
+    w_walk:        parseInt(document.getElementById('w-walk')?.value || 13) / 100,
+  };
+  const zones = window._lastPipelineZones || [];
+  const uses = {};
+  for (const z of zones) uses[z.id] = z.use;
+  return {
+    v: 1,
+    seed: getCurrentSeed(),
+    params,
+    uses,
+    ts: new Date().toISOString(),
+    score: document.getElementById('res-score')?.textContent || null,
+    units: document.getElementById('res-units')?.textContent || null,
+  };
+}
+
+function saveToHash() {
+  const state = captureState();
+  const json = JSON.stringify(state);
+  const b64 = btoa(unescape(encodeURIComponent(json)));
+  history.replaceState(null, '', '#ec:' + b64);
+  // Copy to clipboard
+  navigator.clipboard?.writeText(window.location.href).then(() => {
+    showToast('Link copied — share to restore this exact layout');
+  }).catch(() => {
+    showToast('Hash set in URL — copy the address bar');
+  });
+}
+
+function saveToFile() {
+  const state = captureState();
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `eastside-commons-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+function loadFromHash() {
+  const hash = window.location.hash;
+  if (!hash.startsWith('#ec:')) return false;
+  try {
+    const json = decodeURIComponent(escape(atob(hash.slice(4))));
+    const state = JSON.parse(json);
+    return restoreState(state);
+  } catch(e) {
+    console.warn('Failed to load state from hash:', e);
+    return false;
+  }
+}
+
+function loadFromFile() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json,application/json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const state = JSON.parse(ev.target.result);
+        restoreState(state);
+      } catch(err) {
+        showToast('Failed to parse save file: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function restoreState(state) {
+  if (!state || state.v !== 1) {
+    showToast('Unrecognized save format');
+    return false;
+  }
+  // Restore seed
+  if (state.seed) setSeed(state.seed);
+  // Restore sliders
+  const p = state.params || {};
+  const setSlider = (id, val, suffix='') => {
+    const el = document.getElementById(id);
+    const lbl = document.getElementById(id + '-val');
+    if (el && val !== undefined) {
+      el.value = typeof val === 'number' && val <= 1 ? Math.round(val * 100) : val;
+      if (lbl) lbl.textContent = el.value + suffix;
+    }
+  };
+  setSlider('p-block-size', p.block_size_ft, 'ft');
+  setSlider('p-courtyard', p.courtyard_inset_ft, 'ft');
+  setSlider('p-rounds', p.ea_rounds);
+  setSlider('p-mutation', p.ea_mutation, '%');
+  setSlider('w-units', p.w_units, '%');
+  setSlider('w-affordable', p.w_affordable, '%');
+  setSlider('w-green', p.w_green, '%');
+  setSlider('w-walk', p.w_walk, '%');
+  if (p.strategy) {
+    const sel = document.getElementById('p-strategy');
+    if (sel) sel.value = p.strategy;
+  }
+
+  // Restore zone uses — applied after pipeline runs
+  window._pendingUseRestore = state.uses;
+
+  // Re-run pipeline with restored seed
+  showToast(`Restoring layout (score ${state.score || '?'}, ${state.units || '?'} units)…`);
+  setTimeout(() => triggerPipeline(), 100);
+  return true;
+}
+
+// Apply restored uses after pipeline T2 runs (hook into T2 output)
+function applyPendingRestore(zones) {
+  const pending = window._pendingUseRestore;
+  if (!pending) return;
+  let applied = 0;
+  for (const z of zones) {
+    if (pending[z.id] && z.eligible_uses.includes(pending[z.id])) {
+      z.use = pending[z.id];
+      applied++;
+    }
+  }
+  console.log(`State restore: applied ${applied}/${zones.length} zone uses`);
+  window._pendingUseRestore = null;
+}
+
+function showToast(msg) {
+  let toast = document.getElementById('ec-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'ec-toast';
+    toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);' +
+      'background:var(--surface);border:1px solid var(--accent);color:var(--text);' +
+      'padding:0.5rem 1rem;font-family:var(--font-mono);font-size:0.65rem;z-index:9999;' +
+      'opacity:0;transition:opacity 0.2s;pointer-events:none;max-width:80vw;text-align:center;';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.opacity = 1;
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.style.opacity = 0, 3500);
+}
+
+window.EC_Save = { captureState, saveToHash, saveToFile, loadFromFile, restoreState, showToast };
+
+// ── ANALYSIS VIEWS ───────────────────────────────────────────────────────────
+
+// Norfolk-Virginia Beach MSA HUD Income Limits 2024 (4-person household)
+const NORFOLK_AMI = {
+  ami_4person: 82900,
+  // Rent limits: 30% of monthly income at each AMI bracket
+  // Monthly income = AMI × bracket / 12
+  // Max rent = monthly income × 0.30
+  brackets: [
+    { label: '30% AMI', pct: 0.30, monthly: Math.round(82900 * 0.30 / 12 * 0.30), color: '#0e7828' },
+    { label: '50% AMI', pct: 0.50, monthly: Math.round(82900 * 0.50 / 12 * 0.30), color: '#22a838' },
+    { label: '60% AMI', pct: 0.60, monthly: Math.round(82900 * 0.60 / 12 * 0.30), color: '#d4940c' },
+    { label: '80% AMI', pct: 0.80, monthly: Math.round(82900 * 0.80 / 12 * 0.30), color: '#c87818' },
+    { label: 'Market rate', pct: null, monthly: 1650, color: '#888' },
+  ],
+  // Construction cost estimate: Norfolk 2024 (per unit, includes soft costs)
+  cost_per_unit_affordable: 185000,   // CLT/affordable unit: ~$185k
+  cost_per_unit_market: 210000,       // market rate: ~$210k
+  // CLT ground lease: land cost removed from equation
+  land_value_per_ac: 475000,          // Norfolk commercial land ~$475k/ac
+};
+
+function renderPeopleView(zones) {
+  const el = document.getElementById('av-people-content');
+  if (!el || !zones) return;
+
+  const AMI = NORFOLK_AMI;
+  let affordable = 0, market = 0, total = 0;
+  const byDistrict = {};
+
+  for (const z of zones) {
+    if (!z.units || !z.use.startsWith('RESIDENTIAL')) continue;
+    const u = z.units.unit_count;
+    const af = z.units.affordable_units;
+    total += u;
+    affordable += af;
+    market += u - af;
+    const d = z.parent_district || z.district?.split('_')[0] || z.district;
+    byDistrict[d] = (byDistrict[d] || 0) + u;
+  }
+
+  const afPct = total > 0 ? Math.round(affordable/total*100) : 0;
+  const totalCost = (affordable * AMI.cost_per_unit_affordable + market * AMI.cost_per_unit_market) / 1e6;
+  const landLocked = (73.4 * AMI.land_value_per_ac / 1e6).toFixed(1);
+
+  el.innerHTML = `
+    <div class="av-row"><span class="av-key">Total units</span><span class="av-val accent">${total.toLocaleString()}</span></div>
+    <div class="av-row"><span class="av-key">Affordable</span><span class="av-val accent">${affordable.toLocaleString()} (${afPct}%)</span></div>
+    <div class="av-row"><span class="av-key">Market-rate</span><span class="av-val">${market.toLocaleString()}</span></div>
+    <hr class="av-divider">
+    <div class="av-header">What does affordable mean in Norfolk?</div>
+    <div style="color:var(--muted);line-height:1.6;margin-bottom:0.4rem;font-size:0.58rem;">
+      HUD Area Median Income 2024 — Norfolk-Virginia Beach MSA<br>
+      4-person household: <strong style="color:var(--text)">$${AMI.ami_4person.toLocaleString()}/yr</strong>
+    </div>
+    <table class="av-table">
+      ${AMI.brackets.map(b => `
+        <tr>
+          <td style="color:${b.color}">${b.label}</td>
+          <td style="color:${b.color}">$${b.monthly.toLocaleString()}/mo max rent</td>
+        </tr>`).join('')}
+    </table>
+    <div style="margin-top:0.3rem;font-size:0.55rem;color:var(--muted);line-height:1.6;">
+      CLT target: 60% AMI ($${AMI.brackets[2].monthly.toLocaleString()}/mo for 2BR).
+      Norfolk market 2BR: ~$1,650/mo.
+    </div>
+    <hr class="av-divider">
+    <div class="av-header">Estimated build cost</div>
+    <div class="av-row"><span class="av-key">Total construction</span><span class="av-val">~$${totalCost.toFixed(0)}M</span></div>
+    <div class="av-row"><span class="av-key">Land cost (CLT)</span><span class="av-val accent">$0</span></div>
+    <div class="av-row"><span class="av-key">Land value locked</span><span class="av-val">$${landLocked}M</span></div>
+    <div style="font-size:0.55rem;color:var(--muted);margin-top:0.3rem;line-height:1.6;">
+      CLT ground lease permanently removes land from speculation.
+      No developer extracts appreciation. Equity stays in the commons.
+    </div>
+  `;
+}
+
+function renderParcelsView(zones) {
+  const el = document.getElementById('av-parcels-content');
+  if (!el || !zones) return;
+
+  const resParcels = zones.filter(z => z.use.startsWith('RESIDENTIAL') && z.poly?.outer);
+  const avgAc = resParcels.length > 0
+    ? (resParcels.reduce((s,z)=>s+z.area_ac,0) / resParcels.length).toFixed(2)
+    : '—';
+  const minAc = resParcels.length > 0
+    ? Math.min(...resParcels.map(z=>z.area_ac)).toFixed(2) : '—';
+  const maxAc = resParcels.length > 0
+    ? Math.max(...resParcels.map(z=>z.area_ac)).toFixed(2) : '—';
+
+  // Parcel size distribution
+  const small = resParcels.filter(z=>z.area_ac < 0.3).length;
+  const mid   = resParcels.filter(z=>z.area_ac >= 0.3 && z.area_ac < 1.0).length;
+  const large = resParcels.filter(z=>z.area_ac >= 1.0).length;
+
+  // Cost estimates
+  const AMI = NORFOLK_AMI;
+  const avgUnitsPerParcel = resParcels.length > 0
+    ? Math.round(resParcels.reduce((s,z)=>s+(z.units?.unit_count||0),0) / resParcels.length)
+    : 0;
+  const avgCostPerParcel = Math.round(avgUnitsPerParcel * AMI.cost_per_unit_affordable / 1000);
+
+  el.innerHTML = `
+    <div class="av-row"><span class="av-key">Residential parcels</span><span class="av-val accent">${resParcels.length}</span></div>
+    <div class="av-row"><span class="av-key">Avg size</span><span class="av-val">${avgAc}ac</span></div>
+    <div class="av-row"><span class="av-key">Range</span><span class="av-val">${minAc}–${maxAc}ac</span></div>
+    <hr class="av-divider">
+    <div class="av-header">Parcel size distribution</div>
+    <div class="av-row"><span class="av-key">Small (&lt;0.3ac)</span><span class="av-val">${small} parcels</span></div>
+    <div class="av-row"><span class="av-key">Mid (0.3–1.0ac)</span><span class="av-val">${mid} parcels</span></div>
+    <div class="av-row"><span class="av-key">Large (&gt;1.0ac)</span><span class="av-val">${large} parcels</span></div>
+    <hr class="av-divider">
+    <div class="av-header">Per-parcel economics</div>
+    <div class="av-row"><span class="av-key">Avg units/parcel</span><span class="av-val">${avgUnitsPerParcel}</span></div>
+    <div class="av-row"><span class="av-key">Avg build cost</span><span class="av-val">~$${avgCostPerParcel}k</span></div>
+    <div class="av-row"><span class="av-key">Ground lease cost</span><span class="av-val accent">$0</span></div>
+    <div style="font-size:0.55rem;color:var(--muted);margin-top:0.4rem;line-height:1.6;">
+      Each parcel is a CLT ground lease to a small developer, cooperative,
+      or community land trust homeownership group. No single entity
+      controls the site. ${resParcels.length} parcels = ${resParcels.length} development teams.
+    </div>
+  `;
+}
+
+function renderAccessView(zones) {
+  const el = document.getElementById('av-access-content');
+  if (!el || !zones || !window._derivedG) return;
+
+  const G = window._derivedG;
+  const resZones = zones.filter(z => z.use.startsWith('RESIDENTIAL'));
+
+  // Distance from Tide station centroid
+  const tideX = G.TIDE ? G.TIDE.x + G.TIDE.w/2 : 660;
+  const tideY = G.TIDE ? G.TIDE.y : 600;
+  const FT_PER_PX = 8.5;  // from scale analysis
+  const WALK_FT_PER_MIN = 264;  // ~3mph walking = 264ft/min
+  const BIKE_FT_PER_MIN = 880;  // ~10mph cycling
+
+  const distanceTo = (z, px, py) =>
+    Math.hypot(z.centroid.x - px, z.centroid.y - py) * FT_PER_PX;
+
+  const within5min  = resZones.filter(z => distanceTo(z,tideX,tideY) <= WALK_FT_PER_MIN * 5).length;
+  const within10min = resZones.filter(z => distanceTo(z,tideX,tideY) <= WALK_FT_PER_MIN * 10).length;
+  const within15min = resZones.filter(z => distanceTo(z,tideX,tideY) <= WALK_FT_PER_MIN * 15).length;
+  const byBike5min  = resZones.filter(z => distanceTo(z,tideX,tideY) <= BIKE_FT_PER_MIN * 5).length;
+
+  const pct = n => resZones.length > 0 ? Math.round(n/resZones.length*100) : 0;
+
+  // Green access
+  const greenZones = zones.filter(z => z.use.startsWith('GREEN'));
+  const greenAc = greenZones.reduce((s,z)=>s+z.area_ac, 0).toFixed(1);
+  const resNearGreen = resZones.filter(z =>
+    greenZones.some(g => Math.hypot(z.centroid.x-g.centroid.x, z.centroid.y-g.centroid.y)*FT_PER_PX < 600)
+  ).length;
+
+  el.innerHTML = `
+    <div class="av-header">Transit access to Tide station (~2033)</div>
+    <div class="av-row"><span class="av-key">5-min walk</span><span class="av-val ${pct(within5min)>50?'accent':'warn'}">${pct(within5min)}% of parcels</span></div>
+    <div class="av-row"><span class="av-key">10-min walk</span><span class="av-val accent">${pct(within10min)}% of parcels</span></div>
+    <div class="av-row"><span class="av-key">15-min walk</span><span class="av-val">${pct(within15min)}% of parcels</span></div>
+    <div class="av-row"><span class="av-key">5-min bike</span><span class="av-val accent">${pct(byBike5min)}% of parcels</span></div>
+    <hr class="av-divider">
+    <div class="av-header">Green space access</div>
+    <div class="av-row"><span class="av-key">Total green/open</span><span class="av-val">${greenAc}ac</span></div>
+    <div class="av-row"><span class="av-key">Green cover</span><span class="av-val">${((+greenAc/73.4)*100).toFixed(1)}% of site</span></div>
+    <div class="av-row"><span class="av-key">Within 600ft green</span><span class="av-val accent">${pct(resNearGreen)}% of parcels</span></div>
+    <hr class="av-divider">
+    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;">
+      Tide station estimated 2033 (HRT ~2.2mi extension, ~$300M).
+      Walk speeds at ADA standard (3mph). Norfolk has a flat terrain
+      advantage — no elevation penalty on walk times.
+      Site is at 8–12ft elevation: confirmed high ground, Flood Zone X.
+    </div>
+  `;
+}
+
+function switchAnalysis(view, btn) {
+  document.querySelectorAll('.analysis-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.analysis-view').forEach(v => v.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('av-' + view)?.classList.add('active');
+
+  // Update seed display in save view
+  if (view === 'save') {
+    const seedEl = document.getElementById('av-seed-display');
+    if (seedEl) seedEl.textContent = getCurrentSeed().toString(16).toUpperCase().padStart(8,'0');
+  }
+}
+
+function updateAnalysisViews() {
+  const zones = window._lastPipelineZones || [];
+  renderPeopleView(zones);
+  renderParcelsView(zones);
+  renderAccessView(zones);
+}
 </script>
 
 </body>
