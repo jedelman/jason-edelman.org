@@ -50,6 +50,12 @@ const SUBPROJECTS = [
     outDir: '.',
   },
   {
+    name: 'eastside-commons',
+    dir: 'eastside-commons',
+    buildCmd: null,   // plain static HTML — constraint solver runs in browser
+    outDir: '.',
+  },
+  {
     name: 'qri',
     dir: 'qri',
     buildCmd: 'node ../scripts/build-qri.mjs',
