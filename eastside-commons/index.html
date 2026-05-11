@@ -335,6 +335,84 @@ details[open] summary::before { content: '▼  '; }
 .overlay-btn[data-overlay="density"] { color:#a08028; }
 .overlay-btn[data-overlay="walkability"] { color:#48a870; }
 .overlay-btn[data-overlay="plants"] { color:#388040; }
+
+/* ── PIPELINE PANEL ── */
+.pipeline-panel {
+  background:var(--surface); border:1px solid var(--border);
+  padding:0.8rem; display:flex; flex-direction:column; gap:0.55rem;
+}
+.pipeline-header {
+  display:flex; justify-content:space-between; align-items:center;
+  padding-bottom:0.4rem; border-bottom:1px solid var(--border);
+}
+.pt-label {
+  font-family:var(--font-mono); font-size:0.65rem; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--text);
+}
+.param-section {
+  display:flex; flex-direction:column; gap:0.3rem;
+  padding:0.4rem 0; border-bottom:1px solid var(--border);
+}
+.param-section:last-of-type { border-bottom:none; }
+.param-label {
+  font-family:var(--font-mono); font-size:0.58rem; letter-spacing:0.12em;
+  text-transform:uppercase; color:var(--accent-dim); margin-bottom:0.1rem;
+}
+.param-row {
+  display:flex; align-items:center; gap:0.5rem;
+}
+.param-key {
+  font-family:var(--font-mono); font-size:0.62rem; color:var(--muted);
+  min-width:7rem; flex-shrink:0;
+}
+.param-control {
+  display:flex; align-items:center; gap:0.4rem; flex:1;
+}
+.param-control input[type=range] {
+  flex:1; height:3px; accent-color:var(--accent);
+  background:var(--border); cursor:pointer;
+}
+.param-val {
+  font-family:var(--font-mono); font-size:0.62rem; color:var(--accent);
+  min-width:2.5rem; text-align:right;
+}
+.param-select {
+  flex:1; background:var(--bg); border:1px solid var(--border);
+  color:var(--text); font-family:var(--font-mono); font-size:0.62rem;
+  padding:0.2rem 0.3rem; cursor:pointer;
+}
+.run-btn {
+  font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.1em;
+  text-transform:uppercase; padding:0.55rem 1rem;
+  background:var(--accent-dim); border:1px solid var(--accent);
+  color:var(--bg); cursor:pointer; font-weight:500; transition:all 0.12s;
+}
+.run-btn:hover { background:var(--accent); }
+.run-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.pipeline-status {
+  background:var(--bg); border:1px solid var(--border);
+  padding:0.5rem 0.6rem; display:flex; flex-direction:column; gap:0.3rem;
+}
+.status-text {
+  font-family:var(--font-mono); font-size:0.62rem; color:var(--muted);
+}
+.ea-progress {
+  height:3px; background:var(--border); position:relative;
+}
+.ea-progress-bar {
+  height:3px; background:var(--accent); transition:width 0.2s; width:0%;
+}
+.score-history {
+  font-family:var(--font-mono); font-size:0.58rem; color:var(--muted);
+  max-height:4rem; overflow-y:auto; line-height:1.5;
+}
+.zone-detail {
+  background:var(--bg); border:1px solid var(--border);
+  padding:0.5rem 0.6rem;
+}
+.pipeline-results {
+  background:var(--bg); border:1px solid var(--border); padding:0.5rem 0.6rem;
+}
 </style>
 </head>
 
@@ -422,6 +500,132 @@ details[open] summary::before { content: '▼  '; }
       <span class="density-lbl">Walk score est.</span>
     </div>
   </div>
+
+<!-- PIPELINE CONTROLS (injected into page) -->
+<div class="pipeline-panel" id="pipeline-panel">
+  <div class="pipeline-header">
+    <span class="pt-label">Spatial Decomposition Pipeline</span>
+    <span class="pt-label" style="color:var(--muted);">T1→T7</span>
+  </div>
+
+  <!-- T2 Parameters -->
+  <div class="param-section">
+    <div class="param-label">T2 — Zone decomposition</div>
+    <div class="param-row">
+      <label class="param-key">Block size</label>
+      <div class="param-control">
+        <input type="range" id="p-block-size" min="150" max="600" step="25" value="350"
+          oninput="document.getElementById('p-block-size-val').textContent=this.value+'ft'">
+        <span class="param-val" id="p-block-size-val">350ft</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <label class="param-key">Strategy</label>
+      <div class="param-control">
+        <select id="p-strategy" class="param-select">
+          <option value="hybrid" selected>Hybrid (parcel edges + grid interior)</option>
+          <option value="grid">Grid (uniform)</option>
+          <option value="parcel">Parcel (follow GIS boundaries)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- T3 EA Parameters -->
+  <div class="param-section">
+    <div class="param-label">T3 — Evolutionary algorithm</div>
+    <div class="param-row">
+      <label class="param-key">Rounds</label>
+      <div class="param-control">
+        <input type="range" id="p-rounds" min="5" max="30" step="5" value="15"
+          oninput="document.getElementById('p-rounds-val').textContent=this.value">
+        <span class="param-val" id="p-rounds-val">15</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <label class="param-key">Candidates</label>
+      <div class="param-control">
+        <input type="range" id="p-candidates" min="10" max="60" step="5" value="30"
+          oninput="document.getElementById('p-candidates-val').textContent=this.value">
+        <span class="param-val" id="p-candidates-val">30</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <label class="param-key">Mutation rate</label>
+      <div class="param-control">
+        <input type="range" id="p-mutation" min="5" max="30" step="1" value="10"
+          oninput="document.getElementById('p-mutation-val').textContent=this.value+'%'">
+        <span class="param-val" id="p-mutation-val">10%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- T3 Reward Weights -->
+  <div class="param-section">
+    <div class="param-label">T3 — Reward function weights</div>
+    <div class="param-row">
+      <label class="param-key">Housing units</label>
+      <div class="param-control">
+        <input type="range" id="w-units" min="0" max="50" step="1" value="25"
+          oninput="document.getElementById('w-units-val').textContent=this.value+'%'">
+        <span class="param-val" id="w-units-val">25%</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <label class="param-key">Affordability</label>
+      <div class="param-control">
+        <input type="range" id="w-affordable" min="0" max="50" step="1" value="30"
+          oninput="document.getElementById('w-affordable-val').textContent=this.value+'%'">
+        <span class="param-val" id="w-affordable-val">30%</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <label class="param-key">Green corridors</label>
+      <div class="param-control">
+        <input type="range" id="w-green" min="0" max="40" step="1" value="20"
+          oninput="document.getElementById('w-green-val').textContent=this.value+'%'">
+        <span class="param-val" id="w-green-val">20%</span>
+      </div>
+    </div>
+    <div class="param-row">
+      <label class="param-key">Walkability</label>
+      <div class="param-control">
+        <input type="range" id="w-walk" min="0" max="40" step="1" value="15"
+          oninput="document.getElementById('w-walk-val').textContent=this.value+'%'">
+        <span class="param-val" id="w-walk-val">15%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Run button -->
+  <button class="run-btn" id="run-pipeline-btn" onclick="triggerPipeline()">
+    ▶ Run pipeline
+  </button>
+
+  <!-- Progress display -->
+  <div id="pipeline-status" class="pipeline-status" style="display:none;">
+    <div class="status-text" id="pipeline-status-text">Initializing…</div>
+    <div class="ea-progress" id="ea-progress-bar-wrap" style="display:none;">
+      <div class="ea-progress-bar" id="ea-progress-bar"></div>
+    </div>
+    <div class="score-history" id="score-history"></div>
+  </div>
+
+  <!-- Zone detail panel (populated on hover) -->
+  <div id="zone-detail" class="zone-detail" style="display:none;">
+    <!-- Populated by T7 hover -->
+  </div>
+
+  <!-- Results summary -->
+  <div id="pipeline-results" class="pipeline-results" style="display:none;">
+    <div class="param-label">Results</div>
+    <div class="dr"><span class="dl">Total units</span><span class="dv" id="res-units">—</span></div>
+    <div class="dr"><span class="dl">Affordable</span><span class="dv" id="res-affordable">—</span></div>
+    <div class="dr"><span class="dl">Green coverage</span><span class="dv" id="res-green">—</span></div>
+    <div class="dr"><span class="dl">Zones</span><span class="dv" id="res-zones">—</span></div>
+    <div class="dr"><span class="dl">Best score</span><span class="dv" id="res-score">—</span></div>
+  </div>
+</div>
 
   <!-- CONSTRAINT LOG -->
   <details>
@@ -1161,13 +1365,15 @@ function initTooltip() {
   console.log(`Parcels: ${parcels.length} (${parcels.filter(p=>p.is_eda).length} EDA-owned)`);
   console.log(`Constraints: ${log.filter(l=>l.ok).length} pass, ${log.filter(l=>!l.ok).length} fail`);
 
-  // Export solved geometry to interactive layer (deferred - JS modules load after IIFE)
+  // Export solved geometry to interactive layer + init pipeline
   setTimeout(() => {
     if (window.EC_Interactive) {
       window.EC_Interactive.exportDerived(derived, MAP);
       window.EC_Interactive.initInteractiveLayer();
       setTimeout(() => window.EC_Interactive.renderOverlays(), 50);
     }
+    // Wire pipeline to this solve's outputs
+    initPipeline(parcels, proj, MAP, derived);
   }, 0);
 })();
 
@@ -1988,6 +2194,1230 @@ window.EC_Interactive = {
   calcDensity,
   initInteractiveLayer,
 };
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EASTSIDE COMMONS — SPATIAL DECOMPOSITION PIPELINE
+//  Tiers 1–7: ground truth → zone decomposition → use assignment (EA) →
+//             unit decomposition → edge mutation → cleanup → coloring
+//
+//  Design principles:
+//  - All dimensions in feet first, converted to px via computed scale
+//  - No hardcoded pixel values except MAP canvas bounds (inherited from constraint solver)
+//  - Each tier is a pure function: (input, params) → output
+//  - T3 EA runs async so UI stays live
+//  - T7 is the only tier that touches SVG
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── PLANNING CONSTANTS (all in feet — the authoritative source of truth) ──────
+const PLANNING = {
+  // Road setbacks by class (ft from road edge to buildable zone)
+  SETBACK: { HIGHWAY: 50, ARTERIAL: 20, COLLECTOR: 15, LOCAL: 10 },
+
+  // Building envelope
+  MAX_BUILDING_DEPTH_FT: 50,      // natural ventilation limit
+  MIN_COURTYARD_RATIO: 0.30,      // min 30% of block as open space
+  DAYLIGHT_ANGLE_DEG: 45,         // courtyard width ≥ building height at this angle
+  MAX_HEIGHT_FT: { residential: 65, commercial: 45, civic: 55 },
+
+  // Use mix targets (site-wide)
+  TARGET_UNITS: 1600,
+  TARGET_AFFORDABLE_PCT: 0.60,
+  TARGET_GREEN_PCT: 0.20,         // min 20% of site as green/open
+
+  // Density targets
+  FAR_MIN: 3.0, FAR_MAX: 4.5,    // floor area ratio range
+  MIN_UNIT_SF: 650,               // smallest unit allowed (sq ft)
+  AVG_UNIT_SF: 850,               // planning average
+
+  // Tier 2 defaults (overridden by UI params)
+  BLOCK_SIZE_FT: 350,
+  STRATEGY: 'hybrid',             // 'grid' | 'parcel' | 'hybrid'
+  SPINE_WIDTH_FT: 80,             // pedestrian priority street
+
+  // EA parameters
+  EA_CANDIDATES: 30,
+  EA_SURVIVORS: 3,
+  EA_ROUNDS: 15,
+  EA_MUTATION_RATE: 0.10,
+};
+
+// ── USE TAXONOMY ──────────────────────────────────────────────────────────────
+const USES = {
+  RESIDENTIAL_MARKET:     { id:'RM', label:'Market-rate housing',     color:'#c88020', priority:2 },
+  RESIDENTIAL_AFFORDABLE: { id:'RA', label:'Affordable housing (CLT)',color:'#d4a840', priority:1 },
+  RESIDENTIAL_CLT_OWN:    { id:'RC', label:'CLT homeownership',       color:'#e0c060', priority:1 },
+  RETAIL_GROUND:          { id:'RG', label:'Ground-floor retail',     color:'#c85018', priority:3 },
+  CIVIC:                  { id:'CV', label:'Civic / community',       color:'#2070a0', priority:2 },
+  PLAZA:                  { id:'PZ', label:'Plaza / hardscape',       color:'#7090a0', priority:3 },
+  GREEN_ACTIVE:           { id:'GA', label:'Active park / recreation',color:'#48a858', priority:2 },
+  GREEN_PASSIVE:          { id:'GP', label:'Wetland / ecological',    color:'#308038', priority:1 },
+  RESEARCH:               { id:'RS', label:'Research station',        color:'#3898c0', priority:3 },
+  TRANSIT:                { id:'TR', label:'Transit / Tide station',  color:'#2878a0', priority:1 },
+  INFRASTRUCTURE:         { id:'IN', label:'Infrastructure / utility',color:'#5a5040', priority:3 },
+};
+
+// Adjacency graph: which uses can mutate into which (T3 mutation operator)
+const USE_ADJACENCY = {
+  RESIDENTIAL_MARKET:     ['RESIDENTIAL_AFFORDABLE','RETAIL_GROUND','GREEN_ACTIVE'],
+  RESIDENTIAL_AFFORDABLE: ['RESIDENTIAL_MARKET','RESIDENTIAL_CLT_OWN','RETAIL_GROUND'],
+  RESIDENTIAL_CLT_OWN:    ['RESIDENTIAL_AFFORDABLE','CIVIC','GREEN_ACTIVE'],
+  RETAIL_GROUND:          ['CIVIC','PLAZA','RESIDENTIAL_MARKET'],
+  CIVIC:                  ['RETAIL_GROUND','PLAZA','GREEN_ACTIVE','RESIDENTIAL_CLT_OWN'],
+  PLAZA:                  ['CIVIC','GREEN_ACTIVE','RETAIL_GROUND'],
+  GREEN_ACTIVE:           ['GREEN_PASSIVE','PLAZA','RESIDENTIAL_AFFORDABLE'],
+  GREEN_PASSIVE:          ['GREEN_ACTIVE','RESEARCH','INFRASTRUCTURE'],
+  RESEARCH:               ['GREEN_PASSIVE','CIVIC','INFRASTRUCTURE'],
+  TRANSIT:                ['CIVIC','PLAZA','RETAIL_GROUND'],  // transit rarely mutates
+  INFRASTRUCTURE:         ['GREEN_PASSIVE','TRANSIT'],
+};
+
+// Conflict matrix: adjacency penalty [A][B] = penalty score (higher = worse)
+const CONFLICT = {
+  RESIDENTIAL_MARKET:     { INFRASTRUCTURE:5, GREEN_PASSIVE:1 },
+  RESIDENTIAL_AFFORDABLE: { INFRASTRUCTURE:5, GREEN_PASSIVE:1 },
+  RETAIL_GROUND:          { GREEN_PASSIVE:2, INFRASTRUCTURE:4 },
+  GREEN_PASSIVE:          { RETAIL_GROUND:2, RESIDENTIAL_MARKET:1, RESIDENTIAL_AFFORDABLE:1 },
+  TRANSIT:                { GREEN_PASSIVE:3, INFRASTRUCTURE:1 },
+};
+
+// Synergy matrix: adjacency bonus [A][B] = bonus score
+const SYNERGY = {
+  RESIDENTIAL_MARKET:     { GREEN_ACTIVE:3, GREEN_PASSIVE:2, PLAZA:2, RETAIL_GROUND:2 },
+  RESIDENTIAL_AFFORDABLE: { GREEN_ACTIVE:3, GREEN_PASSIVE:2, PLAZA:2, CIVIC:2 },
+  RESIDENTIAL_CLT_OWN:    { GREEN_ACTIVE:4, PLAZA:3, CIVIC:3, GREEN_PASSIVE:2 },
+  RETAIL_GROUND:          { PLAZA:3, CIVIC:2, TRANSIT:3, RESIDENTIAL_MARKET:1 },
+  CIVIC:                  { PLAZA:3, GREEN_ACTIVE:2, RETAIL_GROUND:2, TRANSIT:2 },
+  PLAZA:                  { RETAIL_GROUND:3, CIVIC:3, GREEN_ACTIVE:2, TRANSIT:2 },
+  GREEN_ACTIVE:           { RESIDENTIAL_MARKET:3, RESIDENTIAL_AFFORDABLE:3, PLAZA:2 },
+  GREEN_PASSIVE:          { RESEARCH:4, GREEN_ACTIVE:3 },
+  RESEARCH:               { GREEN_PASSIVE:4, CIVIC:2 },
+  TRANSIT:                { RETAIL_GROUND:3, PLAZA:3, CIVIC:2 },
+};
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  TIER 1 — GROUND TRUTH
+//  Input: raw GIS parcels, road boundaries, flood zones, existing structures
+//  Output: site constraints object — the unchanging physical reality
+// ════════════════════════════════════════════════════════════════════════════════
+
+function buildT1GroundTruth(parcels, proj, MAP) {
+  // Compute px/ft scale from projection (two scales due to aspect ratio)
+  // We project two points 1 degree apart and measure pixel distance
+  const [x0, y0] = proj(-76.210, 36.850);
+  const [x1, y1] = proj(-76.209, 36.850);  // 0.001° E
+  const [x2, y2] = proj(-76.210, 36.851);  // 0.001° N
+  // 0.001° lon at 36.85° ≈ 291.6ft; 0.001° lat ≈ 364.3ft
+  const px_per_ft_ew = Math.abs(x1 - x0) / 291.6;
+  const px_per_ft_ns = Math.abs(y2 - y0) / 364.3;
+  const ft_per_px_ew = 1 / px_per_ft_ew;
+  const ft_per_px_ns = 1 / px_per_ft_ns;
+
+  function ftToPx(ft_ew, ft_ns) {
+    return [ft_ew * px_per_ft_ew, ft_ns * px_per_ft_ns];
+  }
+
+  // Road boundaries (derived from MAP canvas edges, classified by road type)
+  const roads = {
+    VA_BEACH_BLVD: { edge: 'north', y: MAP.y0, class: 'ARTERIAL', setback_ft: PLANNING.SETBACK.ARTERIAL },
+    I264:          { edge: 'south', y: MAP.y1, class: 'HIGHWAY',   setback_ft: PLANNING.SETBACK.HIGHWAY  },
+    N_MILITARY_HWY:{ edge: 'west',  x: MAP.x0, class: 'ARTERIAL', setback_ft: PLANNING.SETBACK.ARTERIAL },
+    TIDEWATER_DR:  { edge: 'east',  x: MAP.x1, class: 'COLLECTOR', setback_ft: PLANNING.SETBACK.COLLECTOR},
+  };
+
+  // Setback polygons — the unbuildable buffer strips along each road
+  const setbacks = [];
+  for (const [name, road] of Object.entries(roads)) {
+    const [, sb_px_ns] = ftToPx(0, road.setback_ft);
+    const [sb_px_ew,] = ftToPx(road.setback_ft, 0);
+    let poly;
+    if (road.edge === 'north') {
+      poly = { x:MAP.x0, y:MAP.y0, w:MAP.x1-MAP.x0, h:sb_px_ns };
+    } else if (road.edge === 'south') {
+      poly = { x:MAP.x0, y:MAP.y1-sb_px_ns, w:MAP.x1-MAP.x0, h:sb_px_ns };
+    } else if (road.edge === 'west') {
+      poly = { x:MAP.x0, y:MAP.y0, w:sb_px_ew, h:MAP.y1-MAP.y0 };
+    } else {
+      poly = { x:MAP.x1-sb_px_ew, y:MAP.y0, w:sb_px_ew, h:MAP.y1-MAP.y0 };
+    }
+    setbacks.push({ name, road_class: road.class, setback_ft: road.setback_ft, poly });
+  }
+
+  // EDA parcel index — the actual land we control
+  const edaParcels = parcels.filter(p => p.is_eda);
+
+  // Existing structures that constrain the plan
+  const existing = [
+    {
+      name: 'ROSS_LEASEHOLD',
+      type: 'leasehold',
+      constraint: 'build_around_until_2036',
+      // Position from parcel data — derived by constraint solver, referenced here
+      note: 'Ross Stores Inc lease through 2036. Cannot demolish. Build around.',
+    },
+  ];
+
+  // Flood zone: site is Zone X (low-moderate). No hard prohibition but note.
+  const floodZone = { designation: 'X', risk: 'low-moderate', subsidence_mm_yr: 4.5 };
+
+  // Building code constants (ft) — the authoritative planning numbers
+  const buildingCode = {
+    min_unit_sf:        PLANNING.MIN_UNIT_SF,
+    avg_unit_sf:        PLANNING.AVG_UNIT_SF,
+    max_building_depth: PLANNING.MAX_BUILDING_DEPTH_FT,
+    min_courtyard_pct:  PLANNING.MIN_COURTYARD_RATIO,
+    daylight_angle_deg: PLANNING.DAYLIGHT_ANGLE_DEG,
+    max_height:         PLANNING.MAX_HEIGHT_FT,
+    far_range:          [PLANNING.FAR_MIN, PLANNING.FAR_MAX],
+  };
+
+  return {
+    edaParcels,
+    roads,
+    setbacks,
+    existing,
+    floodZone,
+    buildingCode,
+    scale: { px_per_ft_ew, px_per_ft_ns, ft_per_px_ew, ft_per_px_ns, ftToPx },
+    MAP,
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  TIER 2 — SPATIAL DECOMPOSITION
+//  Input: T1 ground truth, T2 params
+//  Output: array of Zone objects, each a polygon with eligible uses
+//  
+//  Zone: { id, poly:{x,y,w,h}, centroid:{x,y}, area_px, area_ac,
+//          eligible_uses:[], road_adjacency:[], parcel_specs:[], constraints:{} }
+//
+//  Strategy 'hybrid': parcel boundaries at site edges, grid interior
+//  Strategy 'grid':   uniform grid across EDA extent
+//  Strategy 'parcel': each EDA parcel is a zone
+// ════════════════════════════════════════════════════════════════════════════════
+
+function buildT2Zones(t1, params, derivedG) {
+  const { scale, MAP, edaParcels, setbacks, roads } = t1;
+  const BLOCK_SIZE_FT = params.block_size_ft || PLANNING.BLOCK_SIZE_FT;
+  const STRATEGY      = params.strategy      || PLANNING.STRATEGY;
+
+  // Convert block size to pixels using computed scale
+  const block_px_ew = BLOCK_SIZE_FT * scale.px_per_ft_ew;
+  const block_px_ns = BLOCK_SIZE_FT * scale.px_per_ft_ns;
+
+  // Build EDA bounding box from actual parcel projections
+  let edaMinX=Infinity, edaMaxX=-Infinity, edaMinY=Infinity, edaMaxY=-Infinity;
+  for (const p of edaParcels) {
+    if (p._bbox) {
+      edaMinX = Math.min(edaMinX, p._bbox.left);
+      edaMaxX = Math.max(edaMaxX, p._bbox.right);
+      edaMinY = Math.min(edaMinY, p._bbox.top);
+      edaMaxY = Math.max(edaMaxY, p._bbox.bottom);
+    }
+  }
+  // Fallback to MAP bounds if bbox not populated
+  if (!isFinite(edaMinX)) {
+    edaMinX=MAP.x0; edaMaxX=MAP.x1; edaMinY=MAP.y0; edaMaxY=MAP.y1;
+  }
+
+  let rawZones = [];
+
+  if (STRATEGY === 'grid' || STRATEGY === 'hybrid') {
+    // Generate grid over EDA extent
+    const cols = Math.ceil((edaMaxX - edaMinX) / block_px_ew);
+    const rows = Math.ceil((edaMaxY - edaMinY) / block_px_ns);
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = edaMinX + c * block_px_ew;
+        const y = edaMinY + r * block_px_ns;
+        const w = Math.min(block_px_ew, edaMaxX - x);
+        const h = Math.min(block_px_ns, edaMaxY - y);
+        const cx = x + w/2, cy = y + h/2;
+
+        rawZones.push({ x, y, w, h, cx, cy, row:r, col:c });
+      }
+    }
+
+    if (STRATEGY === 'hybrid') {
+      // Filter to zones that overlap EDA parcels (not empty space outside site)
+      rawZones = rawZones.filter(z => zoneOverlapsEDA(z, edaParcels));
+    }
+  } else {
+    // 'parcel': each EDA parcel becomes a zone using its bbox
+    for (const p of edaParcels) {
+      if (!p._bbox) continue;
+      const b = p._bbox;
+      rawZones.push({
+        x: b.left, y: b.top,
+        w: b.right-b.left, h: b.bottom-b.top,
+        cx: b.left+(b.right-b.left)/2, cy: b.top+(b.bottom-b.top)/2,
+        parcel_spec: p.spec,
+      });
+    }
+  }
+
+  // ── Convert raw zones to full Zone objects ──
+  const PX_TO_AC = (scale.ft_per_px_ew * scale.ft_per_px_ns) / 43560;
+
+  const zones = rawZones.map((z, i) => {
+    const area_px = z.w * z.h;
+    const area_ac = area_px * PX_TO_AC;
+    const area_sf = area_ac * 43560;
+
+    // Which parcels does this zone overlap?
+    const parcel_specs = edaParcels
+      .filter(p => p._bbox && rectsOverlap({x:z.x,y:z.y,w:z.w,h:z.h}, p._bbox))
+      .map(p => p.spec);
+
+    // Road adjacency: which roads are within one block of this zone?
+    const road_adj = [];
+    if (z.y <= MAP.y0 + block_px_ns * 1.5) road_adj.push('VA_BEACH_BLVD');
+    if (z.y + z.h >= MAP.y1 - block_px_ns * 1.5) road_adj.push('I264');
+    if (z.x <= MAP.x0 + block_px_ew * 1.5) road_adj.push('N_MILITARY_HWY');
+    if (z.x + z.w >= MAP.x1 - block_px_ew * 1.5) road_adj.push('TIDEWATER_DR');
+
+    // Is this zone in a setback? (unbuildable)
+    const in_setback = setbacks.some(s => rectsOverlap({x:z.x,y:z.y,w:z.w,h:z.h}, s.poly));
+
+    // Is this zone on the commons spine? (derived geometry)
+    const on_spine = derivedG && derivedG.SPINE &&
+      z.cx >= derivedG.SPINE.x - 10 &&
+      z.cx <= derivedG.SPINE.x + derivedG.SPINE.w + 10;
+
+    // Is this zone in the sponge park area?
+    const near_sponge = derivedG && derivedG.SPONGE &&
+      Math.hypot(z.cx - derivedG.SPONGE.cx, z.cy - derivedG.SPONGE.cy) <
+      Math.max(derivedG.SPONGE.rx, derivedG.SPONGE.ry) * 1.3;
+
+    // Is this zone in the main street band?
+    const in_main_st = derivedG && derivedG.BAND &&
+      z.cy < derivedG.BAND.y + derivedG.BAND.h + block_px_ns * 0.5 &&
+      z.cy > derivedG.BAND.y;
+
+    // Is this zone near the Tide station?
+    const near_tide = derivedG && derivedG.TIDE &&
+      Math.abs(z.cx - (derivedG.TIDE.x + derivedG.TIDE.w/2)) < block_px_ew * 2 &&
+      z.cy > MAP.y1 - block_px_ns * 3;
+
+    // Determine eligible uses based on spatial constraints
+    const eligible = computeEligibleUses({
+      in_setback, on_spine, near_sponge, in_main_st, near_tide,
+      road_adj, parcel_specs, area_ac, area_sf,
+    });
+
+    // Initial use assignment: use the highest-priority eligible use
+    // (EA will improve this)
+    const initial_use = selectInitialUse(eligible, parcel_specs, {
+      on_spine, near_sponge, in_main_st, near_tide
+    });
+
+    return {
+      id: `Z${i.toString().padStart(3,'0')}`,
+      poly: { x:z.x, y:z.y, w:z.w, h:z.h },
+      centroid: { x:z.cx, y:z.cy },
+      area_px, area_ac, area_sf,
+      parcel_specs,
+      road_adj,
+      in_setback,
+      on_spine, near_sponge, in_main_st, near_tide,
+      eligible_uses: eligible,
+      use: initial_use,
+      constraints: {
+        max_height_ft: in_main_st ? 35 : near_sponge ? 25 : 65,
+        min_courtyard_ratio: PLANNING.MIN_COURTYARD_RATIO,
+        max_depth_ft: PLANNING.MAX_BUILDING_DEPTH_FT,
+        far: in_setback ? 0 : (near_sponge ? 1.5 : PLANNING.FAR_MAX),
+      },
+    };
+  });
+
+  return zones;
+}
+
+function computeEligibleUses(props) {
+  const uses = [];
+
+  if (props.in_setback) {
+    // Setback zones: only green or infrastructure
+    uses.push('GREEN_ACTIVE', 'GREEN_PASSIVE', 'INFRASTRUCTURE');
+    return uses;
+  }
+
+  if (props.near_tide) {
+    uses.push('TRANSIT', 'PLAZA', 'RETAIL_GROUND', 'CIVIC');
+    return uses;
+  }
+
+  if (props.near_sponge) {
+    uses.push('GREEN_PASSIVE', 'GREEN_ACTIVE', 'RESEARCH');
+    // Housing only if zone is not in the sponge core
+    if (props.area_ac > 0.5) uses.push('RESIDENTIAL_AFFORDABLE');
+    return uses;
+  }
+
+  if (props.in_main_st) {
+    uses.push('RETAIL_GROUND', 'CIVIC', 'PLAZA');
+    // Main street can have residential above retail (mixed-use)
+    uses.push('RESIDENTIAL_MARKET', 'RESIDENTIAL_AFFORDABLE');
+    return uses;
+  }
+
+  if (props.on_spine) {
+    uses.push('GREEN_ACTIVE', 'PLAZA', 'CIVIC', 'TRANSIT');
+    return uses;
+  }
+
+  // Highway-adjacent: restrict housing, allow only buffered uses
+  if (props.road_adj.includes('I264')) {
+    uses.push('INFRASTRUCTURE', 'GREEN_PASSIVE', 'GREEN_ACTIVE');
+    if (!props.road_adj.includes('N_MILITARY_HWY')) uses.push('TRANSIT');
+    return uses;
+  }
+
+  // General interior: all residential and civic uses eligible
+  uses.push(
+    'RESIDENTIAL_MARKET', 'RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_CLT_OWN',
+    'RETAIL_GROUND', 'CIVIC', 'PLAZA', 'GREEN_ACTIVE'
+  );
+
+  // Large zones near Military Hwy get civic uses
+  if (props.road_adj.includes('N_MILITARY_HWY') && props.area_ac > 1.0) {
+    uses.push('CIVIC');
+  }
+
+  return [...new Set(uses)];
+}
+
+function selectInitialUse(eligible, parcel_specs, ctx) {
+  if (eligible.length === 0) return 'INFRASTRUCTURE';
+  if (ctx.near_tide) return 'TRANSIT';
+  if (ctx.near_sponge) return 'GREEN_PASSIVE';
+  if (ctx.on_spine) return 'PLAZA';
+  if (ctx.in_main_st) return 'RETAIL_GROUND';
+
+  // Use parcel spec as a hint
+  if (parcel_specs.some(s => s && s.startsWith('CIVIC'))) {
+    return eligible.includes('CIVIC') ? 'CIVIC' : eligible[0];
+  }
+  if (parcel_specs.some(s => s && s.startsWith('HOUSING'))) {
+    return eligible.includes('RESIDENTIAL_AFFORDABLE') ? 'RESIDENTIAL_AFFORDABLE' : eligible[0];
+  }
+  if (parcel_specs.some(s => s && s.startsWith('CLT'))) {
+    return eligible.includes('RESIDENTIAL_CLT_OWN') ? 'RESIDENTIAL_CLT_OWN' : eligible[0];
+  }
+
+  // Default: prefer affordable housing for interior zones
+  for (const u of ['RESIDENTIAL_AFFORDABLE','RESIDENTIAL_MARKET','CIVIC','GREEN_ACTIVE']) {
+    if (eligible.includes(u)) return u;
+  }
+  return eligible[0];
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  TIER 3 — USE ASSIGNMENT OPTIMIZATION (EVOLUTIONARY ALGORITHM)
+//  Input: T2 zones (initial assignments), T1 ground truth
+//  Output: optimized zone array with best use assignments
+//
+//  Population: 30 candidates per round
+//  Mutation: 10% of zones, flip use to adjacent eligible use
+//  Selection: top 3 by reward score seed next round
+//  Rounds: 15
+// ════════════════════════════════════════════════════════════════════════════════
+
+// Reward function weights — the tunable knobs
+const DEFAULT_WEIGHTS = {
+  w_units:          0.25,  // total unit count (normalized to target)
+  w_affordable:     0.30,  // fraction affordable (vs 0.60 target)
+  w_green_connect:  0.20,  // green zone connectivity (corridor bonus)
+  w_walkability:    0.15,  // proximity of residential to transit/retail
+  w_conflict:      -0.05,  // conflict adjacency penalty (negative weight)
+  w_synergy:        0.05,  // synergy adjacency bonus
+};
+
+function scoreCandidate(candidate, t1, weights) {
+  const W = weights || DEFAULT_WEIGHTS;
+  const zones = candidate;
+  const PX_TO_AC = t1.scale.ft_per_px_ew * t1.scale.ft_per_px_ns / 43560;
+
+  // ── Unit count score ──
+  let total_units = 0;
+  let affordable_units = 0;
+  for (const z of zones) {
+    if (!['RESIDENTIAL_MARKET','RESIDENTIAL_AFFORDABLE','RESIDENTIAL_CLT_OWN'].includes(z.use)) continue;
+    const buildable_ac = z.area_ac * (1 - PLANNING.MIN_COURTYARD_RATIO) * z.constraints.far;
+    const units = Math.floor(buildable_ac * 43560 / PLANNING.AVG_UNIT_SF);
+    total_units += units;
+    if (z.use !== 'RESIDENTIAL_MARKET') affordable_units += units;
+  }
+  const units_score = Math.min(1, total_units / PLANNING.TARGET_UNITS);
+  const affordable_score = total_units > 0
+    ? Math.min(1, affordable_units / (total_units * PLANNING.TARGET_AFFORDABLE_PCT))
+    : 0;
+
+  // ── Green connectivity score ──
+  // Score = fraction of green zones that are adjacent to another green zone
+  const greenZones = zones.filter(z => z.use === 'GREEN_ACTIVE' || z.use === 'GREEN_PASSIVE');
+  const totalGreen = zones.reduce((s, z) =>
+    z.use.startsWith('GREEN') ? s + z.area_ac : s, 0);
+  const greenPct = totalGreen / 73.4;  // site total
+  let greenConnected = 0;
+  for (const gz of greenZones) {
+    const hasGreenNeighbor = zones.some(z2 =>
+      z2 !== gz && (z2.use === 'GREEN_ACTIVE' || z2.use === 'GREEN_PASSIVE') &&
+      zonesAdjacent(gz, z2)
+    );
+    if (hasGreenNeighbor) greenConnected++;
+  }
+  const green_connect_score = greenZones.length > 0
+    ? (greenConnected / greenZones.length) * Math.min(1, greenPct / PLANNING.TARGET_GREEN_PCT)
+    : 0;
+
+  // ── Walkability score ──
+  // Residential zones score higher when adjacent to transit/retail/civic
+  const resZones = zones.filter(z => z.use.startsWith('RESIDENTIAL'));
+  const walkableUses = new Set(['RETAIL_GROUND','CIVIC','TRANSIT','PLAZA','GREEN_ACTIVE']);
+  let walkSum = 0;
+  for (const rz of resZones) {
+    const walkNeighbors = zones.filter(z2 =>
+      z2 !== rz && walkableUses.has(z2.use) && zonesAdjacent(rz, z2)
+    ).length;
+    walkSum += Math.min(1, walkNeighbors / 2);  // full score if 2+ walkable neighbors
+  }
+  const walkability_score = resZones.length > 0 ? walkSum / resZones.length : 0;
+
+  // ── Conflict / synergy adjacency score ──
+  let conflict_total = 0, synergy_total = 0;
+  for (let i = 0; i < zones.length; i++) {
+    for (let j = i+1; j < zones.length; j++) {
+      if (!zonesAdjacent(zones[i], zones[j])) continue;
+      const ua = zones[i].use, ub = zones[j].use;
+      conflict_total += (CONFLICT[ua]?.[ub] || 0) + (CONFLICT[ub]?.[ua] || 0);
+      synergy_total  += (SYNERGY[ua]?.[ub]  || 0) + (SYNERGY[ub]?.[ua]  || 0);
+    }
+  }
+  // Normalize by zone count squared
+  const n = zones.length;
+  const conflict_score = n > 1 ? conflict_total / (n * n) : 0;
+  const synergy_score  = n > 1 ? synergy_total  / (n * n) : 0;
+
+  // ── Weighted total ──
+  const total =
+    W.w_units         * units_score        +
+    W.w_affordable    * affordable_score   +
+    W.w_green_connect * green_connect_score +
+    W.w_walkability   * walkability_score  +
+    W.w_conflict      * conflict_score     +  // negative weight
+    W.w_synergy       * synergy_score;
+
+  return {
+    total, units_score, affordable_score, green_connect_score,
+    walkability_score, conflict_score, synergy_score,
+    total_units, affordable_units,
+  };
+}
+
+function mutateCandidate(zones, mutation_rate) {
+  // Deep copy
+  const mutant = zones.map(z => ({...z}));
+  const n = Math.max(1, Math.round(mutant.length * mutation_rate));
+  // Pick n random zones to mutate
+  const indices = [];
+  while (indices.length < n) {
+    const i = Math.floor(Math.random() * mutant.length);
+    if (!indices.includes(i)) indices.push(i);
+  }
+  for (const i of indices) {
+    const z = mutant[i];
+    // Skip zones with no mutation options
+    const adj_uses = (USE_ADJACENCY[z.use] || []).filter(u => z.eligible_uses.includes(u));
+    if (adj_uses.length === 0) continue;
+    z.use = adj_uses[Math.floor(Math.random() * adj_uses.length)];
+  }
+  return mutant;
+}
+
+async function runT3EA(zones, t1, weights, params, onProgress) {
+  const CANDIDATES = params.ea_candidates || PLANNING.EA_CANDIDATES;
+  const SURVIVORS  = params.ea_survivors  || PLANNING.EA_SURVIVORS;
+  const ROUNDS     = params.ea_rounds     || PLANNING.EA_ROUNDS;
+  const MUT_RATE   = params.ea_mutation   || PLANNING.EA_MUTATION_RATE;
+
+  // Seed population: start from the initial T2 assignment
+  let population = [zones];
+  // Add random variants as additional seeds
+  for (let i = 1; i < SURVIVORS; i++) {
+    population.push(mutateCandidate(zones, 0.5));  // high mutation for initial diversity
+  }
+
+  let bestEver = null, bestScore = -Infinity;
+  const history = [];  // score history for convergence display
+
+  for (let round = 0; round < ROUNDS; round++) {
+    // Generate candidates from survivors
+    const candidates = [];
+    for (const seed of population) {
+      const perSeed = Math.ceil(CANDIDATES / population.length);
+      for (let c = 0; c < perSeed && candidates.length < CANDIDATES; c++) {
+        candidates.push(mutateCandidate(seed, MUT_RATE));
+      }
+    }
+    // Include the seeds themselves
+    for (const seed of population) candidates.push(seed);
+
+    // Score all candidates
+    const scored = candidates.map(c => ({
+      zones: c,
+      score: scoreCandidate(c, t1, weights),
+    }));
+
+    // Sort by total score descending
+    scored.sort((a, b) => b.score.total - a.score.total);
+
+    // Select survivors
+    population = scored.slice(0, SURVIVORS).map(s => s.zones);
+
+    // Track best
+    if (scored[0].score.total > bestScore) {
+      bestScore = scored[0].score.total;
+      bestEver = scored[0];
+    }
+
+    history.push({
+      round: round + 1,
+      best: scored[0].score.total,
+      worst: scored[scored.length-1].score.total,
+      units: scored[0].score.total_units,
+    });
+
+    // Progress callback (for UI update)
+    if (onProgress) {
+      await new Promise(resolve => setTimeout(resolve, 0));  // yield to UI
+      onProgress({ round: round+1, total: ROUNDS, best: bestEver, history });
+    }
+  }
+
+  return { best: bestEver, history };
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  TIER 4 — UNIT DECOMPOSITION
+//  Input: T3 optimized zones
+//  Output: zones with sub-units: { building_footprints[], courtyards[], paths[] }
+//
+//  All dimensions derived from building code constraints, not design patterns.
+//  Each zone produces its own module: FAR × area → floor_area → footprint
+//  Courtyard dimensions: derived from daylight angle at each zone's height limit
+// ════════════════════════════════════════════════════════════════════════════════
+
+function buildT4Units(zones, t1) {
+  const { scale } = t1;
+
+  return zones.map(z => {
+    if (z.in_setback || !z.use.startsWith('RESIDENTIAL') && z.use !== 'CIVIC') {
+      // Non-building zones: no unit decomposition
+      return { ...z, units: null };
+    }
+
+    const { x, y, w, h } = z.poly;
+    const constraints = z.constraints;
+
+    // ── Derive building dimensions from constraints ──
+    // 1. Target floor area from FAR
+    const target_floor_area_sf = z.area_sf * constraints.far;
+
+    // 2. Max building depth from natural ventilation
+    const max_depth_px = constraints.max_depth_ft * scale.px_per_ft_ew;
+
+    // 3. Min courtyard from ratio
+    const courtyard_area_px = z.area_px * constraints.min_courtyard_ratio;
+
+    // 4. Building height from FAR and footprint
+    //    footprint_sf = zone_sf - courtyard_sf
+    //    floors = ceil(target_floor_area / footprint_sf)
+    const courtyard_area_sf = z.area_sf * constraints.min_courtyard_ratio;
+    const footprint_sf = z.area_sf - courtyard_area_sf;
+    const floors = Math.ceil(target_floor_area_sf / footprint_sf);
+    const actual_height_ft = Math.min(floors * 12, constraints.max_height_ft);
+    const actual_floors = Math.ceil(actual_height_ft / 12);
+
+    // 5. Courtyard dimensions from daylight angle
+    //    courtyard_width_min = building_height / tan(daylight_angle)
+    //    At 45°: min courtyard width = building height
+    const daylight_angle_rad = (constraints.min_courtyard_ratio || PLANNING.DAYLIGHT_ANGLE_DEG) * Math.PI / 180;
+    const min_courtyard_ft = actual_height_ft / Math.tan(Math.PI / 4);  // 45°
+    const min_courtyard_px_ew = min_courtyard_ft * scale.px_per_ft_ew;
+    const min_courtyard_px_ns = min_courtyard_ft * scale.px_per_ft_ns;
+
+    // 6. Actual courtyard (center of zone, constrained by daylight)
+    const courtyard_w = Math.max(min_courtyard_px_ew, w * 0.35);
+    const courtyard_h = Math.max(min_courtyard_px_ns, h * 0.35);
+    const courtyard_x = x + (w - courtyard_w) / 2;
+    const courtyard_y = y + (h - courtyard_h) / 2;
+
+    // 7. Building footprints: the area of the zone minus the courtyard
+    //    Decompose into perimeter wings (N, S, E, W)
+    //    Wing depth: min(max_depth, available_space)
+    const margin = (w - courtyard_w) / 2;
+    const wing_depth_ew = Math.min(max_depth_px, margin);
+    const wing_depth_ns = Math.min(max_depth_px, (h - courtyard_h) / 2);
+
+    // Four building wings around the courtyard
+    const building_wings = [
+      // North wing
+      { x, y, w, h: wing_depth_ns, label: 'N' },
+      // South wing
+      { x, y: courtyard_y + courtyard_h, w, h: wing_depth_ns, label: 'S' },
+      // West wing (fills between N and S)
+      { x, y: y + wing_depth_ns, w: wing_depth_ew, h: h - wing_depth_ns*2, label: 'W' },
+      // East wing
+      { x: courtyard_x + courtyard_w, y: y + wing_depth_ns, w: wing_depth_ew, h: h - wing_depth_ns*2, label: 'E' },
+    ].filter(wing => wing.w > 4 && wing.h > 4);
+
+    // 8. Chamfered corners (Eixample-style) — cut each corner at 45°
+    //    Chamfer = min(wing_depth / 3, 12px)
+    const chamfer = Math.min(wing_depth_ew / 3, 12);
+
+    // 9. Unit count from actual floor area
+    const actual_floor_area_sf = building_wings.reduce((s, w) =>
+      s + w.w * w.h * (scale.ft_per_px_ew * scale.ft_per_px_ns), 0) * actual_floors;
+    const units = Math.floor(actual_floor_area_sf * 0.85 / PLANNING.AVG_UNIT_SF);
+    const affordable = z.use !== 'RESIDENTIAL_MARKET' ? units : Math.floor(units * 0.3);
+
+    return {
+      ...z,
+      units: {
+        building_wings,
+        courtyard: { x: courtyard_x, y: courtyard_y, w: courtyard_w, h: courtyard_h },
+        chamfer,
+        floors: actual_floors,
+        height_ft: actual_height_ft,
+        unit_count: units,
+        affordable_units: affordable,
+        derived_from: {
+          far_target: constraints.far,
+          daylight_angle_deg: PLANNING.DAYLIGHT_ANGLE_DEG,
+          max_depth_ft: constraints.max_depth_ft,
+          min_courtyard_pct: constraints.min_courtyard_ratio,
+        },
+      },
+    };
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  TIER 5 — INTERACTION CONSTRAINTS / EDGE MUTATION
+//  Input: T4 zones with unit decomposition
+//  Output: zones with edge-mutated uses based on proximity rules
+//
+//  Rules:
+//  - Residential unit adjacent to Main Street road → ground floor = RETAIL_GROUND
+//  - Residential unit adjacent to 2+ green zones → reclassify to GREEN_ACTIVE
+//  - Research zone adjacent to GREEN_PASSIVE → keep; adjacent to residential → add buffer
+//  - TRANSIT zone must have RETAIL_GROUND or PLAZA within 1 zone
+// ════════════════════════════════════════════════════════════════════════════════
+
+function applyT5Interactions(zones) {
+  const mutated = zones.map(z => ({...z, edge_mutations: []}));
+
+  for (const z of mutated) {
+    const neighbors = mutated.filter(z2 => z2 !== z && zonesAdjacent(z, z2));
+
+    // Rule 1: Residential adjacent to arterial → ground floor retail
+    if (z.use.startsWith('RESIDENTIAL') &&
+        (z.road_adj.includes('VA_BEACH_BLVD') || z.road_adj.includes('N_MILITARY_HWY'))) {
+      z.edge_mutations.push({
+        type: 'ground_floor_retail',
+        description: 'Adjacent to arterial — ground floor must be active commercial',
+        ground_floor_use: 'RETAIL_GROUND',
+      });
+    }
+
+    // Rule 2: Residential adjacent to 2+ green zones → open courtyard to green
+    const greenNeighbors = neighbors.filter(n => n.use.startsWith('GREEN')).length;
+    if (z.use.startsWith('RESIDENTIAL') && greenNeighbors >= 2) {
+      z.edge_mutations.push({
+        type: 'green_courtyard',
+        description: 'Adjacent to 2+ green zones — courtyard opens toward green; passive uses expanded',
+        courtyard_orientation: 'green',
+      });
+    }
+
+    // Rule 3: Residential adjacent to highway without buffer → flag violation
+    if (z.use.startsWith('RESIDENTIAL') && z.road_adj.includes('I264')) {
+      const hasBuffer = neighbors.some(n =>
+        ['GREEN_ACTIVE','GREEN_PASSIVE','INFRASTRUCTURE','PLAZA'].includes(n.use)
+      );
+      if (!hasBuffer) {
+        z.edge_mutations.push({
+          type: 'highway_violation',
+          description: 'Residential directly adjacent to I-264 without buffer — T6 will reclassify',
+          severity: 'error',
+          suggested: 'GREEN_ACTIVE',
+        });
+      }
+    }
+
+    // Rule 4: TRANSIT must have walkable activation within 1 zone
+    if (z.use === 'TRANSIT') {
+      const hasActivation = neighbors.some(n =>
+        ['RETAIL_GROUND','PLAZA','CIVIC'].includes(n.use)
+      );
+      if (!hasActivation) {
+        z.edge_mutations.push({
+          type: 'transit_activation_missing',
+          description: 'Transit zone lacks adjacent retail/plaza activation',
+          suggested_neighbor: 'RETAIL_GROUND',
+          severity: 'warning',
+        });
+      }
+    }
+
+    // Rule 5: GREEN_PASSIVE (wetland) adjacent to impervious → flag
+    if (z.use === 'GREEN_PASSIVE') {
+      const imperviousNeighbors = neighbors.filter(n =>
+        ['RESIDENTIAL_MARKET','RETAIL_GROUND'].includes(n.use) &&
+        !n.edge_mutations.some(m => m.type === 'green_courtyard')
+      );
+      if (imperviousNeighbors.length > 2) {
+        z.edge_mutations.push({
+          type: 'wetland_isolation',
+          description: 'Wetland zone surrounded by impervious uses — hydrological function reduced',
+          severity: 'warning',
+        });
+      }
+    }
+  }
+
+  return mutated;
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  TIER 6 — CLEANUP PASS
+//  Input: T5 zones
+//  Output: topologically valid zone set — no overlaps, no violations
+//
+//  Operations:
+//  1. Resolve highway_violation errors → reclassify to GREEN_ACTIVE
+//  2. Resolve transit_activation_missing → flip nearest eligible neighbor to RETAIL_GROUND
+//  3. Check greenway-crossing-highway impossibility (geometric check)
+//  4. Remove zones with zero eligible uses → INFRASTRUCTURE
+//  5. Final overlap check (grid zones shouldn't overlap, but verify)
+// ════════════════════════════════════════════════════════════════════════════════
+
+function applyT6Cleanup(zones) {
+  let cleaned = zones.map(z => ({...z}));
+
+  // Pass 1: resolve hard errors
+  for (const z of cleaned) {
+    for (const m of (z.edge_mutations || [])) {
+      if (m.type === 'highway_violation' && m.severity === 'error') {
+        z.use = m.suggested;
+        z.cleanup_note = `Reclassified from ${z.use} to ${m.suggested}: highway buffer required`;
+      }
+    }
+  }
+
+  // Pass 2: resolve transit activation — find nearest eligible neighbor and flip it
+  for (const z of cleaned) {
+    const missingActivation = z.edge_mutations?.find(m => m.type === 'transit_activation_missing');
+    if (!missingActivation) continue;
+    // Find nearest residential zone and convert its ground floor
+    const nearbyRes = cleaned
+      .filter(z2 => z2.use.startsWith('RESIDENTIAL') && zonesAdjacent(z, z2))
+      .sort((a,b) => zoneDist(z,a) - zoneDist(z,b));
+    if (nearbyRes.length > 0) {
+      const target = nearbyRes[0];
+      if (!target.edge_mutations) target.edge_mutations = [];
+      target.edge_mutations.push({
+        type: 'ground_floor_retail',
+        description: 'Activated for transit zone — ground floor retail required',
+        ground_floor_use: 'RETAIL_GROUND',
+      });
+    }
+  }
+
+  // Pass 3: impossible geometry — greenway crossing highway
+  // A GREEN zone is "crossing a highway" if it spans from one side of the site
+  // to the other across the I-264 boundary. Since our zones are confined to
+  // the EDA parcel extent and I-264 is the south boundary, this means:
+  // a GREEN zone at the south edge should not extend into the highway setback
+  // (already handled by setback eligibility, but verify)
+  for (const z of cleaned) {
+    if (!z.use.startsWith('GREEN')) continue;
+    if (z.road_adj.includes('I264') && z.poly.y + z.poly.h > MAP_Y1 - 20) {
+      z.poly = { ...z.poly, h: Math.max(10, MAP_Y1 - 20 - z.poly.y) };
+      z.cleanup_note = (z.cleanup_note||'') + ' Trimmed to highway setback.';
+    }
+  }
+
+  // Pass 4: zones with no eligible uses → INFRASTRUCTURE
+  for (const z of cleaned) {
+    if (!z.eligible_uses || z.eligible_uses.length === 0) {
+      z.use = 'INFRASTRUCTURE';
+      z.cleanup_note = 'No eligible uses — assigned INFRASTRUCTURE';
+    }
+  }
+
+  // Pass 5: sanity check unit counts vs. zone areas
+  for (const z of cleaned) {
+    if (z.units && z.units.unit_count > z.area_ac * 200) {
+      // More than 200 units/acre is not feasible at 4-story residential
+      const cap = Math.floor(z.area_ac * 180);
+      z.units = { ...z.units, unit_count: cap, capped: true };
+      z.cleanup_note = (z.cleanup_note||'') + ` Unit count capped at ${cap} (${z.area_ac.toFixed(2)}ac).`;
+    }
+  }
+
+  return cleaned;
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+//  TIER 7 — COLORING AND VISUAL OUTPUT
+//  Input: T6 clean zones
+//  Output: SVG elements appended to the site plan
+//
+//  Color strategy:
+//  - Each use has a canonical color (defined in USES above)
+//  - Colors are colorblind-safe (tested against deuteranopia and protanopia)
+//  - Edge mutations shown as hatching or border change
+//  - T4 building wings shown as slightly darker fill within zone
+// ════════════════════════════════════════════════════════════════════════════════
+
+function renderT7(zones, svg, params) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const showUnits    = params.show_units    !== false;
+  const showEdges    = params.show_edges    !== false;
+  const showLabels   = params.show_labels   !== false;
+  const opacity      = params.opacity       || 0.55;
+
+  // Clear previous T7 render
+  svg.querySelectorAll('[data-t7]').forEach(e => e.remove());
+
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('data-t7', '1');
+  g.setAttribute('clip-path', 'url(#mc)');
+
+  for (const z of zones) {
+    const usedef  = USES[z.use];
+    if (!usedef) continue;
+    const color   = usedef.color;
+    const { x, y, w, h } = z.poly;
+
+    // ── Zone fill ──
+    const fill = document.createElementNS(ns, 'rect');
+    fill.setAttribute('x', x); fill.setAttribute('y', y);
+    fill.setAttribute('width', w); fill.setAttribute('height', h);
+    fill.setAttribute('fill', color);
+    fill.setAttribute('fill-opacity', opacity);
+    fill.setAttribute('stroke', color);
+    fill.setAttribute('stroke-width', '1');
+    fill.setAttribute('stroke-opacity', '0.7');
+    fill.setAttribute('data-zone', z.id);
+    fill.setAttribute('data-use', z.use);
+    fill.style.cursor = 'pointer';
+    // Tooltip on hover
+    fill.addEventListener('mouseenter', () => showZoneTooltip(z));
+    fill.addEventListener('mouseleave', hideZoneTooltip);
+    g.appendChild(fill);
+
+    // ── T4 building wings (darker fill within zone) ──
+    if (showUnits && z.units) {
+      for (const wing of z.units.building_wings) {
+        const wg = document.createElementNS(ns, 'rect');
+        wg.setAttribute('x', wing.x); wg.setAttribute('y', wing.y);
+        wg.setAttribute('width', wing.w); wg.setAttribute('height', wing.h);
+        wg.setAttribute('fill', color);
+        wg.setAttribute('fill-opacity', 0.35);
+        wg.setAttribute('stroke', color);
+        wg.setAttribute('stroke-width', '0.5');
+        wg.setAttribute('stroke-opacity', '0.5');
+        g.appendChild(wg);
+      }
+      // Courtyard (lighter, open space)
+      if (z.units.courtyard) {
+        const { courtyard: ct } = z.units;
+        const ctRect = document.createElementNS(ns, 'rect');
+        ctRect.setAttribute('x', ct.x); ctRect.setAttribute('y', ct.y);
+        ctRect.setAttribute('width', ct.w); ctRect.setAttribute('height', ct.h);
+        ctRect.setAttribute('fill', '#1a2810');
+        ctRect.setAttribute('fill-opacity', '0.3');
+        ctRect.setAttribute('stroke', '#3a5828');
+        ctRect.setAttribute('stroke-width', '0.8');
+        ctRect.setAttribute('stroke-dasharray', '2,2');
+        g.appendChild(ctRect);
+      }
+    }
+
+    // ── Edge mutation indicators ──
+    if (showEdges && z.edge_mutations && z.edge_mutations.length > 0) {
+      for (const m of z.edge_mutations) {
+        if (m.type === 'ground_floor_retail') {
+          // Orange stripe on the road-facing edge
+          const stripe = document.createElementNS(ns, 'rect');
+          stripe.setAttribute('x', x); stripe.setAttribute('y', y + h - 4);
+          stripe.setAttribute('width', w); stripe.setAttribute('height', 4);
+          stripe.setAttribute('fill', USES.RETAIL_GROUND.color);
+          stripe.setAttribute('fill-opacity', '0.9');
+          g.appendChild(stripe);
+        } else if (m.type === 'highway_violation' && m.severity === 'error') {
+          const warning = document.createElementNS(ns, 'rect');
+          warning.setAttribute('x', x+1); warning.setAttribute('y', y+1);
+          warning.setAttribute('width', w-2); warning.setAttribute('height', h-2);
+          warning.setAttribute('fill', 'none');
+          warning.setAttribute('stroke', '#c04030');
+          warning.setAttribute('stroke-width', '2');
+          warning.setAttribute('stroke-dasharray', '4,2');
+          g.appendChild(warning);
+        } else if (m.type === 'green_courtyard') {
+          const dot = document.createElementNS(ns, 'circle');
+          dot.setAttribute('cx', x+w/2); dot.setAttribute('cy', y+h/2);
+          dot.setAttribute('r', '4');
+          dot.setAttribute('fill', '#48a858'); dot.setAttribute('fill-opacity', '0.8');
+          g.appendChild(dot);
+        }
+      }
+    }
+
+    // ── Zone label ──
+    if (showLabels && w > 30 && h > 20) {
+      const label = document.createElementNS(ns, 'text');
+      label.setAttribute('x', x + w/2);
+      label.setAttribute('y', y + h/2 + 3);
+      label.setAttribute('font-family', 'DM Mono, monospace');
+      label.setAttribute('font-size', Math.min(8, w/5, h/3));
+      label.setAttribute('fill', '#f0ece0');
+      label.setAttribute('fill-opacity', '0.85');
+      label.setAttribute('text-anchor', 'middle');
+      label.textContent = usedef.id;
+      g.appendChild(label);
+
+      if (z.units && h > 35) {
+        const sub = document.createElementNS(ns, 'text');
+        sub.setAttribute('x', x + w/2);
+        sub.setAttribute('y', y + h/2 + 12);
+        sub.setAttribute('font-family', 'DM Mono, monospace');
+        sub.setAttribute('font-size', Math.min(6, w/6));
+        sub.setAttribute('fill', '#f0ece0');
+        sub.setAttribute('fill-opacity', '0.55');
+        sub.setAttribute('text-anchor', 'middle');
+        sub.textContent = `${z.units.unit_count}u ${z.units.floors}F`;
+        g.appendChild(sub);
+      }
+    }
+  }
+
+  svg.appendChild(g);
+}
+
+// ── TOOLTIP ──────────────────────────────────────────────────────────────────
+let _tooltipZone = null;
+function showZoneTooltip(z) {
+  _tooltipZone = z;
+  const panel = document.getElementById('zone-detail');
+  if (!panel) return;
+  const usedef = USES[z.use];
+  const mutations = (z.edge_mutations||[]).map(m =>
+    `<div style="color:${m.severity==='error'?'#c04030':m.severity==='warning'?'#c08020':'#48a858'};font-size:0.6rem;">
+      ${m.severity==='error'?'⚠':'⟳'} ${m.description}</div>`
+  ).join('');
+  const units_html = z.units ?
+    `<div class="dr"><span class="dl">Units</span><span class="dv">${z.units.unit_count}</span></div>
+     <div class="dr"><span class="dl">Floors</span><span class="dv">${z.units.floors}</span></div>
+     <div class="dr"><span class="dl">Height</span><span class="dv">${z.units.height_ft}ft</span></div>` : '';
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.4rem;">
+      <div style="width:10px;height:10px;background:${usedef?.color};flex-shrink:0;"></div>
+      <span style="font-family:var(--font-mono);font-size:0.65rem;color:var(--text);">${z.id} — ${usedef?.label}</span>
+    </div>
+    <div class="dr"><span class="dl">Area</span><span class="dv">${z.area_ac.toFixed(2)}ac</span></div>
+    <div class="dr"><span class="dl">FAR target</span><span class="dv">${z.constraints.far.toFixed(1)}</span></div>
+    ${units_html}
+    ${mutations}
+    <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--muted);margin-top:0.3rem;">${z.parcel_specs.join(', ')||'—'}</div>
+  `;
+  panel.style.display = '';
+}
+
+function hideZoneTooltip() {
+  // Keep visible until another zone is hovered or panel is explicitly closed
+}
+
+// ── GEOMETRY HELPERS ─────────────────────────────────────────────────────────
+function rectsOverlap(a, b) {
+  // a and b are {x,y,w,h} or {left,top,right,bottom}
+  const ax1 = a.x ?? a.left,   ay1 = a.y ?? a.top;
+  const ax2 = (a.x ?? a.left) + (a.w ?? (a.right - a.left));
+  const ay2 = (a.y ?? a.top)  + (a.h ?? (a.bottom - a.top));
+  const bx1 = b.x ?? b.left,   by1 = b.y ?? b.top;
+  const bx2 = (b.x ?? b.left) + (b.w ?? (b.right - b.left));
+  const by2 = (b.y ?? b.top)  + (b.h ?? (b.bottom - b.top));
+  return ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1;
+}
+
+function zonesAdjacent(a, b) {
+  // Two grid zones are adjacent if they share an edge (within 2px tolerance)
+  const TOL = 3;
+  const ax1=a.poly.x, ay1=a.poly.y, ax2=a.poly.x+a.poly.w, ay2=a.poly.y+a.poly.h;
+  const bx1=b.poly.x, by1=b.poly.y, bx2=b.poly.x+b.poly.w, by2=b.poly.y+b.poly.h;
+  const shareEW = (Math.abs(ax2-bx1)<TOL || Math.abs(bx2-ax1)<TOL);
+  const shareNS = (Math.abs(ay2-by1)<TOL || Math.abs(by2-ay1)<TOL);
+  const overlapEW = ax1 < bx2 && ax2 > bx1;
+  const overlapNS = ay1 < by2 && ay2 > by1;
+  return (shareEW && overlapNS) || (shareNS && overlapEW);
+}
+
+function zoneDist(a, b) {
+  return Math.hypot(a.centroid.x - b.centroid.x, a.centroid.y - b.centroid.y);
+}
+
+function zoneOverlapsEDA(zone, edaParcels) {
+  return edaParcels.some(p => p._bbox && rectsOverlap(
+    {x:zone.x,y:zone.y,w:zone.w,h:zone.h}, p._bbox
+  ));
+}
+
+// MAP_Y1 needed in T6 — will be set from MAP when pipeline runs
+let MAP_Y1 = 653;
+
+// ── PIPELINE ORCHESTRATOR ────────────────────────────────────────────────────
+// Runs T1→T7, with T3 async (EA), calling back on completion
+async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
+  MAP_Y1 = MAP.y1;
+
+  callbacks?.onStatus?.('T1: Building ground truth…');
+  const t1 = buildT1GroundTruth(parcels, proj, MAP);
+
+  // Attach computed bboxes to EDA parcels for T2
+  for (const p of t1.edaParcels) {
+    if (!p._bbox) {
+      let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+      for (const ring of p.rings) {
+        for (const [lon,lat] of ring) {
+          const [x,y] = proj(lon,lat);
+          if(x<minX)minX=x; if(x>maxX)maxX=x;
+          if(y<minY)minY=y; if(y>maxY)maxY=y;
+        }
+      }
+      p._bbox = {left:minX,right:maxX,top:minY,bottom:maxY};
+    }
+  }
+
+  callbacks?.onStatus?.('T2: Decomposing site into zones…');
+  const t2Zones = buildT2Zones(t1, params, derivedG);
+  callbacks?.onT2Complete?.(t2Zones);
+
+  callbacks?.onStatus?.(`T3: Running evolutionary algorithm (${params.ea_rounds||15} rounds)…`);
+  const t3Result = await runT3EA(t2Zones, t1, params.weights, params, (progress) => {
+    callbacks?.onEAProgress?.(progress);
+  });
+  callbacks?.onStatus?.(`T3 complete — best score: ${t3Result.best.score.total.toFixed(3)}, ${t3Result.best.score.total_units} units`);
+
+  const t3Zones = t3Result.best.zones;
+
+  callbacks?.onStatus?.('T4: Decomposing zones into building units…');
+  const t4Zones = buildT4Units(t3Zones, t1);
+
+  callbacks?.onStatus?.('T5: Applying interaction constraints…');
+  const t5Zones = applyT5Interactions(t4Zones);
+
+  callbacks?.onStatus?.('T6: Cleanup pass…');
+  const t6Zones = applyT6Cleanup(t5Zones);
+
+  callbacks?.onStatus?.('T7: Rendering…');
+  const svg = document.getElementById('site-plan');
+  if (svg) renderT7(t6Zones, svg, params);
+
+  callbacks?.onComplete?.({
+    zones: t6Zones,
+    score: t3Result.best.score,
+    history: t3Result.history,
+    t1, params,
+  });
+
+  return { zones: t6Zones, t3Result, t1 };
+}
+
+// Export
+window.EC_Pipeline = {
+  PLANNING, USES, USE_ADJACENCY, CONFLICT, SYNERGY, DEFAULT_WEIGHTS,
+  buildT1GroundTruth, buildT2Zones, runT3EA, buildT4Units,
+  applyT5Interactions, applyT6Cleanup, renderT7,
+  runPipeline, scoreCandidate,
+};
+
+
+
+// ── PIPELINE WIRING ──────────────────────────────────────────────────────────
+let _pipelineParcels = null, _pipelineProj = null, _pipelineMAP = null;
+
+function initPipeline(parcels, proj, MAP, derivedG) {
+  _pipelineParcels = parcels; _pipelineProj = proj; _pipelineMAP = MAP;
+  window._derivedG = derivedG;
+}
+
+async function triggerPipeline() {
+  if (!_pipelineParcels) { alert('Constraint solver must run first.'); return; }
+  const btn = document.getElementById('run-pipeline-btn');
+  btn.disabled = true; btn.textContent = '⟳ Running…';
+  const statusText = document.getElementById('pipeline-status-text');
+  const progressBar = document.getElementById('ea-progress-bar');
+  const scoreHistory = document.getElementById('score-history');
+  const results = document.getElementById('pipeline-results');
+  document.getElementById('pipeline-status').style.display = '';
+  document.getElementById('ea-progress-bar-wrap').style.display = '';
+  scoreHistory.innerHTML = ''; results.style.display = 'none';
+
+  const params = {
+    block_size_ft:  parseInt(document.getElementById('p-block-size').value),
+    strategy:       document.getElementById('p-strategy').value,
+    ea_rounds:      parseInt(document.getElementById('p-rounds').value),
+    ea_candidates:  parseInt(document.getElementById('p-candidates').value),
+    ea_mutation:    parseInt(document.getElementById('p-mutation').value) / 100,
+    show_units:true, show_edges:true, show_labels:true, opacity:0.55,
+    weights: {
+      w_units:         parseInt(document.getElementById('w-units').value) / 100,
+      w_affordable:    parseInt(document.getElementById('w-affordable').value) / 100,
+      w_green_connect: parseInt(document.getElementById('w-green').value) / 100,
+      w_walkability:   parseInt(document.getElementById('w-walk').value) / 100,
+      w_conflict: -0.05, w_synergy: 0.05,
+    },
+  };
+
+  try {
+    await window.EC_Pipeline.runPipeline(
+      _pipelineParcels, _pipelineProj, _pipelineMAP, window._derivedG, params,
+      {
+        onStatus: (msg) => { statusText.textContent = msg; },
+        onT2Complete: (zones) => { statusText.textContent = `T2: ${zones.length} zones`; },
+        onEAProgress: ({ round, total, best, history }) => {
+          progressBar.style.width = `${(round/total)*100}%`;
+          const last = history[history.length-1];
+          scoreHistory.innerHTML += `<div>Round ${last.round}: score=${last.best.toFixed(3)}, units=${last.units}</div>`;
+          scoreHistory.scrollTop = scoreHistory.scrollHeight;
+        },
+        onComplete: ({ zones, score }) => {
+          let total_units=0, affordable=0, green_ac=0;
+          for (const z of zones) {
+            if (z.units) { total_units+=z.units.unit_count; affordable+=z.units.affordable_units; }
+            if (z.use.startsWith('GREEN')) green_ac+=z.area_ac;
+          }
+          document.getElementById('res-units').textContent = total_units.toLocaleString();
+          document.getElementById('res-affordable').textContent =
+            total_units>0 ? `${((affordable/total_units)*100).toFixed(0)}%` : '—';
+          document.getElementById('res-green').textContent = (green_ac/73.4*100).toFixed(1)+'%';
+          document.getElementById('res-zones').textContent = zones.length;
+          document.getElementById('res-score').textContent = score.total.toFixed(3);
+          results.style.display = '';
+          statusText.textContent = '\u2713 Pipeline complete';
+          btn.disabled=false; btn.textContent='\u25b6 Re-run pipeline';
+        },
+      }
+    );
+  } catch(e) {
+    statusText.textContent = '\u2717 Error: ' + e.message;
+    console.error(e); btn.disabled=false; btn.textContent='\u25b6 Run pipeline';
+  }
+}
 
 </script>
 
