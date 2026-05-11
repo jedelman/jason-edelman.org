@@ -257,6 +257,84 @@ details[open] summary::before { content: '▼  '; }
   .callout-grid { grid-template-columns: 1fr; }
   .stat { min-width: 100px; padding: 0.75rem 1rem; }
 }
+
+/* ── INTERACTIVE PLAN TOOLS ── */
+.tools-bar {
+  display:flex; gap:0.5rem; flex-wrap:wrap;
+  padding:0.6rem; background:var(--surface); border:1px solid var(--border);
+  border-bottom:none;
+}
+.tool-btn {
+  font-family:var(--font-mono); font-size:0.65rem; letter-spacing:0.08em;
+  text-transform:uppercase; padding:0.3rem 0.6rem;
+  background:transparent; border:1px solid var(--border); color:var(--muted);
+  cursor:pointer; transition:all 0.12s;
+}
+.tool-btn:hover { border-color:var(--accent-dim); color:var(--accent); }
+.tool-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+.tool-btn.danger { border-color:#604040; color:#a06060; }
+.tool-btn.danger:hover { background:#401818; border-color:#c04040; color:#d06060; }
+
+/* Density meter */
+.density-panel {
+  background:var(--surface); border:1px solid var(--border);
+  padding:0.6rem 0.8rem; display:grid;
+  grid-template-columns:1fr 1fr 1fr 1fr; gap:0.5rem;
+}
+.density-stat { display:flex; flex-direction:column; }
+.density-val {
+  font-family:var(--font-display); font-size:1.4rem; font-weight:900;
+  color:var(--accent); line-height:1;
+}
+.density-val.warn { color:#c87020; }
+.density-val.bad  { color:#c04030; }
+.density-lbl {
+  font-family:var(--font-mono); font-size:0.58rem; letter-spacing:0.1em;
+  text-transform:uppercase; color:var(--muted); margin-top:0.2rem;
+}
+
+/* Section view */
+.section-wrap {
+  background:#040402; border:1px solid var(--border);
+  position:relative; overflow:hidden;
+}
+.section-label-bar {
+  position:absolute; bottom:0; left:0; right:0;
+  background:rgba(18,16,9,0.85); padding:0.3rem 0.6rem;
+  font-family:var(--font-mono); font-size:0.58rem; color:var(--muted);
+  display:flex; justify-content:space-between; align-items:center;
+}
+.section-hint {
+  font-family:var(--font-mono); font-size:0.62rem; color:var(--muted);
+  padding:0.5rem; text-align:center; opacity:0.6;
+}
+
+/* Plant palette */
+.plant-palette {
+  background:var(--surface); border:1px solid var(--border); padding:0.6rem 0.8rem;
+}
+.plant-palette h3 { font-family:var(--font-mono); font-size:0.6rem; letter-spacing:0.15em; text-transform:uppercase; color:var(--muted); margin-bottom:0.4rem; }
+.plant-list { display:flex; flex-wrap:wrap; gap:0.3rem; }
+.plant-chip {
+  font-family:var(--font-mono); font-size:0.6rem; padding:0.2rem 0.4rem;
+  border:1px solid var(--border); color:var(--muted); cursor:default;
+  position:relative;
+}
+.plant-chip.meye { border-color:var(--accent-dim); color:var(--accent-dim); }
+.plant-chip.meye::after { content:'M'; font-size:0.5rem; margin-left:0.2rem; opacity:0.6; }
+
+/* Superblock overlay toggle */
+.overlay-controls { display:flex; gap:0.4rem; flex-wrap:wrap; }
+.overlay-btn {
+  font-family:var(--font-mono); font-size:0.6rem; padding:0.2rem 0.5rem;
+  border:1px solid transparent; cursor:pointer; background:transparent;
+  color:var(--muted); letter-spacing:0.06em; text-transform:uppercase;
+}
+.overlay-btn.on { border-color:currentColor; }
+.overlay-btn[data-overlay="superblock"] { color:#4888a8; }
+.overlay-btn[data-overlay="density"] { color:#a08028; }
+.overlay-btn[data-overlay="walkability"] { color:#48a870; }
+.overlay-btn[data-overlay="plants"] { color:#388040; }
 </style>
 </head>
 
@@ -308,6 +386,43 @@ details[open] summary::before { content: '▼  '; }
     </div>
   </div>
 
+
+  <!-- INTERACTIVE TOOLS BAR -->
+  <div class="tools-bar">
+    <span style="font-family:var(--font-mono);font-size:0.6rem;color:var(--muted);padding:0.3rem 0.2rem;letter-spacing:0.1em;text-transform:uppercase;">Tools:</span>
+    <button class="tool-btn active" id="btn-select" onclick="setTool('select')">↖ Select</button>
+    <button class="tool-btn" id="btn-place" onclick="setTool('place')">▭ Place building</button>
+    <button class="tool-btn" id="btn-section" onclick="setTool('section')">⊸ Section cut</button>
+    <button class="tool-btn danger" id="btn-clear" onclick="clearBuildings()">✕ Clear buildings</button>
+    <span style="flex:1"></span>
+    <div class="overlay-controls">
+      <button class="overlay-btn on" data-overlay="superblock" onclick="toggleOverlay(this)">Superblock grid</button>
+      <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
+      <button class="overlay-btn" data-overlay="density" onclick="toggleOverlay(this)">Density heat</button>
+      <button class="overlay-btn on" data-overlay="plants" onclick="toggleOverlay(this)">Plant layer</button>
+    </div>
+  </div>
+
+  <!-- DENSITY METER (updated live) -->
+  <div class="density-panel" id="density-panel">
+    <div class="density-stat">
+      <span class="density-val" id="dv-units">1,600</span>
+      <span class="density-lbl">Target units</span>
+    </div>
+    <div class="density-stat">
+      <span class="density-val" id="dv-placed">0</span>
+      <span class="density-lbl">Placed units</span>
+    </div>
+    <div class="density-stat">
+      <span class="density-val" id="dv-far">—</span>
+      <span class="density-lbl">FAR (target 3.0–4.5)</span>
+    </div>
+    <div class="density-stat">
+      <span class="density-val" id="dv-walk">—</span>
+      <span class="density-lbl">Walk score est.</span>
+    </div>
+  </div>
+
   <!-- CONSTRAINT LOG -->
   <details>
     <summary>Constraint solver output</summary>
@@ -326,6 +441,30 @@ details[open] summary::before { content: '▼  '; }
       <div style="background:#040402;border:1px solid var(--border);overflow:hidden;">
         <img src="/eastside-commons/render-rza.svg" alt="RZ·A Housing A courtyard interior — perspective looking north" style="display:block;width:100%;height:auto;">
       </div>
+    </div>
+  </div>
+
+
+  <!-- LIVE SECTION VIEW -->
+  <div class="map-section" id="section-section" style="display:none;">
+    <span class="map-label" id="section-label-text">Section cut — draw a line on the plan above</span>
+    <div class="section-wrap" style="height:280px;">
+      <svg id="section-view" viewBox="0 0 960 280" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;height:auto;">
+        <rect width="960" height="280" fill="#040402"/>
+        <text x="480" y="144" font-family="monospace" font-size="12" fill="#2a2820" text-anchor="middle">Draw a section cut on the plan above ↑</text>
+      </svg>
+      <div class="section-label-bar">
+        <span id="section-info">No cut active</span>
+        <span>W ←————→ E</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLANT PALETTE -->
+  <div class="plant-palette">
+    <h3>Native plant palette — Hampton Roads (SE Virginia)</h3>
+    <div class="plant-list" id="plant-list">
+      <!-- Populated by JS -->
     </div>
   </div>
 
@@ -1021,7 +1160,835 @@ function initTooltip() {
   console.log('Eastside Commons: constraint solver complete.');
   console.log(`Parcels: ${parcels.length} (${parcels.filter(p=>p.is_eda).length} EDA-owned)`);
   console.log(`Constraints: ${log.filter(l=>l.ok).length} pass, ${log.filter(l=>!l.ok).length} fail`);
+
+  // Export solved geometry to interactive layer (deferred - JS modules load after IIFE)
+  setTimeout(() => {
+    if (window.EC_Interactive) {
+      window.EC_Interactive.exportDerived(derived, MAP);
+      window.EC_Interactive.initInteractiveLayer();
+      setTimeout(() => window.EC_Interactive.renderOverlays(), 50);
+    }
+  }, 0);
 })();
+
+
+// ═══════════════════════════════════════════════════════════════
+//  EASTSIDE COMMONS — INTERACTIVE LAYER v2
+//  Superblock grid, building placement, section cut, plant palette
+// ═══════════════════════════════════════════════════════════════
+
+// ── PLANT REGISTRY ──
+const PLANT_REGISTRY = {
+  "source": "Hampton Roads Native Plant Guide (VCZMP 2017) + Norfolk tree survey",
+  "meye_url": "https://meye.dk/",
+  "note": "Only genera available on meye.dk are marked meye_available:true",
+  "species": [
+    {
+      "common": "Red Maple",
+      "latin": "Acer rubrum",
+      "genus": "Acer",
+      "meye_available": true,
+      "meye_genus": "Acer",
+      "context": ["courtyard", "swale_edge", "street"],
+      "mature_height_ft": [40, 70],
+      "canopy_spread_ft": [30, 50],
+      "notes": "Most common native tree in Norfolk. Brilliant red fall color. Tolerates wet soils — ideal for bioswale edges.",
+      "sponge_suitable": true,
+      "season_interest": ["spring_flowers", "fall_color"]
+    },
+    {
+      "common": "River Birch",
+      "latin": "Betula nigra",
+      "genus": "Betula",
+      "meye_available": true,
+      "meye_genus": "Betula",
+      "context": ["swale_edge", "wetland_margin"],
+      "mature_height_ft": [40, 70],
+      "canopy_spread_ft": [40, 60],
+      "notes": "Native birch of riparian corridors. Multi-stem form, peeling bark. Perfect for sponge park wetland edge. Extremely flood-tolerant.",
+      "sponge_suitable": true,
+      "season_interest": ["peeling_bark", "spring_catkins"]
+    },
+    {
+      "common": "American Hornbeam",
+      "latin": "Carpinus caroliniana",
+      "genus": "Carpinus",
+      "meye_available": true,
+      "meye_genus": "Carpinus",
+      "context": ["courtyard_understory", "shaded_swale"],
+      "mature_height_ft": [20, 35],
+      "canopy_spread_ft": [20, 35],
+      "notes": "Small understory tree native to Hampton Roads. Muscled bark, excellent fall color. Perfect under taller buildings.",
+      "sponge_suitable": true,
+      "season_interest": ["fall_color", "muscled_bark"]
+    },
+    {
+      "common": "Downy Serviceberry",
+      "latin": "Amelanchier arborea",
+      "genus": "Amelanchier",
+      "meye_available": true,
+      "meye_genus": "Amelanchier",
+      "context": ["courtyard_edge", "spine_planting"],
+      "mature_height_ft": [15, 25],
+      "canopy_spread_ft": [15, 25],
+      "notes": "First tree to bloom in spring. Native to SE Virginia. Multi-season interest: flowers, fruit, fall color. Edible berries.",
+      "sponge_suitable": false,
+      "season_interest": ["spring_flowers", "fruit", "fall_color"]
+    },
+    {
+      "common": "Tulip Poplar",
+      "latin": "Liriodendron tulipifera",
+      "genus": "Liriodendron",
+      "meye_available": true,
+      "meye_genus": "Liriodendron",
+      "context": ["spine_canopy", "large_courtyard"],
+      "mature_height_ft": [70, 120],
+      "canopy_spread_ft": [35, 50],
+      "notes": "Virginia's state tree. Fast-growing, tall canopy — excellent for shading the commons spine. Distinctive tulip flowers.",
+      "sponge_suitable": false,
+      "season_interest": ["spring_flowers", "fall_color"]
+    },
+    {
+      "common": "Southern Magnolia",
+      "latin": "Magnolia grandiflora",
+      "genus": "Magnolia",
+      "meye_available": true,
+      "meye_genus": "Magnolia",
+      "context": ["courtyard_anchor", "civic_plaza"],
+      "mature_height_ft": [60, 80],
+      "canopy_spread_ft": [30, 50],
+      "notes": "Iconic SE Virginia native. Evergreen. Signature for Norfolk — already prevalent. Large white flowers. Long-lived anchor tree.",
+      "sponge_suitable": false,
+      "season_interest": ["summer_flowers", "evergreen_form"]
+    },
+    {
+      "common": "Sweetgum",
+      "latin": "Liquidambar styraciflua",
+      "genus": null,
+      "meye_available": false,
+      "notes": "Most common Norfolk tree by count. Not on meye.dk — use Quercus or Acer for renders. Fall color exceptional.",
+      "context": ["street", "spine_canopy"],
+      "mature_height_ft": [60, 75],
+      "sponge_suitable": false
+    },
+    {
+      "common": "Willow Oak",
+      "latin": "Quercus phellos",
+      "genus": "Quercus",
+      "meye_available": true,
+      "meye_genus": "Quercus",
+      "context": ["street_tree", "spine_canopy", "civic_plaza"],
+      "mature_height_ft": [40, 75],
+      "canopy_spread_ft": [30, 45],
+      "notes": "Best street tree in Hampton Roads. Native willow-leaved oak. Beautiful vase form. City of Norfolk standard street tree.",
+      "sponge_suitable": false,
+      "season_interest": ["fall_color", "form"]
+    },
+    {
+      "common": "Water Oak",
+      "latin": "Quercus nigra",
+      "genus": "Quercus",
+      "meye_available": true,
+      "meye_genus": "Quercus",
+      "context": ["swale_edge", "wetland_margin", "large_courtyard"],
+      "mature_height_ft": [50, 80],
+      "canopy_spread_ft": [40, 60],
+      "notes": "Semi-evergreen native oak, tolerates wet soils. Extremely common in Norfolk lowlands. Key sponge park candidate.",
+      "sponge_suitable": true,
+      "season_interest": ["semi_evergreen_form"]
+    },
+    {
+      "common": "Bald Cypress",
+      "latin": "Taxodium distichum",
+      "genus": null,
+      "meye_available": false,
+      "notes": "Not on meye.dk. The signature Hampton Roads wetland tree — state champion specimens nearby. Critical for sponge park renders. Substitute Metasequoia (dawn redwood) from meye.dk for render.",
+      "context": ["wetland_center", "basin_edge"],
+      "mature_height_ft": [50, 70],
+      "sponge_suitable": true,
+      "meye_substitute": "Metasequoia"
+    },
+    {
+      "common": "Black Gum / Blackgum",
+      "latin": "Nyssa sylvatica",
+      "genus": null,
+      "meye_available": false,
+      "notes": "Native to SE Virginia bottomlands. Best fall color of any native. Not on meye.dk — substitute Sorbus for renders.",
+      "context": ["swale_edge", "courtyard"],
+      "mature_height_ft": [30, 50],
+      "sponge_suitable": true
+    },
+    {
+      "common": "Redbud",
+      "latin": "Cercis canadensis",
+      "genus": null,
+      "meye_available": false,
+      "notes": "Small native understory tree, brilliant pink spring flowers. Not on meye.dk. Common in Norfolk yards. Use Prunus (cherry) as render substitute for spring flowering effect.",
+      "context": ["courtyard_understory", "spine_edge"],
+      "mature_height_ft": [15, 30],
+      "meye_substitute": "Prunus"
+    },
+    {
+      "common": "American Sycamore",
+      "latin": "Platanus occidentalis",
+      "genus": "Platanus",
+      "meye_available": true,
+      "meye_genus": "Platanus",
+      "context": ["large_courtyard", "spine_canopy", "riparian"],
+      "mature_height_ft": [75, 100],
+      "canopy_spread_ft": [45, 70],
+      "notes": "Massive native riparian tree. White/tan exfoliating bark — iconic. Present along Elizabeth River corridors. Appropriate for sponge park edge if space allows.",
+      "sponge_suitable": true,
+      "season_interest": ["exfoliating_bark", "massive_form"]
+    }
+  ],
+  "wetland_ground_layer": [
+    {"common": "Blue Flag Iris", "latin": "Iris virginica", "type": "emergent_aquatic", "context": "swale_edge"},
+    {"common": "Soft Rush", "latin": "Juncus effusus", "type": "emergent_aquatic", "context": "swale_water_edge"},
+    {"common": "Swamp Rose Mallow", "latin": "Hibiscus moscheutos", "type": "wetland_margin", "context": "basin_edge"},
+    {"common": "Cardinal Flower", "latin": "Lobelia cardinalis", "type": "wetland_margin", "context": "swale_edge"},
+    {"common": "Lizard's Tail", "latin": "Saururus cernuus", "type": "emergent_aquatic", "context": "shallow_basin"},
+    {"common": "Wild Rice", "latin": "Zizania aquatica", "type": "emergent_aquatic", "context": "basin_shallow"},
+    {"common": "Southern Wild Rice", "latin": "Zizaniopsis miliacea", "type": "emergent_aquatic", "context": "basin_edge"}
+  ],
+  "render_assignments": {
+    "COURTYARD_CANOPY": ["Quercus phellos", "Acer rubrum", "Liriodendron tulipifera"],
+    "COURTYARD_UNDERSTORY": ["Amelanchier arborea", "Carpinus caroliniana"],
+    "SWALE_EDGE": ["Betula nigra", "Acer rubrum", "Quercus nigra"],
+    "WETLAND_EDGE": ["Quercus nigra", "Betula nigra", "Platanus occidentalis"],
+    "WETLAND_CENTER": ["Taxodium distichum (render as Metasequoia)"],
+    "SPINE_CANOPY": ["Quercus phellos", "Liriodendron tulipifera"],
+    "CIVIC_PLAZA_ANCHOR": ["Magnolia grandiflora"],
+    "RESEARCH_PAVILION": ["Betula nigra", "Carpinus caroliniana"]
+  }
+}
+;
+
+// ── GLOBAL STATE ──
+let CURRENT_TOOL = 'select';
+let PLACED_BUILDINGS = [];   // {x,y,w,h,floors,use,id}
+let SECTION_CUT = null;      // {x1,y1,x2,y2}
+let OVERLAYS = {superblock:true, walkability:true, density:false, plants:true};
+let DERIVED_G = null;        // set by main() after solve
+let PROJ = null;             // set by main()
+let MAP_BOUNDS = null;       // set by main()
+
+// ── TOOL MANAGEMENT ──
+function setTool(tool) {
+  CURRENT_TOOL = tool;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-'+tool)?.classList.add('active');
+  const svg = document.getElementById('site-plan');
+  if (svg) svg.style.cursor = tool === 'place' ? 'crosshair' : tool === 'section' ? 'col-resize' : 'default';
+}
+
+function toggleOverlay(btn) {
+  const key = btn.dataset.overlay;
+  OVERLAYS[key] = !OVERLAYS[key];
+  btn.classList.toggle('on', OVERLAYS[key]);
+  renderOverlays();
+}
+
+// ── SUPERBLOCK GRID CONSTRAINT ──
+// Military Circle adapted superblock:
+// - Site ~630px wide (702px map minus road offsets)
+// - 1 superblock = 3×3 blocks. Eixample block = 113m ≈ 113/304 * 702px ≈ 261px
+// - At this scale a full Eixample superblock is larger than the site
+// - So we use a MINIBLOCK (2×2) model: ~56m per block ≈ 130px
+// - Commons spine is the central "green street" — no through traffic
+// - Perimeter roads are the through-traffic ring
+
+function computeSuperblockGrid(G, MAP) {
+  if (!G) return [];
+  const mall = G.MALL;  // will be passed in
+  if (!mall) return [];
+
+  const spine = G.SPINE;
+  const sl = spine.x, sr = spine.x + spine.w;
+  const scx = sl + spine.w/2;
+
+  // Block dimension: target ~130px (≈56m at our scale) for miniblock
+  // Fit blocks into available space left and right of spine
+  const BLOCK = 130;
+
+  // Left side: from N_MILITARY_HWY east edge to spine left
+  const left_avail = sl - MAP.x0;   // ~252px
+  const left_cols = Math.floor(left_avail / BLOCK);
+
+  // Right side: from spine right to TIDEWATER_DR west edge
+  const right_avail = MAP.x1 - sr;  // ~408px
+  const right_cols = Math.floor(right_avail / BLOCK);
+
+  // Rows: from VA_BEACH_BLVD south to I-264 north
+  const rows = Math.floor((MAP.y1 - MAP.y0) / BLOCK);
+
+  const blocks = [];
+
+  // Left blocks
+  for (let r=0; r<rows; r++) {
+    for (let c=0; c<left_cols; c++) {
+      blocks.push({
+        x: MAP.x0 + c*BLOCK,
+        y: MAP.y0 + r*BLOCK,
+        w: BLOCK, h: BLOCK,
+        side: 'left', col: c, row: r,
+        is_perimeter: (c===0 || r===0 || r===rows-1),
+        is_interior: c > 0 && r > 0 && r < rows-1,
+      });
+    }
+  }
+
+  // Right blocks
+  for (let r=0; r<rows; r++) {
+    for (let c=0; c<right_cols; c++) {
+      blocks.push({
+        x: sr + c*BLOCK,
+        y: MAP.y0 + r*BLOCK,
+        w: BLOCK, h: BLOCK,
+        side: 'right', col: c, row: r,
+        is_perimeter: (c===right_cols-1 || r===0 || r===rows-1),
+        is_interior: c < right_cols-1 && r > 0 && r < rows-1,
+      });
+    }
+  }
+
+  return blocks;
+}
+
+// ── DENSITY CALCULATOR ──
+function calcDensity() {
+  if (!MAP_BOUNDS) return;
+
+  // Site area in acres (from parcel data)
+  const site_acres = 73.4;
+
+  // Units from placed buildings
+  let placed_units = 0;
+  let placed_floor_area = 0;  // sq ft
+  const site_area_sqft = site_acres * 43560;
+
+  for (const b of PLACED_BUILDINGS) {
+    // Each pixel ≈ 7.5ft (702px = ~350ft site width, but site is ~1320ft so 1px ≈ 1.88ft)
+    // The map x0-x1 = 702px spans the site bounding box
+    // From GIS: site is ~73ac = ~3.18M sqft. Map area = 702*490 = 344,000px²
+    // So 1px² = 3,180,000/344,000 = 9.24 sqft → 1px = 3.04ft
+    const PX_TO_FT = 3.04;
+    const bldg_footprint_sqft = b.w * b.h * PX_TO_FT * PX_TO_FT;
+    const bldg_floor_area = bldg_footprint_sqft * b.floors;
+    // Assume 850sqft avg unit, 80% residential (20% circulation/common)
+    const units = Math.round(bldg_floor_area * 0.80 / 850);
+    placed_units += units;
+    placed_floor_area += bldg_floor_area;
+  }
+
+  const far = placed_floor_area / site_area_sqft;
+  const units_per_acre = placed_units / site_acres;
+
+  // Walk score estimate: based on planned amenities + transit
+  // Tide station: ~2033. Current: car-dependent. Planned: very walkable.
+  // Base + transit bonus + density bonus
+  const transit_bonus = 20;  // Tide extension planned
+  const density_bonus = Math.min(30, units_per_acre / 3);
+  const amenity_bonus = 15;  // planned retail/clinic/incubator
+  const walk_score = Math.min(95, 30 + transit_bonus + Math.round(density_bonus) + amenity_bonus);
+
+  // Update UI
+  const dv_placed = document.getElementById('dv-placed');
+  const dv_far = document.getElementById('dv-far');
+  const dv_walk = document.getElementById('dv-walk');
+  if (dv_placed) dv_placed.textContent = placed_units.toLocaleString();
+  if (dv_far) {
+    dv_far.textContent = far.toFixed(2);
+    dv_far.className = 'density-val' + (far > 4.5 ? ' bad' : far > 3.0 ? '' : ' warn');
+  }
+  if (dv_walk) dv_walk.textContent = walk_score;
+}
+
+// ── BUILDING PLACEMENT ──
+let placingBuilding = null;  // {startX, startY}
+
+function initBuildingPlacement() {
+  const svg = document.getElementById('site-plan');
+  if (!svg) return;
+
+  svg.addEventListener('mousedown', (e) => {
+    if (CURRENT_TOOL !== 'place' && CURRENT_TOOL !== 'section') return;
+    const pt = svgPoint(svg, e);
+    if (CURRENT_TOOL === 'place') {
+      placingBuilding = {sx:pt.x, sy:pt.y};
+    } else if (CURRENT_TOOL === 'section') {
+      SECTION_CUT = {x1:pt.x, y1:pt.y, x2:pt.x, y2:pt.y};
+    }
+  });
+
+  svg.addEventListener('mousemove', (e) => {
+    if (!placingBuilding && CURRENT_TOOL !== 'section') return;
+    const pt = svgPoint(svg, e);
+    if (CURRENT_TOOL === 'place' && placingBuilding) {
+      // Draw preview
+      let preview = document.getElementById('bldg-preview');
+      if (!preview) {
+        preview = document.createElementNS('http://www.w3.org/2000/svg','rect');
+        preview.setAttribute('id','bldg-preview');
+        preview.setAttribute('fill','#d09828');
+        preview.setAttribute('fill-opacity','0.25');
+        preview.setAttribute('stroke','#d09828');
+        preview.setAttribute('stroke-width','1.5');
+        preview.setAttribute('stroke-dasharray','4,2');
+        svg.appendChild(preview);
+      }
+      const x = Math.min(placingBuilding.sx, pt.x);
+      const y = Math.min(placingBuilding.sy, pt.y);
+      const w = Math.abs(pt.x - placingBuilding.sx);
+      const h = Math.abs(pt.y - placingBuilding.sy);
+      preview.setAttribute('x',x); preview.setAttribute('y',y);
+      preview.setAttribute('width',w); preview.setAttribute('height',h);
+    } else if (CURRENT_TOOL === 'section' && SECTION_CUT) {
+      SECTION_CUT.x2 = pt.x; SECTION_CUT.y2 = pt.y;
+      drawSectionLine();
+    }
+  });
+
+  svg.addEventListener('mouseup', (e) => {
+    const pt = svgPoint(svg, e);
+    if (CURRENT_TOOL === 'place' && placingBuilding) {
+      const x = Math.min(placingBuilding.sx, pt.x);
+      const y = Math.min(placingBuilding.sy, pt.y);
+      const w = Math.abs(pt.x - placingBuilding.sx);
+      const h = Math.abs(pt.y - placingBuilding.sy);
+      if (w > 10 && h > 10) {
+        const bldg = {
+          id: Date.now(), x, y, w, h,
+          floors: promptFloors(),
+          use: 'residential',
+          constraint_ok: checkBuildingConstraints(x,y,w,h),
+        };
+        PLACED_BUILDINGS.push(bldg);
+        renderBuildings();
+        calcDensity();
+      }
+      document.getElementById('bldg-preview')?.remove();
+      placingBuilding = null;
+    } else if (CURRENT_TOOL === 'section' && SECTION_CUT) {
+      SECTION_CUT.x2 = pt.x; SECTION_CUT.y2 = pt.y;
+      renderSection();
+    }
+  });
+}
+
+function svgPoint(svg, e) {
+  const rect = svg.getBoundingClientRect();
+  const scaleX = 960 / rect.width;
+  const scaleY = 760 / rect.height;
+  return {x: (e.clientX - rect.left)*scaleX, y: (e.clientY - rect.top)*scaleY};
+}
+
+function promptFloors() {
+  // For now default to 4; could be a toolbar control
+  return 4;
+}
+
+function checkBuildingConstraints(x,y,w,h) {
+  if (!MAP_BOUNDS) return {ok:true, violations:[]};
+  const MAP = MAP_BOUNDS;
+  const violations = [];
+  // Must be within map area
+  if (x < MAP.x0 || x+w > MAP.x1 || y < MAP.y0 || y+h > MAP.y1)
+    violations.push('Outside site boundary');
+  // Minimum courtyard: building footprint ≤ 70% of block area
+  const BLOCK = 130;
+  const footprint = w*h;
+  const block_area = BLOCK*BLOCK;
+  if (footprint > block_area * 0.70)
+    violations.push('Courtyard ratio: building >70% of block (min 30% courtyard required)');
+  // Daylight angle: building height ≤ 45° from courtyard center
+  // Simplified: w or h should not exceed floors*10px (1 story ≈ 10px)
+  return {ok: violations.length === 0, violations};
+}
+
+function renderBuildings() {
+  const svg = document.getElementById('site-plan');
+  if (!svg) return;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Clear existing placed buildings
+  svg.querySelectorAll('[data-bldg]').forEach(e => e.remove());
+
+  for (const b of PLACED_BUILDINGS) {
+    const color = b.constraint_ok.ok ? '#d09828' : '#c04030';
+
+    // Building footprint
+    const r = document.createElementNS(ns,'rect');
+    r.setAttribute('x',b.x); r.setAttribute('y',b.y);
+    r.setAttribute('width',b.w); r.setAttribute('height',b.h);
+    r.setAttribute('fill',color); r.setAttribute('fill-opacity','0.3');
+    r.setAttribute('stroke',color); r.setAttribute('stroke-width','1.5');
+    r.setAttribute('data-bldg',b.id);
+    r.setAttribute('clip-path','url(#mc)');
+    r.style.cursor='pointer';
+    r.addEventListener('click',() => {
+      if (CURRENT_TOOL === 'select') {
+        if (confirm('Remove this building?')) {
+          PLACED_BUILDINGS = PLACED_BUILDINGS.filter(x=>x.id!==b.id);
+          renderBuildings(); calcDensity(); renderOverlays();
+        }
+      }
+    });
+    svg.appendChild(r);
+
+    // Floor label
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x', b.x+b.w/2); t.setAttribute('y', b.y+b.h/2+4);
+    t.setAttribute('font-family','DM Mono,monospace'); t.setAttribute('font-size','8');
+    t.setAttribute('fill',color); t.setAttribute('text-anchor','middle');
+    t.setAttribute('data-bldg',b.id); t.setAttribute('clip-path','url(#mc)');
+    t.textContent = b.floors+'F';
+    svg.appendChild(t);
+
+    // Constraint violation indicator
+    if (!b.constraint_ok.ok) {
+      const warn = document.createElementNS(ns,'text');
+      warn.setAttribute('x',b.x+4); warn.setAttribute('y',b.y+12);
+      warn.setAttribute('font-family','DM Mono,monospace'); warn.setAttribute('font-size','7');
+      warn.setAttribute('fill','#c04030'); warn.setAttribute('data-bldg',b.id);
+      warn.setAttribute('clip-path','url(#mc)');
+      warn.textContent = '⚠ '+b.constraint_ok.violations[0];
+      svg.appendChild(warn);
+    }
+  }
+}
+
+function clearBuildings() {
+  PLACED_BUILDINGS = [];
+  document.querySelectorAll('[data-bldg]').forEach(e=>e.remove());
+  calcDensity(); renderOverlays();
+}
+
+// ── SUPERBLOCK OVERLAY RENDERER ──
+function renderOverlays() {
+  const svg = document.getElementById('site-plan');
+  if (!svg) return;
+
+  // Clear previous overlays
+  svg.querySelectorAll('[data-overlay]').forEach(e=>e.remove());
+
+  if (!DERIVED_G || !MAP_BOUNDS) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const MAP = MAP_BOUNDS;
+  const G = DERIVED_G;
+
+  if (OVERLAYS.superblock) {
+    const blocks = computeSuperblockGrid({SPINE: G.SPINE, MALL: G.MALL_CORE_BOUNDS}, MAP);
+    const og = document.createElementNS(ns,'g');
+    og.setAttribute('data-overlay','superblock');
+    og.setAttribute('opacity','0.55');
+
+    for (const b of blocks) {
+      // Interior streets: the block grid lines
+      const r = document.createElementNS(ns,'rect');
+      r.setAttribute('x',b.x); r.setAttribute('y',b.y);
+      r.setAttribute('width',b.w); r.setAttribute('height',b.h);
+      r.setAttribute('fill','none');
+      r.setAttribute('stroke', b.is_perimeter ? '#4888a8' : '#2a4860');
+      r.setAttribute('stroke-width', b.is_perimeter ? '1.5' : '0.8');
+      r.setAttribute('stroke-dasharray', b.is_interior ? '4,4' : 'none');
+      r.setAttribute('clip-path','url(#mc)');
+      og.appendChild(r);
+
+      // Interior block: pedestrian zone indicator
+      if (b.is_interior && b.w > 20 && b.h > 20) {
+        const inset = 8;
+        const ri = document.createElementNS(ns,'rect');
+        ri.setAttribute('x',b.x+inset); ri.setAttribute('y',b.y+inset);
+        ri.setAttribute('width',b.w-inset*2); ri.setAttribute('height',b.h-inset*2);
+        ri.setAttribute('fill','#4888a8'); ri.setAttribute('fill-opacity','0.06');
+        ri.setAttribute('clip-path','url(#mc)');
+        og.appendChild(ri);
+      }
+    }
+
+    // Spine "green street" label
+    if (G.SPINE) {
+      const sl = G.SPINE.x, sr = G.SPINE.x+G.SPINE.w;
+      const lt = document.createElementNS(ns,'text');
+      lt.setAttribute('x', sl-8); lt.setAttribute('y', MAP.y0 + (MAP.y1-MAP.y0)/2);
+      lt.setAttribute('font-family','DM Mono,monospace'); lt.setAttribute('font-size','6');
+      lt.setAttribute('fill','#4888a8'); lt.setAttribute('text-anchor','end');
+      lt.setAttribute('opacity','0.6');
+      lt.setAttribute('transform',`rotate(-90,${sl-8},${MAP.y0+(MAP.y1-MAP.y0)/2})`);
+      lt.setAttribute('data-overlay','superblock');
+      lt.textContent = 'GREEN STREET · PEDESTRIAN ONLY';
+      svg.appendChild(lt);
+    }
+
+    svg.appendChild(og);
+  }
+
+  if (OVERLAYS.walkability) {
+    // Walkability radius circles from key amenity locations
+    const amenities = [];
+    if (G.TIDE) amenities.push({x:G.TIDE.x+G.TIDE.w/2, y:G.TIDE.y, label:'Tide Stn.', r:150, color:'#3898c0'});
+    if (G.SPONGE) amenities.push({x:G.SPONGE.cx, y:G.SPONGE.cy, label:'Sponge Park', r:120, color:'#3a8040'});
+    // Main street centroid (assume center of band)
+    amenities.push({x:(MAP.x0+MAP.x1)/2, y:(MAP.y0+G.BAND_BOT)/2, label:'Main St.', r:140, color:'#c85018'});
+
+    const wg = document.createElementNS(ns,'g');
+    wg.setAttribute('data-overlay','walkability');
+
+    for (const a of amenities) {
+      // 5-min walk circle (~400m ≈ 130px at our scale)
+      const c1 = document.createElementNS(ns,'circle');
+      c1.setAttribute('cx',a.x); c1.setAttribute('cy',a.y); c1.setAttribute('r',a.r);
+      c1.setAttribute('fill','none'); c1.setAttribute('stroke',a.color);
+      c1.setAttribute('stroke-width','1'); c1.setAttribute('stroke-dasharray','3,5');
+      c1.setAttribute('opacity','0.35'); c1.setAttribute('clip-path','url(#mc)');
+      wg.appendChild(c1);
+
+      // Label
+      const lt = document.createElementNS(ns,'text');
+      lt.setAttribute('x',a.x); lt.setAttribute('y',a.y-a.r-4);
+      lt.setAttribute('font-family','DM Mono,monospace'); lt.setAttribute('font-size','6');
+      lt.setAttribute('fill',a.color); lt.setAttribute('text-anchor','middle'); lt.setAttribute('opacity','0.6');
+      lt.textContent = a.label+' 5min walk';
+      wg.appendChild(lt);
+    }
+    svg.appendChild(wg);
+  }
+}
+
+// ── SECTION CUT RENDERER ──
+function drawSectionLine() {
+  const svg = document.getElementById('site-plan');
+  if (!svg || !SECTION_CUT) return;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  svg.querySelectorAll('[data-section-line]').forEach(e=>e.remove());
+
+  const g = document.createElementNS(ns,'g');
+  g.setAttribute('data-section-line','1');
+
+  // The cut line
+  const line = document.createElementNS(ns,'line');
+  line.setAttribute('x1',SECTION_CUT.x1); line.setAttribute('y1',SECTION_CUT.y1);
+  line.setAttribute('x2',SECTION_CUT.x2); line.setAttribute('y2',SECTION_CUT.y2);
+  line.setAttribute('stroke','#c85018'); line.setAttribute('stroke-width','2');
+  line.setAttribute('stroke-dasharray','6,3');
+  g.appendChild(line);
+
+  // End markers
+  for (const [ex,ey] of [[SECTION_CUT.x1,SECTION_CUT.y1],[SECTION_CUT.x2,SECTION_CUT.y2]]) {
+    const circ = document.createElementNS(ns,'circle');
+    circ.setAttribute('cx',ex); circ.setAttribute('cy',ey); circ.setAttribute('r','5');
+    circ.setAttribute('fill','none'); circ.setAttribute('stroke','#c85018'); circ.setAttribute('stroke-width','1.5');
+    g.appendChild(circ);
+  }
+
+  svg.appendChild(g);
+}
+
+function renderSection() {
+  if (!SECTION_CUT || !DERIVED_G || !MAP_BOUNDS) return;
+  const sc = SECTION_CUT;
+  const G = DERIVED_G;
+  const MAP = MAP_BOUNDS;
+
+  // Show section panel
+  const panel = document.getElementById('section-section');
+  if (panel) panel.style.display = '';
+
+  drawSectionLine();
+
+  const svg = document.getElementById('section-view');
+  if (!svg) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const W=960, H=280, GRADE_Y=200;
+
+  svg.innerHTML = '';
+
+  // Background sky
+  const sky = document.createElementNS(ns,'defs');
+  const grad = document.createElementNS(ns,'linearGradient');
+  grad.setAttribute('id','sec-sky'); grad.setAttribute('x1','0'); grad.setAttribute('y1','0');
+  grad.setAttribute('x2','0'); grad.setAttribute('y2','1');
+  const s1=document.createElementNS(ns,'stop'); s1.setAttribute('offset','0%'); s1.setAttribute('stop-color','#b8c8d8');
+  const s2=document.createElementNS(ns,'stop'); s2.setAttribute('offset','100%'); s2.setAttribute('stop-color','#d8e6f0');
+  grad.appendChild(s1); grad.appendChild(s2); sky.appendChild(grad);
+  svg.appendChild(sky);
+
+  svg.appendChild(el(ns,'rect',{width:W,height:H,fill:'url(#sec-sky)'}));
+  svg.appendChild(el(ns,'rect',{x:0,y:GRADE_Y,width:W,height:H-GRADE_Y,fill:'#7a6848'}));
+  svg.appendChild(el(ns,'line',{x1:0,y1:GRADE_Y,x2:W,y2:GRADE_Y,stroke:'#4a3820','stroke-width':'2'}));
+
+  // Determine what the cut passes through
+  // Map cut line to site coordinates
+  // The section is a 1D scan: at each x along the cut, what district/building is present?
+
+  // Cut angle
+  const dx = sc.x2 - sc.x1, dy = sc.y2 - sc.y1;
+  const len = Math.hypot(dx,dy);
+  const steps = 20;
+
+  // Collect features along cut
+  const features = [];
+
+  for (let i=0; i<=steps; i++) {
+    const t = i/steps;
+    const px = sc.x1 + dx*t;
+    const py = sc.y1 + dy*t;
+    const screen_x = Math.round(W * t);
+
+    // Check what's at this point
+    let what = 'open';
+    if (G.SPINE && px >= G.SPINE.x && px <= G.SPINE.x+G.SPINE.w) what = 'spine';
+    else if (G.SPONGE && ((px-G.SPONGE.cx)**2/G.SPONGE.rx**2 + (py-G.SPONGE.cy)**2/G.SPONGE.ry**2) < 1) what = 'sponge';
+    else if (G.BAND_BOT && py < G.BAND_BOT) what = 'mainst';
+
+    // Check placed buildings
+    for (const b of PLACED_BUILDINGS) {
+      if (px >= b.x && px <= b.x+b.w && py >= b.y && py <= b.y+b.h) {
+        what = 'building_'+b.floors;
+      }
+    }
+
+    features.push({t, px, py, screen_x, what});
+  }
+
+  // Render section profile
+  let lastWhat = null;
+  for (const f of features) {
+    let bldg_h = 0;
+    let color = '#5a4a3a';
+
+    if (f.what.startsWith('building_')) {
+      const floors = parseInt(f.what.split('_')[1]);
+      // 1 floor ≈ 14px in section view
+      bldg_h = floors * 20;
+      color = '#8a7060';
+    } else if (f.what === 'spine') {
+      bldg_h = 0;
+      color = '#2878a0';
+    } else if (f.what === 'sponge') {
+      bldg_h = -12;  // below grade
+      color = '#3a8040';
+    } else if (f.what === 'mainst') {
+      bldg_h = 0;
+      color = '#c85018';
+    }
+
+    if (bldg_h > 0) {
+      svg.appendChild(el(ns,'rect',{
+        x: f.screen_x, y: GRADE_Y-bldg_h,
+        width: W/steps, height: bldg_h,
+        fill: color, 'fill-opacity':'0.7',
+        stroke: color, 'stroke-width':'0.5'
+      }));
+    }
+
+    lastWhat = f.what;
+  }
+
+  // Grade line
+  svg.appendChild(el(ns,'line',{x1:0,y1:GRADE_Y,x2:W,y2:GRADE_Y,stroke:'#2a1a08','stroke-width':'2'}));
+
+  // Add native plants at strategic points
+  const plantPositions = [
+    {x:W*0.15, species:'Quercus phellos', h:50, canopy:32},
+    {x:W*0.35, species:'Betula nigra', h:42, canopy:28},
+    {x:W*0.55, species:'Acer rubrum', h:45, canopy:35},
+    {x:W*0.75, species:'Carpinus caroliniana', h:28, canopy:22},
+    {x:W*0.88, species:'Amelanchier arborea', h:22, canopy:18},
+  ];
+
+  for (const p of plantPositions) {
+    // Trunk
+    svg.appendChild(el(ns,'rect',{x:p.x-2,y:GRADE_Y-p.h,width:4,height:p.h,fill:'#5a4030'}));
+    // Canopy (ellipse)
+    const canopy = document.createElementNS(ns,'ellipse');
+    canopy.setAttribute('cx',p.x); canopy.setAttribute('cy',GRADE_Y-p.h-p.canopy*0.3);
+    canopy.setAttribute('rx',p.canopy); canopy.setAttribute('ry',p.canopy*0.9);
+    canopy.setAttribute('fill','#3a6828'); canopy.setAttribute('opacity','0.85');
+    svg.appendChild(canopy);
+    // Species label
+    const lt = document.createElementNS(ns,'text');
+    lt.setAttribute('x',p.x); lt.setAttribute('y',GRADE_Y+14);
+    lt.setAttribute('font-family','monospace'); lt.setAttribute('font-size','6');
+    lt.setAttribute('fill','#4a6030'); lt.setAttribute('text-anchor','middle');
+    lt.setAttribute('font-style','italic');
+    lt.textContent = p.species;
+    svg.appendChild(lt);
+  }
+
+  // Annotation bar
+  svg.appendChild(el(ns,'rect',{x:0,y:H-24,width:W,height:24,fill:'#121009','fill-opacity':'0.9'}));
+  svg.appendChild(el(ns,'line',{x1:0,y1:H-24,x2:W,y2:H-24,stroke:'#c85018','stroke-width':'1.5'}));
+
+  const inf = document.createElementNS(ns,'text');
+  inf.setAttribute('x',10); inf.setAttribute('y',H-9);
+  inf.setAttribute('font-family','monospace'); inf.setAttribute('font-size','7.5');
+  inf.setAttribute('fill','#a09080');
+  inf.textContent = `Live section cut · ${features.filter(f=>f.what.startsWith('building')).length>0?PLACED_BUILDINGS.length+' building(s) placed · ':''}Native planting: Quercus phellos, Betula nigra, Acer rubrum, Carpinus caroliniana, Amelanchier arborea`;
+  svg.appendChild(inf);
+
+  // Update info text
+  const info = document.getElementById('section-info');
+  if (info) {
+    const angle_deg = Math.round(Math.atan2(dy,dx)*180/Math.PI);
+    info.textContent = `Cut: (${Math.round(sc.x1)},${Math.round(sc.y1)}) → (${Math.round(sc.x2)},${Math.round(sc.y2)}) · ${Math.round(len)}px · ${angle_deg}°`;
+  }
+}
+
+function el(ns, tag, attrs) {
+  const e = document.createElementNS(ns, tag);
+  for (const [k,v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+}
+
+// ── PLANT PALETTE RENDERER ──
+function renderPlantPalette() {
+  const container = document.getElementById('plant-list');
+  if (!container) return;
+
+  const items = PLANT_REGISTRY.species.map(s => {
+    const cls = 'plant-chip' + (s.meye_available ? ' meye' : '');
+    const meye_link = s.meye_available ? ` title="Available on meye.dk as ${s.meye_genus}"` : '';
+    return `<span class="${cls}"${meye_link}>${s.common} <em style="opacity:0.5;font-style:normal;">(${s.latin})</em></span>`;
+  });
+
+  container.innerHTML = items.join('') +
+    `<span style="font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);margin-left:0.5rem;align-self:center;">
+      M = available on <a href="https://meye.dk/" target="_blank" style="color:var(--accent-dim);">meye.dk</a>
+    </span>`;
+}
+
+// ── EXPORT DERIVED GEOMETRY FOR OTHER MODULES ──
+function exportDerived(derived, MAP) {
+  // Store globally so interactive tools can access solved geometry
+  DERIVED_G = {
+    SPINE: derived.SPINE,
+    SPONGE: derived.SPONGE_PARK_ELLIPSE,
+    TIDE: derived.TIDE_STATION,
+    RESEARCH: derived.RESEARCH_STATION,
+    BAND_BOT: derived.MAIN_STREET_BAND ? derived.MAIN_STREET_BAND.y + derived.MAIN_STREET_BAND.height : null,
+    MALL_CORE_BOUNDS: null,  // populated from parcel data
+  };
+  MAP_BOUNDS = MAP;
+}
+
+// ── INIT ──
+function initInteractiveLayer() {
+  initBuildingPlacement();
+  renderPlantPalette();
+  // Overlays rendered after main() sets DERIVED_G
+}
+
+// Export for main() to call after solve
+window.EC_Interactive = {
+  exportDerived,
+  renderOverlays,
+  calcDensity,
+  initInteractiveLayer,
+};
+
 </script>
 
 </body>
