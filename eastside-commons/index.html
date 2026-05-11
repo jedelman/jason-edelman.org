@@ -420,10 +420,19 @@ details[open] summary::before { content: '▼  '; }
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: 0;
-  height: calc(100vh - 220px);
-  min-height: 560px;
+  height: calc(100vh - 180px);
+  min-height: 600px;
   border: 1px solid var(--border);
   margin-top: 1.5rem;
+  /* Break out of prose column to full viewport width */
+  width: 100vw;
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  border-left: none;
+  border-right: none;
 }
 .ctrl-col {
   border-right: 1px solid var(--border);
@@ -591,10 +600,10 @@ details[open] summary::before { content: '▼  '; }
         <div class="param-row">
           <label class="param-key">Block size</label>
           <div class="param-control">
-            <input type="range" id="p-block-size" min="150" max="600" step="25" value="350"
+            <input type="range" id="p-block-size" min="75" max="400" step="25" value="200"
               oninput="document.getElementById('p-block-size-val').textContent=this.value+'ft'"
               onchange="schedulePipelineRegen()">
-            <span class="param-val" id="p-block-size-val">350ft</span>
+            <span class="param-val" id="p-block-size-val">200ft</span>
           </div>
         </div>
         <div class="param-row" style="margin-top:0.25rem;">
@@ -706,6 +715,12 @@ details[open] summary::before { content: '▼  '; }
         <div id="legend-chips"></div>
       </div>
 
+      <!-- Edge legend -->
+      <div class="ctrl-section">
+        <div class="ctrl-section-title">Edge types</div>
+        <div id="edge-legend-chips"></div>
+      </div>
+
       <!-- Downloads + tools at bottom -->
       <div class="ctrl-section" style="margin-top:auto;">
         <div class="ctrl-section-title">Export</div>
@@ -728,6 +743,7 @@ details[open] summary::before { content: '▼  '; }
         <span style="flex:1"></span>
         <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
         <button class="overlay-btn on" data-overlay="streets" onclick="toggleOverlay(this)">Streets</button>
+        <button class="overlay-btn on" data-overlay="edges" onclick="toggleEdges(this)">Edges</button>
       </div>
 
       <!-- SVG map -->
@@ -1781,15 +1797,10 @@ function calcDensity() {
   const walk_score = Math.min(95, 30 + transit_bonus + Math.round(density_bonus) + amenity_bonus);
 
   // Update UI
-  const dv_placed = document.getElementById('dv-placed');
-  const dv_far = document.getElementById('dv-far');
-  const dv_walk = document.getElementById('dv-walk');
-  if (dv_placed) dv_placed.textContent = placed_units.toLocaleString();
   if (dv_far) {
     dv_far.textContent = far.toFixed(2);
     dv_far.className = 'density-val' + (far > 4.5 ? ' bad' : far > 3.0 ? '' : ' warn');
   }
-  if (dv_walk) dv_walk.textContent = walk_score;
 }
 
 // ── BUILDING PLACEMENT ──
@@ -3653,6 +3664,12 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
     }
     window._pipelineRendered = true;
     if (window.EC_Render) window.EC_Render.renderUnits(t6Zones, svg, params);
+    // Build and render edge geometry
+    if (window.EC_Edges) {
+      const edges = window.EC_Edges.buildEdges(t6Zones, {bufferPx: 5});
+      window.EC_Edges.renderEdges(edges, svg, {opacity: '0.8'});
+      window._lastEdges = edges;
+    }
   }
 
   callbacks?.onComplete?.({
@@ -4367,11 +4384,11 @@ function polyZonesAdjacent(a, b) {
 const T4 = {
 
   // Planning constants for unit placement
-  UNIT_WIDTH_FT:     25,    // each unit bay is 25ft wide (rowhouse module)
-  UNIT_DEPTH_FT:     45,    // depth of a single-loaded unit (or half a double-loaded pair)
-  MIN_PARCEL_AC:     0.4,   // don't subdivide below this — one developer takes the whole thing
-  MAX_PARCEL_AC:     2.5,   // above this, cross-cut into sub-parcels
-  PARCEL_CUT_FT:     280,   // target dimension for cross-cuts
+  UNIT_WIDTH_FT:     18,    // each unit bay: 18ft (townhouse module, Jacobs grain)
+  UNIT_DEPTH_FT:     42,    // depth: ~42ft gives ~756sqft/floor, classic rowhouse
+  MIN_PARCEL_AC:     0.15,  // ~75ft × 100ft = 7,500sqft — smallest viable developer lot
+  MAX_PARCEL_AC:     1.5,   // above this, cross-cut to ~75ft parcels
+  PARCEL_CUT_FT:     75,    // Jane Jacobs: short blocks (75ft) = mix + eyes on street
   AFFORDABLE_PCT: { RESIDENTIAL_AFFORDABLE: 1.0, RESIDENTIAL_CLT_OWN: 1.0,
                     RESIDENTIAL_MARKET: 0.30 },
 
@@ -4932,6 +4949,234 @@ function downloadGeoJSON() {
 window.EC_Render = { renderUnits, downloadPNG, downloadGeoJSON };
 
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EASTSIDE COMMONS — EDGE GEOMETRY
+//  Derives shared edges between adjacent polygon zones.
+//  Each edge is classified by the pair of zone uses it separates.
+//
+//  Edge taxonomy:
+//    STREET      — between any two buildable zones (primary street)
+//    ACTIVATED   — residential facing retail/civic (ground-floor activation zone)
+//    GREEN_EDGE  — residential/civic meeting green space (ecological transition)
+//    SPONGE_EDGE — any zone meeting GREEN_PASSIVE (bioswale edge)
+//    COURTYARD   — footprint meeting its own courtyard (internal edge)
+//    TRANSIT_ACT — any zone meeting TRANSIT (transit activation)
+//
+//  Rendering:
+//    STREET      — grey, solid, 2px
+//    ACTIVATED   — warm orange, solid, 3px (ground-floor retail pressure zone)
+//    GREEN_EDGE  — green, dashed, 2px
+//    SPONGE_EDGE — teal, dashed, 2.5px
+//    COURTYARD   — lighter, dotted, 1px
+//    TRANSIT_ACT — blue, solid, 3px
+//
+//  Edge polygons (not just lines) — each edge is a thin buffered strip
+//  that can hold edge-specific rendering (texture, annotation, activation indicator).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const EDGE_TYPES = {
+  ACTIVATED:   { color: '#e86820', width: 3.0, dash: null,  label: 'Activation edge',    z: 5 },
+  TRANSIT_ACT: { color: '#0868d8', width: 3.0, dash: null,  label: 'Transit edge',        z: 5 },
+  SPONGE_EDGE: { color: '#18b898', width: 2.5, dash: '5,3', label: 'Bioswale edge',       z: 4 },
+  GREEN_EDGE:  { color: '#28b848', width: 2.0, dash: '4,3', label: 'Green edge',           z: 3 },
+  STREET:      { color: '#686868', width: 1.5, dash: null,  label: 'Internal street',     z: 2 },
+  COURTYARD:   { color: '#3a4828', width: 1.0, dash: '2,3', label: 'Courtyard edge',      z: 1 },
+};
+
+// Classify an edge between two uses
+function classifyEdge(useA, useB) {
+  const pair = new Set([useA, useB]);
+
+  // TRANSIT activation: anything meeting TRANSIT
+  if (pair.has('TRANSIT')) return 'TRANSIT_ACT';
+
+  // Sponge/wetland edge: anything meeting GREEN_PASSIVE
+  if (pair.has('GREEN_PASSIVE')) return 'SPONGE_EDGE';
+
+  // Green edge: residential/civic meeting GREEN_ACTIVE
+  if (pair.has('GREEN_ACTIVE')) {
+    const other = useA === 'GREEN_ACTIVE' ? useB : useA;
+    if (other.startsWith('RESIDENTIAL') || other === 'CIVIC' || other === 'PLAZA') {
+      return 'GREEN_EDGE';
+    }
+  }
+
+  // Activation edge: residential facing retail/civic
+  const retailCivic = new Set(['RETAIL_GROUND', 'CIVIC', 'PLAZA']);
+  const residential = new Set(['RESIDENTIAL_MARKET', 'RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_CLT_OWN']);
+  if ((retailCivic.has(useA) && residential.has(useB)) ||
+      (retailCivic.has(useB) && residential.has(useA))) {
+    return 'ACTIVATED';
+  }
+
+  // Courtyard: footprint district meeting its own courtyard
+  // (parent_district matching with one being _FOOTPRINT and other _COURTYARD)
+  return 'STREET';
+}
+
+// Extract shared boundary between two polygon zones using Clipper
+// Returns array of {pts:[x,y][], type, useA, useB, length_px}
+function findSharedEdge(zoneA, zoneB, bufferPx) {
+  if (!zoneA.poly?.outer || !zoneB.poly?.outer) return null;
+  if (!window.EC_Decomp || typeof ClipperLib === 'undefined') return null;
+
+  const SCALE = EC_Decomp.CLIPPER_SCALE;
+
+  // Convert polygons to Clipper paths
+  const pathA = zoneA.poly.outer.map(([x,y]) => ({X:Math.round(x*SCALE), Y:Math.round(y*SCALE)}));
+  const pathB = zoneB.poly.outer.map(([x,y]) => ({X:Math.round(x*SCALE), Y:Math.round(y*SCALE)}));
+
+  // Expand B by bufferPx to detect near-adjacency (not just exact touching)
+  const expandedB = EC_Decomp.clipperOffset([pathB], bufferPx * SCALE, ClipperLib.JoinType.jtMiter);
+  if (!expandedB || expandedB.length === 0) return null;
+
+  // Intersection of A with expanded B = the shared border strip
+  const intersection = EC_Decomp.clipperIntersection([pathA], expandedB);
+  if (!intersection || intersection.length === 0) return null;
+
+  // Filter out tiny fragments
+  const MIN_AREA = bufferPx * 3 * SCALE * SCALE;
+  const valid = intersection.filter(p => {
+    const area = Math.abs(ClipperLib.Clipper.Area(p));
+    return area > MIN_AREA;
+  });
+  if (valid.length === 0) return null;
+
+  const type = classifyEdge(zoneA.use, zoneB.use);
+
+  return valid.map(path => {
+    const pts = path.map(({X,Y}) => [X/SCALE, Y/SCALE]);
+    const bounds = EC_Decomp.polyBounds(pts);
+    const len = Math.max(bounds.width, bounds.height);
+    return { pts, type, useA: zoneA.use, useB: zoneB.use, length_px: len };
+  });
+}
+
+// Build all edges for a zone set
+// Returns array of edge objects ready for rendering
+function buildEdges(zones, options = {}) {
+  const bufferPx = options.bufferPx || 4;   // ~12ft at our scale
+  const edges = [];
+  const processed = new Set();
+
+  for (let i = 0; i < zones.length; i++) {
+    for (let j = i + 1; j < zones.length; j++) {
+      const a = zones[i], b = zones[j];
+
+      // Quick bbox reject before Clipper
+      if (!EC_Decomp.polyZonesAdjacent(a, b)) continue;
+
+      // Skip same-parent courtyard pairs if requested
+      if (options.skipInternalCourtyards &&
+          a.parent_district && a.parent_district === b.parent_district) {
+        // Keep courtyard edges but mark them
+      }
+
+      const key = [a.id, b.id].sort().join('|');
+      if (processed.has(key)) continue;
+      processed.add(key);
+
+      const shared = findSharedEdge(a, b, bufferPx);
+      if (shared) {
+        for (const edge of shared) {
+          edges.push({
+            ...edge,
+            zoneA_id: a.id, zoneB_id: b.id,
+            zoneA_district: a.district, zoneB_district: b.district,
+          });
+        }
+      }
+    }
+  }
+
+  console.log(`EC_Edges: ${edges.length} edges from ${zones.length} zones`);
+  return edges;
+}
+
+// Render edges onto the SVG
+function renderEdges(edges, svg, params = {}) {
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.querySelectorAll('[data-edges]').forEach(e => e.remove());
+
+  if (!edges || edges.length === 0) return;
+
+  // Sort by z-order so important edges render on top
+  const sorted = [...edges].sort((a,b) =>
+    (EDGE_TYPES[a.type]?.z || 0) - (EDGE_TYPES[b.type]?.z || 0)
+  );
+
+  // Group by type for efficient rendering
+  const byType = {};
+  for (const e of sorted) {
+    (byType[e.type] = byType[e.type] || []).push(e);
+  }
+
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('data-edges', '1');
+  g.setAttribute('clip-path', 'url(#mc)');
+
+  for (const [type, typeEdges] of Object.entries(byType)) {
+    const def = EDGE_TYPES[type];
+    if (!def) continue;
+
+    const tg = document.createElementNS(ns, 'g');
+    tg.setAttribute('data-edge-type', type);
+    tg.setAttribute('opacity', params.opacity || '0.85');
+
+    for (const edge of typeEdges) {
+      const path = document.createElementNS(ns, 'path');
+      path.setAttribute('d', EC_Decomp.ptsToSVGPath(edge.pts));
+      path.setAttribute('fill', def.color);
+      path.setAttribute('fill-opacity', '0.55');
+      path.setAttribute('stroke', def.color);
+      path.setAttribute('stroke-width', def.width);
+      path.setAttribute('stroke-opacity', '0.9');
+      if (def.dash) path.setAttribute('stroke-dasharray', def.dash);
+      path.setAttribute('fill-rule', 'evenodd');
+
+      // Tooltip
+      path.style.cursor = 'crosshair';
+      path.addEventListener('mouseenter', e => {
+        const tt = document.getElementById('tooltip');
+        if (!tt) return;
+        tt.style.opacity = 1;
+        tt.style.left = (e.clientX + 14) + 'px';
+        tt.style.top  = (e.clientY - 8) + 'px';
+        const uA = window.EC_Pipeline?.USES[edge.useA];
+        const uB = window.EC_Pipeline?.USES[edge.useB];
+        tt.innerHTML =
+          `<span style='color:${def.color};font-weight:500'>${def.label}</span><br>` +
+          `<span style='color:${uA?.color||'#aaa'}'>${uA?.id||edge.useA}</span>` +
+          ` <span style='opacity:0.4'>↔</span> ` +
+          `<span style='color:${uB?.color||'#aaa'}'>${uB?.id||edge.useB}</span>` +
+          `<br><span style='opacity:0.4;font-size:0.52rem'>${edge.length_px.toFixed(0)}px · ${edge.zoneA_district}|${edge.zoneB_district}</span>`;
+      });
+      path.addEventListener('mouseleave', () => {
+        const tt = document.getElementById('tooltip');
+        if (tt) tt.style.opacity = 0;
+      });
+
+      tg.appendChild(path);
+    }
+    g.appendChild(tg);
+  }
+
+  svg.appendChild(g);
+}
+
+// Edge legend for the ctrl panel
+function edgeLegendHTML() {
+  return Object.entries(EDGE_TYPES).map(([type, def]) =>
+    `<span class="legend-chip">
+      <span class="legend-swatch" style="background:${def.color}"></span>
+      ${def.label}
+    </span>`
+  ).join('');
+}
+
+window.EC_Edges = { buildEdges, renderEdges, classifyEdge, EDGE_TYPES, edgeLegendHTML };
+
+
 window.EC_Decomp = {
   buildT2PolygonZones,
   renderT7Polygons,
@@ -5027,6 +5272,21 @@ async function triggerPipeline() {
 }
 
 
+// ── EDGE TOGGLE ─────────────────────────────────────────────────────────────────
+function toggleEdges(btn) {
+  btn.classList.toggle('on');
+  const svg = document.getElementById('site-plan');
+  if (!svg) return;
+  const show = btn.classList.contains('on');
+  const edgeGroup = svg.querySelector('[data-edges]');
+  if (edgeGroup) edgeGroup.style.display = show ? '' : 'none';
+  // If turning on and no edges yet, build them
+  if (show && !edgeGroup && window._lastPipelineZones && window.EC_Edges) {
+    const edges = window.EC_Edges.buildEdges(window._lastPipelineZones, {bufferPx:5});
+    window.EC_Edges.renderEdges(edges, svg, {opacity:'0.8'});
+  }
+}
+
 // ── AUTO-REGEN on slider change ──────────────────────────────────────────────
 let _regenTimer = null;
 function schedulePipelineRegen() {
@@ -5046,6 +5306,11 @@ function renderLegendChips() {
       ${def.id} ${def.label}
     </span>`
   ).join('');
+  // Edge legend
+  const edgeContainer = document.getElementById('edge-legend-chips');
+  if (edgeContainer && window.EC_Edges) {
+    edgeContainer.innerHTML = window.EC_Edges.edgeLegendHTML();
+  }
 }
 </script>
 
