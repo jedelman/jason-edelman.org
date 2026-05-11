@@ -1385,6 +1385,8 @@ function initTooltip() {
     }
     // Wire pipeline to this solve's outputs
     initPipeline(parcels, proj, MAP, derived);
+    // Auto-run pipeline after page paints
+    setTimeout(() => { if (typeof triggerPipeline!=='undefined') triggerPipeline(); }, 600);
   }, 0);
 })();
 
@@ -3420,8 +3422,42 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
     // Specifically: ellipses (sponge), rects (spine/ross/tide), and texts that
     // are NOT inside the road label group (road labels have no data- attr but are expected)
     svg.querySelectorAll('ellipse').forEach(e => e.remove());
-    // Remove spine/ross/tide rects: they have no data-acct and are overlay rects
     svg.querySelectorAll('rect[fill="#0a1828"],rect[fill="#160606"],rect[fill="#081408"]').forEach(e=>e.remove());
+    // Remove all direct-child text and line elements from buildSVG Layer 4
+    // Road labels are inside <g> elements; Layer 4 texts are direct svg children
+    [...svg.childNodes].forEach(el => {
+      if (el.tagName === 'text' || el.tagName === 'line') el.remove();
+    });
+    // Remove specific overlay rects by their known stroke/fill colors
+    // Spine rect (stroke=#2878a0 or fill=#081220)
+    // Ross rect (fill=#160606 or stroke=#903020)
+    // Tide rect (fill=#081428)
+    // Scale bar rects
+    const OVERLAY_FILLS = new Set(['#0a1828','#160606','#081408','#081220',
+      '#081428','#0a1020','#242210','#161410']);
+    const OVERLAY_STROKES = new Set(['#2878a0','#903020','#3898c0','#2070a0']);
+    [...svg.childNodes].forEach(el => {
+      if (el.tagName !== 'rect') return;
+      if (el.getAttribute('data-acct')) return; // keep parcel paths
+      const fill = el.getAttribute('fill') || '';
+      const stroke = el.getAttribute('stroke') || '';
+      if (OVERLAY_FILLS.has(fill) || OVERLAY_STROKES.has(stroke)) el.remove();
+    });
+    // Remove direct-child groups that are L4 overlays (no data-*, no clip-path, no id)
+    [...svg.childNodes].forEach(el => {
+      if (el.tagName !== 'g') return;
+      if (el.getAttribute('data-t7') || el.getAttribute('data-units') ||
+          el.getAttribute('data-overlay') || el.getAttribute('clip-path') ||
+          el.getAttribute('id')) return;
+      el.remove();
+    });
+    // Also remove any stray overlay rect/line direct children
+    // that survived (e.g. scale bar)
+    [...svg.childNodes].forEach(el => {
+      if (el.tagName === 'rect' || el.tagName === 'line') {
+        if (!el.getAttribute('data-acct')) el.remove();
+      }
+    });
     // Remove spine rect (stroke=#2878a0) and other overlay rects/lines
     svg.querySelectorAll('rect[stroke="#2878a0"],rect[stroke="#903020"],rect[stroke="#3898c0"]').forEach(e=>e.remove());
     // Remove bike lane dashed lines and tide connector arrow
@@ -4451,7 +4487,7 @@ function renderUnits(zones, svg, params) {
       const sp = document.createElementNS(ns, 'path');
       sp.setAttribute('d', EC_Decomp.ptsToSVGPath(stripPoly));
       sp.setAttribute('fill', baseColor);
-      sp.setAttribute('fill-opacity', '0.25');
+      sp.setAttribute('fill-opacity', '0.38');
       sp.setAttribute('stroke', baseColor);
       sp.setAttribute('stroke-width', '0.6');
       sp.setAttribute('stroke-opacity', '0.4');
@@ -4468,16 +4504,18 @@ function renderUnits(zones, svg, params) {
       let fillOpacity = '0.7';
       if (unit.ground_floor === 'RETAIL_GROUND') {
         fillColor = window.EC_Pipeline.USES.RETAIL_GROUND.color;
-        fillOpacity = '0.85';
+        fillOpacity = '0.90';
       } else if (!unit.is_affordable) {
-        fillColor = baseColor + '88';  // market rate: semi-transparent
-        fillOpacity = '0.45';
+        fillColor = baseColor;
+        fillOpacity = '0.50';  // market rate slightly lighter
+      } else {
+        fillOpacity = '0.80';  // affordable: fully visible
       }
 
       u.setAttribute('fill', fillColor);
       u.setAttribute('fill-opacity', fillOpacity);
       u.setAttribute('stroke', baseColor);
-      u.setAttribute('stroke-width', '0.5');
+      u.setAttribute('stroke-width', '0.8');
       u.setAttribute('stroke-opacity', '0.7');
       u.setAttribute('data-unit', unit.id);
       u.setAttribute('data-floors', unit.floors);
