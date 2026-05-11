@@ -718,6 +718,7 @@ details[open] summary::before { content: '▼  '; }
 
 <div id="tooltip"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════
 //  EASTSIDE COMMONS CONSTRAINT SOLVER
@@ -2377,6 +2378,7 @@ function buildT1GroundTruth(parcels, proj, MAP) {
     existing,
     floodZone,
     buildingCode,
+    proj,
     scale: { px_per_ft_ew, px_per_ft_ns, ft_per_px_ew, ft_per_px_ns, ftToPx },
     MAP,
   };
@@ -3255,7 +3257,12 @@ function rectsOverlap(a, b) {
 }
 
 function zonesAdjacent(a, b) {
-  // Two grid zones are adjacent if they share an edge (within 2px tolerance)
+  // Handles both grid zones {poly:{x,y,w,h}} and polygon zones {poly:{x,y,w,h,outer}}
+  if (!a.poly || !b.poly) return false;
+  if (window.EC_Decomp && a.poly.outer) {
+    return window.EC_Decomp.polyZonesAdjacent(a, b);
+  }
+  // Grid fallback
   const TOL = 3;
   const ax1=a.poly.x, ay1=a.poly.y, ax2=a.poly.x+a.poly.w, ay2=a.poly.y+a.poly.h;
   const bx1=b.poly.x, by1=b.poly.y, bx2=b.poly.x+b.poly.w, by2=b.poly.y+b.poly.h;
@@ -3302,8 +3309,11 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
     }
   }
 
-  callbacks?.onStatus?.('T2: Decomposing site into zones…');
-  const t2Zones = buildT2Zones(t1, params, derivedG);
+  callbacks?.onStatus?.('T2: Decomposing site into polygon zones…');
+  // Use polygon decomposition (Clipper) if available, otherwise fall back to grid
+  const t2Zones = (window.EC_Decomp && typeof ClipperLib !== 'undefined')
+    ? window.EC_Decomp.buildT2PolygonZones(t1, params, derivedG)
+    : buildT2Zones(t1, params, derivedG);
   callbacks?.onT2Complete?.(t2Zones);
 
   callbacks?.onStatus?.(`T3: Running evolutionary algorithm (${params.ea_rounds||15} rounds)…`);
@@ -3325,7 +3335,14 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
 
   callbacks?.onStatus?.('T7: Rendering…');
   const svg = document.getElementById('site-plan');
-  if (svg) renderT7(t6Zones, svg, params);
+  if (svg) {
+    // Use polygon renderer if decomp module loaded, else fall back to rect renderer
+    if (window.EC_Decomp && t6Zones[0]?.poly?.svgPath) {
+      window.EC_Decomp.renderT7Polygons(t6Zones, svg, params);
+    } else {
+      renderT7(t6Zones, svg, params);
+    }
+  }
 
   callbacks?.onComplete?.({
     zones: t6Zones,
@@ -3349,10 +3366,695 @@ window.EC_Pipeline = {
 
 // ── PIPELINE WIRING ──────────────────────────────────────────────────────────
 let _pipelineParcels = null, _pipelineProj = null, _pipelineMAP = null;
+// Expose for external access
+window._getPipelineState = () => ({parcels:_pipelineParcels, proj:_pipelineProj, MAP:_pipelineMAP});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EASTSIDE COMMONS — POLYGON DECOMPOSITION v2
+//  Uses ClipperLib for all polygon operations.
+//  Replaces the bbox-grid T2 with real polygon decomposition.
+//
+//  Coordinate system:
+//    Working space: SVG px (floats from buildProjection)
+//    Clipper space: SVG px × SCALE (integers, SCALE=1000)
+//    All planning constants: feet, converted via scale.px_per_ft_*
+//
+//  Requires: ClipperLib loaded globally (window.ClipperLib)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const CLIPPER_SCALE = 1000;
+
+// ── COORDINATE HELPERS ───────────────────────────────────────────────────────
+
+// SVG px point → Clipper integer point
+function toC([x, y]) {
+  return { X: Math.round(x * CLIPPER_SCALE), Y: Math.round(y * CLIPPER_SCALE) };
+}
+
+// Clipper integer point → SVG px point
+function fromC({ X, Y }) {
+  return [X / CLIPPER_SCALE, Y / CLIPPER_SCALE];
+}
+
+// Array of [x,y] → Clipper path
+function toClipper(pts) {
+  return pts.map(toC);
+}
+
+// Clipper path → Array of [x,y]
+function fromClipper(path) {
+  return path.map(fromC);
+}
+
+// GIS lon/lat ring → SVG px points (via proj function)
+function ringToSVG(ring, proj) {
+  return ring.map(([lon, lat]) => proj(lon, lat));
+}
+
+// SVG px polygon → SVG path string (for rendering)
+function ptsToSVGPath(pts) {
+  if (!pts || pts.length < 2) return '';
+  return 'M ' + pts.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(' L ') + ' Z';
+}
+
+// Compute area of a Clipper path (positive = clockwise in SVG coords)
+function clipperArea(path) {
+  return ClipperLib.Clipper.Area(path);
+}
+
+// ── CLIPPER OPERATION WRAPPERS ───────────────────────────────────────────────
+
+// Union an array of Clipper paths into one (or more) merged polygons
+function clipperUnion(paths) {
+  if (paths.length === 0) return [];
+  if (paths.length === 1) return [paths[0]];
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(paths, ClipperLib.PolyType.ptSubject, true);
+  const solution = new ClipperLib.Paths();
+  c.Execute(
+    ClipperLib.ClipType.ctUnion,
+    solution,
+    ClipperLib.PolyFillType.pftNonZero,
+    ClipperLib.PolyFillType.pftNonZero
+  );
+  return solution;
+}
+
+// Offset a set of paths inward (negative delta = inward for CCW, outward for CW)
+// delta is in Clipper units (px × SCALE)
+// joinType: jtMiter (sharp), jtRound, jtSquare
+function clipperOffset(paths, delta, joinType = ClipperLib.JoinType.jtMiter, miterLimit = 2) {
+  const co = new ClipperLib.ClipperOffset(miterLimit, 0.25 * CLIPPER_SCALE);
+  co.AddPaths(paths, joinType, ClipperLib.EndType.etClosedPolygon);
+  const solution = new ClipperLib.Paths();
+  co.Execute(solution, delta);
+  return solution;
+}
+
+// Difference: subject minus clip
+function clipperDifference(subjectPaths, clipPaths) {
+  if (!clipPaths || clipPaths.length === 0) return subjectPaths;
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(subjectPaths, ClipperLib.PolyType.ptSubject, true);
+  c.AddPaths(clipPaths, ClipperLib.PolyType.ptClip, true);
+  const solution = new ClipperLib.Paths();
+  c.Execute(
+    ClipperLib.ClipType.ctDifference,
+    solution,
+    ClipperLib.PolyFillType.pftNonZero,
+    ClipperLib.PolyFillType.pftNonZero
+  );
+  return solution;
+}
+
+// Intersection: keep only the overlap between subject and clip
+function clipperIntersection(subjectPaths, clipPaths) {
+  const c = new ClipperLib.Clipper();
+  c.AddPaths(subjectPaths, ClipperLib.PolyType.ptSubject, true);
+  c.AddPaths(clipPaths, ClipperLib.PolyType.ptClip, true);
+  const solution = new ClipperLib.Paths();
+  c.Execute(
+    ClipperLib.ClipType.ctIntersection,
+    solution,
+    ClipperLib.PolyFillType.pftNonZero,
+    ClipperLib.PolyFillType.pftNonZero
+  );
+  return solution;
+}
+
+// Clean + Simplify a path (removes near-duplicates, fixes self-intersections)
+function cleanPaths(paths) {
+  const cleaned = paths.map(p =>
+    ClipperLib.Clipper.CleanPolygon(p, 0.5 * CLIPPER_SCALE)
+  ).filter(p => p && p.length >= 3);
+  return ClipperLib.Clipper.SimplifyPolygons(
+    cleaned,
+    ClipperLib.PolyFillType.pftNonZero
+  );
+}
+
+// Ensure correct winding: exterior = CCW in Clipper (positive area with Y-down)
+function ensureWinding(paths) {
+  return paths.map(path => {
+    const area = clipperArea(path);
+    // In SVG (Y-down), CCW has negative area in standard math → positive in Clipper
+    // Clipper expects: outer rings are orientation=true (area>0 with their convention)
+    if (!ClipperLib.Clipper.Orientation(path)) {
+      ClipperLib.Clipper.ReversePath(path);
+    }
+    return path;
+  });
+}
+
+// ── POLYGON → SVG PATH (with holes) ─────────────────────────────────────────
+
+// Given a PolyTree from Clipper, extract outer polygons with their holes
+// Returns array of {outer:[x,y][], holes:[[x,y][]][], svgPath:string}
+function polyTreeToZonePolygons(solution) {
+  const zones = [];
+
+  for (const path of solution) {
+    if (path.length < 3) continue;
+    const pts = fromClipper(path);
+    const area = Math.abs(clipperArea(path));
+    if (area < 10 * CLIPPER_SCALE * CLIPPER_SCALE) continue; // skip tiny fragments
+
+    zones.push({
+      outer: pts,
+      holes: [],
+      svgPath: ptsToSVGPath(pts),
+      area_px2: area / (CLIPPER_SCALE * CLIPPER_SCALE),
+    });
+  }
+
+  return zones;
+}
+
+// ── BOUNDING BOX of a polygon ────────────────────────────────────────────────
+function polyBounds(pts) {
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  for (const [x,y] of pts) {
+    if(x<minX)minX=x; if(x>maxX)maxX=x;
+    if(y<minY)minY=y; if(y>maxY)maxY=y;
+  }
+  return {minX,maxX,minY,maxY,
+    cx:(minX+maxX)/2, cy:(minY+maxY)/2,
+    width:maxX-minX, height:maxY-minY};
+}
+
+// Centroid of a polygon (area-weighted)
+function polyCentroid(pts) {
+  let ax=0,ay=0,a=0;
+  const n=pts.length;
+  for(let i=0;i<n;i++){
+    const [x0,y0]=pts[i], [x1,y1]=pts[(i+1)%n];
+    const cross=x0*y1-x1*y0;
+    ax+=(x0+x1)*cross; ay+=(y0+y1)*cross; a+=cross;
+  }
+  a*=0.5; ax/=(6*a); ay/=(6*a);
+  return [ax,ay];
+}
+
+// Rectangle as Clipper path
+function rectToClipper(x,y,w,h) {
+  return [
+    {X:Math.round(x*CLIPPER_SCALE), Y:Math.round(y*CLIPPER_SCALE)},
+    {X:Math.round((x+w)*CLIPPER_SCALE), Y:Math.round(y*CLIPPER_SCALE)},
+    {X:Math.round((x+w)*CLIPPER_SCALE), Y:Math.round((y+h)*CLIPPER_SCALE)},
+    {X:Math.round(x*CLIPPER_SCALE), Y:Math.round((y+h)*CLIPPER_SCALE)},
+  ];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  T2 POLYGON DECOMPOSITION
+//  Replaces the grid-based T2 with real polygon operations.
+//
+//  For each district:
+//    1. Project GIS rings to SVG px
+//    2. Union all parcels in district → merged polygon
+//    3. Apply setbacks (subtract road buffer strips)
+//    4. Inset by courtyard depth → courtyard polygon
+//    5. Difference outer-inner → building footprint ring(s)
+//    6. Split large footprints by spine (if district spans it)
+//    7. Each resulting polygon becomes a T2 zone
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// District definitions: which parcel specs belong together, and their initial use
+const DISTRICT_DEFS = {
+  MAIN_STREET: {
+    specs: ['MAIN_ST_LARGE','MAIN_ST_MID','MAIN_ST_5773','MAIN_ST_THIN','MAIN_ST_5825'],
+    initial_use: 'RETAIL_GROUND',
+    decompose: 'individual',   // each parcel stays its own zone (already small)
+    split_spine: false,
+  },
+  CIVIC: {
+    specs: ['CIVIC_920','CIVIC_700','CIVIC_854','CIVIC_862',
+            'CIVIC_STRIP','CIVIC_SPINE_S','CIVIC_ROW','HOUSING_A_530'],
+    initial_use: 'CIVIC',
+    decompose: 'union',        // merge, then split by function
+    split_spine: false,
+  },
+  HOUSING_A: {
+    specs: ['MALL_CORE'],
+    initial_use: 'RESIDENTIAL_AFFORDABLE',
+    decompose: 'union',
+    split_spine: true,         // split east/west at spine
+    inset_both_halves: true,   // courtyard on each half separately
+  },
+  CLT: {
+    specs: ['CLT_NORTH','CLT_GLENROCK','CLT_GLENROCK2'],
+    initial_use: 'RESIDENTIAL_CLT_OWN',
+    decompose: 'union',
+    split_spine: false,
+  },
+  HOUSING_B: {
+    specs: ['HOUSING_B_S'],
+    initial_use: 'RESIDENTIAL_AFFORDABLE',
+    decompose: 'union',
+    split_spine: false,
+  },
+  SPONGE: {
+    specs: ['SPONGE_PARCEL'],
+    initial_use: 'GREEN_PASSIVE',
+    decompose: 'as_is',        // keep whole, no inset — it IS the green space
+    split_spine: false,
+  },
+};
+
+function buildT2PolygonZones(t1, params, derivedG) {
+  const { scale, MAP, edaParcels, setbacks } = t1;
+
+  // proj function — we need access to it here
+  // It's stored on t1 (we'll add it there)
+  const proj = t1.proj;
+  if (!proj) {
+    console.error('T2: proj function not found on t1. Was it stored?');
+    return [];
+  }
+
+  if (typeof ClipperLib === 'undefined') {
+    console.error('T2: ClipperLib not loaded');
+    return [];
+  }
+
+  // Planning constants → Clipper units
+  const INSET_FT     = params.courtyard_inset_ft    || 60;   // ft inward from parcel edge to building face
+  const MAX_DEPTH_FT = params.max_building_depth_ft || 50;   // max building depth (natural ventilation)
+  const SETBACK_ART  = params.setback_arterial_ft   || 20;   // arterial road setback
+  const SETBACK_HWY  = params.setback_highway_ft    || 50;   // highway setback
+
+  const inset_px  = INSET_FT     * scale.px_per_ft_ew;
+  const depth_px  = MAX_DEPTH_FT * scale.px_per_ft_ew;
+  const sb_art_px = SETBACK_ART  * scale.px_per_ft_ew;
+  const sb_hwy_px = SETBACK_HWY  * scale.px_per_ft_ew;
+
+  // Setback mask polygons (strips along each road, in Clipper coords)
+  const setbackMask = {
+    north: [rectToClipper(MAP.x0, MAP.y0, MAP.x1-MAP.x0, sb_art_px)],
+    south: [rectToClipper(MAP.x0, MAP.y1-sb_hwy_px, MAP.x1-MAP.x0, sb_hwy_px)],
+    west:  [rectToClipper(MAP.x0, MAP.y0, sb_art_px, MAP.y1-MAP.y0)],
+    east:  [rectToClipper(MAP.x1-sb_art_px, MAP.y0, sb_art_px, MAP.y1-MAP.y0)],
+  };
+
+  // Spine polygon (from derived geometry)
+  let spinePoly = null;
+  if (derivedG && derivedG.SPINE) {
+    const s = derivedG.SPINE;
+    spinePoly = [rectToClipper(s.x, s.y, s.w, s.h)];
+  }
+
+  // Build parcel lookup: spec → GIS ring(s) in Clipper coords
+  function parcelToClipper(parcel) {
+    return parcel.rings.map(ring => {
+      const pts = ringToSVG(ring, proj);
+      return toClipper(pts);
+    });
+  }
+
+  const specIndex = {};
+  for (const p of edaParcels) {
+    if (p.spec) specIndex[p.spec] = p;
+  }
+
+  const PX_TO_AC = (scale.ft_per_px_ew * scale.ft_per_px_ns) / 43560;
+
+  const zones = [];
+
+  for (const [districtName, def] of Object.entries(DISTRICT_DEFS)) {
+    // Collect raw Clipper paths for all parcels in this district
+    const rawPaths = [];
+    for (const spec of def.specs) {
+      const parcel = specIndex[spec];
+      if (!parcel) continue;
+      const cpaths = parcelToClipper(parcel);
+      rawPaths.push(...cpaths);
+    }
+
+    if (rawPaths.length === 0) continue;
+
+    // Clean inputs
+    const cleaned = cleanPaths(rawPaths);
+    if (cleaned.length === 0) continue;
+
+    if (def.decompose === 'as_is') {
+      // Keep the polygon as-is — it IS the zone (sponge park, civic parcels)
+      for (const path of cleaned) {
+        const pts = fromClipper(path);
+        const [cx, cy] = polyCentroid(pts);
+        const area_px2 = Math.abs(clipperArea(path)) / (CLIPPER_SCALE*CLIPPER_SCALE);
+        zones.push(makeZone(districtName, def, pts, [], cx, cy, area_px2, PX_TO_AC, derivedG, MAP));
+      }
+      continue;
+    }
+
+    if (def.decompose === 'individual') {
+      // Each parcel becomes its own zone (main street parcels)
+      for (const spec of def.specs) {
+        const parcel = specIndex[spec];
+        if (!parcel) continue;
+        const cpaths = cleanPaths(parcelToClipper(parcel));
+        for (const path of cpaths) {
+          const pts = fromClipper(path);
+          const [cx, cy] = polyCentroid(pts);
+          const area_px2 = Math.abs(clipperArea(path)) / (CLIPPER_SCALE*CLIPPER_SCALE);
+          zones.push(makeZone(districtName, def, pts, [], cx, cy, area_px2, PX_TO_AC, derivedG, MAP));
+        }
+      }
+      continue;
+    }
+
+    // 'union' mode: merge all parcels, then decompose
+
+    // Step 1: Union all parcel paths
+    const merged = clipperUnion(cleaned);
+    if (merged.length === 0) continue;
+
+    // Step 2: Remove setbacks (subtract road buffer zones)
+    // Only subtract setbacks that are relevant to this district's road adjacency
+    let buildable = merged;
+    // Check which setbacks touch this district
+    const bounds = polyBounds(fromClipper(merged[0]));
+    if (bounds.minY < MAP.y0 + sb_art_px * 2) {
+      buildable = clipperDifference(buildable, setbackMask.north);
+    }
+    if (bounds.maxY > MAP.y1 - sb_hwy_px * 2) {
+      buildable = clipperDifference(buildable, setbackMask.south);
+    }
+    if (bounds.minX < MAP.x0 + sb_art_px * 2) {
+      buildable = clipperDifference(buildable, setbackMask.west);
+    }
+    if (buildable.length === 0) continue;
+
+    if (def.split_spine && spinePoly) {
+      // Step 3a: Split at spine — produce west and east halves separately
+      const westPaths = clipperDifference(buildable, [
+        rectToClipper(derivedG.SPINE.x, MAP.y0, MAP.x1 - derivedG.SPINE.x, MAP.y1 - MAP.y0)
+      ]);
+      const eastPaths = clipperDifference(buildable, [
+        rectToClipper(MAP.x0, MAP.y0, derivedG.SPINE.x + derivedG.SPINE.w, MAP.y1 - MAP.y0)
+      ]);
+
+      for (const [halves, halfName] of [[westPaths,'WEST'],[eastPaths,'EAST']]) {
+        if (!halves || halves.length === 0) continue;
+        const zonesFromHalf = insetToZones(
+          halves, districtName+'_'+halfName, def,
+          inset_px, depth_px, PX_TO_AC, derivedG, MAP
+        );
+        zones.push(...zonesFromHalf);
+      }
+    } else {
+      // Step 3b: No spine split — inset directly
+      const zonesFromDistrict = insetToZones(
+        buildable, districtName, def,
+        inset_px, depth_px, PX_TO_AC, derivedG, MAP
+      );
+      zones.push(...zonesFromDistrict);
+    }
+  }
+
+  console.log(`T2 polygon decomposition: ${zones.length} zones from ${Object.keys(DISTRICT_DEFS).length} districts`);
+  return zones;
+}
+
+// Inset a set of merged polygons to produce building footprint zones
+function insetToZones(paths, districtName, def, inset_px, depth_px, PX_TO_AC, derivedG, MAP) {
+  const zones = [];
+
+  for (const outerPath of paths) {
+    if (outerPath.length < 3) continue;
+    const outerPts = fromClipper(outerPath);
+    const area_outer = Math.abs(clipperArea(outerPath)) / (CLIPPER_SCALE*CLIPPER_SCALE);
+
+    // Only inset if the polygon is large enough to have a meaningful courtyard
+    const MIN_INSET_AREA = inset_px * inset_px * 4;
+    if (area_outer < MIN_INSET_AREA) {
+      // Too small for inset — use whole polygon as zone
+      const [cx,cy] = polyCentroid(outerPts);
+      zones.push(makeZone(districtName, def, outerPts, [], cx, cy,
+        area_outer, PX_TO_AC, derivedG, MAP));
+      continue;
+    }
+
+    // Inset inward — negative delta = inward offset for properly-wound paths
+    const insetPaths = clipperOffset(
+      [outerPath], -inset_px * CLIPPER_SCALE,
+      ClipperLib.JoinType.jtMiter, 2.0
+    );
+
+    if (!insetPaths || insetPaths.length === 0) {
+      // Inset collapsed the polygon — use whole polygon
+      const [cx,cy] = polyCentroid(outerPts);
+      zones.push(makeZone(districtName, def, outerPts, [], cx, cy,
+        area_outer, PX_TO_AC, derivedG, MAP));
+      continue;
+    }
+
+    // Building footprint = outer MINUS inset (the annular ring)
+    const footprintPaths = clipperDifference([outerPath], insetPaths);
+    const courtyardPts = fromClipper(insetPaths[0]);
+    const [cx,cy] = polyCentroid(outerPts);
+
+    if (footprintPaths.length === 0) {
+      // Difference failed — use outer
+      zones.push(makeZone(districtName, def, outerPts, [], cx, cy,
+        area_outer, PX_TO_AC, derivedG, MAP));
+      continue;
+    }
+
+    // Check: does the footprint ring exceed max_depth?
+    // If the outer polygon is very wide, the footprint might be deeper than allowed.
+    // In that case, inset again from the footprint to create additional interior zones.
+    const bounds = polyBounds(outerPts);
+    const maxDim = Math.max(bounds.width, bounds.height);
+
+    if (maxDim > inset_px * 2 + depth_px * 2) {
+      // Large polygon: building footprint ring + inner courtyard zone
+      // The courtyard inset is already computed; produce the building ring as zone(s)
+      for (const fp of footprintPaths) {
+        const fpPts = fromClipper(fp);
+        const fpArea = Math.abs(clipperArea(fp)) / (CLIPPER_SCALE*CLIPPER_SCALE);
+        if (fpArea < 100) continue; // skip tiny fragments
+        const [fcx,fcy] = polyCentroid(fpPts);
+        zones.push(makeZone(districtName+'_FOOTPRINT', def, fpPts, [], fcx, fcy,
+          fpArea, PX_TO_AC, derivedG, MAP));
+      }
+      // Courtyard as a separate GREEN_ACTIVE zone
+      if (courtyardPts.length >= 3) {
+        const ctArea = Math.abs(clipperArea(insetPaths[0])) / (CLIPPER_SCALE*CLIPPER_SCALE);
+        const [ccx,ccy] = polyCentroid(courtyardPts);
+        const greenDef = { ...def, initial_use: 'GREEN_ACTIVE' };
+        zones.push(makeZone(districtName+'_COURTYARD', greenDef, courtyardPts, [], ccx, ccy,
+          ctArea, PX_TO_AC, derivedG, MAP));
+      }
+    } else {
+      // Smaller polygon: single building footprint zone (courtyard as hole)
+      // Represent as outer polygon with hole — SVG path with hole using even-odd rule
+      const holePath = courtyardPts.length >= 3
+        ? 'M ' + courtyardPts.map(([x,y])=>`${x.toFixed(1)},${y.toFixed(1)}`).join(' L ') + ' Z'
+        : '';
+
+      zones.push(makeZone(districtName, def, outerPts, [courtyardPts], cx, cy,
+        area_outer, PX_TO_AC, derivedG, MAP));
+    }
+  }
+
+  return zones;
+}
+
+// Construct a full zone object from polygon data
+function makeZone(districtName, def, outerPts, holes, cx, cy, area_px2, PX_TO_AC, derivedG, MAP) {
+  const area_ac = area_px2 * PX_TO_AC;
+  const area_sf = area_ac * 43560;
+
+  // Build SVG path string (outer + holes using even-odd fill rule)
+  let svgPath = ptsToSVGPath(outerPts);
+  for (const hole of holes) {
+    if (hole.length >= 3) svgPath += ' ' + ptsToSVGPath(hole);
+  }
+
+  // Determine spatial relationships for use eligibility
+  const bounds = polyBounds(outerPts);
+  const on_spine = derivedG && derivedG.SPINE &&
+    cx >= derivedG.SPINE.x - 5 && cx <= derivedG.SPINE.x + derivedG.SPINE.w + 5;
+  const near_sponge = derivedG && derivedG.SPONGE &&
+    Math.hypot(cx - derivedG.SPONGE.cx, cy - derivedG.SPONGE.cy) <
+    Math.max(derivedG.SPONGE.rx, derivedG.SPONGE.ry) * 1.5;
+  const in_main_st = derivedG && derivedG.BAND &&
+    cy < derivedG.BAND.y + derivedG.BAND.h + 20 && cy > derivedG.BAND.y;
+  const near_tide = derivedG && derivedG.TIDE &&
+    Math.hypot(cx - (derivedG.TIDE.x + derivedG.TIDE.w/2), cy - derivedG.TIDE.y) < 120;
+
+  const road_adj = [];
+  if (bounds.minY < MAP.y0 + 30) road_adj.push('VA_BEACH_BLVD');
+  if (bounds.maxY > MAP.y1 - 30) road_adj.push('I264');
+  if (bounds.minX < MAP.x0 + 30) road_adj.push('N_MILITARY_HWY');
+  if (bounds.maxX > MAP.x1 - 30) road_adj.push('TIDEWATER_DR');
+
+  // Eligible uses from spatial context + district definition
+  const eligible_uses = computeEligibleUses({
+    in_setback: false,   // already subtracted setbacks
+    on_spine, near_sponge, in_main_st, near_tide, road_adj,
+    area_ac, area_sf, parcel_specs: def.specs,
+  });
+
+  const use = def.initial_use || (eligible_uses[0] || 'INFRASTRUCTURE');
+
+  return {
+    id: `${districtName}_${Math.floor(cx)}_${Math.floor(cy)}`,
+    district: districtName,
+    poly: {
+      outer: outerPts,
+      holes,
+      svgPath,
+      // Keep bbox for adjacency checks
+      x: bounds.minX, y: bounds.minY,
+      w: bounds.width, h: bounds.height,
+    },
+    centroid: { x: cx, y: cy },
+    area_px2, area_ac, area_sf,
+    parcel_specs: def.specs || [],
+    road_adj,
+    on_spine, near_sponge, in_main_st, near_tide,
+    in_setback: false,
+    eligible_uses,
+    use,
+    constraints: {
+      max_height_ft: in_main_st ? 35 : near_sponge ? 25 : 65,
+      min_courtyard_ratio: 0.30,
+      max_depth_ft: 50,
+      far: near_sponge ? 1.5 : 4.0,
+    },
+    edge_mutations: [],
+  };
+}
+
+// ─── T7 POLYGON RENDERER (replaces rect-based renderer) ─────────────────────
+
+function renderT7Polygons(zones, svg, params) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const opacity    = params.opacity    !== undefined ? params.opacity   : 0.55;
+  const showLabels = params.show_labels !== false;
+
+  svg.querySelectorAll('[data-t7]').forEach(e => e.remove());
+
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('data-t7', '1');
+  g.setAttribute('clip-path', 'url(#mc)');
+
+  // Use even-odd fill rule so holes (courtyards) render correctly
+  g.setAttribute('fill-rule', 'evenodd');
+
+  for (const z of zones) {
+    if (!z.poly || !z.poly.svgPath) continue;
+    const usedef = window.EC_Pipeline?.USES[z.use];
+    if (!usedef) continue;
+    const color = usedef.color;
+
+    // Zone fill + stroke — single path handles outer + holes via even-odd
+    const fill = document.createElementNS(ns, 'path');
+    fill.setAttribute('d', z.poly.svgPath);
+    fill.setAttribute('fill', color);
+    fill.setAttribute('fill-opacity', opacity);
+    fill.setAttribute('stroke', color);
+    fill.setAttribute('stroke-width', '1.5');
+    fill.setAttribute('stroke-opacity', '0.85');
+    fill.setAttribute('fill-rule', 'evenodd');
+    fill.setAttribute('data-zone', z.id);
+    fill.setAttribute('data-use', z.use);
+    fill.style.cursor = 'pointer';
+    fill.addEventListener('mouseenter', () => {
+      if (window.EC_Pipeline) window.EC_Pipeline.showZoneTooltip?.(z);
+    });
+    g.appendChild(fill);
+
+    // Edge mutation: ground-floor retail stripe
+    for (const m of (z.edge_mutations || [])) {
+      if (m.type === 'ground_floor_retail' && z.poly.outer) {
+        // Draw a 4px-wide outline in retail color along the polygon exterior
+        const stripe = document.createElementNS(ns, 'path');
+        stripe.setAttribute('d', ptsToSVGPath(z.poly.outer));
+        stripe.setAttribute('fill', 'none');
+        stripe.setAttribute('stroke', window.EC_Pipeline.USES.RETAIL_GROUND.color);
+        stripe.setAttribute('stroke-width', '4');
+        stripe.setAttribute('stroke-opacity', '0.9');
+        g.appendChild(stripe);
+      }
+      if (m.type === 'highway_violation') {
+        const warn = document.createElementNS(ns, 'path');
+        warn.setAttribute('d', ptsToSVGPath(z.poly.outer));
+        warn.setAttribute('fill', 'none');
+        warn.setAttribute('stroke', '#c04030');
+        warn.setAttribute('stroke-width', '2.5');
+        warn.setAttribute('stroke-dasharray', '5,3');
+        g.appendChild(warn);
+      }
+    }
+
+    // Zone label — placed at centroid
+    if (showLabels && z.area_ac > 0.2) {
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', z.centroid.x.toFixed(1));
+      t.setAttribute('y', (z.centroid.y + 3).toFixed(1));
+      t.setAttribute('font-family', 'DM Mono, monospace');
+      t.setAttribute('font-size', Math.min(9, z.area_ac * 8 + 5).toFixed(0));
+      t.setAttribute('fill', '#f0ece0');
+      t.setAttribute('fill-opacity', '0.85');
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('pointer-events', 'none');
+      t.textContent = usedef.id;
+      g.appendChild(t);
+
+      if (z.units && z.area_ac > 0.5) {
+        const sub = document.createElementNS(ns, 'text');
+        sub.setAttribute('x', z.centroid.x.toFixed(1));
+        sub.setAttribute('y', (z.centroid.y + 13).toFixed(1));
+        sub.setAttribute('font-family', 'DM Mono, monospace');
+        sub.setAttribute('font-size', '6');
+        sub.setAttribute('fill', '#f0ece0');
+        sub.setAttribute('fill-opacity', '0.55');
+        sub.setAttribute('text-anchor', 'middle');
+        sub.setAttribute('pointer-events', 'none');
+        sub.textContent = `${z.units.unit_count}u`;
+        g.appendChild(sub);
+      }
+    }
+  }
+
+  svg.appendChild(g);
+}
+
+// Adjacency check for polygon zones (uses centroid distance + bbox overlap)
+function polyZonesAdjacent(a, b) {
+  // Two polygon zones are adjacent if their bboxes overlap or nearly touch
+  const TOL = 5;
+  const ao = a.poly, bo = b.poly;
+  const ax1=ao.x-TOL, ax2=ao.x+ao.w+TOL, ay1=ao.y-TOL, ay2=ao.y+ao.h+TOL;
+  const bx1=bo.x,     bx2=bo.x+bo.w,     by1=bo.y,     by2=bo.y+bo.h;
+  return ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1;
+}
+
+// ─── EXPORT ──────────────────────────────────────────────────────────────────
+window.EC_Decomp = {
+  buildT2PolygonZones,
+  renderT7Polygons,
+  polyZonesAdjacent,
+  ptsToSVGPath,
+  polyBounds,
+  polyCentroid,
+  clipperUnion,
+  clipperOffset,
+  clipperDifference,
+  clipperIntersection,
+  cleanPaths,
+  DISTRICT_DEFS,
+  CLIPPER_SCALE,
+};
+
 
 function initPipeline(parcels, proj, MAP, derivedG) {
   _pipelineParcels = parcels; _pipelineProj = proj; _pipelineMAP = MAP;
   window._derivedG = derivedG;
+  window._pipelineReady = true;
 }
 
 async function triggerPipeline() {
