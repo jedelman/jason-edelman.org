@@ -703,7 +703,7 @@ function buildSVG(parcels, P, G, derived, MAP, proj) {
   const specToParcel = {};
   for (const p of parcels) if (p.spec) specToParcel[p.spec] = p;
 
-  const haloGroup = el('g',{'style':'mix-blend-mode:screen','clip-path':'url(#mc)'});
+  const haloGroup = el('g',{'style':'mix-blend-mode:screen;isolation:isolate','clip-path':'url(#mc)'});
   for (const [,fid,,color,specs] of districts) {
     const g = el('g',{filter:`url(#${fid})`,'clip-path':'url(#mc)'});
     for (const spec of specs) {
