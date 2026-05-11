@@ -472,6 +472,8 @@ details[open] summary::before { content: '▼  '; }
     <button class="tool-btn" id="btn-place" onclick="setTool('place')">▭ Place building</button>
     <button class="tool-btn" id="btn-section" onclick="setTool('section')">⊸ Section cut</button>
     <button class="tool-btn danger" id="btn-clear" onclick="clearBuildings()">✕ Clear buildings</button>
+    <button class="tool-btn" onclick="if(window.EC_Render)window.EC_Render.downloadPNG();" title="Export plan as PNG image">↓ PNG</button>
+    <button class="tool-btn" onclick="if(window.EC_Render)window.EC_Render.downloadGeoJSON();" title="Export as GeoJSON for QGIS/ArcGIS">↓ GeoJSON</button>
     <span style="flex:1"></span>
     <div class="overlay-controls">
       <button class="overlay-btn on" data-overlay="superblock" onclick="toggleOverlay(this)">Superblock grid</button>
@@ -759,6 +761,8 @@ function buildProjection(parcels) {
     ];
   }
 
+  // Attach bounds so inverse projection is possible (GeoJSON export)
+  proj._bounds = {minLon, maxLon, minLat, maxLat};
   return {proj, MAP, minLon, maxLon, minLat, maxLat};
 }
 
@@ -1122,8 +1126,11 @@ function buildSVG(parcels, P, G, derived, MAP, proj) {
   svg.appendChild(edaG);
 
   // ── LAYER 4: DERIVED OVERLAY (constraint-solved geometry) ──
-  // Suppressed when pipeline T7 has rendered (pipeline zones replace these)
-  if (window._pipelineRendered) return;
+  // Create a group for all layer 4 elements so pipeline T7 can remove them
+  const _l4g = document.createElementNS(ns, 'g');
+  _l4g.setAttribute('data-constraint-overlay', '1');
+  svg.appendChild(_l4g);
+  const _l4svg = { appendChild: (el) => _l4g.appendChild(el) };
 
   const D = derived;
 
@@ -3389,8 +3396,11 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
 
   const t3Zones = t3Result.best.zones;
 
-  callbacks?.onStatus?.('T4: Decomposing zones into building units…');
-  const t4Zones = buildT4Units(t3Zones, t1);
+  callbacks?.onStatus?.('T4: Placing unit modules…');
+  // Use polygon-aware unit placement if available
+  const t4Zones = (window.EC_T4 && t3Zones[0]?.poly?.outer)
+    ? window.EC_T4.buildUnits(t3Zones, t1)
+    : buildT4Units(t3Zones, t1);
 
   callbacks?.onStatus?.('T5: Applying interaction constraints…');
   const t5Zones = applyT5Interactions(t4Zones);
@@ -3401,15 +3411,40 @@ async function runPipeline(parcels, proj, MAP, derivedG, params, callbacks) {
   callbacks?.onStatus?.('T7: Rendering…');
   const svg = document.getElementById('site-plan');
   if (svg) {
+    // Clear previous pipeline layers + constraint-solver decorations
+    // Keep: defs, background rects, road bands, parcel paths (data-acct), EDA paths
+    // Remove: overlays, decorations, previous T7/T4 renders
+    svg.querySelectorAll('[data-t7],[data-units],[data-overlay],[data-bldg],[data-section-line]').forEach(e => e.remove());
+    // Remove constraint-solver layer 4 decorations — these have no data-acct
+    // and come after the parcel layer. Identify by tag + absence of data-acct.
+    // Specifically: ellipses (sponge), rects (spine/ross/tide), and texts that
+    // are NOT inside the road label group (road labels have no data- attr but are expected)
+    svg.querySelectorAll('ellipse').forEach(e => e.remove());
+    // Remove spine/ross/tide rects: they have no data-acct and are overlay rects
+    svg.querySelectorAll('rect[fill="#0a1828"],rect[fill="#160606"],rect[fill="#081408"]').forEach(e=>e.remove());
+    // Remove spine rect (stroke=#2878a0) and other overlay rects/lines
+    svg.querySelectorAll('rect[stroke="#2878a0"],rect[stroke="#903020"],rect[stroke="#3898c0"]').forEach(e=>e.remove());
+    // Remove bike lane dashed lines and tide connector arrow
+    svg.querySelectorAll('line[stroke="#3a8040"],line[stroke="#3898c0"]').forEach(e=>e.remove());
+    // Remove overlay text groups: district labels, callout boxes, annotations
+    // These are <g> elements appended directly to svg (not data-t7 groups)
+    // Identify by checking if they contain text children with specific fill colors
+    svg.querySelectorAll('g:not([data-t7]):not([data-units]):not([clip-path]):not([id])').forEach(g => {
+      // Layer 4 groups have no clip-path, no id, no data-t7
+      if (g.querySelector('text[fill="#d4982c"],text[fill="#4a9ab0"],text[fill="#9060c0"],text[fill="#5aaa60"]')) {
+        g.remove();
+      }
+    });
+    // Remove callout boxes (rect+text groups appended directly, no clip-path)
+    svg.querySelectorAll('text[fill="#d4982c"],text[fill="#4a9ab0"],text[fill="#9060c0"]').forEach(e=>e.remove());
+
     if (window.EC_Decomp && t6Zones[0]?.poly?.svgPath) {
       window.EC_Decomp.renderT7Polygons(t6Zones, svg, params);
     } else {
       renderT7(t6Zones, svg, params);
     }
-    // Signal that pipeline has rendered — suppress old constraint overlay layer
     window._pipelineRendered = true;
-    // Also remove old halo district layers from the halo group
-    svg.querySelectorAll('[data-overlay]').forEach(e => e.remove());
+    if (window.EC_Render) window.EC_Render.renderUnits(t6Zones, svg, params);
   }
 
   callbacks?.onComplete?.({
@@ -4111,6 +4146,583 @@ function polyZonesAdjacent(a, b) {
 }
 
 // ─── EXPORT ──────────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EASTSIDE COMMONS — T4 UNIT PLACEMENT v2
+//  Replaces the bbox-based T4 with polygon-aware unit placement.
+//
+//  Pipeline:
+//    1. Subdivide large footprint zones into developer-scale parcels (~300ft)
+//    2. For each sub-parcel, compute a perimeter building strip + interior courtyard
+//    3. Place individual unit modules (25ft wide × 50ft deep) along each strip face
+//    4. Output: zones with units[] array of placed unit polygons + metadata
+//
+//  All in Clipper space; uses EC_Decomp helpers.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const T4 = {
+
+  // Planning constants for unit placement
+  UNIT_WIDTH_FT:     25,    // each unit bay is 25ft wide (rowhouse module)
+  UNIT_DEPTH_FT:     45,    // depth of a single-loaded unit (or half a double-loaded pair)
+  MIN_PARCEL_AC:     0.4,   // don't subdivide below this — one developer takes the whole thing
+  MAX_PARCEL_AC:     2.5,   // above this, cross-cut into sub-parcels
+  PARCEL_CUT_FT:     280,   // target dimension for cross-cuts
+  AFFORDABLE_PCT: { RESIDENTIAL_AFFORDABLE: 1.0, RESIDENTIAL_CLT_OWN: 1.0,
+                    RESIDENTIAL_MARKET: 0.30 },
+
+  // ── STEP 1: Subdivide large zones into developer-scale parcels ──────────────
+  subdivideZone(zone, t1) {
+    const { scale } = t1;
+    const cutPx = this.PARCEL_CUT_FT * scale.px_per_ft_ew;
+
+    // Only subdivide residential/civic footprint zones that are oversized
+    const isSubdividable = zone.area_ac > this.MAX_PARCEL_AC &&
+      (zone.use.startsWith('RESIDENTIAL') || zone.use === 'CIVIC') &&
+      zone.poly.outer;
+
+    if (!isSubdividable) return [zone];
+
+    // Get polygon bounds
+    const bounds = EC_Decomp.polyBounds(zone.poly.outer);
+    const outerC = zone.poly.outer.map(([x,y]) =>
+      ({X: Math.round(x*CLIPPER_SCALE), Y: Math.round(y*CLIPPER_SCALE)})
+    );
+
+    // Determine cut direction: cut perpendicular to longer axis
+    const cutAlongX = bounds.width >= bounds.height;
+    const cutCount = Math.ceil(
+      (cutAlongX ? bounds.width : bounds.height) / cutPx
+    ) - 1;
+
+    if (cutCount <= 0) return [zone];
+
+    const subZones = [];
+    let remaining = [outerC];
+
+    for (let i = 1; i <= cutCount; i++) {
+      const cutPos = cutAlongX
+        ? bounds.minX + (bounds.width * i / (cutCount + 1))
+        : bounds.minY + (bounds.height * i / (cutCount + 1));
+
+      const newRemaining = [];
+      for (const poly of remaining) {
+        // Cut polygon with a vertical or horizontal line using Clipper
+        const cutRect = cutAlongX
+          ? [{X: Math.round(cutPos*CLIPPER_SCALE), Y: Math.round((bounds.minY-10)*CLIPPER_SCALE)},
+             {X: Math.round((bounds.maxX+10)*CLIPPER_SCALE), Y: Math.round((bounds.minY-10)*CLIPPER_SCALE)},
+             {X: Math.round((bounds.maxX+10)*CLIPPER_SCALE), Y: Math.round((bounds.maxY+10)*CLIPPER_SCALE)},
+             {X: Math.round(cutPos*CLIPPER_SCALE), Y: Math.round((bounds.maxY+10)*CLIPPER_SCALE)}]
+          : [{X: Math.round((bounds.minX-10)*CLIPPER_SCALE), Y: Math.round(cutPos*CLIPPER_SCALE)},
+             {X: Math.round((bounds.maxX+10)*CLIPPER_SCALE), Y: Math.round(cutPos*CLIPPER_SCALE)},
+             {X: Math.round((bounds.maxX+10)*CLIPPER_SCALE), Y: Math.round((bounds.maxY+10)*CLIPPER_SCALE)},
+             {X: Math.round((bounds.minX-10)*CLIPPER_SCALE), Y: Math.round((bounds.maxY+10)*CLIPPER_SCALE)}];
+
+        // Left/top piece
+        const leftPiece = EC_Decomp.clipperDifference([poly], [cutRect]);
+        // Right/bottom piece  
+        const rightPiece = EC_Decomp.clipperIntersection([poly], [cutRect]);
+
+        if (leftPiece.length > 0) {
+          subZones.push(this._makeSubZone(zone, leftPiece[0], t1, i, 'A'));
+        }
+        if (rightPiece.length > 0) newRemaining.push(rightPiece[0]);
+      }
+      remaining = newRemaining;
+    }
+
+    // Add final remaining piece
+    for (const poly of remaining) {
+      subZones.push(this._makeSubZone(zone, poly, t1, cutCount+1, 'B'));
+    }
+
+    return subZones.filter(z => z.area_ac >= this.MIN_PARCEL_AC);
+  },
+
+  _makeSubZone(parent, clipperPath, t1, idx, suffix) {
+    const PX_TO_AC = (t1.scale.ft_per_px_ew * t1.scale.ft_per_px_ns) / 43560;
+    const pts = clipperPath.map(({X,Y}) => [X/CLIPPER_SCALE, Y/CLIPPER_SCALE]);
+    const area_px2 = Math.abs(ClipperLib.Clipper.Area(clipperPath)) / (CLIPPER_SCALE*CLIPPER_SCALE);
+    const [cx,cy] = EC_Decomp.polyCentroid(pts);
+    const svgPath = EC_Decomp.ptsToSVGPath(pts);
+    return {
+      ...parent,
+      id: `${parent.id}_P${idx}${suffix}`,
+      poly: { ...parent.poly, outer: pts, svgPath, holes: [] },
+      centroid: {x:cx, y:cy},
+      area_px2, area_ac: area_px2 * PX_TO_AC,
+      area_sf: area_px2 * PX_TO_AC * 43560,
+      is_sub_parcel: true, parent_district: parent.district,
+      units: null,  // will be placed in step 2
+    };
+  },
+
+  // ── STEP 2: Place unit modules on a parcel polygon ──────────────────────────
+  // Returns an array of placed unit objects for a single zone.
+  placeUnits(zone, t1) {
+    if (!zone.poly.outer || zone.in_setback) return null;
+    if (!zone.use.startsWith('RESIDENTIAL') && zone.use !== 'CIVIC') return null;
+
+    const { scale } = t1;
+    const UNIT_W = this.UNIT_WIDTH_FT * scale.px_per_ft_ew;
+    const UNIT_D = this.UNIT_DEPTH_FT * scale.px_per_ft_ns;
+    const MAX_D  = zone.constraints.max_depth_ft * scale.px_per_ft_ns;
+
+    // Derive building height from FAR + footprint
+    const courtyard_frac = zone.constraints.min_courtyard_ratio || 0.30;
+    const footprint_sf   = zone.area_sf * (1 - courtyard_frac);
+    const floors         = Math.max(3, Math.min(
+      Math.ceil((zone.area_sf * zone.constraints.far) / footprint_sf),
+      Math.floor(zone.constraints.max_height_ft / 12)
+    ));
+
+    // Inset the outer polygon to get the buildable face
+    const outerC = zone.poly.outer.map(([x,y]) =>
+      ({X: Math.round(x*CLIPPER_SCALE), Y: Math.round(y*CLIPPER_SCALE)})
+    );
+
+    // Building strip: inset by unit depth from outer, but max building depth
+    const unitInset = Math.min(UNIT_D, MAX_D);
+    const innerRing = EC_Decomp.clipperOffset(
+      [outerC], -unitInset * CLIPPER_SCALE,
+      ClipperLib.JoinType.jtMiter, 2.0
+    );
+
+    if (!innerRing || innerRing.length === 0) return null;
+
+    // Building strip = outer minus inner ring
+    const strip = EC_Decomp.clipperDifference([outerC], innerRing);
+    if (!strip || strip.length === 0) return null;
+
+    // Courtyard = inner ring itself
+    const courtyardPts = innerRing[0].map(({X,Y}) => [X/CLIPPER_SCALE, Y/CLIPPER_SCALE]);
+    const courtyardPath = EC_Decomp.ptsToSVGPath(courtyardPts);
+    const courtyardArea = Math.abs(ClipperLib.Clipper.Area(innerRing[0])) /
+      (CLIPPER_SCALE * CLIPPER_SCALE * 43560 / (scale.ft_per_px_ew * scale.ft_per_px_ns));
+
+    // Place unit modules: walk the OUTER edges and grid unit bays
+    const units = [];
+    const outer = zone.poly.outer;
+    let totalUnits = 0;
+
+    for (let i = 0; i < outer.length; i++) {
+      const [x0,y0] = outer[i];
+      const [x1,y1] = outer[(i+1) % outer.length];
+      const edgeLen = Math.hypot(x1-x0, y1-y0);
+      if (edgeLen < UNIT_W * 0.5) continue;  // skip too-short edges
+
+      // Direction vector along edge
+      const ux = (x1-x0)/edgeLen, uy = (y1-y0)/edgeLen;
+      // Inward normal (toward centroid)
+      const cx = zone.centroid.x, cy = zone.centroid.y;
+      const midX = (x0+x1)/2, midY = (y0+y1)/2;
+      const toCx = cx-midX, toCy = cy-midY;
+      const toCLen = Math.hypot(toCx,toCy);
+      const nx = toCx/toCLen, ny = toCy/toCLen;
+
+      const bayCount = Math.floor(edgeLen / UNIT_W);
+      const startOffset = (edgeLen - bayCount*UNIT_W) / 2;
+
+      for (let b = 0; b < bayCount; b++) {
+        const t = startOffset + b*UNIT_W + UNIT_W/2;
+        // Unit module corners
+        const bx = x0 + ux*t, by = y0 + uy*t;
+        // 4 corners: front-left, front-right, back-right, back-left
+        const fl = [bx - ux*UNIT_W/2, by - uy*UNIT_W/2];
+        const fr = [bx + ux*UNIT_W/2, by + uy*UNIT_W/2];
+        const br = [fr[0] + nx*unitInset, fr[1] + ny*unitInset];
+        const bl = [fl[0] + nx*unitInset, fl[1] + ny*unitInset];
+
+        const unitPoly = [fl,fr,br,bl];
+        const svgPath = EC_Decomp.ptsToSVGPath(unitPoly);
+
+        // Is this unit actually inside the strip polygon?
+        // Check centroid point-in-polygon against the strip
+        const unitCx = (fl[0]+fr[0]+br[0]+bl[0])/4;
+        const unitCy = (fl[1]+fr[1]+br[1]+bl[1])/4;
+        const inStrip = ClipperLib.Clipper.PointInPolygon(
+          {X: Math.round(unitCx*CLIPPER_SCALE), Y: Math.round(unitCy*CLIPPER_SCALE)},
+          strip[0]
+        ) !== 0;
+
+        if (!inStrip) continue;
+
+        const affordable_pct = this.AFFORDABLE_PCT[zone.use] || 0.3;
+        totalUnits++;
+
+        units.push({
+          id: `${zone.id}_U${totalUnits}`,
+          poly: unitPoly,
+          svgPath,
+          centroid: [unitCx, unitCy],
+          floors,
+          edge_idx: i,
+          bay_idx: b,
+          use: zone.use,
+          is_affordable: totalUnits % Math.round(1/affordable_pct) !== 0 || affordable_pct === 1.0,
+          ground_floor: zone.edge_mutations?.some(m=>m.type==='ground_floor_retail')
+            && (i === 0) ? 'RETAIL_GROUND' : null,
+        });
+      }
+    }
+
+    // FAR check: approximate floor area from unit count
+    const unit_sf_each = this.UNIT_WIDTH_FT * this.UNIT_DEPTH_FT;
+    const total_floor_area = units.length * unit_sf_each * floors;
+    const realized_far = total_floor_area / zone.area_sf;
+    const affordable_count = units.filter(u=>u.is_affordable).length;
+
+    return {
+      units,
+      unit_count: units.length * floors,  // total dwelling units (each module × floors)
+      module_count: units.length,          // distinct ground-floor modules
+      floors,
+      affordable_units: affordable_count * floors,
+      courtyard: {pts: courtyardPts, svgPath: courtyardPath, area_ac: courtyardArea},
+      building_strip: strip.map(p => p.map(({X,Y})=>[X/CLIPPER_SCALE, Y/CLIPPER_SCALE])),
+      floor_area_sf: total_floor_area,
+      realized_far: +realized_far.toFixed(2),
+      unit_width_ft: this.UNIT_WIDTH_FT,
+      unit_depth_ft: this.UNIT_DEPTH_FT,
+    };
+  },
+
+  // ── MAIN ENTRY: run full T4 on all zones ────────────────────────────────────
+  buildUnits(zones, t1) {
+    const result = [];
+
+    for (const zone of zones) {
+      // Step 1: subdivide large zones
+      const subZones = this.subdivideZone(zone, t1);
+
+      for (const sz of subZones) {
+        // Step 2: place unit modules
+        const placed = this.placeUnits(sz, t1);
+        result.push({ ...sz, units: placed });
+      }
+    }
+
+    console.log(`T4: ${result.length} parcels, ` +
+      `${result.filter(z=>z.units).length} with placed units, ` +
+      `${result.reduce((s,z)=>s+(z.units?.unit_count||0),0)} total units`);
+
+    return result;
+  },
+};
+
+window.EC_T4 = T4;
+
+
+// ── T7 UNIT RENDERER ─────────────────────────────────────────────────────────
+// Renders placed unit modules on the SVG map.
+// Called after renderT7Polygons to add the unit layer on top.
+
+function renderUnits(zones, svg, params) {
+  const ns = 'http://www.w3.org/2000/svg';
+  svg.querySelectorAll('[data-units]').forEach(e => e.remove());
+
+  if (!params.show_units) return;
+
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('data-units', '1');
+  g.setAttribute('clip-path', 'url(#mc)');
+  g.setAttribute('fill-rule', 'nonzero');
+
+  let totalRendered = 0;
+
+  for (const zone of zones) {
+    if (!zone.units) continue;
+    const usedef = window.EC_Pipeline?.USES[zone.use];
+    const baseColor = usedef?.color || '#888';
+
+    // ── Courtyard (open space) ──
+    if (zone.units.courtyard?.svgPath) {
+      const ct = document.createElementNS(ns, 'path');
+      ct.setAttribute('d', zone.units.courtyard.svgPath);
+      ct.setAttribute('fill', '#0a1808');
+      ct.setAttribute('fill-opacity', '0.55');
+      ct.setAttribute('stroke', '#3a5828');
+      ct.setAttribute('stroke-width', '0.8');
+      ct.setAttribute('stroke-dasharray', '2,2');
+      g.appendChild(ct);
+    }
+
+    // ── Building strip (perimeter band) ──
+    for (const stripPoly of (zone.units.building_strip || [])) {
+      const sp = document.createElementNS(ns, 'path');
+      sp.setAttribute('d', EC_Decomp.ptsToSVGPath(stripPoly));
+      sp.setAttribute('fill', baseColor);
+      sp.setAttribute('fill-opacity', '0.25');
+      sp.setAttribute('stroke', baseColor);
+      sp.setAttribute('stroke-width', '0.6');
+      sp.setAttribute('stroke-opacity', '0.4');
+      g.appendChild(sp);
+    }
+
+    // ── Individual unit modules ──
+    for (const unit of zone.units.units) {
+      const u = document.createElementNS(ns, 'path');
+      u.setAttribute('d', unit.svgPath);
+
+      // Color: affordable = district color, market = lighter, ground retail = orange
+      let fillColor = baseColor;
+      let fillOpacity = '0.7';
+      if (unit.ground_floor === 'RETAIL_GROUND') {
+        fillColor = window.EC_Pipeline.USES.RETAIL_GROUND.color;
+        fillOpacity = '0.85';
+      } else if (!unit.is_affordable) {
+        fillColor = baseColor + '88';  // market rate: semi-transparent
+        fillOpacity = '0.45';
+      }
+
+      u.setAttribute('fill', fillColor);
+      u.setAttribute('fill-opacity', fillOpacity);
+      u.setAttribute('stroke', baseColor);
+      u.setAttribute('stroke-width', '0.5');
+      u.setAttribute('stroke-opacity', '0.7');
+      u.setAttribute('data-unit', unit.id);
+      u.setAttribute('data-floors', unit.floors);
+      u.setAttribute('data-affordable', unit.is_affordable);
+      u.style.cursor = 'pointer';
+
+      // Tooltip
+      u.addEventListener('mouseenter', e => {
+        const tt = document.getElementById('tooltip');
+        if (tt) {
+          tt.style.opacity = 1;
+          tt.style.left = (e.clientX + 14) + 'px';
+          tt.style.top  = (e.clientY + 14) + 'px';
+          tt.textContent =
+            `${unit.id.split('_').slice(-2).join('-')}  ·  ` +
+            `${unit.floors}F  ·  ` +
+            `${unit.is_affordable ? 'affordable' : 'market-rate'}` +
+            (unit.ground_floor ? `  ·  ground: ${unit.ground_floor}` : '');
+        }
+      });
+      u.addEventListener('mouseleave', () => {
+        const tt = document.getElementById('tooltip');
+        if (tt) tt.style.opacity = 0;
+      });
+
+      g.appendChild(u);
+      totalRendered++;
+    }
+
+    // ── Floor count label on each sub-parcel ──
+    if (zone.units.module_count > 0 && zone.area_ac > 0.3) {
+      const t = document.createElementNS(ns, 'text');
+      t.setAttribute('x', zone.centroid.x.toFixed(1));
+      t.setAttribute('y', (zone.centroid.y - 6).toFixed(1));
+      t.setAttribute('font-family', 'DM Mono, monospace');
+      t.setAttribute('font-size', '7');
+      t.setAttribute('fill', '#f0ece0');
+      t.setAttribute('fill-opacity', '0.75');
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('pointer-events', 'none');
+      t.textContent = `${zone.units.unit_count}u ${zone.units.floors}F`;
+      g.appendChild(t);
+
+      if (zone.units.realized_far !== undefined) {
+        const sub = document.createElementNS(ns, 'text');
+        sub.setAttribute('x', zone.centroid.x.toFixed(1));
+        sub.setAttribute('y', (zone.centroid.y + 3).toFixed(1));
+        sub.setAttribute('font-family', 'DM Mono, monospace');
+        sub.setAttribute('font-size', '5.5');
+        sub.setAttribute('fill', '#f0ece0');
+        sub.setAttribute('fill-opacity', '0.45');
+        sub.setAttribute('text-anchor', 'middle');
+        sub.setAttribute('pointer-events', 'none');
+        sub.textContent = `FAR ${zone.units.realized_far}`;
+        g.appendChild(sub);
+      }
+    }
+  }
+
+  svg.appendChild(g);
+  console.log(`T7 units: ${totalRendered} unit modules rendered`);
+}
+
+// ── DOWNLOAD: SVG as PNG ──────────────────────────────────────────────────────
+async function downloadPNG() {
+  const svg = document.getElementById('site-plan');
+  if (!svg) return;
+
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svg);
+  const blob = new Blob([svgStr], {type: 'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+
+  // Render to canvas for PNG conversion
+  const img = new Image();
+  const canvas = document.createElement('canvas');
+  const scale = 2;  // 2× for retina
+
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = reject;
+    img.src = url;
+  });
+
+  const vb = svg.viewBox.baseVal;
+  canvas.width  = (vb.width  || 960)  * scale;
+  canvas.height = (vb.height || 760) * scale;
+
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#040402';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  URL.revokeObjectURL(url);
+
+  canvas.toBlob(blob => {
+    const a = document.createElement('a');
+    a.download = 'eastside-commons-plan.png';
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }, 'image/png');
+}
+
+// ── DOWNLOAD: GeoJSON ─────────────────────────────────────────────────────────
+// Converts zone polygons back to geographic coordinates (lon/lat) for GIS use.
+// Requires the inverse projection from SVG px → lon/lat.
+function downloadGeoJSON() {
+  const state = window._getPipelineState?.();
+  if (!state) { alert('Run the pipeline first.'); return; }
+
+  // Inverse projection: SVG px → lon/lat
+  // We have: x = MAP.x0 + (lon - minLon)/(maxLon-minLon) * mapW
+  // So:       lon = minLon + (x - MAP.x0)/mapW * (maxLon - minLon)
+  const MAP = state.MAP;
+  const t1 = window.EC_Pipeline.buildT1GroundTruth(state.parcels, state.proj, state.MAP);
+  const { minLon, maxLon, minLat, maxLat } = state.proj._bounds || {};
+
+  // Recover bounds from T1 — we stored them during buildProjection
+  // (We'll need to expose these — for now compute from EDA parcel rings)
+  let mnLon=Infinity,mxLon=-Infinity,mnLat=Infinity,mxLat=-Infinity;
+  for (const p of t1.edaParcels) {
+    for (const ring of p.rings) {
+      for (const [lo,la] of ring) {
+        if(lo<mnLon)mnLon=lo; if(lo>mxLon)mxLon=lo;
+        if(la<mnLat)mnLat=la; if(la>mxLat)mxLat=la;
+      }
+    }
+  }
+  const padLon=(mxLon-mnLon)*0.18, padLat=(mxLat-mnLat)*0.20;
+  mnLon-=padLon; mxLon+=padLon; mnLat-=padLat; mxLat+=padLat;
+
+  const mapW = MAP.x1-MAP.x0, mapH = MAP.y1-MAP.y0;
+
+  function svgToLonLat([x,y]) {
+    const lon = mnLon + (x - MAP.x0) / mapW * (mxLon - mnLon);
+    const lat = mxLat - (y - MAP.y0) / mapH * (mxLat - mnLat);
+    return [+lon.toFixed(6), +lat.toFixed(6)];
+  }
+
+  // Get current rendered zones
+  const zones = window._lastPipelineZones;
+  if (!zones) { alert('No pipeline output found. Run the pipeline first.'); return; }
+
+  const features = [];
+
+  // District zone polygons
+  for (const z of zones) {
+    if (!z.poly?.outer) continue;
+    const coords = [z.poly.outer.map(svgToLonLat)];
+    // Close the ring
+    if (coords[0].length > 0) {
+      coords[0].push(coords[0][0]);
+    }
+    // Add holes (courtyards) as interior rings
+    for (const hole of (z.poly.holes || [])) {
+      if (hole.length < 3) continue;
+      const hCoords = hole.map(svgToLonLat);
+      hCoords.push(hCoords[0]);
+      coords.push(hCoords);
+    }
+
+    features.push({
+      type: 'Feature',
+      geometry: { type: 'Polygon', coordinates: coords },
+      properties: {
+        id: z.id,
+        district: z.district,
+        use: z.use,
+        use_label: window.EC_Pipeline.USES[z.use]?.label || z.use,
+        area_ac: +z.area_ac.toFixed(3),
+        is_sub_parcel: z.is_sub_parcel || false,
+        parent_district: z.parent_district || z.district,
+        unit_count: z.units?.unit_count || 0,
+        floors: z.units?.floors || 0,
+        realized_far: z.units?.realized_far || null,
+        affordable_units: z.units?.affordable_units || 0,
+        constraints_far: z.constraints?.far || null,
+        on_spine: z.on_spine,
+        near_sponge: z.near_sponge,
+        in_main_st: z.in_main_st,
+        near_tide: z.near_tide,
+      },
+    });
+
+    // Individual unit modules as separate features
+    if (z.units?.units) {
+      for (const unit of z.units.units) {
+        const uCoords = unit.poly.map(svgToLonLat);
+        uCoords.push(uCoords[0]);
+        features.push({
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [uCoords] },
+          properties: {
+            id: unit.id,
+            type: 'unit_module',
+            parent_zone: z.id,
+            use: z.use,
+            floors: unit.floors,
+            is_affordable: unit.is_affordable,
+            ground_floor: unit.ground_floor || null,
+            unit_width_ft: z.units.unit_width_ft,
+            unit_depth_ft: z.units.unit_depth_ft,
+          },
+        });
+      }
+    }
+  }
+
+  // Also add raw EDA parcel polygons as a reference layer
+  for (const p of t1.edaParcels) {
+    for (const ring of p.rings) {
+      const coords = [ring.map(([lo,la]) => [+lo.toFixed(6), +la.toFixed(6)])];
+      features.push({
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: coords },
+        properties: {
+          type: 'eda_parcel',
+          acct: p.acct,
+          gpin: p.gpin,
+          spec: p.spec,
+          area_ac: p.area_ac,
+        },
+      });
+    }
+  }
+
+  const geojson = {
+    type: 'FeatureCollection',
+    name: 'Eastside Commons Plan',
+    crs: { type: 'name', properties: { name: 'urn:ogc:def:crs:OGC:1.3:CRS84' }},
+    features,
+  };
+
+  const blob = new Blob([JSON.stringify(geojson, null, 2)], {type:'application/geo+json'});
+  const a = document.createElement('a');
+  a.download = 'eastside-commons-plan.geojson';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  console.log(`GeoJSON: ${features.length} features exported`);
+}
+
+window.EC_Render = { renderUnits, downloadPNG, downloadGeoJSON };
+
+
 window.EC_Decomp = {
   buildT2PolygonZones,
   renderT7Polygons,
@@ -4175,6 +4787,7 @@ async function triggerPipeline() {
           scoreHistory.scrollTop = scoreHistory.scrollHeight;
         },
         onComplete: ({ zones, score }) => {
+          window._lastPipelineZones = zones;  // for GeoJSON export
           let total_units=0, affordable=0, green_ac=0;
           for (const z of zones) {
             if (z.units) { total_units+=z.units.unit_count; affordable+=z.units.affordable_units; }
