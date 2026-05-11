@@ -762,6 +762,7 @@ details[open] summary::before { content: '▼  '; }
           <button class="analysis-tab active" onclick="switchAnalysis('people', this)">People</button>
           <button class="analysis-tab" onclick="switchAnalysis('parcels', this)">Parcels</button>
           <button class="analysis-tab" onclick="switchAnalysis('access', this)">Access</button>
+          <button class="analysis-tab" onclick="switchAnalysis('financials', this)">Financials</button>
           <button class="analysis-tab" onclick="switchAnalysis('save', this)">Save</button>
         </div>
         <div id="av-people" class="analysis-view active">
@@ -776,6 +777,11 @@ details[open] summary::before { content: '▼  '; }
           <div class="av-header">Transit &amp; walkability</div>
           <div id="av-access-content">Run the pipeline to see access analysis.</div>
         </div>
+        <div id="av-financials" class="analysis-view">
+          <div class="av-header">Pro Forma</div>
+          <div id="av-financials-content">Run the pipeline to see financial analysis.</div>
+        </div>
+
         <div id="av-save" class="analysis-view">
           <div class="av-header">Save this layout</div>
           <p style="margin-bottom:0.5rem;line-height:1.6;">
@@ -5464,7 +5470,9 @@ async function triggerPipeline() {
           window._lastPipelineZones = zones;  // for GeoJSON export
           let total_units=0, affordable=0, green_ac=0;
           for (const z of zones) {
-            if (z.units) { total_units+=z.units.unit_count; affordable+=z.units.affordable_units; }
+            if (z.units && z.use.startsWith('RESIDENTIAL') && !z.district?.includes('COURTYARD')) {
+              total_units+=z.units.unit_count; affordable+=z.units.affordable_units;
+            }
             if (z.use.startsWith('GREEN')) green_ac+=z.area_ac;
           }
           document.getElementById('res-units').textContent = total_units.toLocaleString();
@@ -5480,10 +5488,27 @@ async function triggerPipeline() {
           // Update legend chips
           renderLegendChips();
           updateAnalysisViews();
-          // Rebuild 3D if active
-          if (_3dActive && window.EC3D && window._lastPipelineZones) {
-            const st = window._getPipelineState?.() || {};
+          // Rebuild 3D if active, or auto-activate 3D on first run
+          const st = window._getPipelineState?.() || {};
+          if (!_3dActive) {
+            // Auto-switch to 3D as primary view on pipeline complete
+            _3dActive = true;
+            const btn3d = document.getElementById('btn-3d');
+            const wrap2d = document.getElementById('map-wrap-2d');
+            const wrap3d = document.getElementById('map-wrap-3d');
+            if (wrap2d) wrap2d.style.display = 'none';
+            if (wrap3d) wrap3d.style.display = '';
+            if (btn3d) btn3d.classList.add('on');
+            const canvas = document.getElementById('canvas-3d');
+            if (canvas && typeof THREE !== 'undefined') {
+              if (!window.EC3D.renderer) window.EC3D.init(canvas);
+              else window.EC3D.resize();
+              window.EC3D.buildScene(window._lastPipelineZones, st.parcels?.filter(p=>p.is_eda), st.proj);
+              window.EC3D.buildEdgeFurniture(window._lastPipelineZones);
+            }
+          } else if (window.EC3D && window._lastPipelineZones) {
             window.EC3D.buildScene(window._lastPipelineZones, st.parcels?.filter(p=>p.is_eda), st.proj);
+            window.EC3D.buildEdgeFurniture(window._lastPipelineZones);
           }
         },
       }
@@ -6351,6 +6376,124 @@ const EC3D = {
     }, { passive: false });
   },
 
+  // ── Edge furniture: street elements per edge type ─────────────────────────
+  buildEdgeFurniture(zones) {
+    if (!zones || !window.EC_Edges) return;
+
+    // Remove existing furniture
+    const toRemove = [];
+    this.scene.traverse(obj => { if (obj.userData?.furniture) toRemove.push(obj); });
+    toRemove.forEach(obj => this.scene.remove(obj));
+
+    const edges = window.EC_Edges.buildEdges(zones, { bufferPx: 5 });
+    if (!edges || !edges.length) return;
+
+    const S = 0.45;
+    const svgToW = (x, y) => [(x - 490) * S, -(y - 408) * S];
+
+    const sampleEdge = (pts, spacingW) => {
+      const samples = [];
+      for (let i = 0; i < pts.length - 1; i++) {
+        const [ax, az] = svgToW(pts[i][0], pts[i][1]);
+        const [bx, bz] = svgToW(pts[i+1][0], pts[i+1][1]);
+        const dx = bx - ax, dz = bz - az;
+        const len = Math.hypot(dx, dz);
+        if (len < 0.1) continue;
+        const ux = dx / len, uz = dz / len;
+        const nx = -uz, nz = ux;
+        let dist = spacingW / 2;
+        while (dist < len - spacingW / 2) {
+          samples.push({ x: ax + ux * dist, z: az + uz * dist, nx, nz });
+          dist += spacingW;
+        }
+      }
+      return samples;
+    };
+
+    const addF = (mesh) => {
+      mesh.userData.furniture = true;
+      mesh.castShadow = false;
+      mesh.receiveShadow = true;
+      this.scene.add(mesh);
+    };
+
+    const mBench   = new THREE.MeshLambertMaterial({ color: 0x8a7050 });
+    const mBollard = new THREE.MeshLambertMaterial({ color: 0x404848 });
+    const mRack    = new THREE.MeshLambertMaterial({ color: 0x506878 });
+    const mAwning  = new THREE.MeshLambertMaterial({ color: 0xc04818, transparent: true, opacity: 0.88 });
+    const mTreeTrk = new THREE.MeshLambertMaterial({ color: 0x5a3a20 });
+    const mTreeCan = new THREE.MeshLambertMaterial({ color: 0x2a6828, transparent: true, opacity: 0.82 });
+    const mPlanter = new THREE.MeshLambertMaterial({ color: 0x486040 });
+
+    for (const edge of edges) {
+      const outer = edge.poly?.outer;
+      if (!outer || outer.length < 3) continue;
+      const type = edge.type;
+
+      if (type === 'ACTIVATED') {
+        const samples = sampleEdge(outer, 8);
+        for (const { x, z, nx, nz } of samples) {
+          const b = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 6), mBollard);
+          b.position.set(x + nx * 0.6, 0.55, z + nz * 0.6);
+          addF(b);
+          const a = new THREE.Mesh(new THREE.BoxGeometry(4, 0.12, 1.4), mAwning);
+          a.position.set(x, 3.8, z);
+          a.rotation.y = Math.atan2(nx, nz);
+          addF(a);
+        }
+
+      } else if (type === 'GREEN_EDGE' || type === 'SPONGE_EDGE') {
+        const samples = sampleEdge(outer, 10);
+        for (const { x, z, nx, nz } of samples) {
+          const bk = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.45, 0.7), mBench);
+          bk.position.set(x + nx * 0.8, 0.225, z + nz * 0.8);
+          bk.rotation.y = Math.atan2(nx, nz);
+          addF(bk);
+          const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 0.12), mBench);
+          back.position.set(x + nx * 0.8, 0.68, z + nz * 0.8 + nz * 0.3);
+          back.rotation.y = Math.atan2(nx, nz);
+          addF(back);
+          const pl = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 1.0), mPlanter);
+          pl.position.set(x - nx * 1.5, 0.3, z - nz * 1.5);
+          addF(pl);
+        }
+        const treeSamples = sampleEdge(outer, 18);
+        for (const { x, z } of treeSamples) {
+          const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 2.4, 6), mTreeTrk);
+          tr.position.set(x, 1.2, z);
+          addF(tr);
+          const can = new THREE.Mesh(new THREE.SphereGeometry(2.8, 7, 5), mTreeCan);
+          can.position.set(x, 4.8, z);
+          addF(can);
+        }
+
+      } else if (type === 'TRANSIT_ACT') {
+        const samples = sampleEdge(outer, 9);
+        for (const { x, z, nx, nz } of samples) {
+          for (const side of [-0.5, 0, 0.5]) {
+            const r = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.1), mRack);
+            r.position.set(x + nx * 0.4 + side, 0.5, z + nz * 0.4);
+            addF(r);
+          }
+          const top = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.1, 0.1), mRack);
+          top.position.set(x + nx * 0.4, 1.05, z + nz * 0.4);
+          addF(top);
+        }
+
+      } else if (type === 'STREET') {
+        const samples = sampleEdge(outer, 14);
+        for (const { x, z } of samples) {
+          const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 2.8, 6), mTreeTrk);
+          tr.position.set(x, 1.4, z);
+          addF(tr);
+          const can = new THREE.Mesh(new THREE.SphereGeometry(3.2, 7, 5), mTreeCan);
+          can.position.set(x, 5.0, z);
+          addF(can);
+        }
+      }
+    }
+  },
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   animate() {
     this.animFrame = requestAnimationFrame(() => this.animate());
@@ -6570,6 +6713,7 @@ function renderPeopleView(zones) {
 
   for (const z of zones) {
     if (!z.units || !z.use.startsWith('RESIDENTIAL')) continue;
+    if (z.district?.includes('COURTYARD')) continue;  // courtyard zones not housing
     const u = z.units.unit_count;
     const af = z.units.affordable_units;
     total += u;
@@ -6728,11 +6872,147 @@ function switchAnalysis(view, btn) {
   }
 }
 
+function renderFinancialsView(zones) {
+  const el = document.getElementById('av-financials-content');
+  if (!el || !zones) return;
+
+  const AMI = NORFOLK_AMI;
+
+  // ── Unit counts ──
+  let totalUnits = 0, cltUnits = 0, marketUnits = 0;
+  const resZones = zones.filter(z => z.use.startsWith('RESIDENTIAL') && !z.district?.includes('COURTYARD'));
+  for (const z of resZones) {
+    const u = z.units?.unit_count || 0;
+    const af = z.units?.affordable_units || 0;
+    totalUnits += u;
+    if (z.use === 'RESIDENTIAL_MARKET') marketUnits += u;
+    else cltUnits += af;
+  }
+  const belowMarketUnits = totalUnits - marketUnits;
+  const cltCondoTarget = Math.round(cltUnits * 0.30);  // Lake Champlain CLT model: ~30% ownership
+  const rentalUnits = belowMarketUnits - cltCondoTarget;
+
+  // ── Storefronts ──
+  const retailZones = zones.filter(z => z.use === 'RETAIL_GROUND' || z.in_main_st);
+  // Storefront count: 18ft bay, walk street edge length
+  const totalRetailAc = retailZones.reduce((s, z) => s + z.area_ac, 0);
+  const storeFrontCount = Math.round(totalRetailAc * 43560 / (18 * 50));  // 18ft wide × 50ft deep bay
+  const smallPEStorefronts = Math.round(storeFrontCount * 0.75);  // 75% mom-and-pop, 25% anchor
+  const marketRent_sqft = 28;  // Norfolk retail $/sqft/yr (market)
+  const commonsRent_sqft = 16;  // CLT ground lease enables ~43% below market
+  const rentDiscount = Math.round((1 - commonsRent_sqft / marketRent_sqft) * 100);
+  const avgStoreSqft = 900;  // 18ft × 50ft
+  const annualRetailIncome = smallPEStorefronts * commonsRent_sqft * avgStoreSqft / 1000;  // $k/yr
+
+  // ── Construction cost (phased) ──
+  const phase1Units = Math.round(totalUnits * 0.30);
+  const phase2Units = Math.round(totalUnits * 0.33);
+  const phase3Units = totalUnits - phase1Units - phase2Units;
+  const costPerUnit = (u, isAffordable) => isAffordable ? AMI.cost_per_unit_affordable : AMI.cost_per_unit_market;
+  const phase1Cost = phase1Units * AMI.cost_per_unit_affordable / 1e6;
+  const phase2Cost = phase2Units * AMI.cost_per_unit_affordable / 1e6;
+  const phase3Cost = phase3Units * AMI.cost_per_unit_market / 1e6;
+  const totalCost = phase1Cost + phase2Cost + phase3Cost;
+
+  // ── Financing stack ──
+  const lihtcPerUnit = 15000;  // LIHTC equity per affordable unit (typical, $15k)
+  const lihtcTotal = (belowMarketUnits * lihtcPerUnit) / 1e6;
+  const landValueLocked = (73.4 * AMI.land_value_per_ac / 1e6).toFixed(1);
+  const cityBondEst = 18;  // sponge park + roads + utilities ($M)
+  const equityGap = (totalCost - lihtcTotal - parseFloat(landValueLocked) * 0 - cityBondEst).toFixed(1);
+
+  // ── Annual operating ──
+  const avgRent60AMI = AMI.brackets[2].monthly;  // 60% AMI rent cap
+  const annualResIncome = (rentalUnits * avgRent60AMI * 12 / 1e6).toFixed(1);
+  const opexPct = 0.38;  // operating expenses as % of gross income
+  const noi = ((parseFloat(annualResIncome) + annualRetailIncome / 1000) * (1 - opexPct)).toFixed(1);
+
+  // ── Small private equity framing ──
+  // Each T4 parcel (~0.3ac avg) = $185k/unit × ~25 units ≈ $4.6M deal
+  const avgParcelUnits = 25;
+  const avgParcelCost = Math.round(avgParcelUnits * AMI.cost_per_unit_affordable / 1000);  // $k
+  const avgLIHTC = Math.round(avgParcelUnits * lihtcPerUnit / 1000);  // $k equity
+  const avgDebt = Math.round((avgParcelCost - avgLIHTC) * 0.65);  // 65% debt
+  const avgEquity = Math.round(avgParcelCost - avgLIHTC - avgDebt);  // residual equity
+
+  el.innerHTML = `
+    <div class="av-header">Storefronts</div>
+    <div class="av-row"><span class="av-key">Total storefronts</span><span class="av-val accent">${storeFrontCount}</span></div>
+    <div class="av-row"><span class="av-key">Mom-and-pop (75%)</span><span class="av-val accent">${smallPEStorefronts}</span></div>
+    <div class="av-row"><span class="av-key">Market rent</span><span class="av-val">$${marketRent_sqft}/sqft/yr</span></div>
+    <div class="av-row"><span class="av-key">CLT rent</span><span class="av-val accent">$${commonsRent_sqft}/sqft/yr</span></div>
+    <div class="av-row"><span class="av-key">Below-market by</span><span class="av-val accent">${rentDiscount}%</span></div>
+    <div class="av-row"><span class="av-key">Annual retail income</span><span class="av-val">~$${annualRetailIncome.toFixed(0)}k</span></div>
+    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-top:0.2rem;">
+      CLT ground lease eliminates land cost from rents. Small operators pay
+      what the space earns, not what speculators need to recoup.
+    </div>
+
+    <hr class="av-divider">
+    <div class="av-header">Housing</div>
+    <div class="av-row"><span class="av-key">Total units</span><span class="av-val accent">${totalUnits.toLocaleString()}</span></div>
+    <div class="av-row"><span class="av-key">Below-market</span><span class="av-val accent">${belowMarketUnits.toLocaleString()} (${Math.round(belowMarketUnits/totalUnits*100)}%)</span></div>
+    <div class="av-row"><span class="av-key">CLT rental (≤60% AMI)</span><span class="av-val">${rentalUnits.toLocaleString()}</span></div>
+    <div class="av-row"><span class="av-key">CLT ownership condos</span><span class="av-val accent">${cltCondoTarget.toLocaleString()}</span></div>
+    <div class="av-row"><span class="av-key">Market-rate</span><span class="av-val">${marketUnits.toLocaleString()}</span></div>
+    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-top:0.2rem;">
+      CLT condos: resale-restricted ownership (Lake Champlain model).
+      Buyers build equity; appreciation stays in the commons.
+      Capped resale = permanently affordable ownership, not a one-time subsidy.
+    </div>
+
+    <hr class="av-divider">
+    <div class="av-header">Phased construction</div>
+    <div class="av-row"><span class="av-key">Phase 1 (2026–28)</span><span class="av-val">${phase1Units} units · ~$${phase1Cost.toFixed(0)}M</span></div>
+    <div class="av-row"><span class="av-key">Phase 2 (2029–32)</span><span class="av-val">${phase2Units} units · ~$${phase2Cost.toFixed(0)}M</span></div>
+    <div class="av-row"><span class="av-key">Phase 3 (2033+)</span><span class="av-val">${phase3Units} units · ~$${phase3Cost.toFixed(0)}M</span></div>
+    <div class="av-row"><span class="av-key">Total buildout cost</span><span class="av-val">~$${totalCost.toFixed(0)}M</span></div>
+
+    <hr class="av-divider">
+    <div class="av-header">Financing stack</div>
+    <div class="av-row"><span class="av-key">Land cost (CLT)</span><span class="av-val accent">$0</span></div>
+    <div class="av-row"><span class="av-key">Land value locked</span><span class="av-val">$${landValueLocked}M</span></div>
+    <div class="av-row"><span class="av-key">LIHTC equity</span><span class="av-val">~$${lihtcTotal.toFixed(0)}M</span></div>
+    <div class="av-row"><span class="av-key">City infrastructure bond</span><span class="av-val">~$${cityBondEst}M</span></div>
+    <div class="av-row"><span class="av-key">VHDA / CDFI debt</span><span class="av-val">balance</span></div>
+    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-top:0.2rem;">
+      LIHTC: Low Income Housing Tax Credit (federal). VHDA: Virginia Housing
+      Development Authority below-market construction loans. CDFI: Community
+      Development Financial Institution patient capital. City bond covers
+      sponge park, spine road, utilities (~$18M est.).
+    </div>
+
+    <hr class="av-divider">
+    <div class="av-header">Annual operating</div>
+    <div class="av-row"><span class="av-key">Gross rental income</span><span class="av-val">~$${annualResIncome}M/yr</span></div>
+    <div class="av-row"><span class="av-key">Retail income</span><span class="av-val">~$${(annualRetailIncome/1000).toFixed(1)}M/yr</span></div>
+    <div class="av-row"><span class="av-key">NOI (at ${Math.round(opexPct*100)}% opex)</span><span class="av-val accent">~$${noi}M/yr</span></div>
+
+    <hr class="av-divider">
+    <div class="av-header">Small private equity deal</div>
+    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-bottom:0.3rem;">
+      Each T4 parcel (~0.3ac) is a standalone deal. Size is intentional:
+      small enough for a family office, cooperative, or BIPOC developer —
+      not requiring institutional scale.
+    </div>
+    <div class="av-row"><span class="av-key">Avg units / parcel</span><span class="av-val">${avgParcelUnits} units</span></div>
+    <div class="av-row"><span class="av-key">Avg total cost</span><span class="av-val">~$${avgParcelCost}k</span></div>
+    <div class="av-row"><span class="av-key">LIHTC equity in</span><span class="av-val accent">~$${avgLIHTC}k</span></div>
+    <div class="av-row"><span class="av-key">VHDA debt (65%)</span><span class="av-val">~$${avgDebt}k</span></div>
+    <div class="av-row"><span class="av-key">Developer equity req.</span><span class="av-val">~$${avgEquity}k</span></div>
+    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-top:0.2rem;">
+      ~$${avgEquity}k equity buy-in per parcel. Accessible to community
+      development orgs, credit unions, and small operators — not Blackstone.
+    </div>
+  `;
+}
+
 function updateAnalysisViews() {
   const zones = window._lastPipelineZones || [];
   renderPeopleView(zones);
   renderParcelsView(zones);
   renderAccessView(zones);
+  renderFinancialsView(zones);
 }
 </script>
 
