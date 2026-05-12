@@ -6179,7 +6179,11 @@ const EC3D = {
 
     // ── Ground plane (asphalt/earth) ──
     const gGeo = new THREE.PlaneGeometry(1600, 1600);
-    const gMat = new THREE.MeshLambertMaterial({ color: 0x1a1710 });
+    const soilTex = this.tex ? this.tex('soil', 100, 100) : null;
+    const gMat = new THREE.MeshLambertMaterial({
+      color: soilTex ? 0xffffff : 0x1a1710,
+      map: soilTex || null,
+    });
     const ground = new THREE.Mesh(gGeo, gMat);
     ground.name = 'ground';
     ground.rotation.x = -Math.PI / 2;
