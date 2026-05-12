@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eastside Commons — Community Vision</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:    #1a1410;
+  --bg:     #faf8f3;
+  --clay:   #8b3a18;
+  --forest: #1e4a28;
+  --gold:   #7a5c14;
+  --rule:   #ccc5b5;
+  --light:  #f0ece0;
+  --f-hed:  'Playfair Display', Georgia, serif;
+  --f-body: 'Source Serif 4', Georgia, serif;
+  --f-mono: 'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@media print {
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .no-print { display: none; }
+  .page-break { page-break-after: always; }
+}
+html { background: var(--bg); color: var(--ink); }
+body { font-family: var(--f-body); line-height: 1.65; max-width: 800px; margin: 0 auto; padding: 2rem 2rem 4rem; }
+
+.print-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.6rem 1rem; background: var(--clay); color: #fff;
+  font-family: var(--f-mono); font-size: 0.65rem; letter-spacing: 0.08em;
+  margin: -2rem -2rem 2rem;
+}
+.print-btn {
+  background: transparent; border: 1px solid rgba(255,255,255,0.4);
+  color: #fff; font-family: var(--f-mono); font-size: 0.62rem;
+  padding: 0.25rem 0.75rem; cursor: pointer;
+}
+
+/* Cover */
+.cover { border-bottom: 3px solid var(--ink); padding-bottom: 1.5rem; margin-bottom: 2rem; }
+.cover-over { font-family: var(--f-mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--clay); margin-bottom: 0.5rem; }
+.cover-title { font-family: var(--f-hed); font-size: 3.5rem; font-weight: 900; line-height: 0.95; }
+.cover-title em { font-style: italic; color: var(--clay); }
+.cover-deck { font-family: var(--f-body); font-size: 1.05rem; font-style: italic; color: #444; margin-top: 0.75rem; max-width: 55ch; line-height: 1.5; }
+.cover-by { font-family: var(--f-mono); font-size: 0.6rem; letter-spacing: 0.1em; color: var(--gold); margin-top: 0.75rem; }
+
+/* Pull quote */
+.pq { border-left: 4px solid var(--clay); padding: 0.75rem 1.25rem; margin: 1.5rem 0; background: var(--light); }
+.pq p { font-family: var(--f-hed); font-size: 1.05rem; font-style: italic; line-height: 1.4; }
+.pq cite { font-family: var(--f-mono); font-size: 0.6rem; letter-spacing: 0.08em; color: var(--clay); display: block; margin-top: 0.4rem; font-style: normal; }
+
+/* Section */
+.section { margin: 1.75rem 0; }
+.sh { font-family: var(--f-hed); font-size: 1.3rem; font-weight: 700; margin-bottom: 0.75rem; }
+.sh em { font-style: italic; color: var(--clay); }
+p { font-size: 0.95rem; margin-bottom: 0.75rem; }
+p strong { color: var(--ink); }
+
+/* Scenario box */
+.scenario { border: 1px solid var(--rule); padding: 1.25rem; margin: 1rem 0; background: var(--light); }
+.scenario-name { font-family: var(--f-hed); font-size: 0.85rem; font-weight: 700; font-style: italic; color: var(--clay); margin-bottom: 0.5rem; }
+.scenario-line { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 0.2rem 0; border-bottom: 1px solid var(--rule); }
+.scenario-line:last-of-type { border-bottom: none; }
+.sv { font-family: var(--f-mono); font-weight: 500; color: var(--forest); }
+
+/* Comparison */
+.compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--rule); margin: 1rem 0; }
+.compare-col { padding: 1rem; }
+.compare-col:first-child { border-right: 1px solid var(--rule); }
+.compare-head { font-family: var(--f-mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--clay); margin-bottom: 0.5rem; }
+.compare-item { font-size: 0.82rem; padding: 0.2rem 0; border-bottom: 1px solid var(--rule); display: flex; justify-content: space-between; }
+.compare-item:last-child { border-bottom: none; }
+.compare-item .bad { color: #8b1a1a; }
+.compare-item .good { color: var(--forest); font-weight: 600; }
+
+/* Commitments */
+.commit-list { margin: 0.5rem 0; }
+.commit { display: flex; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--rule); align-items: flex-start; }
+.commit:last-child { border-bottom: none; }
+.commit-n { font-family: var(--f-hed); font-size: 1.5rem; font-weight: 900; color: var(--clay); line-height: 1; min-width: 2rem; }
+.commit-body strong { font-family: var(--f-body); font-size: 0.9rem; font-weight: 600; display: block; }
+.commit-body span { font-size: 0.82rem; color: #555; }
+
+/* Ask */
+.ask-box { background: var(--clay); color: #fff; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+.ask-box h3 { font-family: var(--f-hed); font-size: 1rem; margin-bottom: 0.75rem; }
+.ask-item { display: flex; gap: 0.75rem; font-size: 0.85rem; margin-bottom: 0.4rem; opacity: 0.92; }
+.ask-bullet { flex-shrink: 0; }
+
+/* Stats inline */
+.inline-stats { display: flex; gap: 0; border: 1px solid var(--rule); margin: 1rem 0; }
+.is { flex: 1; padding: 0.75rem; border-right: 1px solid var(--rule); text-align: center; }
+.is:last-child { border-right: none; }
+.is-val { font-family: var(--f-hed); font-size: 1.6rem; font-weight: 900; color: var(--clay); display: block; }
+.is-lbl { font-family: var(--f-mono); font-size: 0.52rem; letter-spacing: 0.1em; text-transform: uppercase; color: #666; display: block; }
+
+/* Footer */
+.footer { margin-top: 2.5rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); font-size: 0.7rem; color: #888; line-height: 1.6; }
+.footer-url { font-family: var(--f-mono); font-size: 0.68rem; color: var(--clay); display: block; margin-bottom: 0.3rem; }
+</style>
+</head>
+<body>
+
+<div class="print-bar no-print">
+  <span>Eastside Commons — Community Vision · Draft 2025</span>
+  <button class="print-btn" onclick="window.print()">↓ Print / Save PDF</button>
+</div>
+
+<div class="cover">
+  <div class="cover-over">Norfolk, Virginia · Eastside · Ward 4 · 2025</div>
+  <div class="cover-title">The High Ground<br><em>Is Ours.</em></div>
+  <div class="cover-deck">A community vision for the 73 acres at Military Circle — what it could be if the Eastside, not a developer, decides.</div>
+  <div class="cover-by">Eastside Commons · jason-edelman.org/eastside-commons</div>
+</div>
+
+<div class="pq">
+  <p>"Downtown Tunnel Vision 2.0. Another round of resources flowing toward downtown while the Eastside gets managed decline dressed up as investment."</p>
+  <cite>— Rosemont / Forest Shores / EP Civic League, March 29, 2025 letter to Norfolk City Council</cite>
+</div>
+
+<div class="section">
+  <div class="sh">What the city bought, and what they owe us</div>
+  <p>In 2022, the Norfolk Economic Development Authority bought Military Circle Mall for $10. Ten dollars. Seventy-three acres at the highest elevation in a flooding city — transferred to public hands for less than a cup of coffee.</p>
+  <p>Then came Pharrell Williams. Emmitt Smith. Bruce Thompson. Every one of them wanted to buy the land. The city shelved all three proposals. Then City Hall floated a library and a fitness center. Not a plan. A placeholder — a way to do nothing while looking like they're doing something.</p>
+  <p><strong>We named this correctly: Downtown Tunnel Vision 2.0.</strong> The same pattern. The same extraction. The city owns the highest ground in Norfolk — and their plan is to hand it to someone who will spend 50 years extracting what they can before leaving.</p>
+  <p>There's another way. We've mapped it.</p>
+</div>
+
+<div class="inline-stats">
+  <div class="is"><span class="is-val">73ac</span><span class="is-lbl">City-owned</span></div>
+  <div class="is"><span class="is-val">$10</span><span class="is-lbl">City paid for it</span></div>
+  <div class="is"><span class="is-val">5,118</span><span class="is-lbl">Homes possible</span></div>
+  <div class="is"><span class="is-val">96%</span><span class="is-lbl">Permanently affordable</span></div>
+  <div class="is"><span class="is-val">$0</span><span class="is-lbl">Land cost (CLT)</span></div>
+</div>
+
+<div class="section">
+  <div class="sh">One rule that changes everything</div>
+  <p>A Community Land Trust holds the land. The city transfers it under a ground lease — it never leaves public hands. No developer buys it. No future city council can sell it. Buildings go up, people move in, businesses open — but the land stays ours.</p>
+  <p>That one rule is what makes every other number possible. Construction costs stay the same. But with land removed from the equation, rents come down, purchase prices come down, and the whole thing stops being a gift to a developer and starts being an asset for the Eastside.</p>
+</div>
+
+<div class="section">
+  <div class="sh">What this looks like for <em>you</em></div>
+
+  <div class="scenario">
+    <div class="scenario-name">You want to open a restaurant, nail salon, or bookshop</div>
+    <div class="scenario-line"><span>Market rent (nearby)</span><span class="sv">$2,100/mo</span></div>
+    <div class="scenario-line"><span>CLT lease on Eastside Commons</span><span class="sv">$1,200/mo</span></div>
+    <div class="scenario-line"><span>You save every month</span><span class="sv">$900/mo · $10,800/yr</span></div>
+    <div class="scenario-line"><span>Ready to buy your space?</span><span class="sv">$906/mo — you own it</span></div>
+    <p style="font-size:0.78rem;color:#555;margin-top:0.5rem;">That's right — you can own your storefront for less than you'd pay in rent. SBA 504 loan, 10% down ($13,500), 20-year fixed. The land stays in the commons. The building is yours.</p>
+  </div>
+
+  <div class="scenario">
+    <div class="scenario-name">You want to own a home in the neighborhood where you grew up</div>
+    <div class="scenario-line"><span>Market condo price (Norfolk)</span><span class="sv">$295,000</span></div>
+    <div class="scenario-line"><span>CLT condo price</span><span class="sv">$150,000</span></div>
+    <div class="scenario-line"><span>Down payment (FHA 3.5%)</span><span class="sv">$5,250</span></div>
+    <div class="scenario-line"><span>Your total monthly payment</span><span class="sv">$1,270/mo</span></div>
+    <div class="scenario-line"><span>vs. renting at market</span><span class="sv">$1,650/mo</span></div>
+    <div class="scenario-line"><span>You save every month</span><span class="sv">$380/mo cheaper to own</span></div>
+    <div class="scenario-line"><span>Equity you build in 10 years</span><span class="sv">$36,583</span></div>
+    <p style="font-size:0.78rem;color:#555;margin-top:0.5rem;">You pay less than market rent — and you're building equity. Not a subsidy. Ownership. When you sell, you keep your equity plus 25% of any appreciation. The CLT uses the other 75% to keep the next home affordable for the next person.</p>
+  </div>
+</div>
+
+<div class="compare">
+  <div class="compare-col">
+    <div class="compare-head">Developer model</div>
+    <div class="compare-item"><span>Who owns the land?</span><span class="bad">Developer</span></div>
+    <div class="compare-item"><span>Affordable units</span><span class="bad">~10–20%</span></div>
+    <div class="compare-item"><span>Appreciation goes to</span><span class="bad">Shareholders</span></div>
+    <div class="compare-item"><span>Retail rents</span><span class="bad">Market rate</span></div>
+    <div class="compare-item"><span>Your say</span><span class="bad">None</span></div>
+    <div class="compare-item"><span>In 50 years</span><span class="bad">They leave</span></div>
+  </div>
+  <div class="compare-col">
+    <div class="compare-head">Commons model</div>
+    <div class="compare-item"><span>Who owns the land?</span><span class="good">Community (CLT)</span></div>
+    <div class="compare-item"><span>Affordable units</span><span class="good">96%</span></div>
+    <div class="compare-item"><span>Appreciation goes to</span><span class="good">The commons</span></div>
+    <div class="compare-item"><span>Retail rents</span><span class="good">43% below market</span></div>
+    <div class="compare-item"><span>Your say</span><span class="good">Resident-governed</span></div>
+    <div class="compare-item"><span>In 50 years</span><span class="good">Still yours</span></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sh">Six commitments built into the structure</div>
+  <div class="commit-list">
+    <div class="commit"><span class="commit-n">01</span><div class="commit-body"><strong>Land never leaves community hands</strong><span>CLT ground lease. No future city council can sell it. No future developer can buy it. Permanently.</span></div></div>
+    <div class="commit"><span class="commit-n">02</span><div class="commit-body"><strong>Eastside residents get first offer on storefronts</strong><span>Right of first refusal built into the CLT charter. Your neighbors' businesses before anyone else's.</span></div></div>
+    <div class="commit"><span class="commit-n">03</span><div class="commit-body"><strong>Residents govern the commons</strong><span>CLT board is majority tenant and community. Major decisions require community vote. Not a landlord. A commons.</span></div></div>
+    <div class="commit"><span class="commit-n">04</span><div class="commit-body"><strong>A community wealth fund, not a landlord's profit</strong><span>2% of gross rents → resident-controlled endowment. Funded by the commons, governed by the community.</span></div></div>
+    <div class="commit"><span class="commit-n">05</span><div class="commit-body"><strong>All finances published</strong><span>Every dollar of income, every dollar of expense, public. No black boxes. This is your land.</span></div></div>
+    <div class="commit"><span class="commit-n">06</span><div class="commit-body"><strong>Success cannot displace your neighbors</strong><span>Rising land values stay in the commons. CLT resale caps mean your building's success doesn't price out the block.</span></div></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="sh">Why this moment, why this site</div>
+  <p>Military Circle sits at 8–12 feet elevation — the highest ground in Norfolk. Norfolk sinks 4–5mm every year. The flooding that is already happening in Chesterfield Heights, in Larchmont, in the low-lying neighborhoods — that flooding gets worse every decade. The people displaced by it need somewhere to go. The highest, most resilient ground in the city should be where the Eastside — not the market — decides who lives there.</p>
+  <p>There is a plan to build a sponge park on the 3-acre wetland parcel — a living bioswale that captures 70% of annual runoff, provides public park space, and hosts a sea level research station in partnership with ODU, Norfolk State, and HRSD. The research station generates data licensing revenue that funds the community wealth endowment. <strong>The same parcel that protects the neighborhood from flooding also pays for its future.</strong></p>
+</div>
+
+<div class="ask-box">
+  <h3>What needs to happen — and who needs to hear it</h3>
+  <div class="ask-item"><span class="ask-bullet">→</span><span><strong>Rezone Military Circle</strong> from commercial to mixed-use. No minimum parking. One council vote.</span></div>
+  <div class="ask-item"><span class="ask-bullet">→</span><span><strong>Charter a Community Land Trust</strong> as the ownership vehicle. City transfers land under ground lease.</span></div>
+  <div class="ask-item"><span class="ask-bullet">→</span><span><strong>Issue a collaborative RFQ</strong> — many small developers under one CLT, not one master developer.</span></div>
+  <div class="ask-item"><span class="ask-bullet">→</span><span><strong>Request Tide extension pre-application funding</strong> from FTA. The 2.2-mile extension activates Phase 3.</span></div>
+</div>
+
+<div class="section">
+  <div class="sh">This is the framework in action</div>
+  <p>Everything described here is real. The CLT model is real — the Champlain Housing Trust in Burlington, Vermont has 2,500 permanently affordable homes and a 30-year track record. The financing is real — LIHTC, VHDA, CDFI are federal and state programs designed for exactly this. The site plan is built from real GIS data — 19 confirmed city-owned parcels, real coordinates, real acreage from the Norfolk FY26 assessment roll.</p>
+  <p>The only thing that isn't real yet is the political commitment. That's what we're building toward. The Eastside Civic League named the problem. This document names the solution. What we need now is the coalition to demand it.</p>
+</div>
+
+<div class="footer">
+  <span class="footer-url">jason-edelman.org/eastside-commons</span>
+  Interactive plan, full financial pro forma, and printable zine. GIS data: gisshare.norfolk.gov + data.norfolk.gov FY26 Assessment. 19 EDA-owned parcels, 73.4ac confirmed. All site plan geometry derived by constraint satisfaction from real parcel data — no hardcoded coordinates, no assumptions. Financial projections based on Norfolk 2024 costs and HUD FY24 AMI. Draft for community discussion · 2025.
+</div>
+
+</body>
+</html>
