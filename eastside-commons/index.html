@@ -79,6 +79,22 @@ body {
   font-style: italic;
   max-width: 55ch;
 }
+.cold-open-link {
+  display: inline-block;
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-dim);
+  padding-bottom: 0.1rem;
+  transition: color 0.15s, border-color 0.15s;
+}
+.cold-open-link:hover {
+  color: var(--link-hover);
+  border-color: var(--link-hover);
+}
 
 /* ── Stat row ── */
 .stat-row {
@@ -606,6 +622,7 @@ details[open] summary::before { content: '▼  '; }
   <header class="plan-header">
     <h1>Eastside<br><em>Commons</em></h1>
     <p class="tagline">A 20-year commons master plan for the 73-acre city-owned Military Circle site — Norfolk, Virginia.</p>
+    <a href="/eastside-commons/cold-open" class="cold-open-link">A place worth building — read the full argument →</a>
   </header>
 
   <div class="stat-row">
