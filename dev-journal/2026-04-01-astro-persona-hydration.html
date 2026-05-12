@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hydrating 2,268 Prompt Slots with Haiku — Dev Journal</title>
+  <meta name="description" content="Built the internal hydration tool for Astro Persona — a five-tab dashboard for batch-generating astrological prompt content via Claude Haiku with real-time cost tracking and prompt cache awareness.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Hydrating 2,268 Prompt Slots with Haiku</h1>
+        <p class="date">April 1, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Astro Persona has 2,268 prompt slots — one for every combination of planet, zodiac sign, house, and aspect type that the system needs to describe. Each slot is a short astrological voice description: what it sounds like when a chart has Saturn in Scorpio in the 8th house, or Venus in Gemini in the 3rd. These are the building blocks the persona assembler combines at runtime.
+        </p>
+
+        <p>
+          Generating 2,268 distinct pieces of content by hand isn't viable. Doing it with a single large API call that sends 2,268 prompts simultaneously runs into Cloudflare Worker body size limits — I hit that wall during testing when a batch of 2,101 slots produced an HTML 500 instead of a JSON response. The fix was smaller batches with configurable size and inter-batch delay.
+        </p>
+
+        <p>
+          The hydration tool is a five-tab HTML dashboard that runs against the live Worker API. The Auto-Hydrate tab runs batches autonomously: configurable batch size (default 15), configurable delay between batches (default 1,200ms), pause/resume controls, and real-time cost estimation using Haiku's pricing model with prompt cache awareness. The cached prefix — the shared astrological knowledge system prompt — amortizes across every call in the batch. At scale, cache hits drive effective input costs close to zero.
+        </p>
+
+        <p>
+          By the time this was done, all 2,268 slots were filled. Total Haiku cost was well under what I'd budgeted. The prompt cache design decision — putting the entire astrological knowledge base in a shared prefix rather than regenerating it per call — turned out to be the most economically significant engineering choice in the whole system.
+        </p>
+
+        <p>
+          The lesson: if you're making many API calls with shared context, structured prompt caching is worth the design investment. The savings aren't marginal.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

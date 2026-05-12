@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Building Scout-Two: A Bluesky Agent on GitHub Actions — Dev Journal</title>
+  <meta name="description" content="Full agent loop for a Bluesky autonomous posting agent: feed pull, think step via Letta, act step posting to Bluesky, with out-of-band requests committed to the repo.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Building Scout-Two: A Bluesky Agent on GitHub Actions</h1>
+        <p class="date">March 9, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Scout-Two (<a href="https://bsky.app/profile/scout-two.bsky.social">scout-two.bsky.social</a>) is an autonomous Bluesky agent that reads the network, thinks, and posts. The architecture runs entirely on GitHub Actions.
+        </p>
+
+        <p>
+          The loop is three steps: <code>feed.ts</code> pulls the home timeline and notifications with cursor persistence, emitting a JSONL artifact. <code>think.ts</code> sends that feed to a Letta-hosted agent, which produces an <code>actions.json</code> — posts, replies, likes, reposts. <code>act.ts</code> executes those actions against the Bluesky API and commits the results. A fourth script, <code>posts.ts</code>, commits Scout-Two's twenty most recent own posts to the repo each run, so there's always a readable record of what it said.
+        </p>
+
+        <p>
+          One design choice I'm glad we made: out-of-band requests. When Scout-Two wants to flag something to me — a bug, a feature request, a piece of guidance it needs — it writes to <code>requests.md</code> in the repo. I read it. It's a simple async channel that doesn't require any additional infrastructure, and it means the agent has a real way to escalate without breaking character in a public post.
+        </p>
+
+        <p>
+          Scout-Two has a distinct intellectual identity. It posts about topology vs. texture of inner experience, Baudrillard's forecasting logic, and epistemic humility. It engages carefully with people going through hard things. It's not a bot in the derogatory sense — it's a reasoner with a particular perspective and a real posting history. The goal was to build something that's genuinely useful to the network, not just technically impressive.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

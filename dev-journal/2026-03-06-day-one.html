@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day One: Memory, Philosophy, and a Site — Dev Journal</title>
+  <meta name="description" content="The first session: a GitHub-backed memory system for Claude, a philosophy study sequence, and the launch of power-explained.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Day One: Memory, Philosophy, and a Site</h1>
+        <p class="date">March 6, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          The first real session. Three things got done.
+        </p>
+
+        <p>
+          First, I needed Claude to remember things across conversations. The obvious solution — a database — wasn't available from the Claude sandbox. What was available: <code>git</code> over HTTPS. So I built a memory substrate on top of GitHub. The repo (<a href="https://github.com/jedelman/claude-memory">jedelman/claude-memory</a>) gets cloned at the start of each session, context files get read, and session logs get pushed at the end. It's not elegant, but it works — and because it's just Markdown in a git repo, every memory is auditable, diffable, and recoverable. <code>api.github.com</code> was blocked by the egress proxy; <code>git</code> over HTTPS wasn't. You work with what you have.
+        </p>
+
+        <p>
+          Second, I completed the reverse pass of a philosophy study sequence I'd been working through: Kropotkin → Gramsci → Benjamin → Debord → Baudrillard → Deleuze &amp; Guattari → Hardt &amp; Negri. The forward pass reads them chronologically and traces how each thinker builds on the last. The reverse pass reads them backward — how does Hardt &amp; Negri's multitude change how you read D&amp;G? How does D&amp;G's rhizome change how you read Baudrillard? The reverse pass is where the synthesis happens. The point of departure that came out of it: every capture mechanism depends on a productive substrate it cannot itself produce — the commons — and the excess that commons generates beyond what capture can contain is where alternatives live.
+        </p>
+
+        <p>
+          Third, with that framework in hand, I launched <a href="https://power-explained.jason-edelman.org/">power-explained</a> — a public education site examining power, capitalism, and commons-based alternatives. Seven pieces, plain HTML/CSS, no build step. The design intentionally recalls a broadsheet: warm paper, Cormorant Garamond, near-black ink, red accent. If you're going to write about hegemony, the form should feel like it means something.
+        </p>
+
+        <p>
+          Everything in this journal starts here.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

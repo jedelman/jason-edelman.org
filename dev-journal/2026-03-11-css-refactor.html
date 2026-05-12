@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Removing 11,500 Lines of Duplicated CSS — Dev Journal</title>
+  <meta name="description" content="Found 200 hardcoded color values across 46 HTML files breaking dark mode, extracted shared styles, and introduced channel variables. Net change: −11,500 lines.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Removing 11,500 Lines of Duplicated CSS</h1>
+        <p class="date">March 11, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          power-explained had grown to 46 HTML files, each carrying its full CSS inline. That was fine when there were seven files. At 46, a bug in a shared component meant 46 fixes — or, more likely, 46 inconsistencies.
+        </p>
+
+        <p>
+          The immediate trigger was dark mode. The site's design uses opacity variants extensively — text at 70% opacity, borders at 20%, backgrounds at 50%. In light mode these read as warm grays and soft tones. The original implementation used hardcoded <code>rgba(26,23,20,0.7)</code> values, which worked fine until dark mode flipped the background. Then you had dark text on a dark background in about 200 places across the codebase. The fix that didn't scale: changing every instance. The fix that did: CSS channel variables.
+        </p>
+
+        <p>
+          Channel variables separate the color from the opacity. Instead of <code>rgba(26,23,20,0.7)</code>, you write <code>rgba(var(--ink-rgb), 0.7)</code>. The <code>--ink-rgb</code> variable holds just the RGB components — <code>26,23,20</code> in light mode, <code>240,232,216</code> in dark. One variable swap per theme, every opacity variant follows automatically. It's a pattern I hadn't used before and won't forget.
+        </p>
+
+        <p>
+          Once the colors were fixed, extracting the shared styles to a single <code>style.css</code> was mostly mechanical — grep for recurring class definitions, consolidate, test. The final number was around 11,500 lines removed. The site looks identical. The codebase is now maintainable.
+        </p>
+
+        <p>
+          The lesson isn't profound: duplication is a debt that compounds. The interesting part was the channel variable pattern, which is a genuinely better approach to opacity-based theming than anything I'd used before.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

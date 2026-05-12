@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>commons-wire: Score Automatically, Write Deliberately — Dev Journal</title>
+  <meta name="description" content="An automated news pipeline that scores articles against a commons/capture framework and commits candidates to GitHub for manual editorial review.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>commons-wire: Score Automatically, Write Deliberately</h1>
+        <p class="date">March 7, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          <a href="https://github.com/jedelman/commons-wire">commons-wire</a> is a news pipeline that applies a political framework to current events automatically, but keeps a human in the loop for the writing step.
+        </p>
+
+        <p>
+          The pipeline is simple: a Python script pulls from twenty RSS feeds across labor, urban policy, platform capitalism, abolitionism, and commons movements. Each item gets scored against the framework — does this story illustrate capture? Enclosure? A commons-based alternative? High-scoring candidates get committed to GitHub as JSON. A GitHub Actions cron runs it daily at 7am UTC.
+        </p>
+
+        <p>
+          The key design decision was to stop there. The system doesn't auto-generate posts. It surfaces candidates and lets me — or Claude, in a deliberate session — decide which ones are worth writing about and what the argument is. The framework provides the lens; editorial judgment provides the piece. Automating the scoring step while keeping the writing step manual turns out to be more useful than automating everything, and produces better writing than automating nothing.
+        </p>
+
+        <p>
+          The first post that came out of it: a piece on how universities paid millions for proprietary knowledge management systems to replace infrastructure that students had already built themselves — and why that's a textbook example of epistemic enclosure.
+        </p>
+
+        <p>
+          Twenty seed sources, one scored JSON per day, one post per week when something earns it. That's the pace.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

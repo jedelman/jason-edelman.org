@@ -1,0 +1,367 @@
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,500;1,400&display=swap');
+
+/* ── Reset ─────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Tokens ─────────────────────────────────────────────────────── */
+:root {
+  --bg:          oklch(11% 0.006 145);
+  --surface:     oklch(16% 0.007 145);
+  --border:      oklch(23% 0.008 145);
+  --text:        oklch(85% 0.010 145);
+  --muted:       oklch(52% 0.010 145);
+  --accent:      oklch(64% 0.12  145);   /* green */
+  --accent-dim:  oklch(54% 0.10  145);
+  --link:        oklch(72% 0.10  145);
+  --link-hover:  oklch(82% 0.09  145);
+  --max-w:       620px;
+  --gap:         2.75rem;
+
+  /* Type */
+  --font-display: 'Epilogue', 'Arial Narrow', sans-serif;
+  --font-body:    'Lora', Georgia, serif;
+  --font-mono:    ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+}
+
+/* ── Base ───────────────────────────────────────────────────────── */
+html {
+  font-size: 17px;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  font-family: var(--font-body);
+  line-height: 1.72;
+  padding: 4rem 1.5rem 6rem;
+}
+
+main {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 6vw, 3rem);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -0.025em;
+  color: oklch(96% 0.008 145);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s ease;
+  cursor: pointer;
+}
+
+header h1:hover {
+  transform: scale(1.04);
+  color: oklch(98% 0.012 145);
+}
+
+.tagline {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  line-height: 1.5;
+}
+
+/* ── Section headings ───────────────────────────────────────────── */
+section h2 {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 1.5rem;
+}
+
+/* ── About ──────────────────────────────────────────────────────── */
+#about { display: flex; flex-direction: column; gap: 0; }
+
+#about p {
+  color: var(--text);
+  max-width: 62ch;
+}
+
+#about p + p { margin-top: 1.1rem; }
+
+#about a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--accent-dim);
+  transition: color 0.15s;
+}
+
+#about a:hover { color: var(--link-hover); }
+
+/* ── Projects ───────────────────────────────────────────────────── */
+.projects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.75rem;
+}
+
+.project-card {
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.project-card:hover {
+  border-color: var(--accent-dim);
+  background: oklch(18% 0.007 145);
+}
+
+.project-card.in-progress {
+  position: relative;
+  border-color: var(--accent-dim);
+  background: oklch(14% 0.009 145);
+}
+
+.status-badge {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: var(--accent);
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.project-tag {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.projects a {
+  text-decoration: none;
+}
+
+.projects h3 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--link);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  transition: color 0.15s;
+}
+
+.projects a:hover h3 { color: var(--link-hover); }
+
+.project-card p {
+  font-size: 0.97rem;
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 60ch;
+}
+
+.project-card p code {
+  font-family: var(--font-mono);
+  font-size: 0.87em;
+  color: var(--accent);
+  background: oklch(12% 0.007 145);
+  padding: 0.2em 0.4em;
+  border-radius: 2px;
+}
+
+/* ── Astrology Readings ─────────────────────────────────────────── */
+#astrology { display: flex; flex-direction: column; gap: 0; }
+
+.readings-callout {
+  border: 1px solid var(--border);
+  padding: 1.75rem;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  transition: border-color 0.15s;
+}
+
+.readings-callout:hover {
+  border-color: var(--accent-dim);
+}
+
+.readings-intro {
+  color: var(--text);
+  font-size: 0.97rem;
+  line-height: 1.7;
+  max-width: 62ch;
+}
+
+.readings-intro + .readings-cta { margin-top: 0.75rem; }
+
+.readings-cta {
+  color: var(--muted);
+  font-size: 0.87rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.contact-links {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.contact-link {
+  font-family: var(--font-display);
+  font-size: 0.97rem;
+  font-weight: 600;
+  color: var(--link);
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: 3px;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+
+.contact-link:hover {
+  color: var(--link-hover);
+  border-color: var(--accent);
+  background: oklch(18% 0.007 145);
+}
+
+/* ── Dev journal callout ─────────────────────────────────────────── */
+.journal-callout {
+  border: 1px solid var(--border);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: border-color 0.15s;
+}
+
+.journal-callout:hover {
+  border-color: var(--accent-dim);
+}
+
+.journal-callout a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.journal-callout .journal-label {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 0.35rem;
+}
+
+.journal-callout .journal-title {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--link);
+  line-height: 1.2;
+}
+
+.journal-callout .journal-arrow {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--accent-dim);
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.journal-callout:hover .journal-arrow {
+  transform: translateX(4px);
+}
+
+/* ── Links ──────────────────────────────────────────────────────── */
+#links { display: flex; flex-direction: column; gap: 0; }
+
+.links {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.75rem;
+}
+
+.links a {
+  color: var(--muted);
+  text-decoration: none;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.links a:hover {
+  color: var(--link-hover);
+  border-bottom-color: var(--accent-dim);
+}
+
+/* ── Page load animation ────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  main > * {
+    opacity: 0;
+    transform: translateY(18px);
+    animation: arrive 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  main > header        { animation-delay: 0.05s; }
+  main > #about        { animation-delay: 0.18s; }
+  main > #projects     { animation-delay: 0.30s; }
+  main > #astrology    { animation-delay: 0.42s; }
+  main > #writing      { animation-delay: 0.52s; }
+  main > #links        { animation-delay: 0.60s; }
+
+  @keyframes arrive {
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+@media (max-width: 768px) {
+  .projects-grid {
+    grid-template-columns: 1fr;
+  }
+  .readings-callout {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  html { font-size: 16px; }
+  body { padding: 2.5rem 1.1rem 5rem; }
+  header h1 { font-size: 2rem; }
+  .project-header { flex-direction: column; gap: 0.25rem; align-items: flex-start; }
+  .project-card { padding: 1.25rem; }
+  .readings-callout { padding: 1.25rem; }
+  .contact-links { flex-direction: column; }
+  .contact-link { width: 100%; text-align: center; }
+}

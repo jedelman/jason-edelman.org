@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A Civic Accountability Dashboard for Norfolk's Green Plan — Dev Journal</title>
+  <meta name="description" content="Built a public dashboard tracking Norfolk's compliance with its 2018 Green Infrastructure Plan. Finding: 9.9:1 tree removal-to-planting ratio against a 5,200 plantings/year mandate.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>A Civic Accountability Dashboard for Norfolk's Green Plan</h1>
+        <p class="date">March 29, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Norfolk adopted a Green Infrastructure Plan in 2018. The plan includes specific numerical commitments: 5,200 tree plantings per year, canopy coverage targets, stormwater management milestones. Eight years later, nobody was publicly tracking compliance. <a href="https://green-norfolk.netlify.app">green-norfolk</a> does.
+        </p>
+
+        <p>
+          The stack is minimal: a single HTML file, a Netlify Edge Function proxy to solve CORS on the city's Socrata data API, and a GitHub Actions pipeline that fetches data daily and commits a JSON snapshot. The dashboard reads the snapshot first and falls back to the live API. No framework, no database, no build step beyond what Netlify provides.
+        </p>
+
+        <p>
+          The CORS problem was the most annoying part. <code>data.norfolk.gov</code> returns CORS headers that block direct browser requests. The Edge Function proxies requests server-side; the client never touches the Norfolk API directly. It's a one-file proxy that took about twenty minutes to write and completely unblocked the project.
+        </p>
+
+        <p>
+          The finding that surprised me most: the city's forestry work orders from 2020–2025 show a 9.9:1 ratio of tree removals to plantings. The GIP requires 5,200 plantings per year. The city appears to be hitting somewhere between 78 and 160. The canopy coverage map hasn't been updated since 2022, which means the baseline against which progress should be measured is itself three years stale.
+        </p>
+
+        <p>
+          None of this is a scandal. Cities underfund green infrastructure commitments constantly, and Norfolk is dealing with serious flooding pressure that consumes budget. But the numbers should be public and visible, and now they are.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

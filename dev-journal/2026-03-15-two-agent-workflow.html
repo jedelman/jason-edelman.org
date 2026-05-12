@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Two Agents, One GitHub Repo — Dev Journal</title>
+  <meta name="description" content="Dropped Google Drive as the handoff layer between Claude and Gemini. GitHub is now the sync surface — simpler and fully auditable.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Two Agents, One GitHub Repo</h1>
+        <p class="date">March 15, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          The Mithlond research workflow originally used Google Drive as the handoff layer between two AI systems — Gemini would dump research into a Drive doc, I'd copy-paste it, Claude would read it. Three steps, two of them manual.
+        </p>
+
+        <p>
+          We cut that down. GitHub is now the sole sync surface. Gemini writes research findings directly to <code>research/findings/</code> in the <a href="https://github.com/jedelman/mithlond">repo</a>, updates a shared task tracker, commits, and pushes. Claude pulls at the start of a session, reviews the findings, flags what needs fact-checking, and promotes solid material to the blog or policy briefs. No Drive, no copy-paste, no intermediary.
+        </p>
+
+        <p>
+          The more interesting improvement was adding a <code>GEMINI.md</code> orientation file to the repo — the equivalent of what I use for Claude, but written for Gemini's reasoning patterns. It defines the two-agent architecture explicitly, specifies the finding format (each finding gets a confidence level, a source, and a confabulation risk flag), and includes a warning about the most common failure mode: Gemini generating plausible-sounding regulatory citation numbers that don't exist.
+        </p>
+
+        <p>
+          Confabulation at the source is the core risk in any multi-agent research workflow. The mitigation we landed on: Gemini labels its own uncertainty, Claude does a verification pass before anything goes into a public document, and I do a final spot-check on anything that will be cited in a policy context. Three layers, each catching a different class of error.
+        </p>
+
+        <p>
+          The result is faster, more transparent, and produces a full audit trail in git of what each system contributed. If a finding turns out to be wrong, we can trace where it came from.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

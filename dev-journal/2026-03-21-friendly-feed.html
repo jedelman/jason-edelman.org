@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Friendly Feed: Plain Language to Custom Bluesky Feeds — Dev Journal</title>
+  <meta name="description" content="Designed Friendly Feed after a call-out on Bluesky. Currently on hold after Attie launched with overlapping UX — waiting to see if their refinement loop compounds or just re-prompts.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Friendly Feed: Plain Language to Custom Bluesky Feeds</h1>
+        <p class="date">March 21, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Someone posted on Bluesky asking if anyone could build a dead-simple custom feed builder. I replied that I could and gave myself a few days. That's how <a href="https://github.com/jedelman/friendly-feed">Friendly Feed</a> started.
+        </p>
+
+        <p>
+          The idea: plain language in, custom Bluesky feed out, with a human-in-the-loop quality signal that improves the feed over time. You describe what you want — "posts about urban farming and food sovereignty from accounts I don't already follow" — and the system generates a feed config, subscribes to the firehose, filters for matching content, and serves it via Bluesky's custom feed API. Thumbs up/down on individual posts becomes training signal.
+        </p>
+
+        <p>
+          The stack: Tap (Go, WebSocket firehose consumer) → filter engine (TypeScript) → Cloudflare D1 → Cloudflare Worker serving <code>getFeedSkeleton</code>. Marginal cost per million feed views served: about thirty cents via CF Workers. That's a favorable unit economics story.
+        </p>
+
+        <p>
+          Then Attie launched. Attie is built by Bluesky's own exploration team, powered by Claude, same basic creation UX. The critical question is whether their refinement loop is persistent and compounding — does a thumbs-down teach the system, or does it just re-prompt? If it's the latter, the product is different. If it's the former, the moat question gets harder.
+        </p>
+
+        <p>
+          Friendly Feed is on hold pending that answer. The positioning I'm sitting on: Attie curates within your existing graph. Friendly Feed finds things beyond it. Those are genuinely different jobs. Whether that's enough differentiation depends on what Attie ships when they open the beta.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>
