@@ -270,6 +270,11 @@ const robots = [
 writeFileSync(resolve(PUBLIC, 'robots.txt'), robots);
 console.log(`   → robots.txt written`);
 
+// Write deploy timestamp — ensures wrangler always sees a changed file
+// and re-establishes the full asset binding on every deploy
+writeFileSync(resolve(PUBLIC, '_deploy.txt'), new Date().toISOString());
+console.log(`   → _deploy.txt written`);
+
 // Finalise manifest with file count
 function countFiles(dir) {
   let n = 0;
