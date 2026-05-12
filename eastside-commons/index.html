@@ -549,22 +549,24 @@ details[open] summary::before { content: '▼  '; }
 /* ── ANALYSIS VIEWS ── */
 .analysis-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .analysis-tab {
   font-family: var(--font-mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
+  font-size: 0.50rem;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  padding: 0.35rem 0.5rem;
+  padding: 0.30rem 0.4rem;
   color: var(--muted);
   cursor: pointer;
   border: none;
   background: transparent;
   border-bottom: 2px solid transparent;
   margin-bottom: -1px;
+  white-space: nowrap;
 }
 .analysis-tab.active {
   color: var(--accent);
@@ -3438,7 +3440,8 @@ function applyT6Cleanup(zones) {
     if (z.units && z.units.unit_count > z.area_ac * 200) {
       // More than 200 units/acre is not feasible at 4-story residential
       const cap = Math.floor(z.area_ac * 180);
-      z.units = { ...z.units, unit_count: cap, capped: true };
+      const afRatio = z.units.unit_count > 0 ? z.units.affordable_units / z.units.unit_count : 0;
+      z.units = { ...z.units, unit_count: cap, affordable_units: Math.floor(cap * afRatio), capped: true };
       z.cleanup_note = (z.cleanup_note||'') + ` Unit count capped at ${cap} (${z.area_ac.toFixed(2)}ac).`;
     }
   }
@@ -6030,24 +6033,39 @@ const EC3D = {
   makeGreenSurface(bds, use) {
     const { minX, maxX, minZ, maxZ } = bds;
     const W = maxX - minX, D = maxZ - minZ;
-    const segs = Math.max(4, Math.min(16, Math.floor(Math.max(W, D) / 4)));
+    const segs = Math.max(4, Math.min(20, Math.floor(Math.max(W, D) / 3)));
 
     const geo = new THREE.PlaneGeometry(W, D, segs, segs);
     const pos = geo.attributes.position;
-    const AMP = use === 'GREEN_PASSIVE' ? 0.5 : 0.25;  // wetland more textured
+    const AMP = use === 'GREEN_PASSIVE' ? 0.6 : 0.3;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
-      pos.setY(i, Math.sin(x * 0.8) * Math.cos(z * 0.8) * AMP);
+      pos.setY(i, Math.sin(x * 0.7) * Math.cos(z * 0.7) * AMP);
     }
     geo.computeVertexNormals();
 
-    const color = use === 'GREEN_PASSIVE' ? 0x0a5018 : 0x1a7228;
+    const color = use === 'GREEN_PASSIVE' ? 0x1a6828 : 0x28a83a;
     const mat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set((minX + maxX) / 2, 1.8, -(minZ + maxZ) / 2);
+    mesh.position.set((minX + maxX) / 2, 0.08, -(minZ + maxZ) / 2);
     mesh.receiveShadow = true;
-    return [mesh];
+
+    const meshes = [mesh];
+    const shrubMat = new THREE.MeshLambertMaterial({ color: use === 'GREEN_PASSIVE' ? 0x145a22 : 0x22903a });
+    const rng = (seed) => { let s=seed; return () => { s=(s*16807+0)%2147483647; return (s-1)/2147483646; }; };
+    const rand = rng(Math.round(minX*100+minZ*100));
+    const shrubCount = Math.min(16, Math.floor(W * D / 60));
+    for (let i = 0; i < shrubCount; i++) {
+      const sx = (minX + maxX) / 2 + (rand() - 0.5) * W * 0.78;
+      const sz = -(minZ + maxZ) / 2 + (rand() - 0.5) * D * 0.78;
+      const r = 0.4 + rand() * 0.7;
+      const sg = new THREE.SphereGeometry(r, 5, 4);
+      const sm = new THREE.Mesh(sg, shrubMat);
+      sm.position.set(sx, r * 0.6 + 0.08, sz);
+      meshes.push(sm);
+    }
+    return meshes;
   },
 
   // Plaza: paver grid (alternating light/dark squares)
@@ -6171,6 +6189,29 @@ const EC3D = {
         height = far > 0
           ? Math.max(FLOOR_H, Math.min(MAX_H, far * FLOOR_H * 0.8))
           : Math.max(FLOOR_H, Math.min(MAX_H, (zone.units?.floors || 3) * FLOOR_H));
+      }
+
+      // ── Green zones: skip extrusion, use surface mesh only ──
+      if (use === 'GREEN_ACTIVE' || use === 'GREEN_PASSIVE') {
+        const surfaceMeshes = this.makeGreenSurface(bds, use);
+        for (const sm of surfaceMeshes) {
+          sm.userData = { zone, height: 0, usedef };
+          this.scene.add(sm);
+        }
+        // Still make pickable via a flat ShapeGeometry at ground
+        const holes = (zone.poly.holes || []).filter(h => h && h.length >= 3);
+        const shape = this.makeShape(zone.poly.outer, holes);
+        if (shape) {
+          const pickGeo = new THREE.ShapeGeometry(shape);
+          const pickMat = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
+          const pickMesh = new THREE.Mesh(pickGeo, pickMat);
+          pickMesh.rotation.x = -Math.PI / 2;
+          pickMesh.position.y = 0.5;
+          pickMesh.userData = { zone, height: 0, usedef };
+          this.scene.add(pickMesh);
+          this.pickables.push(pickMesh);
+        }
+        continue;
       }
 
       // ── Base building extrusion ──
