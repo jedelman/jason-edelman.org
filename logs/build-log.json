@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "ts": "2026-05-12T15:59:28.292Z",
+    "commit_sha": "0e86982",
+    "commit_msg": "fix: skip empty submodule dirs in build; add contents:write for log push",
+    "commit_author": "Jason",
+    "build": "success",
+    "deploy": "success",
+    "run_url": "https://github.com/jedelman/jason-edelman.org/actions/runs/25746272504",
+    "overall": "success"
+  }
+]
