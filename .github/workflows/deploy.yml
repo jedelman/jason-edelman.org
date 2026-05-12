@@ -18,7 +18,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-          # Need full history so the log step can push back
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node
@@ -30,9 +29,91 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
+      # ── Gate 1: required source files exist before building ──────────────
+      - name: Pre-build source check
+        run: |
+          node - << 'JS'
+          const { existsSync } = require('fs');
+          const { resolve } = require('path');
+          const ROOT = process.cwd();
+
+          const REQUIRED = [
+            'index.html',
+            'style.css',
+            'dev-journal',
+            'eastside-commons',
+            'scripts/build.mjs',
+            'wrangler.toml',
+          ];
+
+          let ok = true;
+          for (const f of REQUIRED) {
+            if (!existsSync(resolve(ROOT, f))) {
+              console.error(`❌ Missing required source: ${f}`);
+              ok = false;
+            } else {
+              console.log(`✅ ${f}`);
+            }
+          }
+          if (!ok) {
+            console.error('\nPre-build check failed. Aborting before build.');
+            process.exit(1);
+          }
+          console.log('\nAll required sources present.');
+          JS
+
       - name: Build
         id: build
         run: npm run build
+
+      # ── Gate 2: critical outputs exist in public/ before deploying ────────
+      - name: Post-build output check
+        run: |
+          node - << 'JS'
+          const { existsSync, readFileSync } = require('fs');
+          const { resolve } = require('path');
+          const PUBLIC = resolve(process.cwd(), 'public');
+
+          // These must exist after every successful build
+          const REQUIRED_OUTPUTS = [
+            'index.html',
+            'style.css',
+            'eastside-commons/index.html',
+            'eastside-commons/cold-open.html',
+            'sitemap.xml',
+            'robots.txt',
+            '_build-manifest.json',
+          ];
+
+          let ok = true;
+          for (const f of REQUIRED_OUTPUTS) {
+            const full = resolve(PUBLIC, f);
+            if (!existsSync(full)) {
+              console.error(`❌ Missing output: public/${f}`);
+              ok = false;
+            } else {
+              console.log(`✅ public/${f}`);
+            }
+          }
+
+          // Also print the manifest summary
+          try {
+            const manifest = JSON.parse(readFileSync(resolve(PUBLIC, '_build-manifest.json'), 'utf8'));
+            console.log('\nBuild manifest:');
+            console.log(`  built_at:   ${manifest.built_at}`);
+            console.log(`  total_files: ${manifest.total_files}`);
+            console.log(`  sources:`);
+            for (const [k, v] of Object.entries(manifest.sources)) {
+              console.log(`    ${k}: ${v}`);
+            }
+          } catch {}
+
+          if (!ok) {
+            console.error('\nPost-build check failed. Aborting deploy.');
+            process.exit(1);
+          }
+          console.log('\nAll required outputs present — safe to deploy.');
+          JS
 
       - name: Deploy to Cloudflare Workers
         id: deploy
@@ -41,11 +122,56 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
+      # ── Post-deploy smoke test ────────────────────────────────────────────
+      - name: Post-deploy smoke test
+        id: smoke
+        run: |
+          sleep 10  # give Cloudflare a moment to propagate
+          node - << 'JS'
+          const https = require('https');
+
+          const URLS = [
+            'https://jason-edelman.org/',
+            'https://jason-edelman.org/eastside-commons/',
+            'https://jason-edelman.org/eastside-commons/cold-open',
+          ];
+
+          async function check(url) {
+            return new Promise((resolve) => {
+              https.get(url, { timeout: 10000 }, (res) => {
+                resolve({ url, status: res.statusCode });
+              }).on('error', (e) => {
+                resolve({ url, status: 'error', error: e.message });
+              });
+            });
+          }
+
+          (async () => {
+            let ok = true;
+            for (const url of URLS) {
+              const { status, error } = await check(url);
+              if (status === 200) {
+                console.log(`✅ ${status} ${url}`);
+              } else {
+                console.error(`❌ ${status} ${url}${error ? ' — ' + error : ''}`);
+                ok = false;
+              }
+            }
+            if (!ok) {
+              console.error('\nSmoke test failed — deployment may have issues.');
+              process.exit(1);
+            }
+            console.log('\nAll URLs live.');
+          })();
+          JS
+
+      # ── Build log (always runs) ───────────────────────────────────────────
       - name: Write build log
         if: always()
         env:
           BUILD_STATUS:  ${{ steps.build.outcome }}
           DEPLOY_STATUS: ${{ steps.deploy.outcome }}
+          SMOKE_STATUS:  ${{ steps.smoke.outcome }}
           COMMIT_SHA:    ${{ github.sha }}
           COMMIT_MSG:    ${{ github.event.head_commit.message }}
           COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
@@ -56,10 +182,17 @@ jobs:
           const path = require('path');
           const file = path.join(process.cwd(), 'logs', 'build-log.json');
 
-          // Read existing log (array), append new entry, keep last 50
           let history = [];
           try { history = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
           if (!Array.isArray(history)) history = [];
+
+          // Also read build manifest if it exists
+          let manifest = null;
+          try {
+            manifest = JSON.parse(fs.readFileSync(
+              path.join(process.cwd(), 'public', '_build-manifest.json'), 'utf8'
+            ));
+          } catch {}
 
           const entry = {
             ts:            new Date().toISOString(),
@@ -68,13 +201,18 @@ jobs:
             commit_author: process.env.COMMIT_AUTHOR,
             build:         process.env.BUILD_STATUS,
             deploy:        process.env.DEPLOY_STATUS,
+            smoke:         process.env.SMOKE_STATUS,
+            overall:       (['success'].includes(process.env.BUILD_STATUS) &&
+                            ['success'].includes(process.env.DEPLOY_STATUS)) ? 'success' : 'failure',
+            manifest:      manifest ? {
+              total_files: manifest.total_files,
+              sources:     manifest.sources,
+            } : null,
             run_url:       process.env.RUN_URL,
-            overall:       (process.env.BUILD_STATUS === 'success' &&
-                            process.env.DEPLOY_STATUS === 'success') ? 'success' : 'failure',
           };
 
-          history.unshift(entry);          // newest first
-          history = history.slice(0, 50);  // keep last 50
+          history.unshift(entry);
+          history = history.slice(0, 50);
 
           fs.writeFileSync(file, JSON.stringify(history, null, 2));
           console.log('Log entry written:', JSON.stringify(entry, null, 2));
@@ -85,7 +223,7 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
           git add logs/build-log.json
-          # Only commit if there's actually a change
           git diff --cached --quiet || git commit -m "ci: update build log [skip ci]"
           git push

@@ -11,7 +11,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { cpSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync } from 'node:fs';
 import { resolve, dirname, relative, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,8 +27,8 @@ const STATIC = [
   '.well-known',
 ];
 
-// Subprojects: { name, dir, buildCmd, outDir }
-// outDir is relative to the subproject dir, copied to public/<name>/
+// Subprojects: { name, dir, buildCmd, outDir, required }
+// required: if true, build fails when directory is missing (not just a warning)
 // For plain static HTML projects, set buildCmd to null and outDir to '.'
 const SUBPROJECTS = [
   {
@@ -54,6 +54,7 @@ const SUBPROJECTS = [
     dir: 'eastside-commons',
     buildCmd: null,   // plain static HTML — constraint solver runs in browser
     outDir: '.',
+    required: true,   // hard failure if missing
   },
   {
     name: 'qri',
@@ -62,6 +63,24 @@ const SUBPROJECTS = [
     outDir: '.',
   },
 ];
+
+// ── Pre-flight: verify required sources exist before nuking public/ ─────────────
+const REQUIRED_SOURCES = [...STATIC, ...SUBPROJECTS.map(p => p.dir)];
+const missing = REQUIRED_SOURCES.filter(f => !existsSync(resolve(ROOT, f)));
+if (missing.length) {
+  // Warn about missing submodules but only hard-fail on non-optional sources
+  const OPTIONAL = new Set(SUBPROJECTS.filter(p => !p.required).map(p => p.dir));
+  const hardMissing = missing.filter(f => !OPTIONAL.has(f));
+  for (const f of missing) {
+    const tag = OPTIONAL.has(f) ? '⚠️  optional' : '❌ required';
+    console.warn(`  ${tag} source missing: ${f}`);
+  }
+  if (hardMissing.length) {
+    console.error('\nPre-flight failed — aborting before public/ is cleaned.');
+    process.exit(1);
+  }
+}
+console.log('✅ Pre-flight passed');
 
 // ── Clean ─────────────────────────────────────────────────────────────────────
 console.log('🧹 Cleaning public/');
@@ -109,6 +128,17 @@ for (const project of SUBPROJECTS) {
     }
   });
 }
+
+// ── Build manifest ────────────────────────────────────────────────────────────
+const builtProjects = SUBPROJECTS.filter(p => existsSync(resolve(PUBLIC, p.name)));
+const manifest = {
+  built_at:    new Date().toISOString(),
+  total_files: 0,  // filled in after sitemap
+  sources: {
+    static_files: STATIC.filter(f => existsSync(resolve(PUBLIC, f))).join(', '),
+    ...Object.fromEntries(builtProjects.map(p => [p.name, 'copied'])),
+  },
+};
 
 // ── Sitemap ───────────────────────────────────────────────────────────────────
 console.log('\n🗺  Generating sitemap.xml');
@@ -239,5 +269,19 @@ const robots = [
 
 writeFileSync(resolve(PUBLIC, 'robots.txt'), robots);
 console.log(`   → robots.txt written`);
+
+// Finalise manifest with file count
+function countFiles(dir) {
+  let n = 0;
+  try {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      n += e.isDirectory() ? countFiles(resolve(dir, e.name)) : 1;
+    }
+  } catch {}
+  return n;
+}
+manifest.total_files = countFiles(PUBLIC);
+writeFileSync(resolve(PUBLIC, '_build-manifest.json'), JSON.stringify(manifest, null, 2));
+console.log(`   → _build-manifest.json (${manifest.total_files} files)`);
 
 console.log('\n✅ public/ ready for deployment');
