@@ -1326,6 +1326,65 @@ function buildSVG(parcels, P, G, derived, MAP, proj) {
   grid.appendChild(el('path',{d:'M20 0L0 0 0 20',fill:'none',stroke:'#0c0a06','stroke-width':'0.5'}));
   defs.appendChild(grid);
 
+  // ── Green zone texture patterns ─────────────────────────────────────────────
+
+  // GREEN_ACTIVE: fine diagonal grass hatch, 45° at 5px pitch
+  (function() {
+    const p = el('pattern',{id:'pat-green-active',patternUnits:'userSpaceOnUse',width:'8',height:'8'});
+    // Base fill
+    p.appendChild(el('rect',{width:'8',height:'8',fill:'#1a8030'}));
+    // Diagonal hatching — two directions for a meadow feel
+    p.appendChild(el('line',{x1:'0',y1:'8',x2:'8',y2:'0',stroke:'#2ec050',
+      'stroke-width':'0.8','stroke-opacity':'0.6'}));
+    p.appendChild(el('line',{x1:'-2',y1:'6',x2:'2',y2:'2',stroke:'#2ec050',
+      'stroke-width':'0.5','stroke-opacity':'0.4'}));
+    p.appendChild(el('line',{x1:'6',y1:'10',x2:'10',y2:'6',stroke:'#2ec050',
+      'stroke-width':'0.5','stroke-opacity':'0.4'}));
+    defs.appendChild(p);
+  })();
+
+  // GREEN_PASSIVE: wetland pattern — horizontal ripples + stipple dots
+  (function() {
+    const p = el('pattern',{id:'pat-green-passive',patternUnits:'userSpaceOnUse',width:'12',height:'10'});
+    p.appendChild(el('rect',{width:'12',height:'10',fill:'#0a5c1e'}));
+    // Ripple lines (horizontal, slightly wavy via short segments)
+    p.appendChild(el('path',{d:'M0,3 Q3,2 6,3 Q9,4 12,3',fill:'none',
+      stroke:'#14a040','stroke-width':'0.7','stroke-opacity':'0.7'}));
+    p.appendChild(el('path',{d:'M0,7 Q3,6 6,7 Q9,8 12,7',fill:'none',
+      stroke:'#14a040','stroke-width':'0.7','stroke-opacity':'0.7'}));
+    // Stipple dots — scattered reed/sedge suggestion
+    p.appendChild(el('circle',{cx:'2',cy:'1',r:'0.6',fill:'#1ec850','fill-opacity':'0.5'}));
+    p.appendChild(el('circle',{cx:'8',cy:'5',r:'0.6',fill:'#1ec850','fill-opacity':'0.5'}));
+    p.appendChild(el('circle',{cx:'5',cy:'9',r:'0.6',fill:'#1ec850','fill-opacity':'0.5'}));
+    p.appendChild(el('circle',{cx:'11',cy:'2',r:'0.6',fill:'#1ec850','fill-opacity':'0.5'}));
+    defs.appendChild(p);
+  })();
+
+  // PLAZA: fine square paving grid
+  (function() {
+    const p = el('pattern',{id:'pat-plaza',patternUnits:'userSpaceOnUse',width:'10',height:'10'});
+    p.appendChild(el('rect',{width:'10',height:'10',fill:'#5a6878'}));
+    p.appendChild(el('rect',{x:'0.5',y:'0.5',width:'9',height:'9',fill:'none',
+      stroke:'#7a8898','stroke-width':'0.6','stroke-opacity':'0.6'}));
+    p.appendChild(el('line',{x1:'5',y1:'0',x2:'5',y2:'10',
+      stroke:'#4a5868','stroke-width':'0.4','stroke-opacity':'0.4'}));
+    p.appendChild(el('line',{x1:'0',y1:'5',x2:'10',y2:'5',
+      stroke:'#4a5868','stroke-width':'0.4','stroke-opacity':'0.4'}));
+    defs.appendChild(p);
+  })();
+
+  // GREEN_ACTIVE overlay: fine blade detail at higher zoom
+  (function() {
+    const p = el('pattern',{id:'pat-green-active-blades',patternUnits:'userSpaceOnUse',width:'6',height:'6'});
+    p.appendChild(el('rect',{width:'6',height:'6',fill:'none'}));
+    // Tiny blade marks
+    p.appendChild(el('line',{x1:'1',y1:'6',x2:'2',y2:'3',stroke:'#40d060',
+      'stroke-width':'0.6','stroke-opacity':'0.5','stroke-linecap':'round'}));
+    p.appendChild(el('line',{x1:'4',y1:'6',x2:'5',y2:'2',stroke:'#40d060',
+      'stroke-width':'0.6','stroke-opacity':'0.5','stroke-linecap':'round'}));
+    defs.appendChild(p);
+  })();
+
   svg.appendChild(defs);
 
   // Background
@@ -3667,11 +3726,30 @@ function renderT7(zones, svg, params) {
     const { x, y, w, h } = z.poly;
 
     // ── Zone fill ──
+    // Textured patterns for green zones and plaza
+    const ZONE_PATTERNS = {
+      GREEN_ACTIVE:  'pat-green-active',
+      GREEN_PASSIVE: 'pat-green-passive',
+      PLAZA:         'pat-plaza',
+    };
+    const patId = ZONE_PATTERNS[z.use];
+
+    // For patterned zones: solid base rect first, then pattern overlay
+    if (patId) {
+      const base = document.createElementNS(ns, 'rect');
+      base.setAttribute('x', x); base.setAttribute('y', y);
+      base.setAttribute('width', w); base.setAttribute('height', h);
+      base.setAttribute('fill', color);
+      base.setAttribute('fill-opacity', opacity * 0.7);
+      base.setAttribute('stroke', 'none');
+      g.appendChild(base);
+    }
+
     const fill = document.createElementNS(ns, 'rect');
     fill.setAttribute('x', x); fill.setAttribute('y', y);
     fill.setAttribute('width', w); fill.setAttribute('height', h);
-    fill.setAttribute('fill', color);
-    fill.setAttribute('fill-opacity', opacity);
+    fill.setAttribute('fill', patId ? `url(#${patId})` : color);
+    fill.setAttribute('fill-opacity', patId ? '1' : opacity);
     fill.setAttribute('stroke', color);
     fill.setAttribute('stroke-width', '1');
     fill.setAttribute('stroke-opacity', '0.7');
@@ -3682,6 +3760,18 @@ function renderT7(zones, svg, params) {
     fill.addEventListener('mouseenter', () => showZoneTooltip(z));
     fill.addEventListener('mouseleave', hideZoneTooltip);
     g.appendChild(fill);
+
+    // Extra blade overlay for GREEN_ACTIVE at fine scale
+    if (z.use === 'GREEN_ACTIVE') {
+      const blades = document.createElementNS(ns, 'rect');
+      blades.setAttribute('x', x); blades.setAttribute('y', y);
+      blades.setAttribute('width', w); blades.setAttribute('height', h);
+      blades.setAttribute('fill', 'url(#pat-green-active-blades)');
+      blades.setAttribute('fill-opacity', '0.4');
+      blades.setAttribute('stroke', 'none');
+      blades.style.pointerEvents = 'none';
+      g.appendChild(blades);
+    }
 
     // ── T4 building wings (darker fill within zone) ──
     if (showUnits && z.units) {
