@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Highest Ground in a Sinking City</title>
+<meta name="description" content="Norfolk, Virginia is one of the fastest-sinking coastal cities in America. The city owns 73 acres at the highest elevation. Here's what could be built.">
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #101418;
+  --paper: #f5f4f0;
+  --tide: #1a4a5c;
+  --tide-lt: #2a6a80;
+  --tide-dark: #0d2a38;
+  --clay: #b03010;
+  --gold: #9a6010;
+  --forest: #1a4224;
+  --mid: #e8e4dc;
+  --rule: #c8c2b4;
+  --muted: #787060;
+}
+html { background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
+body { font-family: 'Libre Baskerville', Georgia, serif; line-height: 1.65; }
+
+/* Hero — dark tidal */
+.hero {
+  background: var(--tide-dark);
+  min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 3rem 1.5rem;
+  position: relative; overflow: hidden;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 40%;
+  background: linear-gradient(to top, rgba(10,20,30,0.8), transparent);
+  pointer-events: none;
+}
+/* Subtle water-like gradient */
+.hero::before {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 70%, rgba(26,74,92,0.6) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 20%, rgba(13,42,56,0.8) 0%, transparent 50%),
+    repeating-linear-gradient(
+      180deg,
+      rgba(255,255,255,0) 0px,
+      rgba(255,255,255,0) 3px,
+      rgba(255,255,255,0.012) 3px,
+      rgba(255,255,255,0.012) 4px
+    );
+}
+.hero-inner {
+  position: relative; z-index: 1;
+  max-width: 680px; margin: 0 auto; width: 100%;
+}
+.hero-over {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem; font-weight: 500;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+  margin-bottom: 1.5rem;
+}
+.hero-hed {
+  font-size: clamp(2.2rem, 8vw, 4.2rem);
+  line-height: 1.1;
+  color: #fff;
+  margin-bottom: 1.5rem;
+}
+.hero-hed em {
+  font-style: italic;
+  color: rgba(154, 200, 220, 0.85);
+}
+.hero-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: clamp(0.9rem, 2.5vw, 1.05rem);
+  font-weight: 400; line-height: 1.7;
+  color: rgba(255,255,255,0.55);
+  max-width: 50ch;
+  margin-bottom: 2rem;
+}
+.hero-stat {
+  display: inline-flex; flex-direction: column;
+  border-left: 2px solid rgba(154, 200, 220, 0.4);
+  padding-left: 1rem;
+  margin-bottom: 0.75rem;
+}
+.hs-val {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem; font-weight: 600;
+  color: rgba(154, 200, 220, 0.85);
+  letter-spacing: 0.02em;
+}
+.hs-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.68rem; color: rgba(255,255,255,0.35);
+  margin-top: 0.1rem;
+}
+.hero-scroll {
+  position: absolute; bottom: 2rem; left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6rem; letter-spacing: 0.15em; text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  display: flex; flex-direction: column; align-items: center; gap: 0.4rem;
+}
+.hero-scroll::after {
+  content: '';
+  width: 1px; height: 1.5rem;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.2), transparent);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
+/* Section */
+.section {
+  max-width: 660px; margin: 0 auto;
+  padding: 3.5rem 1.5rem;
+}
+.section + .section { padding-top: 0; }
+.section-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--tide); margin-bottom: 1rem;
+}
+
+/* Body */
+.body-p {
+  font-size: clamp(1rem, 2.5vw, 1.05rem);
+  line-height: 1.78; margin-bottom: 1.2rem;
+  color: #1c1a16;
+}
+.body-p strong { color: var(--ink); }
+
+/* The pivot — full-bleed dark */
+.pivot {
+  background: var(--ink);
+  color: #fff;
+  padding: 3.5rem 1.5rem;
+}
+.pivot-inner { max-width: 660px; margin: 0 auto; }
+.pivot-over {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6rem; font-weight: 600;
+  letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.3); margin-bottom: 1rem;
+}
+.pivot-hed {
+  font-size: clamp(1.6rem, 5vw, 2.4rem);
+  line-height: 1.2; color: #fff;
+  margin-bottom: 1.25rem;
+  max-width: 22ch;
+}
+.pivot-p {
+  font-size: 0.97rem; line-height: 1.75;
+  color: rgba(255,255,255,0.65); margin-bottom: 0.9rem;
+  max-width: 58ch;
+}
+.pivot-num {
+  font-family: 'Inter', sans-serif;
+  font-size: 3rem; font-weight: 600;
+  color: rgba(154, 200, 220, 0.85);
+  line-height: 1; display: block;
+}
+.pivot-num-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem; color: rgba(255,255,255,0.35);
+  display: block; margin-top: 0.3rem; margin-bottom: 2rem;
+  letter-spacing: 0.05em;
+}
+
+/* Pullquote */
+.pq {
+  border-left: 3px solid var(--tide-lt);
+  padding: 0.75rem 1.25rem;
+  margin: 2rem 0;
+}
+.pq p {
+  font-size: clamp(1.05rem, 3vw, 1.25rem);
+  font-style: italic; line-height: 1.5;
+}
+.pq cite {
+  display: block;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.62rem; letter-spacing: 0.08em;
+  color: var(--muted); margin-top: 0.4rem; font-style: normal;
+}
+
+/* What it looks like — light strip */
+.what-strip {
+  background: var(--mid);
+  padding: 3rem 1.5rem;
+}
+.what-inner { max-width: 660px; margin: 0 auto; }
+.what-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem; margin-top: 1.5rem;
+}
+.what-card {
+  padding: 1.25rem;
+  background: #fff;
+  border-top: 3px solid var(--tide);
+}
+.wc-over {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.58rem; font-weight: 600;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--tide); margin-bottom: 0.5rem;
+}
+.wc-name {
+  font-size: 1rem; line-height: 1.3;
+  margin-bottom: 0.75rem;
+}
+.wc-stat {
+  display: flex; justify-content: space-between;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem; padding: 0.25rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.wc-stat:last-child { border-bottom: none; }
+.wc-val { font-weight: 600; color: var(--forest); }
+
+/* Final CTA */
+.cta {
+  background: var(--clay);
+  padding: 3.5rem 1.5rem;
+  color: #fff;
+}
+.cta-inner { max-width: 580px; margin: 0 auto; }
+.cta-hed {
+  font-size: clamp(1.8rem, 6vw, 2.8rem);
+  line-height: 1.1; margin-bottom: 1rem;
+}
+.cta-p {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem; line-height: 1.7;
+  color: rgba(255,255,255,0.72); margin-bottom: 0.85rem;
+}
+.cta-links {
+  display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1.75rem;
+}
+.cta-primary {
+  display: inline-block;
+  background: #fff; color: var(--clay);
+  padding: 0.85rem 1.75rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem; font-weight: 600;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  text-decoration: none;
+}
+.cta-secondary {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem; color: rgba(255,255,255,0.65);
+  text-decoration: underline; text-underline-offset: 3px;
+  align-self: center;
+}
+.cta-secondary:hover { color: #fff; }
+
+/* Foot */
+.foot {
+  padding: 1.5rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6rem; color: var(--muted);
+  line-height: 1.7; text-align: center;
+  border-top: 1px solid var(--rule);
+  max-width: 720px; margin: 0 auto;
+}
+
+@media (max-width: 520px) {
+  .what-grid { grid-template-columns: 1fr; }
+  .cta-links { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-over">Norfolk, Virginia · 2026</div>
+    <h1 class="hero-hed">The highest ground<br>in <em>a sinking city.</em></h1>
+    <p class="hero-sub">Norfolk is one of the fastest-subsiding coastal cities in America. Four to five millimeters per year. While neighborhoods flood, the city owns 73 acres at the highest elevation — sitting mostly empty.</p>
+    <div class="hero-stat">
+      <span class="hs-val">4–5mm/year</span>
+      <span class="hs-label">Norfolk subsidence rate — among the fastest on the US East Coast</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hs-val">8–12ft elevation</span>
+      <span class="hs-label">Military Circle site — Flood Zone X, highest ground in the city</span>
+    </div>
+    <div class="hero-stat">
+      <span class="hs-val">73 acres</span>
+      <span class="hs-label">City-owned. Purchased for $10. Mostly empty.</span>
+    </div>
+  </div>
+  <div class="hero-scroll">scroll</div>
+</section>
+
+<div class="section">
+  <div class="section-label">The situation</div>
+  <p class="body-p">Norfolk sits where the Chesapeake Bay meets the Atlantic. The Naval Station, the Port of Virginia, some of the oldest neighborhoods on the East Coast. It's also one of the most flood-vulnerable cities in America — not just from hurricanes, but from the slow, steady combination of sea level rise and land subsidence. The ground is sinking. The water is rising. Both at once.</p>
+  <p class="body-p">The flooding is already happening. Not hypothetically. In Chesterfield Heights, in parts of Larchmont, in the low-lying streets near the Elizabeth River, it happens in bad storms. It happens with unusually high tides. It gets worse every decade. The people who live in those neighborhoods are going to need somewhere to go.</p>
+
+  <div class="pq">
+    <p>"The climate argument and the housing argument are, in Norfolk, the same argument."</p>
+    <cite>— The highest ground should house people, not a failing mall</cite>
+  </div>
+
+  <p class="body-p">In 2022, the Norfolk Economic Development Authority acquired the Military Circle Mall site — 73 acres at the I-264/I-64 nexus — for $10. Not $10 million. Ten dollars. The site sits at 8 to 12 feet elevation. Flood Zone X: the lowest flood risk classification. As the neighborhoods around it face rising water, this site becomes more valuable, not less.</p>
+  <p class="body-p">Three developers proposed plans — Pharrell Williams, Emmitt Smith, Bruce Thompson. Each wanted to buy or long-lease the land. Each was shelved. The current placeholder: a library and a fitness center. Not a vision. A signal that no one in City Hall has decided what this land is for.</p>
+</div>
+
+<div class="pivot">
+  <div class="pivot-inner">
+    <div class="pivot-over">The other way</div>
+    <h2 class="pivot-hed">What if the answer to flooding is ownership?</h2>
+    <p class="pivot-p">The standard response to climate displacement is reactive: wait until people are flooded out, then try to rehouse them. The commons argument is different. Build the resilient community <em>before</em> people need it. Use public land — already owned, already flood-safe — to create housing under permanent community control, priced for the people most likely to need it.</p>
+
+    <span class="pivot-num">$10</span>
+    <span class="pivot-num-label">What the city paid for 73 acres. Land cost: zero. The hard part is already done.</span>
+
+    <p class="pivot-p">The plan is called Eastside Commons. The core rule: the city doesn't sell the land. It transfers it to a Community Land Trust that holds it permanently. Buildings go up, people move in, businesses open — but the land never goes to market. No future city council can sell it. No future developer can buy it. Rising land values don't displace anyone because rising land values flow back into the commons.</p>
+    <p class="pivot-p">Because land is typically 25–40% of any development's total cost, removing it from the equation makes permanently affordable housing financially viable without ongoing subsidy. Three federal programs — LIHTC tax credit equity, Virginia Housing construction loans, CDFI impact debt — are specifically designed for this.</p>
+  </div>
+</div>
+
+<div class="what-strip">
+  <div class="what-inner">
+    <div class="section-label">What this looks like on the ground</div>
+    <p class="body-p">Built from real GIS parcel data and real financial models — 19 confirmed EDA-owned parcels, real Norfolk construction costs, real federal program parameters.</p>
+    <div class="what-grid">
+      <div class="what-card">
+        <div class="wc-over">Own a home</div>
+        <div class="wc-name">CLT ownership condos — buy for less than rent</div>
+        <div class="wc-stat"><span>CLT price</span><span class="wc-val">$150,000</span></div>
+        <div class="wc-stat"><span>Market price</span><span class="wc-val" style="color:var(--muted);">$295,000</span></div>
+        <div class="wc-stat"><span>Monthly payment</span><span class="wc-val">$1,270/mo</span></div>
+        <div class="wc-stat"><span>vs. market rent</span><span class="wc-val" style="color:var(--muted);">$1,650/mo</span></div>
+        <div class="wc-stat"><span>10-year equity</span><span class="wc-val">$36,583</span></div>
+      </div>
+      <div class="what-card">
+        <div class="wc-over">Open a business</div>
+        <div class="wc-name">Storefronts at 43% below market — or buy your space</div>
+        <div class="wc-stat"><span>CLT lease</span><span class="wc-val">$1,200/mo</span></div>
+        <div class="wc-stat"><span>Market rent</span><span class="wc-val" style="color:var(--muted);">$2,100/mo</span></div>
+        <div class="wc-stat"><span>Buy your storefront</span><span class="wc-val">$906/mo own</span></div>
+        <div class="wc-stat"><span>Down payment (SBA)</span><span class="wc-val">$13,500</span></div>
+        <div class="wc-stat"><span>Annual savings</span><span class="wc-val">$10,800/yr</span></div>
+      </div>
+      <div class="what-card">
+        <div class="wc-over">Total scale</div>
+        <div class="wc-name">20-year phased build — no master developer</div>
+        <div class="wc-stat"><span>Total homes</span><span class="wc-val">5,118</span></div>
+        <div class="wc-stat"><span>Permanently affordable</span><span class="wc-val">96%</span></div>
+        <div class="wc-stat"><span>Storefronts</span><span class="wc-val">1,590</span></div>
+        <div class="wc-stat"><span>Annual NOI</span><span class="wc-val">$43.5M</span></div>
+      </div>
+      <div class="what-card">
+        <div class="wc-over">Climate resilience</div>
+        <div class="wc-name">The flooding gets worse. This site is where people go.</div>
+        <div class="wc-stat"><span>Elevation</span><span class="wc-val">8–12ft</span></div>
+        <div class="wc-stat"><span>Flood zone</span><span class="wc-val">Zone X</span></div>
+        <div class="wc-stat"><span>Sponge park</span><span class="wc-val">3 acres</span></div>
+        <div class="wc-stat"><span>Runoff capture</span><span class="wc-val">70%</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-label">The model works. It has a track record.</div>
+  <p class="body-p">The Champlain Housing Trust in Burlington, Vermont has been running this model for 30 years. 2,500 permanently affordable homes. Condos that have been resold at affordable prices through five ownership cycles. Not an experiment — a proven system.</p>
+  <p class="body-p">What's needed in Norfolk is one council vote: rezone Military Circle and charter a Community Land Trust. A Planned Development rezoning — the same vehicle used for East Beach, Harbor Walk, and Broad Creek — replaces 200 individual permits with one master plan. One vote that could permanently lock 5,118 homes into community ownership.</p>
+  <p class="body-p">The Eastside Civic League named the problem. The commons plan names the solution. <strong>The land is already owned. The numbers work. The only missing piece is political will.</strong></p>
+</div>
+
+<div class="cta">
+  <div class="cta-inner">
+    <h2 class="cta-hed">The highest ground should belong to the people who need it most.</h2>
+    <p class="cta-p">An interactive site plan, full financial pro forma, and printable zine — all built from real parcel data, real costs, real programs. This isn't speculation. It's a plan.</p>
+    <div class="cta-links">
+      <a href="./index.html" class="cta-primary">See the full site plan →</a>
+      <a href="./zine.html" class="cta-secondary">Print the zine</a>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  GIS data: gisshare.norfolk.gov + data.norfolk.gov FY26 Assessment · 19 EDA-owned parcels confirmed, 73.4ac ·
+  Subsidence data: NOAA, Virginia Institute of Marine Science ·
+  Financial models: Norfolk 2024 construction costs, HUD FY24 AMI, LIHTC 9% credit, VHDA current rates ·
+  Draft for public discussion · jason-edelman.org/eastside-commons
+</div>
+
+</body>
+</html>
