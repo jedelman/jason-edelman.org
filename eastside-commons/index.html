@@ -558,8 +558,30 @@ details[open] summary::before { content: '▼  '; }
   flex-shrink: 0;
 }
 @media (max-width: 700px) {
-  .plan-tool { grid-template-columns: 1fr; height: auto; }
-  .ctrl-col { border-right: none; border-bottom: 1px solid var(--border); max-height: 60vh; }
+  .plan-tool {
+    grid-template-columns: 1fr;
+    height: auto;
+    /* undo the full-bleed 100vw trick — causes scroll issues on mobile */
+    width: auto;
+    position: static;
+    left: auto; right: auto;
+    margin-left: 0; margin-right: 0;
+  }
+  .ctrl-col {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 50vh;
+  }
+  /* Give the map an explicit height so the SVG doesn't collapse to zero */
+  .map-col {
+    height: 70vw;
+    min-height: 300px;
+    max-height: 480px;
+  }
+  /* Tools bar: smaller text, wrap tightly */
+  .tools-bar { padding: 0.4rem; gap: 0.3rem; }
+  .tool-btn { font-size: 0.58rem; padding: 0.25rem 0.45rem; }
+  .overlay-btn { font-size: 0.58rem; padding: 0.2rem 0.4rem; }
 }
 
 /* ── ANALYSIS VIEWS ── */
