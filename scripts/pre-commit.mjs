@@ -50,17 +50,12 @@ for (const f of REQUIRED) {
 // ── 2. wrangler.toml sanity ──────────────────────────────────────────────────
 console.log('\n[2] wrangler.toml');
 const wrangler = readFileSync(resolve(ROOT, 'wrangler.toml'), 'utf8');
-// [[routes]] is fine when used with custom_domain = true.
-// The dangerous pattern is routes without custom_domain (zone-based routes that
-// wrangler rewrites on every deploy and can break custom domain bindings).
-const routeBlocks = [...wrangler.matchAll(/^\[\[routes\]\][^[]*$/gm)].map(m => m[0]);
-const badRoutes = routeBlocks.filter(b => !b.includes('custom_domain = true'));
-if (badRoutes.length > 0) {
-  fail('wrangler.toml has [[routes]] without custom_domain = true — use custom_domain bindings instead');
-} else if (routeBlocks.length > 0) {
-  pass(`[[routes]] with custom_domain = true (${routeBlocks.length} binding(s))`);
+// [[routes]] causes error 1042 (zone file not found) for custom domains on assets-only workers.
+// Custom domain binding is managed in the Cloudflare dashboard. Do not add [[routes]] here.
+if (/^\[\[routes\]\]/m.test(wrangler)) {
+  fail('wrangler.toml has [[routes]] — this causes error 1042 on assets-only workers. Remove it; manage custom domains in the Cloudflare dashboard.');
 } else {
-  pass('No [[routes]] block (custom domain managed in dashboard)');
+  pass('No [[routes]] block ✓');
 }
 if (!wrangler.includes('[assets]')) {
   fail('wrangler.toml missing [assets] section');

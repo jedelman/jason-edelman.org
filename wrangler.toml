@@ -4,19 +4,3 @@ account_id = "543fde7feabd0af945bfae926ceea7ad"
 
 [assets]
 directory = "public"
-# "none" = serve exact file matches; 404 for unmatched paths.
-# Correct for a multi-page static site where every URL has a real .html file.
-not_found_handling = "none"
-
-# Custom domain bindings — wrangler manages these.
-# The [[routes]] key with custom_domain = true is the correct syntax per
-# https://developers.cloudflare.com/workers/wrangler/configuration/#routes
-[[routes]]
-pattern = "jason-edelman.org"
-custom_domain = true
-
-[[routes]]
-pattern = "www.jason-edelman.org"
-custom_domain = true
-
-# last-deploy: 2026-05-12T18:01:25.869190
