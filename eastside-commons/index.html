@@ -6934,121 +6934,223 @@ function renderFinancialsView(zones) {
     const af = z.units?.affordable_units || 0;
     totalUnits += u;
     if (z.use === 'RESIDENTIAL_MARKET') marketUnits += u;
-    else cltUnits += af;
+    else cltUnits += Math.min(af, u);
   }
   const belowMarketUnits = totalUnits - marketUnits;
-  const cltCondoTarget = Math.round(cltUnits * 0.30);  // Lake Champlain CLT model: ~30% ownership
+  const cltCondoTarget = Math.round(cltUnits * 0.30);
   const rentalUnits = belowMarketUnits - cltCondoTarget;
 
   // ── Storefronts ──
   const retailZones = zones.filter(z => z.use === 'RETAIL_GROUND' || z.in_main_st);
-  // Storefront count: 18ft bay, walk street edge length
   const totalRetailAc = retailZones.reduce((s, z) => s + z.area_ac, 0);
-  const storeFrontCount = Math.round(totalRetailAc * 43560 / (18 * 50));  // 18ft wide × 50ft deep bay
-  const smallPEStorefronts = Math.round(storeFrontCount * 0.75);  // 75% mom-and-pop, 25% anchor
-  const marketRent_sqft = 28;  // Norfolk retail $/sqft/yr (market)
-  const commonsRent_sqft = 16;  // CLT ground lease enables ~43% below market
-  const rentDiscount = Math.round((1 - commonsRent_sqft / marketRent_sqft) * 100);
-  const avgStoreSqft = 900;  // 18ft × 50ft
-  const annualRetailIncome = smallPEStorefronts * commonsRent_sqft * avgStoreSqft / 1000;  // $k/yr
+  const storeFrontCount = Math.round(totalRetailAc * 43560 / (18 * 50));
+  const smallPEStorefronts = Math.round(storeFrontCount * 0.75);
+  const avgStoreSqft = 900;  // 18ft × 50ft bay
 
-  // ── Construction cost (phased) ──
+  // ── Retail scenarios ──
+  const mktRent_sqft = 28;        // Norfolk market NNN $/sqft/yr
+  const cltRent_sqft = 16;        // CLT rate (land cost removed)
+  const mktMonthly  = Math.round(mktRent_sqft * avgStoreSqft / 12);
+  const cltMonthly  = Math.round(cltRent_sqft * avgStoreSqft / 12);
+  const rentSavings = mktMonthly - cltMonthly;
+  const rentDiscount = Math.round((1 - cltRent_sqft / mktRent_sqft) * 100);
+  const annualRetailIncome = smallPEStorefronts * cltRent_sqft * avgStoreSqft / 1000;
+
+  // Storefront buyout — CLT building purchase (land stays in trust)
+  const bldgCostPerSqft = 150;    // commercial construction cost basis
+  const bldgValue = avgStoreSqft * bldgCostPerSqft;  // $135k
+  const sba504Down = 0.10;
+  const sba504DownAmt = Math.round(bldgValue * sba504Down);
+  const sba504Loan = bldgValue - sba504DownAmt;
+  const sbaRate = 0.065, sbaTerm = 20;
+  const sbaMonthly = Math.round(sba504Loan * (sbaRate/12) / (1 - Math.pow(1+sbaRate/12, -sbaTerm*12)));
+  const buyVsLeaseMonthly = cltMonthly - sbaMonthly;  // positive = ownership cheaper than lease
+
+  // ── Housing scenarios ──
+  // CLT condo pricing: construction cost basis minus LIHTC equity already in
+  const lihtcPerUnit = 15000;
+  const cltCondoPrice = AMI.cost_per_unit_affordable - lihtcPerUnit - 20000;  // ~$150k
+  const mktCondoPrice = 295000;   // Norfolk market 2BR condo comparable (2024)
+  const condoDiscount = Math.round((1 - cltCondoPrice / mktCondoPrice) * 100);
+
+  // FHA loan on CLT condo
+  const fhaDown = 0.035;
+  const fhaDownAmt = Math.round(cltCondoPrice * fhaDown);
+  const fhaLoan = cltCondoPrice - fhaDownAmt;
+  const fhaRate = 0.068, fhaTerm = 30;
+  const fhaMI = Math.round(fhaLoan * 0.0085 / 12);  // FHA MIP ~0.85%/yr
+  const fhaPrinInt = Math.round(fhaLoan * (fhaRate/12) / (1 - Math.pow(1+fhaRate/12, -fhaTerm*12)));
+  const propTax = Math.round(cltCondoPrice * 0.011 / 12);   // Norfolk rate ~1.1%
+  const insurance = 85;                                        // homeowner's insurance est.
+  const fhaTotalPITI = fhaPrinInt + fhaMI + propTax + insurance;
+  const mktRent2br = AMI.brackets[4].monthly;  // market rate ~$1,650/mo
+  const ownershipSavings = mktRent2br - fhaTotalPITI;
+
+  // 10-year equity build (resale-restricted: owner keeps 25% of appreciation)
+  const appreciation = 0.035;  // Norfolk 10yr avg appreciation ~3.5%/yr
+  const futureValue = Math.round(cltCondoPrice * Math.pow(1+appreciation, 10));
+  const totalAppreciation = futureValue - cltCondoPrice;
+  const ownerShare = Math.round(totalAppreciation * 0.25);  // CLT formula: owner keeps 25%
+  const principalPaid = Math.round(fhaLoan - fhaLoan * Math.pow(1+fhaRate/12, -(fhaTerm*12)) +
+    fhaLoan * (fhaRate/12) / (1-Math.pow(1+fhaRate/12,-fhaTerm*12)) /
+    (fhaRate/12) * (1 - Math.pow(1+fhaRate/12,-10*12)));  // approx principal after 10yr
+  // simpler: use amortization approximation
+  const balance10yr = Math.round(fhaLoan * Math.pow(1+fhaRate/12, 10*12) -
+    fhaPrinInt * (Math.pow(1+fhaRate/12, 10*12) - 1) / (fhaRate/12));
+  const equityBuilt = Math.round(ownerShare + (fhaLoan - balance10yr));
+
+  // ── Construction cost / financing stack ──
   const phase1Units = Math.round(totalUnits * 0.30);
   const phase2Units = Math.round(totalUnits * 0.33);
   const phase3Units = totalUnits - phase1Units - phase2Units;
-  const costPerUnit = (u, isAffordable) => isAffordable ? AMI.cost_per_unit_affordable : AMI.cost_per_unit_market;
   const phase1Cost = phase1Units * AMI.cost_per_unit_affordable / 1e6;
   const phase2Cost = phase2Units * AMI.cost_per_unit_affordable / 1e6;
   const phase3Cost = phase3Units * AMI.cost_per_unit_market / 1e6;
   const totalCost = phase1Cost + phase2Cost + phase3Cost;
-
-  // ── Financing stack ──
-  const lihtcPerUnit = 15000;  // LIHTC equity per affordable unit (typical, $15k)
   const lihtcTotal = (belowMarketUnits * lihtcPerUnit) / 1e6;
   const landValueLocked = (73.4 * AMI.land_value_per_ac / 1e6).toFixed(1);
-  const cityBondEst = 18;  // sponge park + roads + utilities ($M)
-  const equityGap = (totalCost - lihtcTotal - parseFloat(landValueLocked) * 0 - cityBondEst).toFixed(1);
-
-  // ── Annual operating ──
-  const avgRent60AMI = AMI.brackets[2].monthly;  // 60% AMI rent cap
+  const cityBondEst = 18;
+  const avgRent60AMI = AMI.brackets[2].monthly;
   const annualResIncome = (rentalUnits * avgRent60AMI * 12 / 1e6).toFixed(1);
-  const opexPct = 0.38;  // operating expenses as % of gross income
+  const opexPct = 0.38;
   const noi = ((parseFloat(annualResIncome) + annualRetailIncome / 1000) * (1 - opexPct)).toFixed(1);
 
-  // ── Small private equity framing ──
-  // Each T4 parcel (~0.3ac avg) = $185k/unit × ~25 units ≈ $4.6M deal
+  // ── Small PE deal ──
   const avgParcelUnits = 25;
-  const avgParcelCost = Math.round(avgParcelUnits * AMI.cost_per_unit_affordable / 1000);  // $k
-  const avgLIHTC = Math.round(avgParcelUnits * lihtcPerUnit / 1000);  // $k equity
-  const avgDebt = Math.round((avgParcelCost - avgLIHTC) * 0.65);  // 65% debt
-  const avgEquity = Math.round(avgParcelCost - avgLIHTC - avgDebt);  // residual equity
+  const avgParcelCost = Math.round(avgParcelUnits * AMI.cost_per_unit_affordable / 1000);
+  const avgLIHTC = Math.round(avgParcelUnits * lihtcPerUnit / 1000);
+  const avgDebt = Math.round((avgParcelCost - avgLIHTC) * 0.65);
+  const avgEquity = Math.round(avgParcelCost - avgLIHTC - avgDebt);
 
-  const FR = (label, val, accent=false) =>
-    `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.18rem 0;border-bottom:1px solid oklch(23% 0.008 145);">
-      <span style="color:var(--muted)">${label}</span>
-      <span style="color:${accent?'var(--accent)':'var(--text)'};font-weight:500">${val}</span>
+  // ── Render helpers ──
+  const FR = (label, val, accent=false, note='') =>
+    `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.2rem 0;border-bottom:1px solid oklch(20% 0.006 145);">
+      <span style="color:var(--muted);font-size:0.6rem;">${label}${note?`<span style="font-size:0.52rem;color:oklch(40% 0.006 145);margin-left:0.4rem;">${note}</span>`:''}</span>
+      <span style="color:${accent?'var(--accent)':'var(--text)'};font-weight:600;font-size:0.62rem;white-space:nowrap;margin-left:1rem;">${val}</span>
     </div>`;
-  const FH = (t) => `<div style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin:1.1rem 0 0.4rem;">${t}</div>`;
-  const FN = (t) => `<p style="font-size:0.6rem;color:var(--muted);line-height:1.7;margin:0.4rem 0 0;">${t}</p>`;
+  const FH = (t) => `<div style="font-size:0.55rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin:1.3rem 0 0.5rem;border-left:2px solid var(--accent);padding-left:0.5rem;">${t}</div>`;
+  const FN = (t) => `<p style="font-size:0.58rem;color:oklch(48% 0.008 145);line-height:1.75;margin:0.4rem 0 0;">${t}</p>`;
+  const SCENARIO = (headline, sub) =>
+    `<div style="background:oklch(14% 0.007 145);border:1px solid oklch(22% 0.008 145);border-left:3px solid var(--accent);padding:0.75rem 1rem;margin:0.8rem 0;">
+      <div style="font-family:var(--font-display);font-size:0.85rem;font-weight:700;color:var(--text);line-height:1.2;">${headline}</div>
+      <div style="font-size:0.58rem;color:var(--muted);margin-top:0.2rem;line-height:1.6;">${sub}</div>
+    </div>`;
+  const BIG = (label, val, accent=true) =>
+    `<div style="text-align:center;padding:0.6rem 0.5rem;">
+      <div style="font-family:var(--font-display);font-size:1.6rem;font-weight:900;color:${accent?'var(--accent)':'var(--text)'};">${val}</div>
+      <div style="font-size:0.52rem;color:var(--muted);letter-spacing:0.06em;text-transform:uppercase;margin-top:0.1rem;">${label}</div>
+    </div>`;
 
   el.innerHTML = `
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:2rem 3rem;">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2.5rem 3.5rem;">
 
+    <!-- COL 1: STOREFRONT SCENARIOS -->
     <div>
-      ${FH('Storefronts')}
-      ${FR('Total storefronts', storeFrontCount)}
-      ${FR('Mom-and-pop (75%)', smallPEStorefronts, true)}
-      ${FR('Market rent', `$${marketRent_sqft}/sqft/yr`)}
-      ${FR('CLT rent', `$${commonsRent_sqft}/sqft/yr`, true)}
-      ${FR('Below-market by', `${rentDiscount}%`, true)}
-      ${FR('Annual retail income', `~$${annualRetailIncome.toFixed(0)}k`)}
-      ${FN('CLT ground lease eliminates land cost from rents. Small operators pay what the space earns, not what speculators need to recoup.')}
+      ${FH('Mom-and-pop storefront')}
+      ${SCENARIO(`${smallPEStorefronts} storefronts reserved for small operators`, `18ft × 50ft bays · CLT ground lease · no land speculation`)}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.6rem 0;">
+        ${BIG('market lease/mo', `$${mktMonthly.toLocaleString()}`, false)}
+        ${BIG('CLT lease/mo', `$${cltMonthly.toLocaleString()}`)}
+      </div>
+      ${FR('Monthly savings vs. market', `$${rentSavings.toLocaleString()}/mo`, true)}
+      ${FR('Annual savings', `$${(rentSavings*12).toLocaleString()}/yr`, true)}
+      ${FR('Discount vs. market', `${rentDiscount}%`, true)}
+      ${FR('Lease term', '5-yr renewable')}
+      ${FR('NNN structure', 'Tenant pays taxes, insurance, maintenance')}
+      ${FN('Land cost is removed from the equation entirely. A family restaurant, nail salon, or bookshop pays for the space it uses — not for the city-owned ground beneath it.')}
 
-      ${FH('Annual operating')}
-      ${FR('Gross rental income', `~$${annualResIncome}M/yr`)}
-      ${FR('Retail income', `~$${(annualRetailIncome/1000).toFixed(1)}M/yr`)}
-      ${FR(`NOI (at ${Math.round(opexPct*100)}% opex)`, `~$${noi}M/yr`, true)}
+      ${FH('Storefront buyout option')}
+      ${FN('CLT operators can purchase their building at cost basis. Land stays in trust permanently — no land speculation, ever.')}
+      ${FR('Building value (cost basis)', `$${bldgValue.toLocaleString()}`)}
+      ${FR('SBA 504 down payment (10%)', `$${sba504DownAmt.toLocaleString()}`, true)}
+      ${FR('Loan amount', `$${sba504Loan.toLocaleString()}`)}
+      ${FR('Rate / term', `6.5% / 20yr`)}
+      ${FR('Monthly payment (ownership)', `$${sbaMonthly.toLocaleString()}/mo`, true)}
+      ${FR('vs. leasing same space', `$${cltMonthly.toLocaleString()}/mo`)}
+      ${FR('Ownership cheaper by', `$${Math.abs(buyVsLeaseMonthly).toLocaleString()}/mo`, buyVsLeaseMonthly > 0)}
+      ${FN('SBA 504 is the federal small-business loan program. 10% down, 20-year fixed. You own your shop for less than you pay in rent.')}
     </div>
 
+    <!-- COL 2: HOUSING CONDO SCENARIOS -->
     <div>
-      ${FH('Housing')}
+      ${FH('CLT ownership condos')}
+      ${SCENARIO(`${cltCondoTarget.toLocaleString()} units available as resale-restricted condos`, `Lake Champlain CLT model · you build equity · commons stays affordable`)}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.6rem 0;">
+        ${BIG('market condo', `$${(mktCondoPrice/1000).toFixed(0)}k`, false)}
+        ${BIG('CLT price', `$${(cltCondoPrice/1000).toFixed(0)}k`)}
+      </div>
+      ${FR('Price discount vs. market', `${condoDiscount}%`, true)}
+      ${FR('How?', 'Land removed from price · LIHTC equity applied')}
+      ${FH('Monthly cost breakdown (FHA)')}
+      ${FR('Down payment (3.5% FHA)', `$${fhaDownAmt.toLocaleString()}`)}
+      ${FR('Loan amount', `$${fhaLoan.toLocaleString()}`)}
+      ${FR('Rate / term', `6.8% / 30yr`)}
+      ${FR('Principal + interest', `$${fhaPrinInt.toLocaleString()}/mo`)}
+      ${FR('FHA mortgage insurance', `$${fhaMI.toLocaleString()}/mo`)}
+      ${FR('Property tax (1.1%)', `$${propTax.toLocaleString()}/mo`)}
+      ${FR('Homeowner\'s insurance', `$${insurance}/mo`)}
+      ${FR('Total monthly PITI', `$${fhaTotalPITI.toLocaleString()}/mo`, true)}
+      ${FR('vs. market rent (2BR)', `$${mktRent2br.toLocaleString()}/mo`)}
+      ${FR('Monthly advantage', `$${Math.abs(ownershipSavings).toLocaleString()}/mo ${ownershipSavings>0?'cheaper':'more'}`, ownershipSavings > 0)}
+      ${FN('You pay less than market rent — and you\'re building equity. Not subsidized charity. Ownership.')}
+    </div>
+
+    <!-- COL 3: EQUITY + WEALTH -->
+    <div>
+      ${FH('10-year wealth picture')}
+      ${FN('CLT resale formula: owner keeps 25% of appreciation + all principal paid down. Commons retains 75% to keep the next unit affordable.')}
+      ${FR('Purchase price', `$${cltCondoPrice.toLocaleString()}`)}
+      ${FR('10-yr appreciation (3.5%/yr)', `$${futureValue.toLocaleString()}`)}
+      ${FR('Owner\'s share of appreciation (25%)', `$${ownerShare.toLocaleString()}`, true)}
+      ${FR('Principal paid down (10yr)', `$${(fhaLoan - balance10yr).toLocaleString()}`, true)}
+      ${FR('Total equity built', `$${equityBuilt.toLocaleString()}`, true)}
+      ${FR('Market renter\'s equity (10yr)', '$0', false)}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.8rem 0;">
+        ${BIG('CLT owner equity (10yr)', `$${equityBuilt.toLocaleString()}`)}
+        ${BIG('market renter equity (10yr)', '$0', false)}
+      </div>
+      ${FN('The CLT model doesn\'t give you a windfall. It gives you a foundation. Real wealth — the kind that doesn\'t evict the next person.')}
+
+      ${FH('Site-wide impact')}
       ${FR('Total units', totalUnits.toLocaleString(), true)}
-      ${FR('Below-market', `${belowMarketUnits.toLocaleString()} (${Math.round(belowMarketUnits/totalUnits*100)}%)`, true)}
       ${FR('CLT rental (≤60% AMI)', rentalUnits.toLocaleString())}
-      ${FR('CLT ownership condos', cltCondoTarget.toLocaleString(), true)}
+      ${FR('CLT condos (ownership)', cltCondoTarget.toLocaleString(), true)}
       ${FR('Market-rate', marketUnits.toLocaleString())}
-      ${FN('CLT condos: resale-restricted ownership (Lake Champlain model). Buyers build equity; appreciation stays in the commons. Capped resale = permanently affordable ownership, not a one-time subsidy.')}
+      ${FR('Land value locked in commons', `$${landValueLocked}M`, true)}
+      ${FR('LIHTC equity raised', `~$${lihtcTotal.toFixed(0)}M`)}
+      ${FR('City bond (infrastructure)', `~$${cityBondEst}M`)}
+      ${FR('Total buildout cost', `~$${totalCost.toFixed(0)}M`)}
+      ${FR('NOI at stabilization', `~$${noi}M/yr`, true)}
     </div>
 
+    <!-- COL 4: SMALL PE + PHASING -->
     <div>
-      ${FH('Phased construction')}
+      ${FH('Small developer deal structure')}
+      ${SCENARIO('Each T4 parcel is a standalone deal', 'Small enough for a cooperative, family office, or BIPOC developer. Not requiring institutional scale.')}
+      ${FR('Avg parcel size', '~0.3ac')}
+      ${FR('Avg units / parcel', `${avgParcelUnits} units`)}
+      ${FR('Total construction cost', `~$${avgParcelCost}k`)}
+      ${FR('LIHTC tax credit equity', `~$${avgLIHTC}k`, true)}
+      ${FR('VHDA construction loan (65%)', `~$${avgDebt}k`)}
+      ${FR('Developer equity required', `~$${avgEquity}k`, true)}
+      ${FN(`$${avgEquity}k to develop ${avgParcelUnits} permanently affordable homes. That's a credit union, a church, a worker co-op. Not Blackstone.`)}
+
+      ${FH('Phased buildout')}
       ${FR('Phase 1 (2026–28)', `${phase1Units} units · ~$${phase1Cost.toFixed(0)}M`)}
       ${FR('Phase 2 (2029–32)', `${phase2Units} units · ~$${phase2Cost.toFixed(0)}M`)}
-      ${FR('Phase 3 (2033+)', `${phase3Units} units · ~$${phase3Cost.toFixed(0)}M`)}
+      ${FR('Phase 3 (2033+, Tide opens)', `${phase3Units} units · ~$${phase3Cost.toFixed(0)}M`)}
       ${FR('Total buildout', `~$${totalCost.toFixed(0)}M`)}
-
-      ${FH('Financing stack')}
-      ${FR('Land cost (CLT)', '$0', true)}
-      ${FR('Land value locked', `$${landValueLocked}M`)}
-      ${FR('LIHTC equity', `~$${lihtcTotal.toFixed(0)}M`)}
-      ${FR('City infrastructure bond', `~$${cityBondEst}M`)}
-      ${FR('VHDA / CDFI debt', 'balance')}
-      ${FN('LIHTC: federal Low Income Housing Tax Credit. VHDA: Virginia Housing Development Authority below-market loans. CDFI: patient capital. City bond: sponge park, spine road, utilities (~$18M est.).')}
-    </div>
-
-    <div>
-      ${FH('Small private equity deal')}
-      ${FN('Each T4 parcel (~0.3ac) is a standalone deal. Small enough for a family office, cooperative, or BIPOC developer — not requiring institutional scale.')}
-      ${FR('Avg units / parcel', `${avgParcelUnits} units`)}
-      ${FR('Avg total cost', `~$${avgParcelCost}k`)}
-      ${FR('LIHTC equity in', `~$${avgLIHTC}k`, true)}
-      ${FR('VHDA debt (65%)', `~$${avgDebt}k`)}
-      ${FR('Developer equity req.', `~$${avgEquity}k`, true)}
-      ${FN(`~$${avgEquity}k equity buy-in per parcel. Accessible to community development orgs, credit unions, and small operators — not Blackstone.`)}
+      ${FR('Storefronts (total)', storeFrontCount)}
+      ${FR('Mom-and-pop operators', `${smallPEStorefronts} (${rentDiscount}% below market)`, true)}
+      ${FR('Annual retail income', `~$${annualRetailIncome.toFixed(0)}k`)}
+      ${FR('Annual residential income', `~$${annualResIncome}M`)}
+      ${FR('NOI', `~$${noi}M/yr`, true)}
+      ${FN('Phase 3 timing aligns with Tide light rail extension (~2033). Transit-adjacent density at that point is self-financing at market. Phases 1–2 are the commons investment. Phase 3 is the return.')}
     </div>
 
   </div>`;
 }
+
 
 function updateAnalysisViews() {
   const zones = window._lastPipelineZones || [];
