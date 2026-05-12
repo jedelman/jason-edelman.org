@@ -6320,38 +6320,146 @@ const EC3D = {
   makeGreenSurface(bds, use) {
     const { minX, maxX, minZ, maxZ } = bds;
     const W = maxX - minX, D = maxZ - minZ;
+    const cx = (minX + maxX) / 2, cz = -(minZ + maxZ) / 2;
     const segs = Math.max(4, Math.min(20, Math.floor(Math.max(W, D) / 3)));
 
+    // Ground plane with gentle undulation
     const geo = new THREE.PlaneGeometry(W, D, segs, segs);
     const pos = geo.attributes.position;
-    const AMP = use === 'GREEN_PASSIVE' ? 0.6 : 0.3;
+    const AMP = use === 'GREEN_PASSIVE' ? 0.5 : 0.2;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), z = pos.getZ(i);
-      pos.setY(i, Math.sin(x * 0.7) * Math.cos(z * 0.7) * AMP);
+      pos.setY(i, Math.sin(x * 0.6) * Math.cos(z * 0.6) * AMP);
     }
     geo.computeVertexNormals();
 
-    const color = use === 'GREEN_PASSIVE' ? 0x1a6828 : 0x28a83a;
-    const mat = new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
+    const groundColor = use === 'GREEN_PASSIVE' ? 0x1a6828 : 0x2a9840;
+    const mat = new THREE.MeshLambertMaterial({ color: groundColor, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set((minX + maxX) / 2, 0.08, -(minZ + maxZ) / 2);
+    mesh.position.set(cx, 0.08, cz);
     mesh.receiveShadow = true;
 
     const meshes = [mesh];
-    const shrubMat = new THREE.MeshLambertMaterial({ color: use === 'GREEN_PASSIVE' ? 0x145a22 : 0x22903a });
-    const rng = (seed) => { let s=seed; return () => { s=(s*16807+0)%2147483647; return (s-1)/2147483646; }; };
-    const rand = rng(Math.round(minX*100+minZ*100));
-    const shrubCount = Math.min(16, Math.floor(W * D / 60));
-    for (let i = 0; i < shrubCount; i++) {
-      const sx = (minX + maxX) / 2 + (rand() - 0.5) * W * 0.78;
-      const sz = -(minZ + maxZ) / 2 + (rand() - 0.5) * D * 0.78;
-      const r = 0.04 + rand() * 0.06;
-      const sg = new THREE.SphereGeometry(r, 5, 4);
-      const sm = new THREE.Mesh(sg, shrubMat);
-      sm.position.set(sx, r * 0.6 + 0.08, sz);
-      meshes.push(sm);
+    const rng = (seed) => {
+      let s = seed;
+      return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
+    };
+    const rand = rng(Math.round(minX * 100 + minZ * 100));
+
+    // Shared materials (reused across all trees in this zone)
+    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5a3a20 });
+    const canopyMat = new THREE.MeshLambertMaterial({
+      color: use === 'GREEN_PASSIVE' ? 0x1e6830 : 0x2e8c40,
+      transparent: true, opacity: 0.88,
+    });
+    const shrubMat = new THREE.MeshLambertMaterial({
+      color: use === 'GREEN_PASSIVE' ? 0x145a22 : 0x22903a,
+    });
+
+    if (use === 'GREEN_ACTIVE') {
+      // ── Park trees: grid pattern with jitter, El Born style ──────────────
+      // Larger spacing = more open park feel; smaller = dense grove
+      const TREE_SPACING = 12;  // world units between trees
+      const colCount = Math.max(1, Math.floor(W / TREE_SPACING));
+      const rowCount = Math.max(1, Math.floor(D / TREE_SPACING));
+
+      for (let r = 0; r < rowCount; r++) {
+        for (let c = 0; c < colCount; c++) {
+          // Grid position with jitter so it reads as natural, not planted
+          const jx = (rand() - 0.5) * TREE_SPACING * 0.35;
+          const jz = (rand() - 0.5) * TREE_SPACING * 0.35;
+          const tx = minX + (c + 0.5) * (W / colCount) + jx;
+          const tz = -(minZ + (r + 0.5) * (D / rowCount) + jz);
+
+          // Trunk: tapered cylinder, slight random height variation
+          const trunkH = 3.5 + rand() * 2.0;
+          const trunkGeo = new THREE.CylinderGeometry(0.18, 0.28, trunkH, 7);
+          const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+          trunk.position.set(tx, trunkH / 2 + 0.1, tz);
+          trunk.castShadow = true;
+          meshes.push(trunk);
+
+          // Canopy: two overlapping spheres for organic shape
+          const canR = 3.2 + rand() * 1.8;
+          const canGeo = new THREE.SphereGeometry(canR, 8, 6);
+          const canopy = new THREE.Mesh(canGeo, canopyMat);
+          canopy.position.set(tx + (rand()-0.5)*0.4, trunkH + canR * 0.55, tz + (rand()-0.5)*0.4);
+          canopy.scale.y = 0.75 + rand() * 0.2;  // slightly flattened
+          canopy.castShadow = true;
+          meshes.push(canopy);
+
+          // Second canopy lobe for variety
+          if (rand() > 0.4) {
+            const can2R = canR * 0.7;
+            const can2Geo = new THREE.SphereGeometry(can2R, 7, 5);
+            const canopy2 = new THREE.Mesh(can2Geo, canopyMat);
+            canopy2.position.set(
+              tx + (rand()-0.5)*canR*0.8,
+              trunkH + can2R * 0.5 + rand() * 1.5,
+              tz + (rand()-0.5)*canR*0.8
+            );
+            canopy2.scale.y = 0.7;
+            meshes.push(canopy2);
+          }
+        }
+      }
+
+      // Scattered understory shrubs between trees
+      const shrubCount = Math.min(20, Math.floor(W * D / 80));
+      for (let i = 0; i < shrubCount; i++) {
+        const sx = minX + rand() * W;
+        const sz = -(minZ + rand() * D);
+        const sr = 0.6 + rand() * 0.8;
+        const sg = new THREE.SphereGeometry(sr, 6, 5);
+        const sm = new THREE.Mesh(sg, shrubMat);
+        sm.position.set(sx, sr * 0.55 + 0.1, sz);
+        sm.scale.y = 0.65;
+        meshes.push(sm);
+      }
+
+    } else {
+      // ── Wetland: irregular scattered trees + reed clumps ─────────────────
+      const treeCount = Math.min(12, Math.max(3, Math.floor(W * D / 200)));
+      for (let i = 0; i < treeCount; i++) {
+        const tx = minX + 0.1 * W + rand() * W * 0.8;
+        const tz = -(minZ + 0.1 * D + rand() * D * 0.8);
+        const trunkH = 4.0 + rand() * 3.0;
+
+        // Wetland trees: more slender, vertical (baldcypress / river birch form)
+        const trTapered = new THREE.CylinderGeometry(0.12, 0.22, trunkH, 6);
+        const tr = new THREE.Mesh(trTapered, trunkMat);
+        tr.position.set(tx, trunkH / 2 + 0.1, tz);
+        tr.castShadow = true;
+        meshes.push(tr);
+
+        // Narrower, taller canopy for wetland species
+        const canR = 2.0 + rand() * 2.0;
+        const canGeo = new THREE.SphereGeometry(canR, 7, 6);
+        const can = new THREE.Mesh(canGeo, canopyMat);
+        can.position.set(tx, trunkH + canR * 0.6, tz);
+        can.scale.set(0.7, 1.1, 0.7);  // taller than wide (cypress form)
+        can.castShadow = true;
+        meshes.push(can);
+      }
+
+      // Reed / sedge clumps: vertical thin cylinders in groups
+      const clumpCount = Math.min(24, Math.floor(W * D / 50));
+      const reedMat = new THREE.MeshLambertMaterial({ color: 0x4a7838 });
+      for (let i = 0; i < clumpCount; i++) {
+        const cx2 = minX + rand() * W;
+        const cz2 = -(minZ + rand() * D);
+        const reedH = 0.8 + rand() * 1.4;
+        for (let j = 0; j < 4 + Math.floor(rand() * 4); j++) {
+          const rg = new THREE.CylinderGeometry(0.04, 0.06, reedH, 4);
+          const rm = new THREE.Mesh(rg, reedMat);
+          rm.position.set(cx2 + (rand()-0.5)*1.0, reedH/2+0.05, cz2 + (rand()-0.5)*1.0);
+          rm.rotation.z = (rand()-0.5)*0.2;
+          meshes.push(rm);
+        }
+      }
     }
+
     return meshes;
   },
 
@@ -6793,6 +6901,27 @@ const EC3D = {
           const can = new THREE.Mesh(new THREE.SphereGeometry(2.8, 7, 5), mTreeCan);
           can.position.set(x, 4.8, z);
           addF(can);
+        }
+
+      } else if (type === 'STREET' || type === 'RESIDENTIAL_EDGE' || type === 'CIVIC_EDGE') {
+        // Street trees: double row, one each side, El Born spacing
+        const samples = sampleEdge(outer, 14);
+        for (const { x, z, nx, nz } of samples) {
+          for (const side of [1, -1]) {
+            const ox = x + nx * side * 2.5;
+            const oz = z + nz * side * 2.5;
+            const trunkH = 4.5 + (Math.sin(ox * 0.3 + oz * 0.3) + 1) * 1.5;
+            const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, trunkH, 7), mTreeTrk);
+            tr.position.set(ox, trunkH / 2 + 0.1, oz);
+            tr.castShadow = true;
+            addF(tr);
+            const canR = 2.8 + Math.abs(Math.sin(ox * 0.5)) * 1.4;
+            const can = new THREE.Mesh(new THREE.SphereGeometry(canR, 8, 6), mTreeCan);
+            can.position.set(ox, trunkH + canR * 0.52, oz);
+            can.scale.y = 0.72;
+            can.castShadow = true;
+            addF(can);
+          }
         }
 
       } else if (type === 'TRANSIT_ACT') {
