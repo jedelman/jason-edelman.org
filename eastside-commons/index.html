@@ -6130,6 +6130,32 @@ const EC3D = {
     return { minX, maxX, minZ, maxZ, w: maxX - minX, d: maxZ - minZ, cx: (minX+maxX)/2, cz: (minZ+maxZ)/2 };
   },
 
+  // Inset a polygon (array of [x,z] world coords) by `dist` units
+  insetPoly(pts, dist) {
+    if (!pts || pts.length < 3) return pts;
+    // Simple centroid-based shrink — works for convex/near-convex zones
+    let cx = 0, cz = 0;
+    for (const [x, z] of pts) { cx += x; cz += z; }
+    cx /= pts.length; cz /= pts.length;
+    return pts.map(([x, z]) => {
+      const dx = x - cx, dz = z - cz;
+      const len = Math.hypot(dx, dz);
+      if (len < 0.001) return [x, z];
+      const scale = Math.max(0, (len - dist) / len);
+      return [cx + dx * scale, cz + dz * scale];
+    });
+  },
+
+  // Build a THREE.Shape from inset world-space points
+  makeShapeFromWorld(worldPts) {
+    if (!worldPts || worldPts.length < 3) return null;
+    const shape = new THREE.Shape();
+    shape.moveTo(worldPts[0][0], worldPts[0][1]);
+    for (let i = 1; i < worldPts.length; i++) shape.lineTo(worldPts[i][0], worldPts[i][1]);
+    shape.closePath();
+    return shape;
+  },
+
   // ── Initialise ────────────────────────────────────────────────────────────
   init(canvasEl) {
     this.canvas = canvasEl;
@@ -6420,7 +6446,7 @@ const EC3D = {
     if (use === 'GREEN_ACTIVE') {
       // ── Park trees: grid pattern with jitter, El Born style ──────────────
       // Larger spacing = more open park feel; smaller = dense grove
-      const TREE_SPACING = 12;  // world units between trees
+      const TREE_SPACING = 8;  // tighter = denser canopy, overlapping at edges
       const colCount = Math.max(1, Math.floor(W / TREE_SPACING));
       const rowCount = Math.max(1, Math.floor(D / TREE_SPACING));
 
@@ -6450,7 +6476,7 @@ const EC3D = {
           meshes.push(canopy);
 
           // Second canopy lobe for variety
-          if (rand() > 0.4) {
+          if (rand() > 0.15) {  // most trees get a second canopy lobe
             const can2R = canR * 0.7;
             const can2Geo = new THREE.SphereGeometry(can2R, 7, 5);
             const canopy2 = new THREE.Mesh(can2Geo, canopyMat);
@@ -6466,7 +6492,7 @@ const EC3D = {
       }
 
       // Scattered understory shrubs between trees
-      const shrubCount = Math.min(20, Math.floor(W * D / 80));
+      const shrubCount = Math.min(40, Math.floor(W * D / 40));
       for (let i = 0; i < shrubCount; i++) {
         const sx = minX + rand() * W;
         const sz = -(minZ + rand() * D);
@@ -6480,7 +6506,7 @@ const EC3D = {
 
     } else {
       // ── Wetland: irregular scattered trees + reed clumps ─────────────────
-      const treeCount = Math.min(12, Math.max(3, Math.floor(W * D / 200)));
+      const treeCount = Math.min(20, Math.max(4, Math.floor(W * D / 120)));
       for (let i = 0; i < treeCount; i++) {
         const tx = minX + 0.1 * W + rand() * W * 0.8;
         const tz = -(minZ + 0.1 * D + rand() * D * 0.8);
@@ -6504,7 +6530,7 @@ const EC3D = {
       }
 
       // Reed / sedge clumps: vertical thin cylinders in groups
-      const clumpCount = Math.min(24, Math.floor(W * D / 50));
+      const clumpCount = Math.min(60, Math.floor(W * D / 20));
       const reedMat = new THREE.MeshLambertMaterial({ color: 0x4a7838 });
       for (let i = 0; i < clumpCount; i++) {
         const cx2 = minX + rand() * W;
@@ -6671,9 +6697,38 @@ const EC3D = {
         continue;
       }
 
-      // ── Base building extrusion ──
+      // ── Ground plane at full zone footprint (shows walkway/setback) ──
+      const gndHoles = (zone.poly.holes || []).filter(h => h && h.length >= 3);
+      const gndShape = this.makeShape(zone.poly.outer, gndHoles);
+      if (gndShape) {
+        const gndGeo = new THREE.ShapeGeometry(gndShape);
+        const gndTexKey = use === 'RETAIL_GROUND' ? 'herringbone'
+          : use === 'TRANSIT' ? 'aggregate'
+          : use === 'WORKSHOP_FABRICATION' || use === 'DEPOT_YARD' ? 'soil'
+          : 'aggregate';
+        const gndTex = this.tex(gndTexKey, 6, 6);
+        const gndMat = new THREE.MeshLambertMaterial({
+          color: gndTex ? 0xffffff : 0x2a2210,
+          map: gndTex || null,
+        });
+        const gndMesh = new THREE.Mesh(gndGeo, gndMat);
+        gndMesh.rotation.x = -Math.PI / 2;
+        gndMesh.position.y = 0.05;
+        gndMesh.receiveShadow = true;
+        this.scene.add(gndMesh);
+      }
+
+      // ── Base building extrusion — inset from zone edge for visible setback ──
+      const BLDG_SETBACK = (use === 'CIVIC' || use === 'RESEARCH') ? 2.5
+        : (use === 'RETAIL_GROUND' || use === 'MARKET_HALL') ? 1.0
+        : 1.8;  // residential / live-work default
+      const outerW = zone.poly.outer.map(([sx, sy]) => {
+        const [wx, wz] = this.svgTo3D(sx, sy);
+        return [wx, -wz];
+      });
+      const insetW = this.insetPoly(outerW, BLDG_SETBACK);
       const holes = (zone.poly.holes || []).filter(h => h && h.length >= 3);
-      const shape = this.makeShape(zone.poly.outer, holes);
+      const shape = this.makeShapeFromWorld(insetW);
       if (!shape) continue;
 
       const bevel = height > FLOOR_H;
