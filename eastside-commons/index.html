@@ -764,7 +764,6 @@ details[open] summary::before { content: '▼  '; }
           <button class="analysis-tab active" onclick="switchAnalysis('people', this)">People</button>
           <button class="analysis-tab" onclick="switchAnalysis('parcels', this)">Parcels</button>
           <button class="analysis-tab" onclick="switchAnalysis('access', this)">Access</button>
-          <button class="analysis-tab" onclick="switchAnalysis('financials', this)">Financials</button>
           <button class="analysis-tab" onclick="switchAnalysis('save', this)">Save</button>
         </div>
         <div id="av-people" class="analysis-view active">
@@ -779,11 +778,6 @@ details[open] summary::before { content: '▼  '; }
           <div class="av-header">Transit &amp; walkability</div>
           <div id="av-access-content">Run the pipeline to see access analysis.</div>
         </div>
-        <div id="av-financials" class="analysis-view">
-          <div class="av-header">Pro Forma</div>
-          <div id="av-financials-content">Run the pipeline to see financial analysis.</div>
-        </div>
-
         <div id="av-save" class="analysis-view">
           <div class="av-header">Save this layout</div>
           <p style="margin-bottom:0.5rem;line-height:1.6;">
@@ -857,6 +851,16 @@ details[open] summary::before { content: '▼  '; }
     </div><!-- /map-col -->
 
   </div><!-- /plan-tool -->
+
+  <!-- FINANCIALS REPORT — full width, below fold -->
+  <div id="financials-report" style="margin-top:2rem;">
+    <div style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin-bottom:1.2rem;">
+      Pro Forma — derived from plan geometry
+    </div>
+    <div id="financials-report-content" style="color:var(--muted);font-family:var(--font-mono);font-size:0.65rem;">
+      Run the pipeline above to generate the financial report.
+    </div>
+  </div>
 
   <!-- ZINE DOWNLOAD -->
   <a href="/eastside-commons/zine" target="_blank" style="display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:0.85rem 1.1rem;background:var(--surface);border:1px solid var(--border);text-decoration:none;color:inherit;">
@@ -6059,7 +6063,7 @@ const EC3D = {
     for (let i = 0; i < shrubCount; i++) {
       const sx = (minX + maxX) / 2 + (rand() - 0.5) * W * 0.78;
       const sz = -(minZ + maxZ) / 2 + (rand() - 0.5) * D * 0.78;
-      const r = 0.4 + rand() * 0.7;
+      const r = 0.04 + rand() * 0.06;
       const sg = new THREE.SphereGeometry(r, 5, 4);
       const sm = new THREE.Mesh(sg, shrubMat);
       sm.position.set(sx, r * 0.6 + 0.08, sz);
@@ -6754,8 +6758,9 @@ function renderPeopleView(zones) {
 
   for (const z of zones) {
     if (!z.units || !z.use.startsWith('RESIDENTIAL')) continue;
-    if (z.district?.includes('COURTYARD')) continue;  // courtyard zones not housing
+    if (z.district?.includes('COURTYARD')) continue;
     const u = z.units.unit_count;
+    const af = Math.min(z.units.affordable_units, u);  // clamp: never exceed unit_count
     const af = z.units.affordable_units;
     total += u;
     affordable += af;
@@ -6914,7 +6919,7 @@ function switchAnalysis(view, btn) {
 }
 
 function renderFinancialsView(zones) {
-  const el = document.getElementById('av-financials-content');
+  const el = document.getElementById('financials-report-content');
   if (!el || !zones) return;
 
   const AMI = NORFOLK_AMI;
@@ -6976,76 +6981,71 @@ function renderFinancialsView(zones) {
   const avgDebt = Math.round((avgParcelCost - avgLIHTC) * 0.65);  // 65% debt
   const avgEquity = Math.round(avgParcelCost - avgLIHTC - avgDebt);  // residual equity
 
+  const FR = (label, val, accent=false) =>
+    `<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.18rem 0;border-bottom:1px solid oklch(23% 0.008 145);">
+      <span style="color:var(--muted)">${label}</span>
+      <span style="color:${accent?'var(--accent)':'var(--text)'};font-weight:500">${val}</span>
+    </div>`;
+  const FH = (t) => `<div style="font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--accent);margin:1.1rem 0 0.4rem;">${t}</div>`;
+  const FN = (t) => `<p style="font-size:0.6rem;color:var(--muted);line-height:1.7;margin:0.4rem 0 0;">${t}</p>`;
+
   el.innerHTML = `
-    <div class="av-header">Storefronts</div>
-    <div class="av-row"><span class="av-key">Total storefronts</span><span class="av-val accent">${storeFrontCount}</span></div>
-    <div class="av-row"><span class="av-key">Mom-and-pop (75%)</span><span class="av-val accent">${smallPEStorefronts}</span></div>
-    <div class="av-row"><span class="av-key">Market rent</span><span class="av-val">$${marketRent_sqft}/sqft/yr</span></div>
-    <div class="av-row"><span class="av-key">CLT rent</span><span class="av-val accent">$${commonsRent_sqft}/sqft/yr</span></div>
-    <div class="av-row"><span class="av-key">Below-market by</span><span class="av-val accent">${rentDiscount}%</span></div>
-    <div class="av-row"><span class="av-key">Annual retail income</span><span class="av-val">~$${annualRetailIncome.toFixed(0)}k</span></div>
-    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-top:0.2rem;">
-      CLT ground lease eliminates land cost from rents. Small operators pay
-      what the space earns, not what speculators need to recoup.
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:2rem 3rem;">
+
+    <div>
+      ${FH('Storefronts')}
+      ${FR('Total storefronts', storeFrontCount)}
+      ${FR('Mom-and-pop (75%)', smallPEStorefronts, true)}
+      ${FR('Market rent', `$${marketRent_sqft}/sqft/yr`)}
+      ${FR('CLT rent', `$${commonsRent_sqft}/sqft/yr`, true)}
+      ${FR('Below-market by', `${rentDiscount}%`, true)}
+      ${FR('Annual retail income', `~$${annualRetailIncome.toFixed(0)}k`)}
+      ${FN('CLT ground lease eliminates land cost from rents. Small operators pay what the space earns, not what speculators need to recoup.')}
+
+      ${FH('Annual operating')}
+      ${FR('Gross rental income', `~$${annualResIncome}M/yr`)}
+      ${FR('Retail income', `~$${(annualRetailIncome/1000).toFixed(1)}M/yr`)}
+      ${FR(`NOI (at ${Math.round(opexPct*100)}% opex)`, `~$${noi}M/yr`, true)}
     </div>
 
-    <hr class="av-divider">
-    <div class="av-header">Housing</div>
-    <div class="av-row"><span class="av-key">Total units</span><span class="av-val accent">${totalUnits.toLocaleString()}</span></div>
-    <div class="av-row"><span class="av-key">Below-market</span><span class="av-val accent">${belowMarketUnits.toLocaleString()} (${Math.round(belowMarketUnits/totalUnits*100)}%)</span></div>
-    <div class="av-row"><span class="av-key">CLT rental (≤60% AMI)</span><span class="av-val">${rentalUnits.toLocaleString()}</span></div>
-    <div class="av-row"><span class="av-key">CLT ownership condos</span><span class="av-val accent">${cltCondoTarget.toLocaleString()}</span></div>
-    <div class="av-row"><span class="av-key">Market-rate</span><span class="av-val">${marketUnits.toLocaleString()}</span></div>
-    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-top:0.2rem;">
-      CLT condos: resale-restricted ownership (Lake Champlain model).
-      Buyers build equity; appreciation stays in the commons.
-      Capped resale = permanently affordable ownership, not a one-time subsidy.
+    <div>
+      ${FH('Housing')}
+      ${FR('Total units', totalUnits.toLocaleString(), true)}
+      ${FR('Below-market', `${belowMarketUnits.toLocaleString()} (${Math.round(belowMarketUnits/totalUnits*100)}%)`, true)}
+      ${FR('CLT rental (≤60% AMI)', rentalUnits.toLocaleString())}
+      ${FR('CLT ownership condos', cltCondoTarget.toLocaleString(), true)}
+      ${FR('Market-rate', marketUnits.toLocaleString())}
+      ${FN('CLT condos: resale-restricted ownership (Lake Champlain model). Buyers build equity; appreciation stays in the commons. Capped resale = permanently affordable ownership, not a one-time subsidy.')}
     </div>
 
-    <hr class="av-divider">
-    <div class="av-header">Phased construction</div>
-    <div class="av-row"><span class="av-key">Phase 1 (2026–28)</span><span class="av-val">${phase1Units} units · ~$${phase1Cost.toFixed(0)}M</span></div>
-    <div class="av-row"><span class="av-key">Phase 2 (2029–32)</span><span class="av-val">${phase2Units} units · ~$${phase2Cost.toFixed(0)}M</span></div>
-    <div class="av-row"><span class="av-key">Phase 3 (2033+)</span><span class="av-val">${phase3Units} units · ~$${phase3Cost.toFixed(0)}M</span></div>
-    <div class="av-row"><span class="av-key">Total buildout cost</span><span class="av-val">~$${totalCost.toFixed(0)}M</span></div>
+    <div>
+      ${FH('Phased construction')}
+      ${FR('Phase 1 (2026–28)', `${phase1Units} units · ~$${phase1Cost.toFixed(0)}M`)}
+      ${FR('Phase 2 (2029–32)', `${phase2Units} units · ~$${phase2Cost.toFixed(0)}M`)}
+      ${FR('Phase 3 (2033+)', `${phase3Units} units · ~$${phase3Cost.toFixed(0)}M`)}
+      ${FR('Total buildout', `~$${totalCost.toFixed(0)}M`)}
 
-    <hr class="av-divider">
-    <div class="av-header">Financing stack</div>
-    <div class="av-row"><span class="av-key">Land cost (CLT)</span><span class="av-val accent">$0</span></div>
-    <div class="av-row"><span class="av-key">Land value locked</span><span class="av-val">$${landValueLocked}M</span></div>
-    <div class="av-row"><span class="av-key">LIHTC equity</span><span class="av-val">~$${lihtcTotal.toFixed(0)}M</span></div>
-    <div class="av-row"><span class="av-key">City infrastructure bond</span><span class="av-val">~$${cityBondEst}M</span></div>
-    <div class="av-row"><span class="av-key">VHDA / CDFI debt</span><span class="av-val">balance</span></div>
-    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-top:0.2rem;">
-      LIHTC: Low Income Housing Tax Credit (federal). VHDA: Virginia Housing
-      Development Authority below-market construction loans. CDFI: Community
-      Development Financial Institution patient capital. City bond covers
-      sponge park, spine road, utilities (~$18M est.).
+      ${FH('Financing stack')}
+      ${FR('Land cost (CLT)', '$0', true)}
+      ${FR('Land value locked', `$${landValueLocked}M`)}
+      ${FR('LIHTC equity', `~$${lihtcTotal.toFixed(0)}M`)}
+      ${FR('City infrastructure bond', `~$${cityBondEst}M`)}
+      ${FR('VHDA / CDFI debt', 'balance')}
+      ${FN('LIHTC: federal Low Income Housing Tax Credit. VHDA: Virginia Housing Development Authority below-market loans. CDFI: patient capital. City bond: sponge park, spine road, utilities (~$18M est.).')}
     </div>
 
-    <hr class="av-divider">
-    <div class="av-header">Annual operating</div>
-    <div class="av-row"><span class="av-key">Gross rental income</span><span class="av-val">~$${annualResIncome}M/yr</span></div>
-    <div class="av-row"><span class="av-key">Retail income</span><span class="av-val">~$${(annualRetailIncome/1000).toFixed(1)}M/yr</span></div>
-    <div class="av-row"><span class="av-key">NOI (at ${Math.round(opexPct*100)}% opex)</span><span class="av-val accent">~$${noi}M/yr</span></div>
+    <div>
+      ${FH('Small private equity deal')}
+      ${FN('Each T4 parcel (~0.3ac) is a standalone deal. Small enough for a family office, cooperative, or BIPOC developer — not requiring institutional scale.')}
+      ${FR('Avg units / parcel', `${avgParcelUnits} units`)}
+      ${FR('Avg total cost', `~$${avgParcelCost}k`)}
+      ${FR('LIHTC equity in', `~$${avgLIHTC}k`, true)}
+      ${FR('VHDA debt (65%)', `~$${avgDebt}k`)}
+      ${FR('Developer equity req.', `~$${avgEquity}k`, true)}
+      ${FN(`~$${avgEquity}k equity buy-in per parcel. Accessible to community development orgs, credit unions, and small operators — not Blackstone.`)}
+    </div>
 
-    <hr class="av-divider">
-    <div class="av-header">Small private equity deal</div>
-    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-bottom:0.3rem;">
-      Each T4 parcel (~0.3ac) is a standalone deal. Size is intentional:
-      small enough for a family office, cooperative, or BIPOC developer —
-      not requiring institutional scale.
-    </div>
-    <div class="av-row"><span class="av-key">Avg units / parcel</span><span class="av-val">${avgParcelUnits} units</span></div>
-    <div class="av-row"><span class="av-key">Avg total cost</span><span class="av-val">~$${avgParcelCost}k</span></div>
-    <div class="av-row"><span class="av-key">LIHTC equity in</span><span class="av-val accent">~$${avgLIHTC}k</span></div>
-    <div class="av-row"><span class="av-key">VHDA debt (65%)</span><span class="av-val">~$${avgDebt}k</span></div>
-    <div class="av-row"><span class="av-key">Developer equity req.</span><span class="av-val">~$${avgEquity}k</span></div>
-    <div style="font-size:0.55rem;color:var(--muted);line-height:1.6;margin-top:0.2rem;">
-      ~$${avgEquity}k equity buy-in per parcel. Accessible to community
-      development orgs, credit unions, and small operators — not Blackstone.
-    </div>
-  `;
+  </div>`;
 }
 
 function updateAnalysisViews() {
