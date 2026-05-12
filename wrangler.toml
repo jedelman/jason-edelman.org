@@ -11,3 +11,12 @@ account_id = "543fde7feabd0af945bfae926ceea7ad"
 [assets]
 directory = "public"
 not_found_handling = "404-page"
+
+# Custom domain — must be declared here or wrangler deploy will wipe the dashboard binding
+[[routes]]
+pattern = "jason-edelman.org"
+custom_domain = true
+
+[[routes]]
+pattern = "www.jason-edelman.org"
+custom_domain = true
