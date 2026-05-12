@@ -5506,13 +5506,16 @@ async function triggerPipeline() {
             if (wrap2d) wrap2d.style.display = 'none';
             if (wrap3d) wrap3d.style.display = '';
             if (btn3d) btn3d.classList.add('on');
-            const canvas = document.getElementById('canvas-3d');
-            if (canvas && typeof THREE !== 'undefined') {
-              if (!window.EC3D.renderer) window.EC3D.init(canvas);
-              else window.EC3D.resize();
-              window.EC3D.buildScene(window._lastPipelineZones, st.parcels?.filter(p=>p.is_eda), st.proj);
-              window.EC3D.buildEdgeFurniture(window._lastPipelineZones);
-            }
+            // Delay so browser paints the canvas at full size before Three.js reads offsetWidth
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+              const canvas = document.getElementById('canvas-3d');
+              if (canvas && typeof THREE !== 'undefined') {
+                if (!window.EC3D.renderer) window.EC3D.init(canvas);
+                else window.EC3D.resize();
+                window.EC3D.buildScene(window._lastPipelineZones, st.parcels?.filter(p=>p.is_eda), st.proj);
+                window.EC3D.buildEdgeFurniture(window._lastPipelineZones);
+              }
+            }));
           } else if (window.EC3D && window._lastPipelineZones) {
             window.EC3D.buildScene(window._lastPipelineZones, st.parcels?.filter(p=>p.is_eda), st.proj);
             window.EC3D.buildEdgeFurniture(window._lastPipelineZones);
@@ -5850,8 +5853,8 @@ const EC3D = {
   // ── Initialise ────────────────────────────────────────────────────────────
   init(canvasEl) {
     this.canvas = canvasEl;
-    const W = canvasEl.offsetWidth || 800;
-    const H = canvasEl.offsetHeight || 600;
+    const W = canvasEl.offsetWidth  > 10 ? canvasEl.offsetWidth  : (canvasEl.parentElement?.offsetWidth  || 800);
+    const H = canvasEl.offsetHeight > 10 ? canvasEl.offsetHeight : (canvasEl.parentElement?.offsetHeight || 600);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true });
