@@ -80,6 +80,18 @@ for (const project of SUBPROJECTS) {
   const outDir     = resolve(projectDir, project.outDir);
   const destDir    = resolve(PUBLIC, project.name);
 
+  // Guard: skip if submodule directory is missing or not checked out (empty)
+  try {
+    const entries = readdirSync(projectDir).filter(e => e !== '.git');
+    if (entries.length === 0) {
+      console.log(`\n⚠️  Skipping ${project.name} — directory empty (submodule not checked out)`);
+      continue;
+    }
+  } catch {
+    console.log(`\n⚠️  Skipping ${project.name} — directory not found`);
+    continue;
+  }
+
   if (project.buildCmd) {
     console.log(`\n🔨 Building ${project.name}`);
     execSync(project.buildCmd, { cwd: projectDir, stdio: 'inherit' });
