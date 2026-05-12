@@ -6764,7 +6764,6 @@ function renderPeopleView(zones) {
     if (z.district?.includes('COURTYARD')) continue;
     const u = z.units.unit_count;
     const af = Math.min(z.units.affordable_units, u);  // clamp: never exceed unit_count
-    const af = z.units.affordable_units;
     total += u;
     affordable += af;
     market += u - af;
