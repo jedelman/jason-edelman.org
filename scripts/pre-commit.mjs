@@ -50,20 +50,30 @@ for (const f of REQUIRED) {
 // ── 2. wrangler.toml sanity ──────────────────────────────────────────────────
 console.log('\n[2] wrangler.toml');
 const wrangler = readFileSync(resolve(ROOT, 'wrangler.toml'), 'utf8');
-if (/^\[\[routes\]\]/m.test(wrangler)) {
-  fail('wrangler.toml contains [[routes]] — this breaks the custom domain binding. Remove it.');
+// [[routes]] is fine when used with custom_domain = true.
+// The dangerous pattern is routes without custom_domain (zone-based routes that
+// wrangler rewrites on every deploy and can break custom domain bindings).
+const routeBlocks = [...wrangler.matchAll(/^\[\[routes\]\][^[]*$/gm)].map(m => m[0]);
+const badRoutes = routeBlocks.filter(b => !b.includes('custom_domain = true'));
+if (badRoutes.length > 0) {
+  fail('wrangler.toml has [[routes]] without custom_domain = true — use custom_domain bindings instead');
+} else if (routeBlocks.length > 0) {
+  pass(`[[routes]] with custom_domain = true (${routeBlocks.length} binding(s))`);
 } else {
-  pass('No [[routes]] block');
+  pass('No [[routes]] block (custom domain managed in dashboard)');
 }
 if (!wrangler.includes('[assets]')) {
   fail('wrangler.toml missing [assets] section');
 } else {
   pass('[assets] section present');
 }
-if (wrangler.includes('not_found_handling = "404-page"')) {
-  fail('not_found_handling = "404-page" requires a 404.html — use "single-page-application" instead');
+const nfh = wrangler.match(/not_found_handling\s*=\s*"([^"]+)"/)?.[1];
+if (nfh === '404-page') {
+  fail('not_found_handling = "404-page" requires a 404.html — use "none" for a multi-page site');
+} else if (nfh === 'single-page-application') {
+  warn('not_found_handling = "single-page-application" serves index.html for all unmatched paths — only correct for SPAs');
 } else {
-  pass('not_found_handling is safe');
+  pass(`not_found_handling = "${nfh || 'none (default)'}" ✓`);
 }
 
 // ── 3. eastside-commons HTML sanity ─────────────────────────────────────────

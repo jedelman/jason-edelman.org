@@ -2,11 +2,19 @@ name = "jason-edelman-org"
 compatibility_date = "2026-04-28"
 account_id = "543fde7feabd0af945bfae926ceea7ad"
 
-# public/ is the assets root — built by npm run build, not committed to git
 [assets]
 directory = "public"
-not_found_handling = "single-page-application"
+# "none" = serve exact file matches; 404 for unmatched paths.
+# Correct for a multi-page static site where every URL has a real .html file.
+not_found_handling = "none"
 
-# Custom domain bindings are managed in the Cloudflare dashboard.
-# Do NOT declare [[routes]] here — wrangler rewrites them on every deploy
-# and has historically broken the custom domain binding.
+# Custom domain bindings — wrangler manages these.
+# The [[routes]] key with custom_domain = true is the correct syntax per
+# https://developers.cloudflare.com/workers/wrangler/configuration/#routes
+[[routes]]
+pattern = "jason-edelman.org"
+custom_domain = true
+
+[[routes]]
+pattern = "www.jason-edelman.org"
+custom_domain = true
