@@ -117,7 +117,10 @@ jobs:
 
       - name: Deploy to Cloudflare Workers
         id: deploy
-        run: npx wrangler deploy
+        run: |
+          # Clear wrangler's local asset cache to force full re-upload
+          rm -rf .wrangler/tmp 2>/dev/null || true
+          npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

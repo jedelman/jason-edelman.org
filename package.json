@@ -9,6 +9,6 @@
     "check": "node scripts/pre-commit.mjs"
   },
   "devDependencies": {
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.90.1"
   }
 }
