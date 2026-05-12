@@ -65,10 +65,18 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
 /* GALLERY */
 .gallery { background: var(--warm); padding: 4rem 1.5rem; overflow: hidden; }
 .gallery-label { font-family: var(--f-sc); font-size: 0.62rem; letter-spacing: 0.2em; color: var(--muted); text-align: center; margin-bottom: 2.5rem; }
-.neighborhood-strip { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 960px; margin: 0 auto; border: 1px solid var(--rule); }
-.neighborhood-strip::-webkit-scrollbar { display: none; }
-.nbhd { flex: 0 0 auto; width: min(210px, 52vw); padding: 1.5rem 1.25rem; border-right: 1px solid var(--rule); }
-.nbhd:last-child { border-right: none; }
+.neighborhood-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 900px;
+  margin: 0 auto;
+  border: 1px solid var(--rule);
+}
+.nbhd { padding: 1.5rem 1.25rem; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+/* Remove bottom border from last row (items 4-6) */
+.nbhd:nth-child(4), .nbhd:nth-child(5), .nbhd:nth-child(6) { border-bottom: none; }
+/* Remove right border from every 3rd item */
+.nbhd:nth-child(3n) { border-right: none; }
 .nbhd-name { font-family: var(--f-disp); font-size: 1.2rem; font-weight: 600; line-height: 1.1; margin-bottom: 0.3rem; }
 .nbhd-city { font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 0.75rem; }
 .nbhd-then { font-size: 0.8rem; color: var(--forest); line-height: 1.55; margin-bottom: 0.6rem; }
@@ -206,6 +214,17 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
 
 .foot { background: var(--ink); padding: 1.5rem; font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.1em; color: rgba(247,244,237,0.2); line-height: 1.9; text-align: center; }
 
+@media (max-width: 700px) {
+  /* Gallery: 3-col → 2-col */
+  .neighborhood-strip { grid-template-columns: repeat(2, 1fr); }
+  .nbhd:nth-child(3n) { border-right: 1px solid var(--rule); }
+  .nbhd:nth-child(2n) { border-right: none; }
+  /* Bottom border: last two items */
+  .nbhd:nth-child(4), .nbhd:nth-child(5), .nbhd:nth-child(6) { border-bottom: 1px solid var(--rule); }
+  .nbhd:nth-child(5), .nbhd:nth-child(6) { border-bottom: none; }
+  /* EC tile always full width when it falls alone */
+}
+
 @media (max-width: 580px) {
   .hero-place { gap: 1.25rem; }
   .persona-grid { grid-template-columns: 1fr; }
@@ -218,6 +237,10 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
   .ch-cell:nth-child(2), .cr-cell:nth-child(2) { display: none; }
   .prec { grid-template-columns: 1fr; gap: 0.5rem; }
   .layer-nums { gap: 1rem; }
+  /* Gallery: 2-col → 1-col */
+  .neighborhood-strip { grid-template-columns: 1fr; }
+  .nbhd { border-right: none; border-bottom: 1px solid var(--rule); }
+  .nbhd:last-child { border-bottom: none; }
 }
 </style>
 </head>
@@ -317,7 +340,7 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
     <p class="rule-p">Because land is removed from the capital stack, construction costs fall 25–40% versus conventional development. That gap is closed by federal programs — LIHTC tax credit equity, Virginia Housing construction loans, CDFI impact debt — specifically designed for this. The result is a neighborhood that works financially across every income band, simultaneously, without ongoing city subsidy.</p>
     <div class="rule-governance">
       <div class="rg-label">Who controls the CLT — and how</div>
-      <p class="rg-body">Urban renewal worked because government held eminent domain — the power to take land without community consent and redistribute it at will. The CLT is the structural inverse: the community holds the land, the city cannot reclaim it, and governance requires resident consent. This is not a byproduct of the financial model. It is the design. The CLT board is majority tenant and community-elected — not appointed by the city. Residents vote for representation. Major decisions require community approval. The city contributes the land via ground lease and then steps back; it has no ongoing appointment power. This is the Champlain Housing Trust model, which has governed 2,500 homes in Burlington, Vermont across 30 years and multiple hostile administrations without political capture. The structure is designed to be durable — including when the politics change.</p>
+      <p class="rg-body">Urban renewal worked because government held eminent domain — the power to take land without community consent and redistribute it at will. The CLT is the structural inverse: the community holds the land, the city cannot reclaim it, and governance requires resident consent. This is not a byproduct of the financial model. It is the design. The CLT board is majority tenant and community-elected — not appointed by the city. Residents vote for representation. Major decisions require community approval. The city contributes the land via ground lease and then steps back; it has no ongoing appointment power. This is the Champlain Housing Trust model, which has governed more than 3,200 homes in northwest Vermont across over 40 years and multiple hostile administrations without political capture. The structure is designed to be durable — including when the politics change.</p>
     </div>
   </div>
 </section>
@@ -378,7 +401,7 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
       <div class="persona">
         <div class="persona-role">The cooperative entrepreneur</div>
         <div class="persona-name">You want to own what you build, not rent from someone who does.</div>
-        <div class="persona-desc">Mondragón — 80,000 worker-owners in the Basque Country, built from a single technical school in 1956 — started with education, not capital. Eastside Commons follows that logic: a technical school producing certified tradespeople, culinary graduates, and construction workers. Graduates get right of first offer on storefronts within the commons — the people who build it can own a piece of it. A cooperative development fund, seeded by CLT operating surplus, finances cooperative formation. Your storefront leases at $1,200/month, or you own it for $906/month through SBA 504.</div>
+        <div class="persona-desc">Mondragón — ~70,000 workers in the Basque Country, built from a single technical school in 1956 — started with education, not capital. Eastside Commons follows that logic: a technical school producing certified tradespeople, culinary graduates, and construction workers. Graduates get right of first offer on storefronts within the commons — the people who build it can own a piece of it. A cooperative development fund, seeded by CLT operating surplus, finances cooperative formation. Your storefront leases at $1,200/month, or you own it for $906/month through SBA 504.</div>
         <div class="persona-hook">"I can start something I actually own, in a place I helped build."</div>
       </div>
 
@@ -392,7 +415,7 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
       <div class="persona">
         <div class="persona-role">The impact investor / CDFI</div>
         <div class="persona-name">A structure that reduces the risks that kill deals like this.</div>
-        <div class="persona-desc">LIHTC 9% equity (~$68M site-wide), VHDA construction financing, CDFI impact debt at patient rates. Land removed from the capital stack means collateral is building-only — significantly reduced LTV risk. $43.5M projected annual NOI at Phase 3 stabilization, with Phase 1 cash-flow positive before Phase 3 begins. The CLT board is majority-tenant elected, not city-appointed — governance risk is structured, not assumed. The model is precedented at Champlain (2,500 units, 30 years); the scale here is larger, which is the honest risk. The honest opportunity: no comparable land assembly exists in the Hampton Roads metro.</div>
+        <div class="persona-desc">LIHTC 9% equity (~$68M site-wide), VHDA construction financing, CDFI impact debt at patient rates. Land removed from the capital stack means collateral is building-only — significantly reduced LTV risk. $43.5M projected annual NOI at Phase 3 stabilization, with Phase 1 cash-flow positive before Phase 3 begins. The CLT board is majority-tenant elected, not city-appointed — governance risk is structured, not assumed. The model is precedented at Champlain (more than 3,200 homes, over 40 years); the scale here is larger, which is the honest risk. The honest opportunity: no comparable land assembly exists in the Hampton Roads metro.</div>
         <div class="persona-hook">"The land is owned. The governance is defined. The federal programs exist. What's missing is the first mover."</div>
       </div>
 
@@ -457,7 +480,7 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
           <span class="layer-sub">The highest ground becomes the permanent ground — for everyone who needs it</span>
         </div>
       </div>
-      <p class="layer-body">A 3-acre sponge park — in the tradition of Rotterdam's green infrastructure program and Philadelphia's $2.4B green stormwater initiative — captures 70% of annual runoff and provides public open space. A proposed sea level research station, designed for partnership with ODU, Norfolk State, and HRSD, generates data licensing revenue that funds the community wealth endowment. As flood events increase across lower-elevation Norfolk, displaced residents need somewhere to go. Military Circle is Flood Zone X. <strong>The endowment is funded by the same infrastructure that protects the neighborhood.</strong></p>
+      <p class="layer-body">A 3-acre sponge park — in the tradition of Rotterdam's green infrastructure program and Philadelphia's ~$1.7B green stormwater initiative — captures 70% of annual runoff and provides public open space. A proposed sea level research station, designed for partnership with ODU, Norfolk State, and HRSD, generates data licensing revenue that funds the community wealth endowment. As flood events increase across lower-elevation Norfolk, displaced residents need somewhere to go. Military Circle is Flood Zone X. <strong>The endowment is funded by the same infrastructure that protects the neighborhood.</strong></p>
       <div class="layer-nums">
         <div class="ln"><span class="ln-val">8–12ft</span><span class="ln-label">Elevation (Flood Zone X)</span></div>
         <div class="ln"><span class="ln-val">70%</span><span class="ln-label">Annual runoff captured</span></div>
@@ -522,21 +545,21 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
         <div class="prec-place">Champlain Housing Trust</div>
         <span class="prec-city">Burlington, Vermont</span>
       </div>
-      <div class="prec-body"><strong>30 years. 2,500 permanently affordable homes.</strong> CLT condos resold at affordable prices through five ownership cycles — the same below-market price passes to each new buyer. Majority-tenant board, community-elected. Founded 1984 with city support; now the largest CLT in the US. The governance has survived multiple hostile administrations. The structure holds.</div>
+      <div class="prec-body"><strong>Over 40 years. More than 3,200 permanently affordable homes.</strong> CLT condos resold at affordable prices through five ownership cycles — the same below-market price passes to each new buyer. Majority-tenant board, community-elected. Founded in 1984 with city support; now the largest CLT in the US. The governance has survived multiple hostile administrations. The structure holds.</div>
     </div>
     <div class="prec">
       <div>
         <div class="prec-place">Mondragón Cooperative</div>
         <span class="prec-city">Basque Country, Spain</span>
       </div>
-      <div class="prec-body">Started in 1956 with <strong>a technical school and five students.</strong> Now 80,000 worker-owners across 100 cooperatives, with an internal credit union that finances cooperative formation from within. Education first, cooperative ownership second, internal capital third. The pattern takes a generation. It compounds. Eastside Commons' cooperative enterprise layer follows this logic directly.</div>
+      <div class="prec-body">Started in 1956 with <strong>a technical school and five students.</strong> Now ~70,000 workers across over 80 cooperatives, with an internal credit union that finances cooperative formation from within. Education first, cooperative ownership second, internal capital third. The pattern takes a generation. It compounds. Eastside Commons' cooperative enterprise layer follows this logic directly.</div>
     </div>
     <div class="prec">
       <div>
         <div class="prec-place">Rotterdam &amp; Philadelphia Green Infrastructure</div>
         <span class="prec-city">Netherlands · Pennsylvania</span>
       </div>
-      <div class="prec-body">Rotterdam's water squares and green corridors made the city a global model for flood resilience — and increased adjacent property values measurably. Philadelphia's $2.4B green stormwater program reduced combined sewer overflows 80% while generating economic co-benefits citywide. <strong>The sponge park at Military Circle follows this playbook</strong> — and generates the data licensing revenue that funds the community endowment.</div>
+      <div class="prec-body">Rotterdam's water squares and green corridors made the city a global model for flood resilience — and increased adjacent property values measurably. Philadelphia's Green City, Clean Waters program has reduced combined sewer overflows by more than 3 billion gallons annually while generating economic co-benefits citywide. <strong>The sponge park at Military Circle follows this playbook</strong> — and generates the data licensing revenue that funds the community endowment.</div>
     </div>
     <div class="prec">
       <div>
