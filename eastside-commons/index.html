@@ -6209,8 +6209,57 @@ const EC3D = {
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(canvasEl);
 
+    // ── Texture library ─────────────────────────────────────────────────────
+    this.textures = {};
+    const TL = new THREE.TextureLoader();
+    const texDefs = [
+      ['brick',          'textures/brick-residential.jpg'],
+      ['brick-market',   'textures/brick-market.png'],
+      ['stone',          'textures/stone-civic.png'],
+      ['granite',        'textures/granite-ashlar.png'],
+      ['concrete-block', 'textures/concrete-block.png'],
+      ['concrete-rib',   'textures/concrete-ribbed.png'],
+      ['concrete',       'textures/concrete-weathered.png'],
+      ['slate',          'textures/slate-tile.png'],
+      ['grass',          'textures/grass-active.png'],
+      ['scrub',          'textures/scrub-wetland.png'],
+      ['soil',           'textures/soil-bare.png'],
+      ['aggregate',      'textures/aggregate-path.png'],
+      ['herringbone',    'textures/herringbone-stone.png'],
+      ['cobble',         'textures/cobble-plaza.png'],
+      ['terrazzo-warm',  'textures/terrazzo-warm.png'],
+      ['terrazzo-dark',  'textures/terrazzo-dark.png'],
+      ['paving',         'textures/paving-grass.png'],
+      ['asphalt',        'textures/asphalt.png'],
+    ];
+    for (const [key, path] of texDefs) {
+      TL.load(path, (tex) => {
+        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+        this.textures[key] = tex;
+        if (Object.keys(this.textures).length === texDefs.length) {
+          // All textures loaded — rebuild scene
+          if (window._lastPipelineZones) {
+            const st = window._lastPipelineState || {};
+            this.buildScene(window._lastPipelineZones,
+              st.parcels?.filter(p => p.is_eda), st.proj);
+          }
+        }
+      }, undefined, () => console.warn('EC3D texture failed:', path));
+    }
+
     this.animate();
     console.log('EC3D v2: initialized');
+  },
+
+  // Clone texture with repeat for a world-space surface
+  tex(key, ru, rv) {
+    const t = this.textures?.[key];
+    if (!t) return null;
+    const c = t.clone();
+    c.wrapS = c.wrapT = THREE.RepeatWrapping;
+    c.repeat.set(ru || 1, rv || 1);
+    c.needsUpdate = true;
+    return c;
   },
 
   // ── Ghost site layer ──────────────────────────────────────────────────────
@@ -6338,7 +6387,13 @@ const EC3D = {
     geo.computeVertexNormals();
 
     const groundColor = use === 'GREEN_PASSIVE' ? 0x1a6828 : 0x2a9840;
-    const mat = new THREE.MeshLambertMaterial({ color: groundColor, side: THREE.DoubleSide });
+    const gRepeat = Math.max(2, Math.round(Math.max(W, D) / 8));
+    const gTex = this.tex(use === 'GREEN_PASSIVE' ? 'scrub' : 'grass', gRepeat, gRepeat);
+    const mat = new THREE.MeshLambertMaterial({
+      color: gTex ? 0xffffff : groundColor,
+      map: gTex || null,
+      side: THREE.DoubleSide,
+    });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.set(cx, 0.08, cz);
@@ -6476,8 +6531,10 @@ const EC3D = {
     const rows = Math.max(1, Math.floor(D / PAVER));
     const meshes = [];
 
-    const matA = new THREE.MeshLambertMaterial({ color: 0x8a8270 });
-    const matB = new THREE.MeshLambertMaterial({ color: 0x6a6255 });
+    const herTex = this.tex('herringbone', 4, 4);
+    const cobTex = this.tex('cobble', 3, 3);
+    const matA = new THREE.MeshLambertMaterial({ color: herTex ? 0xffffff : 0x8a8270, map: herTex || null });
+    const matB = new THREE.MeshLambertMaterial({ color: cobTex ? 0xffffff : 0x6a6255, map: cobTex || null });
 
     for (let r = 0; r < rows; r++) {
       for (let col = 0; col < cols; col++) {
@@ -6627,15 +6684,41 @@ const EC3D = {
         bevelSegments:  1,
       });
 
+      // Wall texture by use type
+      const W3 = bds.maxX - bds.minX;
+      const ru = Math.max(1, Math.round(W3 / 5));
+      const rv = Math.max(1, Math.round(height / 3.5));
+      let wallTex = null;
+      if (use === 'RESIDENTIAL_CLT_OWN' || use === 'RESIDENTIAL_AFFORDABLE') {
+        wallTex = this.tex('brick', ru, rv);
+      } else if (use === 'RESIDENTIAL_MARKET') {
+        wallTex = this.tex('brick-market', ru, rv);
+      } else if (use === 'LIVE_WORK') {
+        wallTex = this.tex('concrete-block', ru, rv);
+      } else if (use === 'WORKSHOP_FABRICATION') {
+        wallTex = this.tex('concrete-rib', ru, rv);
+      } else if (use === 'DEPOT_YARD' || use === 'INFRASTRUCTURE') {
+        wallTex = this.tex('granite', ru, rv);
+      } else if (use === 'CIVIC') {
+        wallTex = this.tex('stone', ru, rv);
+      } else if (use === 'RESEARCH' || use === 'COOP_INCUBATOR') {
+        wallTex = this.tex('slate', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/4)));
+      } else if (use === 'TRANSIT') {
+        wallTex = this.tex('slate', ru, rv);
+      } else if (use === 'RETAIL_GROUND' || use === 'MARKET_HALL') {
+        wallTex = this.tex('concrete', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/4)));
+      }
+
       // Material: MeshPhongMaterial for specular highlight on buildings
       const usePhong = !use.startsWith('GREEN') && use !== 'PLAZA' && use !== 'INFRASTRUCTURE';
       const mat = usePhong
         ? new THREE.MeshPhongMaterial({
-            color: new THREE.Color(color),
+            color: wallTex ? 0xffffff : new THREE.Color(color),
+            map: wallTex || null,
             specular: new THREE.Color(0x222018),
-            shininess: 15,
+            shininess: wallTex ? 8 : 15,
             transparent: true,
-            opacity: 0.9,
+            opacity: 0.92,
           })
         : new THREE.MeshLambertMaterial({
             color: new THREE.Color(color),
@@ -6657,8 +6740,14 @@ const EC3D = {
       if (height > MIN_H * 3) {
         const topGeo = new THREE.ShapeGeometry(shape);
         const topColor = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.22);
+        const useTerr = use === 'CIVIC' || use === 'RESEARCH' || use === 'MARKET_HALL';
+        const topTex = useTerr ? this.tex('terrazzo-warm', 3, 3) : null;
+        const darkTopTex = use === 'TRANSIT' ? this.tex('terrazzo-dark', 3, 3) : null;
         const topMat = new THREE.MeshPhongMaterial({
-          color: topColor, specular: 0x181410, shininess: 20,
+          color: (topTex || darkTopTex) ? 0xffffff : topColor,
+          map: darkTopTex || topTex || null,
+          specular: 0x181410,
+          shininess: (topTex || darkTopTex) ? 40 : 20,
         });
         const topMesh = new THREE.Mesh(topGeo, topMat);
         topMesh.rotation.x = -Math.PI / 2;
