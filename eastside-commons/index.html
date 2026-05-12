@@ -2662,45 +2662,73 @@ const USES = {
   RESEARCH:               { id:'RS', label:'Research station',        color:'#18a0c8', priority:3 },
   TRANSIT:                { id:'TR', label:'Transit / Tide station',  color:'#0858b8', priority:1 },
   INFRASTRUCTURE:         { id:'IN', label:'Infrastructure / utility',color:'#4a4038', priority:3 },
+  // Phase 0 + cooperative economy uses
+  MARKET_HALL:            { id:'MH', label:'Indoor market (Phase 0)', color:'#b84898', priority:0 }, // priority 0 = placed first
+  WORKSHOP_FABRICATION:   { id:'WF', label:'Workshop / fabrication',  color:'#886838', priority:2 },
+  DEPOT_YARD:             { id:'DY', label:'Equipment / materials yard',color:'#585030', priority:3 },
+  LIVE_WORK:              { id:'LW', label:'Live/work (CLT trades)',   color:'#d87828', priority:1 },
+  COOP_INCUBATOR:         { id:'CI', label:'Cooperative incubator',   color:'#2898a8', priority:2 },
 };
 
 // Adjacency graph: which uses can mutate into which (T3 mutation operator)
 const USE_ADJACENCY = {
   RESIDENTIAL_MARKET:     ['RESIDENTIAL_AFFORDABLE','RETAIL_GROUND','GREEN_ACTIVE'],
   RESIDENTIAL_AFFORDABLE: ['RESIDENTIAL_MARKET','RESIDENTIAL_CLT_OWN','RETAIL_GROUND'],
-  RESIDENTIAL_CLT_OWN:    ['RESIDENTIAL_AFFORDABLE','CIVIC','GREEN_ACTIVE'],
-  RETAIL_GROUND:          ['CIVIC','PLAZA','RESIDENTIAL_MARKET'],
-  CIVIC:                  ['RETAIL_GROUND','PLAZA','GREEN_ACTIVE','RESIDENTIAL_CLT_OWN'],
-  PLAZA:                  ['CIVIC','GREEN_ACTIVE','RETAIL_GROUND'],
-  GREEN_ACTIVE:           ['GREEN_PASSIVE','PLAZA','RESIDENTIAL_AFFORDABLE'],
+  RESIDENTIAL_CLT_OWN:    ['RESIDENTIAL_AFFORDABLE','CIVIC','GREEN_ACTIVE','LIVE_WORK'],
+  RETAIL_GROUND:          ['CIVIC','PLAZA','RESIDENTIAL_MARKET','COOP_INCUBATOR'],
+  CIVIC:                  ['RETAIL_GROUND','PLAZA','GREEN_ACTIVE','RESIDENTIAL_CLT_OWN','COOP_INCUBATOR'],
+  PLAZA:                  ['CIVIC','GREEN_ACTIVE','RETAIL_GROUND','MARKET_HALL'],
+  GREEN_ACTIVE:           ['GREEN_PASSIVE','PLAZA','RESIDENTIAL_AFFORDABLE','LIVE_WORK'],
   GREEN_PASSIVE:          ['GREEN_ACTIVE','RESEARCH','INFRASTRUCTURE'],
-  RESEARCH:               ['GREEN_PASSIVE','CIVIC','INFRASTRUCTURE'],
-  TRANSIT:                ['CIVIC','PLAZA','RETAIL_GROUND'],  // transit rarely mutates
-  INFRASTRUCTURE:         ['GREEN_PASSIVE','TRANSIT'],
+  RESEARCH:               ['GREEN_PASSIVE','CIVIC','INFRASTRUCTURE','WORKSHOP_FABRICATION'],
+  TRANSIT:                ['CIVIC','PLAZA','RETAIL_GROUND','DEPOT_YARD','WORKSHOP_FABRICATION'],
+  INFRASTRUCTURE:         ['GREEN_PASSIVE','TRANSIT','DEPOT_YARD'],
+  // New cooperative economy uses
+  MARKET_HALL:            ['RETAIL_GROUND','CIVIC','PLAZA','COOP_INCUBATOR'],
+  WORKSHOP_FABRICATION:   ['LIVE_WORK','DEPOT_YARD','RESEARCH','TRANSIT'],
+  DEPOT_YARD:             ['WORKSHOP_FABRICATION','TRANSIT','INFRASTRUCTURE'],
+  LIVE_WORK:              ['RESIDENTIAL_CLT_OWN','WORKSHOP_FABRICATION','GREEN_ACTIVE'],
+  COOP_INCUBATOR:         ['RETAIL_GROUND','CIVIC','MARKET_HALL','WORKSHOP_FABRICATION'],
 };
 
 // Conflict matrix: adjacency penalty [A][B] = penalty score (higher = worse)
 const CONFLICT = {
-  RESIDENTIAL_MARKET:     { INFRASTRUCTURE:5, GREEN_PASSIVE:1 },
-  RESIDENTIAL_AFFORDABLE: { INFRASTRUCTURE:5, GREEN_PASSIVE:1 },
-  RETAIL_GROUND:          { GREEN_PASSIVE:2, INFRASTRUCTURE:4 },
-  GREEN_PASSIVE:          { RETAIL_GROUND:2, RESIDENTIAL_MARKET:1, RESIDENTIAL_AFFORDABLE:1 },
+  RESIDENTIAL_MARKET:     { INFRASTRUCTURE:5, GREEN_PASSIVE:1, DEPOT_YARD:6, WORKSHOP_FABRICATION:4 },
+  RESIDENTIAL_AFFORDABLE: { INFRASTRUCTURE:5, GREEN_PASSIVE:1, DEPOT_YARD:6, WORKSHOP_FABRICATION:4 },
+  RESIDENTIAL_CLT_OWN:    { DEPOT_YARD:5, WORKSHOP_FABRICATION:3 },
+  RETAIL_GROUND:          { GREEN_PASSIVE:2, INFRASTRUCTURE:4, DEPOT_YARD:3 },
+  GREEN_PASSIVE:          { RETAIL_GROUND:2, RESIDENTIAL_MARKET:1, RESIDENTIAL_AFFORDABLE:1, DEPOT_YARD:5 },
   TRANSIT:                { GREEN_PASSIVE:3, INFRASTRUCTURE:1 },
+  DEPOT_YARD:             { RESIDENTIAL_MARKET:6, RESIDENTIAL_AFFORDABLE:6, GREEN_PASSIVE:5, RETAIL_GROUND:3 },
+  WORKSHOP_FABRICATION:   { RESIDENTIAL_MARKET:4, RESIDENTIAL_AFFORDABLE:4 },
 };
 
 // Synergy matrix: adjacency bonus [A][B] = bonus score
 const SYNERGY = {
   RESIDENTIAL_MARKET:     { GREEN_ACTIVE:3, GREEN_PASSIVE:2, PLAZA:2, RETAIL_GROUND:2 },
   RESIDENTIAL_AFFORDABLE: { GREEN_ACTIVE:3, GREEN_PASSIVE:2, PLAZA:2, CIVIC:2 },
-  RESIDENTIAL_CLT_OWN:    { GREEN_ACTIVE:4, PLAZA:3, CIVIC:3, GREEN_PASSIVE:2 },
-  RETAIL_GROUND:          { PLAZA:3, CIVIC:2, TRANSIT:3, RESIDENTIAL_MARKET:1 },
-  CIVIC:                  { PLAZA:3, GREEN_ACTIVE:2, RETAIL_GROUND:2, TRANSIT:2 },
-  PLAZA:                  { RETAIL_GROUND:3, CIVIC:3, GREEN_ACTIVE:2, TRANSIT:2 },
-  GREEN_ACTIVE:           { RESIDENTIAL_MARKET:3, RESIDENTIAL_AFFORDABLE:3, PLAZA:2 },
+  RESIDENTIAL_CLT_OWN:    { GREEN_ACTIVE:4, PLAZA:3, CIVIC:3, GREEN_PASSIVE:2, LIVE_WORK:3 },
+  RETAIL_GROUND:          { PLAZA:3, CIVIC:2, TRANSIT:3, RESIDENTIAL_MARKET:1, COOP_INCUBATOR:3, MARKET_HALL:3 },
+  CIVIC:                  { PLAZA:3, GREEN_ACTIVE:2, RETAIL_GROUND:2, TRANSIT:2, COOP_INCUBATOR:3 },
+  PLAZA:                  { RETAIL_GROUND:3, CIVIC:3, GREEN_ACTIVE:2, TRANSIT:2, MARKET_HALL:2 },
+  GREEN_ACTIVE:           { RESIDENTIAL_MARKET:3, RESIDENTIAL_AFFORDABLE:3, PLAZA:2, LIVE_WORK:3 },
   GREEN_PASSIVE:          { RESEARCH:4, GREEN_ACTIVE:3 },
-  RESEARCH:               { GREEN_PASSIVE:4, CIVIC:2 },
-  TRANSIT:                { RETAIL_GROUND:3, PLAZA:3, CIVIC:2 },
+  RESEARCH:               { GREEN_PASSIVE:4, CIVIC:2, WORKSHOP_FABRICATION:3 },
+  TRANSIT:                { RETAIL_GROUND:3, PLAZA:3, CIVIC:2, DEPOT_YARD:3, WORKSHOP_FABRICATION:2 },
+  // New cooperative economy synergies
+  MARKET_HALL:            { RETAIL_GROUND:3, COOP_INCUBATOR:4, PLAZA:2, CIVIC:2 },
+  WORKSHOP_FABRICATION:   { LIVE_WORK:5, DEPOT_YARD:4, RESEARCH:3, TRANSIT:2 },
+  DEPOT_YARD:             { WORKSHOP_FABRICATION:4, TRANSIT:3 },
+  LIVE_WORK:              { WORKSHOP_FABRICATION:5, GREEN_ACTIVE:3, RESIDENTIAL_CLT_OWN:3 },
+  COOP_INCUBATOR:         { MARKET_HALL:4, RETAIL_GROUND:3, CIVIC:3, WORKSHOP_FABRICATION:2 },
 };
+
+// Planning principle: GREEN_FIRST
+// Green infrastructure is placed before residential zones in the optimization.
+// This encodes the argument: green space established early becomes an ecological
+// and legal fact that subsequent development must accommodate. It is the hardest
+// to build and the easiest to lose to political pressure. Place it first.
+const GREEN_FIRST_PRIORITY_BONUS = 8; // added to green zone scores during init
 
 // ════════════════════════════════════════════════════════════════════════════════
 //  TIER 1 — GROUND TRUTH
