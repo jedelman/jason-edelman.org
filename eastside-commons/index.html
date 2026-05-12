@@ -6407,7 +6407,8 @@ const EC3D = {
     const rand = rng(Math.round(minX * 100 + minZ * 100));
 
     // Shared materials (reused across all trees in this zone)
-    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5a3a20 });
+    const barkTex = this.tex ? this.tex('bark', 1, 2) : null;
+    const trunkMat = new THREE.MeshLambertMaterial({ color: barkTex ? 0xffffff : 0x5a3a20, map: barkTex || null });
     const canopyMat = new THREE.MeshLambertMaterial({
       color: use === 'GREEN_PASSIVE' ? 0x1e6830 : 0x2e8c40,
       transparent: true, opacity: 0.88,
@@ -6694,7 +6695,7 @@ const EC3D = {
       } else if (use === 'RESIDENTIAL_MARKET') {
         wallTex = this.tex('brick-market', ru, rv);
       } else if (use === 'LIVE_WORK') {
-        wallTex = this.tex('concrete-block', ru, rv);
+        wallTex = this.tex('timber', ru, rv);  // timber cladding — craft character
       } else if (use === 'WORKSHOP_FABRICATION') {
         wallTex = this.tex('concrete-rib', ru, rv);
       } else if (use === 'DEPOT_YARD' || use === 'INFRASTRUCTURE') {
@@ -6705,7 +6706,9 @@ const EC3D = {
         wallTex = this.tex('slate', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/4)));
       } else if (use === 'TRANSIT') {
         wallTex = this.tex('slate', ru, rv);
-      } else if (use === 'RETAIL_GROUND' || use === 'MARKET_HALL') {
+      } else if (use === 'MARKET_HALL') {
+        wallTex = this.tex('timber', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/3)));
+      } else if (use === 'RETAIL_GROUND') {
         wallTex = this.tex('concrete', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/4)));
       }
 
@@ -6950,7 +6953,8 @@ const EC3D = {
     const mBollard = new THREE.MeshLambertMaterial({ color: 0x404848 });
     const mRack    = new THREE.MeshLambertMaterial({ color: 0x506878 });
     const mAwning  = new THREE.MeshLambertMaterial({ color: 0xc04818, transparent: true, opacity: 0.88 });
-    const mTreeTrk = new THREE.MeshLambertMaterial({ color: 0x5a3a20 });
+    const edgeBarkTex = this.tex ? this.tex('bark', 1, 2) : null;
+    const mTreeTrk = new THREE.MeshLambertMaterial({ color: edgeBarkTex ? 0xffffff : 0x5a3a20, map: edgeBarkTex || null });
     const mTreeCan = new THREE.MeshLambertMaterial({ color: 0x2a6828, transparent: true, opacity: 0.82 });
     const mPlanter = new THREE.MeshLambertMaterial({ color: 0x486040 });
 
