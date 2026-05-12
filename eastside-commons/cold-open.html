@@ -4,858 +4,216 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eastside Commons — A Place Worth Building</title>
-<meta name="description" content="Every great neighborhood eventually destroys itself. In Norfolk, Virginia, there's a chance to build one that doesn't. 73 city-owned acres. A plan. An invitation.">
-<meta property="og:title" content="A Place Worth Building">
-<meta property="og:description" content="Every great neighborhood eventually destroys itself. In Norfolk, there's a chance to build one that doesn't.">
+<meta name="description" content="Every great neighborhood eventually prices out the people who made it great. In Norfolk, Virginia, there's a rare chance to build one that doesn't. 73 city-owned acres. A plan. An invitation.">
+<meta property="og:title" content="A Place Worth Building — Eastside Commons, Norfolk VA">
+<meta property="og:description" content="Every great neighborhood eventually prices out the people who made it great. In Norfolk, there's a chance to build one that doesn't.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=Cormorant+SC:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --ink:     #16120e;
-  --paper:   #f7f4ed;
-  --warm:    #ede7d8;
-  --clay:    #a83218;
-  --tide:    #1a4a5c;
-  --forest:  #1c4228;
-  --gold:    #96600e;
-  --pale:    #e8e1ce;
-  --rule:    #cac0a8;
-  --muted:   #7a7060;
-  --f-disp:  'Cormorant Garamond', Georgia, serif;
-  --f-sc:    'Cormorant SC', Georgia, serif;
-  --f-body:  'DM Sans', sans-serif;
+  --ink:    #16120e;
+  --paper:  #f7f4ed;
+  --warm:   #ede7d8;
+  --clay:   #a83218;
+  --tide:   #1a4a5c;
+  --forest: #1c4228;
+  --gold:   #96600e;
+  --rule:   #cac0a8;
+  --muted:  #7a7060;
+  --f-disp: 'Cormorant Garamond', Georgia, serif;
+  --f-sc:   'Cormorant SC', Georgia, serif;
+  --f-body: 'DM Sans', sans-serif;
 }
-
 html { background: var(--paper); color: var(--ink); scroll-behavior: smooth; }
 body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-x: hidden; }
 
-/* ─── UTILITY ─── */
-.u-max { max-width: 680px; margin-left: auto; margin-right: auto; }
-.u-pad { padding-left: 1.5rem; padding-right: 1.5rem; }
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity: 1; transform: none; }
 
-/* ─── REVEAL ANIMATION ─── */
-.reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.75s ease, transform 0.75s ease;
-}
-.reveal.visible {
-  opacity: 1;
-  transform: none;
-}
+.section-eyebrow { font-family: var(--f-sc); font-size: 0.6rem; letter-spacing: 0.22em; color: var(--clay); display: inline-block; border-bottom: 1px solid var(--clay); padding-bottom: 0.2rem; margin-bottom: 1.25rem; }
+.body-p { font-size: clamp(0.97rem, 2.2vw, 1.05rem); line-height: 1.8; color: #2a2318; margin-bottom: 1.3rem; font-weight: 300; }
+.body-p strong { font-weight: 500; color: var(--ink); }
+.pq { padding: 2rem 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); margin: 2.5rem 0; text-align: center; }
+.pq p { font-family: var(--f-disp); font-size: clamp(1.15rem, 3.5vw, 1.55rem); font-style: italic; line-height: 1.45; color: var(--ink); max-width: 46ch; margin: 0 auto; }
+.pq cite { display: block; font-family: var(--f-sc); font-size: 0.55rem; letter-spacing: 0.12em; color: var(--muted); margin-top: 0.75rem; font-style: normal; }
 
-/* ══════════════════════════════════
-   HERO
-══════════════════════════════════ */
-.hero {
-  min-height: 100svh;
-  background: var(--ink);
-  display: grid;
-  place-items: center;
-  padding: 4rem 1.5rem;
-  position: relative;
-  overflow: hidden;
-}
+/* HERO */
+.hero { min-height: 100svh; background: var(--ink); display: grid; place-items: center; padding: 4rem 1.5rem; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E"); opacity: 0.035; pointer-events: none; }
+.hero::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 55% 45% at 25% 75%, rgba(168,50,24,0.18) 0%, transparent 55%), radial-gradient(ellipse 40% 35% at 75% 25%, rgba(26,74,92,0.22) 0%, transparent 50%); pointer-events: none; }
+.hero-inner { position: relative; z-index: 1; text-align: center; max-width: 820px; }
+.hero-kicker { font-family: var(--f-sc); font-size: 0.7rem; letter-spacing: 0.22em; color: rgba(247,244,237,0.3); margin-bottom: 2.5rem; animation: rise 1s ease both; }
+.hero-hed { font-family: var(--f-disp); font-size: clamp(3rem, 10vw, 6.5rem); font-weight: 400; line-height: 1.0; color: #fff; letter-spacing: -0.01em; animation: rise 1s 0.15s ease both; }
+.hero-hed em { font-style: italic; color: rgba(247,220,160,0.85); }
+.hero-hed .line2 { display: block; font-size: clamp(2rem, 6.5vw, 4.2rem); color: rgba(247,244,237,0.45); font-style: italic; margin-top: 0.15em; }
+.hero-sub { font-family: var(--f-disp); font-size: clamp(1.05rem, 2.8vw, 1.35rem); font-style: italic; color: rgba(247,244,237,0.5); max-width: 52ch; margin: 2rem auto 0; line-height: 1.65; animation: rise 1s 0.3s ease both; }
+.hero-place { margin-top: 3rem; display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; animation: rise 1s 0.45s ease both; }
+.hp-item { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+.hp-val { font-family: var(--f-disp); font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 600; color: rgba(247,220,160,0.9); line-height: 1; }
+.hp-label { font-family: var(--f-sc); font-size: 0.55rem; letter-spacing: 0.15em; color: rgba(247,244,237,0.25); }
+.hero-scroll { position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0.5rem; font-family: var(--f-sc); font-size: 0.55rem; letter-spacing: 0.2em; color: rgba(247,244,237,0.18); animation: rise 1s 0.8s ease both; }
+.hero-scroll::after { content: ''; width: 1px; height: 2.5rem; background: linear-gradient(to bottom, rgba(247,244,237,0.2), transparent); animation: breathe 2.5s ease-in-out infinite; }
+@keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@keyframes breathe { 0%, 100% { opacity: 0.2; } 50% { opacity: 0.6; } }
 
-/* Grain texture */
-.hero::before {
-  content: '';
-  position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  opacity: 0.035;
-  pointer-events: none;
-}
-
-/* Warm light leak */
-.hero::after {
-  content: '';
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 55% 45% at 25% 75%, rgba(168,50,24,0.18) 0%, transparent 55%),
-    radial-gradient(ellipse 40% 35% at 75% 25%, rgba(26,74,92,0.22) 0%, transparent 50%);
-  pointer-events: none;
-}
-
-.hero-inner {
-  position: relative; z-index: 1;
-  text-align: center;
-  max-width: 820px;
-}
-
-.hero-kicker {
-  font-family: var(--f-sc);
-  font-size: 0.7rem;
-  letter-spacing: 0.22em;
-  color: rgba(247,244,237,0.3);
-  margin-bottom: 2.5rem;
-  animation: rise 1s ease both;
-}
-
-.hero-hed {
-  font-family: var(--f-disp);
-  font-size: clamp(3rem, 10vw, 6.5rem);
-  font-weight: 400;
-  line-height: 1.0;
-  color: #fff;
-  letter-spacing: -0.01em;
-  animation: rise 1s 0.15s ease both;
-}
-.hero-hed em {
-  font-style: italic;
-  color: rgba(247,220,160,0.85);
-}
-.hero-hed .line2 {
-  display: block;
-  font-size: clamp(2rem, 6.5vw, 4.2rem);
-  color: rgba(247,244,237,0.45);
-  font-style: italic;
-  margin-top: 0.15em;
-}
-
-.hero-sub {
-  font-family: var(--f-disp);
-  font-size: clamp(1.05rem, 2.8vw, 1.35rem);
-  font-style: italic;
-  font-weight: 400;
-  color: rgba(247,244,237,0.5);
-  max-width: 52ch;
-  margin: 2rem auto 0;
-  line-height: 1.65;
-  animation: rise 1s 0.3s ease both;
-}
-
-.hero-place {
-  margin-top: 3rem;
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  flex-wrap: wrap;
-  animation: rise 1s 0.45s ease both;
-}
-.hp-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.2rem;
-}
-.hp-val {
-  font-family: var(--f-disp);
-  font-size: clamp(1.6rem, 5vw, 2.2rem);
-  font-weight: 600;
-  color: rgba(247,220,160,0.9);
-  line-height: 1;
-}
-.hp-label {
-  font-family: var(--f-sc);
-  font-size: 0.55rem;
-  letter-spacing: 0.15em;
-  color: rgba(247,244,237,0.25);
-}
-
-.hero-scroll {
-  position: absolute;
-  bottom: 2rem; left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: var(--f-sc);
-  font-size: 0.55rem;
-  letter-spacing: 0.2em;
-  color: rgba(247,244,237,0.18);
-  animation: rise 1s 0.8s ease both;
-}
-.hero-scroll::after {
-  content: '';
-  width: 1px;
-  height: 2.5rem;
-  background: linear-gradient(to bottom, rgba(247,244,237,0.2), transparent);
-  animation: breathe 2.5s ease-in-out infinite;
-}
-
-@keyframes rise {
-  from { opacity: 0; transform: translateY(20px); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes breathe {
-  0%, 100% { opacity: 0.2; transform: scaleY(0.8); }
-  50%       { opacity: 0.6; transform: scaleY(1); }
-}
-
-/* ══════════════════════════════════
-   OPENING ARGUMENT
-══════════════════════════════════ */
-.opening {
-  padding: 5rem 1.5rem;
-  max-width: 680px;
-  margin: 0 auto;
-}
-
-.opening-hed {
-  font-family: var(--f-disp);
-  font-size: clamp(1.8rem, 5vw, 2.6rem);
-  font-weight: 400;
-  line-height: 1.2;
-  margin-bottom: 2rem;
-}
+/* OPENING */
+.opening { padding: 5rem 1.5rem; max-width: 680px; margin: 0 auto; }
+.opening-hed { font-family: var(--f-disp); font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 400; line-height: 1.2; margin-bottom: 2rem; }
 .opening-hed em { font-style: italic; color: var(--clay); }
 
-.body-p {
-  font-size: clamp(0.97rem, 2.2vw, 1.05rem);
-  line-height: 1.8;
-  color: #2a2318;
-  margin-bottom: 1.3rem;
-  font-weight: 300;
-}
-.body-p strong { font-weight: 500; color: var(--ink); }
-
-/* ══════════════════════════════════
-   NEIGHBORHOOD GALLERY — the burn
-══════════════════════════════════ */
-.gallery {
-  background: var(--warm);
-  padding: 4rem 1.5rem;
-  overflow: hidden;
-}
-
-.gallery-label {
-  font-family: var(--f-sc);
-  font-size: 0.62rem;
-  letter-spacing: 0.2em;
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 2.5rem;
-}
-
-.neighborhood-strip {
-  display: flex;
-  gap: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  max-width: 900px;
-  margin: 0 auto;
-  border: 1px solid var(--rule);
-}
+/* GALLERY */
+.gallery { background: var(--warm); padding: 4rem 1.5rem; overflow: hidden; }
+.gallery-label { font-family: var(--f-sc); font-size: 0.62rem; letter-spacing: 0.2em; color: var(--muted); text-align: center; margin-bottom: 2.5rem; }
+.neighborhood-strip { display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; max-width: 960px; margin: 0 auto; border: 1px solid var(--rule); }
 .neighborhood-strip::-webkit-scrollbar { display: none; }
-
-.nbhd {
-  flex: 0 0 auto;
-  width: min(220px, 55vw);
-  padding: 1.5rem 1.25rem;
-  border-right: 1px solid var(--rule);
-  position: relative;
-}
+.nbhd { flex: 0 0 auto; width: min(210px, 52vw); padding: 1.5rem 1.25rem; border-right: 1px solid var(--rule); }
 .nbhd:last-child { border-right: none; }
-.nbhd-name {
-  font-family: var(--f-disp);
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1.1;
-  margin-bottom: 0.3rem;
-}
-.nbhd-city {
-  font-family: var(--f-sc);
-  font-size: 0.55rem;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  margin-bottom: 0.75rem;
-}
-.nbhd-then {
-  font-size: 0.8rem;
-  color: var(--forest);
-  line-height: 1.5;
-  margin-bottom: 0.6rem;
-}
-.nbhd-now {
-  font-size: 0.78rem;
-  color: var(--clay);
-  line-height: 1.5;
-  padding-top: 0.6rem;
-  border-top: 1px solid var(--rule);
-}
-.nbhd-now::before {
-  content: 'Now: ';
-  font-family: var(--f-sc);
-  font-size: 0.5rem;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  display: block;
-  margin-bottom: 0.2rem;
-  text-transform: uppercase;
-}
-.nbhd.ec {
-  background: var(--ink);
-  border-right: none;
-}
+.nbhd-name { font-family: var(--f-disp); font-size: 1.2rem; font-weight: 600; line-height: 1.1; margin-bottom: 0.3rem; }
+.nbhd-city { font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.12em; color: var(--muted); margin-bottom: 0.75rem; }
+.nbhd-then { font-size: 0.8rem; color: var(--forest); line-height: 1.55; margin-bottom: 0.6rem; }
+.nbhd-now { font-size: 0.78rem; color: var(--clay); line-height: 1.55; padding-top: 0.6rem; border-top: 1px solid var(--rule); }
+.nbhd-now::before { content: 'Now: '; font-family: var(--f-sc); font-size: 0.5rem; letter-spacing: 0.12em; color: var(--muted); display: block; margin-bottom: 0.2rem; }
+.nbhd.ec { background: var(--ink); border-right: none; }
 .nbhd.ec .nbhd-name { color: rgba(247,244,237,0.95); }
 .nbhd.ec .nbhd-city { color: rgba(247,220,160,0.5); }
 .nbhd.ec .nbhd-then { color: rgba(247,244,237,0.65); }
-.nbhd.ec .nbhd-now {
-  color: rgba(247,220,160,0.85);
-  border-top-color: rgba(247,244,237,0.1);
-}
+.nbhd.ec .nbhd-now { color: rgba(247,220,160,0.85); border-top-color: rgba(247,244,237,0.1); }
 .nbhd.ec .nbhd-now::before { color: rgba(247,244,237,0.25); }
-
-.gallery-note {
-  font-family: var(--f-disp);
-  font-style: italic;
-  font-size: clamp(1rem, 3vw, 1.2rem);
-  color: var(--muted);
-  text-align: center;
-  margin-top: 2rem;
-  max-width: 48ch;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
-}
+.gallery-note { font-family: var(--f-disp); font-style: italic; font-size: clamp(1rem, 3vw, 1.2rem); color: var(--muted); text-align: center; margin-top: 2rem; max-width: 48ch; margin-left: auto; margin-right: auto; line-height: 1.6; }
 .gallery-note em { color: var(--clay); font-style: normal; }
 
-/* ══════════════════════════════════
-   THE SITE
-══════════════════════════════════ */
-.site-section {
-  padding: 5rem 1.5rem;
-  max-width: 680px;
-  margin: 0 auto;
-}
-
-.section-eyebrow {
-  font-family: var(--f-sc);
-  font-size: 0.6rem;
-  letter-spacing: 0.22em;
-  color: var(--clay);
-  display: inline-block;
-  border-bottom: 1px solid var(--clay);
-  padding-bottom: 0.2rem;
-  margin-bottom: 1.25rem;
-}
-
-.site-hed {
-  font-family: var(--f-disp);
-  font-size: clamp(1.8rem, 5vw, 2.5rem);
-  font-weight: 400;
-  line-height: 1.15;
-  margin-bottom: 1.75rem;
-}
+/* THE SITE */
+.site-section { padding: 5rem 1.5rem; max-width: 680px; margin: 0 auto; }
+.site-hed { font-family: var(--f-disp); font-size: clamp(1.8rem, 5vw, 2.5rem); font-weight: 400; line-height: 1.15; margin-bottom: 1.75rem; }
 .site-hed em { font-style: italic; color: var(--tide); }
+.fact { border-left: 3px solid var(--clay); padding: 1rem 1.5rem; margin: 2rem 0; background: var(--warm); }
+.fact-val { font-family: var(--f-disp); font-size: clamp(2.5rem, 8vw, 4rem); font-weight: 600; color: var(--clay); line-height: 1; display: block; }
+.fact-label { font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem; line-height: 1.5; }
 
-/* Fact callout */
-.fact {
-  border-left: 3px solid var(--clay);
-  padding: 1rem 1.5rem;
-  margin: 2rem 0;
-  background: var(--warm);
-}
-.fact-val {
-  font-family: var(--f-disp);
-  font-size: clamp(2.5rem, 8vw, 4rem);
-  font-weight: 600;
-  color: var(--clay);
-  line-height: 1;
-  display: block;
-}
-.fact-label {
-  font-size: 0.85rem;
-  color: var(--muted);
-  margin-top: 0.3rem;
-  line-height: 1.5;
-}
-
-/* Pull quote */
-.pq {
-  padding: 2rem 0;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
-  margin: 2.5rem 0;
-  text-align: center;
-}
-.pq p {
-  font-family: var(--f-disp);
-  font-size: clamp(1.2rem, 3.5vw, 1.6rem);
-  font-style: italic;
-  font-weight: 400;
-  line-height: 1.45;
-  color: var(--ink);
-  max-width: 46ch;
-  margin: 0 auto;
-}
-.pq cite {
-  display: block;
-  font-family: var(--f-sc);
-  font-size: 0.55rem;
-  letter-spacing: 0.12em;
-  color: var(--muted);
-  margin-top: 0.75rem;
-  font-style: normal;
-}
-
-/* ══════════════════════════════════
-   THE RULE — dark full-bleed
-══════════════════════════════════ */
-.rule-section {
-  background: var(--ink);
-  padding: 5rem 1.5rem;
-  position: relative;
-  overflow: hidden;
-}
-.rule-section::before {
-  content: '';
-  position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  opacity: 0.03;
-  pointer-events: none;
-}
-.rule-inner {
-  max-width: 680px;
-  margin: 0 auto;
-  position: relative;
-}
-.rule-eyebrow {
-  font-family: var(--f-sc);
-  font-size: 0.6rem;
-  letter-spacing: 0.22em;
-  color: rgba(247,244,237,0.2);
-  margin-bottom: 1.25rem;
-}
-.rule-hed {
-  font-family: var(--f-disp);
-  font-size: clamp(2rem, 6vw, 3.5rem);
-  font-weight: 400;
-  color: #fff;
-  line-height: 1.1;
-  margin-bottom: 2rem;
-}
-.rule-hed em {
-  font-style: italic;
-  color: rgba(247,220,160,0.85);
-}
-.rule-p {
-  font-size: clamp(0.97rem, 2.2vw, 1.05rem);
-  line-height: 1.8;
-  color: rgba(247,244,237,0.6);
-  margin-bottom: 1.2rem;
-  font-weight: 300;
-}
+/* THE RULE */
+.rule-section { background: var(--ink); padding: 5rem 1.5rem; position: relative; overflow: hidden; }
+.rule-section::before { content: ''; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E"); opacity: 0.03; pointer-events: none; }
+.rule-inner { max-width: 680px; margin: 0 auto; position: relative; }
+.rule-eyebrow { font-family: var(--f-sc); font-size: 0.6rem; letter-spacing: 0.22em; color: rgba(247,244,237,0.2); margin-bottom: 1.25rem; }
+.rule-hed { font-family: var(--f-disp); font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 400; color: #fff; line-height: 1.1; margin-bottom: 2rem; }
+.rule-hed em { font-style: italic; color: rgba(247,220,160,0.85); }
+.rule-p { font-size: clamp(0.97rem, 2.2vw, 1.05rem); line-height: 1.8; color: rgba(247,244,237,0.6); margin-bottom: 1.2rem; font-weight: 300; }
 .rule-p strong { font-weight: 500; color: rgba(247,244,237,0.9); }
+.rule-governance { margin-top: 2rem; padding: 1.25rem 1.5rem; border: 1px solid rgba(247,244,237,0.1); background: rgba(247,244,237,0.04); }
+.rg-label { font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.18em; color: rgba(247,220,160,0.5); margin-bottom: 0.6rem; }
+.rg-body { font-size: 0.88rem; line-height: 1.75; color: rgba(247,244,237,0.5); font-weight: 300; }
 
-/* ══════════════════════════════════
-   WHO THIS IS FOR — persona tiles
-══════════════════════════════════ */
-.personas {
-  padding: 5rem 1.5rem;
-  background: var(--paper);
-}
+/* FOR ALL OF NORFOLK */
+.norfolk-section { background: var(--tide); padding: 5rem 1.5rem; }
+.norfolk-inner { max-width: 680px; margin: 0 auto; }
+.norfolk-eyebrow { font-family: var(--f-sc); font-size: 0.6rem; letter-spacing: 0.22em; color: rgba(247,244,237,0.3); margin-bottom: 1.25rem; }
+.norfolk-hed { font-family: var(--f-disp); font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 400; color: #fff; line-height: 1.1; margin-bottom: 0.5rem; }
+.norfolk-hed em { font-style: italic; color: rgba(247,220,160,0.85); }
+.norfolk-sub { font-family: var(--f-disp); font-style: italic; font-size: 1.05rem; color: rgba(247,244,237,0.4); margin-bottom: 2.5rem; }
+.norfolk-p { font-size: clamp(0.97rem, 2.2vw, 1.05rem); line-height: 1.8; color: rgba(247,244,237,0.6); margin-bottom: 1.2rem; font-weight: 300; }
+.norfolk-p strong { font-weight: 500; color: rgba(247,244,237,0.88); }
+.benefits-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: rgba(247,244,237,0.1); border: 1px solid rgba(247,244,237,0.1); margin-top: 2rem; }
+.benefit { background: rgba(247,244,237,0.04); padding: 1.25rem; transition: background 0.2s; }
+.benefit:hover { background: rgba(247,244,237,0.07); }
+.benefit-val { font-family: var(--f-disp); font-size: 1.6rem; font-weight: 600; color: rgba(247,220,160,0.85); line-height: 1; display: block; margin-bottom: 0.2rem; }
+.benefit-label { font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.12em; color: rgba(247,244,237,0.3); display: block; margin-bottom: 0.5rem; }
+.benefit-desc { font-size: 0.82rem; line-height: 1.65; color: rgba(247,244,237,0.5); font-weight: 300; }
+
+/* PERSONAS */
+.personas { padding: 5rem 1.5rem; background: var(--paper); }
 .personas-inner { max-width: 780px; margin: 0 auto; }
-
-.personas-hed {
-  font-family: var(--f-disp);
-  font-size: clamp(1.6rem, 4.5vw, 2.2rem);
-  font-weight: 400;
-  line-height: 1.2;
-  margin-bottom: 0.5rem;
-  text-align: center;
-}
-.personas-sub {
-  font-family: var(--f-disp);
-  font-style: italic;
-  font-size: clamp(1rem, 2.5vw, 1.15rem);
-  color: var(--muted);
-  text-align: center;
-  margin-bottom: 3rem;
-}
-
-.persona-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1px;
-  background: var(--rule);
-  border: 1px solid var(--rule);
-}
-
-.persona {
-  background: var(--paper);
-  padding: 1.75rem 1.5rem;
-  transition: background 0.2s;
-}
+.personas-hed { font-family: var(--f-disp); font-size: clamp(1.6rem, 4.5vw, 2.2rem); font-weight: 400; line-height: 1.2; margin-bottom: 0.5rem; text-align: center; }
+.personas-sub { font-family: var(--f-disp); font-style: italic; font-size: clamp(1rem, 2.5vw, 1.15rem); color: var(--muted); text-align: center; margin-bottom: 3rem; }
+.persona-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.persona { background: var(--paper); padding: 1.75rem 1.5rem; transition: background 0.2s; }
 .persona:hover { background: var(--warm); }
+.persona-role { font-family: var(--f-sc); font-size: 0.55rem; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 0.4rem; }
+.persona-name { font-family: var(--f-disp); font-size: 1.15rem; font-weight: 600; line-height: 1.2; margin-bottom: 0.75rem; color: var(--ink); }
+.persona-desc { font-size: 0.875rem; line-height: 1.72; color: #3a3020; font-weight: 300; }
+.persona-hook { font-family: var(--f-disp); font-size: 0.92rem; font-style: italic; color: var(--clay); margin-top: 0.75rem; line-height: 1.5; }
+.persona.taxpayer { border-top: 2px solid var(--gold); }
+.persona.taxpayer .persona-hook { color: var(--gold); }
 
-.persona-role {
-  font-family: var(--f-sc);
-  font-size: 0.55rem;
-  letter-spacing: 0.18em;
-  color: var(--muted);
-  margin-bottom: 0.4rem;
-}
-.persona-name {
-  font-family: var(--f-disp);
-  font-size: 1.15rem;
-  font-weight: 600;
-  line-height: 1.2;
-  margin-bottom: 0.75rem;
-  color: var(--ink);
-}
-.persona-desc {
-  font-size: 0.875rem;
-  line-height: 1.7;
-  color: #3a3020;
-  font-weight: 300;
-}
-.persona-hook {
-  font-family: var(--f-disp);
-  font-size: 0.92rem;
-  font-style: italic;
-  color: var(--clay);
-  margin-top: 0.75rem;
-  line-height: 1.5;
-}
-
-/* ══════════════════════════════════
-   THE STRUCTURE — how it works
-══════════════════════════════════ */
-.structure {
-  background: var(--warm);
-  padding: 5rem 1.5rem;
-}
+/* STRUCTURE */
+.structure { background: var(--warm); padding: 5rem 1.5rem; }
 .structure-inner { max-width: 680px; margin: 0 auto; }
-
-.structure-hed {
-  font-family: var(--f-disp);
-  font-size: clamp(1.8rem, 5vw, 2.5rem);
-  font-weight: 400;
-  line-height: 1.15;
-  margin-bottom: 0.5rem;
-}
-.structure-sub {
-  font-family: var(--f-disp);
-  font-style: italic;
-  color: var(--muted);
-  font-size: 1.05rem;
-  margin-bottom: 2.5rem;
-}
-
-.layer {
-  border-top: 1px solid var(--rule);
-  padding: 1.75rem 0;
-}
+.structure-hed { font-family: var(--f-disp); font-size: clamp(1.8rem, 5vw, 2.5rem); font-weight: 400; line-height: 1.15; margin-bottom: 0.5rem; }
+.structure-sub { font-family: var(--f-disp); font-style: italic; color: var(--muted); font-size: 1.05rem; margin-bottom: 2.5rem; }
+.layer { border-top: 1px solid var(--rule); padding: 1.75rem 0; }
 .layer:last-child { border-bottom: 1px solid var(--rule); }
-
-.layer-header {
-  display: flex;
-  align-items: baseline;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
-}
-.layer-n {
-  font-family: var(--f-disp);
-  font-size: 2rem;
-  font-weight: 600;
-  color: var(--rule);
-  line-height: 1;
-  flex-shrink: 0;
-}
-.layer-title {
-  font-family: var(--f-disp);
-  font-size: 1.15rem;
-  font-weight: 600;
-  line-height: 1.2;
-}
-.layer-sub {
-  font-family: var(--f-sc);
-  font-size: 0.55rem;
-  letter-spacing: 0.15em;
-  color: var(--muted);
-  display: block;
-  margin-top: 0.15rem;
-}
-.layer-body {
-  font-size: 0.9rem;
-  line-height: 1.75;
-  color: #3a3020;
-  font-weight: 300;
-  max-width: 58ch;
-}
+.layer-header { display: flex; align-items: baseline; gap: 1rem; margin-bottom: 0.75rem; }
+.layer-n { font-family: var(--f-disp); font-size: 2rem; font-weight: 600; color: var(--rule); line-height: 1; flex-shrink: 0; }
+.layer-title { font-family: var(--f-disp); font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
+.layer-sub { font-family: var(--f-sc); font-size: 0.55rem; letter-spacing: 0.15em; color: var(--muted); display: block; margin-top: 0.15rem; }
+.layer-body { font-size: 0.9rem; line-height: 1.78; color: #3a3020; font-weight: 300; max-width: 58ch; }
 .layer-body strong { font-weight: 500; color: var(--ink); }
+.layer-nums { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1rem; }
+.ln { display: flex; flex-direction: column; }
+.ln-val { font-family: var(--f-disp); font-size: 1.4rem; font-weight: 600; color: var(--tide); line-height: 1; }
+.ln-label { font-size: 0.65rem; color: var(--muted); margin-top: 0.15rem; }
 
-/* Numbers inline */
-.layer-nums {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  margin-top: 1rem;
-}
-.ln {
-  display: flex;
-  flex-direction: column;
-}
-.ln-val {
-  font-family: var(--f-disp);
-  font-size: 1.4rem;
-  font-weight: 600;
-  color: var(--tide);
-  line-height: 1;
-}
-.ln-label {
-  font-size: 0.65rem;
-  color: var(--muted);
-  margin-top: 0.15rem;
-}
-
-/* ══════════════════════════════════
-   THE NUMBERS — full table
-══════════════════════════════════ */
-.numbers-section {
-  padding: 5rem 1.5rem;
-  max-width: 680px;
-  margin: 0 auto;
-}
-
-.num-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0;
-  border: 1.5px solid var(--rule);
-  margin: 2rem 0;
-}
-.nc {
-  padding: 1.5rem 1rem;
-  border-right: 1px solid var(--rule);
-  text-align: center;
-}
-.nc:nth-child(3) { border-right: none; }
-.nc:nth-child(4), .nc:nth-child(5), .nc:nth-child(6) {
-  border-top: 1px solid var(--rule);
-}
-.nc:nth-child(6) { border-right: none; }
-.nc-val {
-  font-family: var(--f-disp);
-  font-size: clamp(1.6rem, 5vw, 2.2rem);
-  font-weight: 600;
-  font-style: italic;
-  color: var(--clay);
-  display: block;
-  line-height: 1;
-}
-.nc-label {
-  font-family: var(--f-sc);
-  font-size: 0.52rem;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-  display: block;
-  margin-top: 0.4rem;
-  line-height: 1.4;
-}
-
-/* Comparison table */
-.comp {
-  margin: 2.5rem 0;
-  border: 1px solid var(--rule);
-}
-.comp-head {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  background: var(--ink);
-}
-.ch-cell {
-  padding: 0.6rem 0.75rem;
-  font-family: var(--f-sc);
-  font-size: 0.52rem;
-  letter-spacing: 0.12em;
-  color: rgba(247,244,237,0.4);
-  border-right: 1px solid rgba(255,255,255,0.08);
-}
+/* NUMBERS */
+.numbers-section { padding: 5rem 1.5rem; max-width: 680px; margin: 0 auto; }
+.numbers-hed { font-family: var(--f-disp); font-size: clamp(1.8rem, 5vw, 2.5rem); font-weight: 400; line-height: 1.15; margin-bottom: 0.5rem; }
+.numbers-hed em { font-style: italic; color: var(--tide); }
+.num-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1.5px solid var(--rule); margin: 2rem 0; }
+.nc { padding: 1.5rem 1rem; border-right: 1px solid var(--rule); text-align: center; }
+.nc:nth-child(3n) { border-right: none; }
+.nc:nth-child(n+4) { border-top: 1px solid var(--rule); }
+.nc-val { font-family: var(--f-disp); font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 600; font-style: italic; color: var(--clay); display: block; line-height: 1; }
+.nc-label { font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.1em; color: var(--muted); display: block; margin-top: 0.4rem; line-height: 1.4; }
+.comp { margin: 2.5rem 0; border: 1px solid var(--rule); }
+.comp-head { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--ink); }
+.ch-cell { padding: 0.6rem 0.75rem; font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.12em; color: rgba(247,244,237,0.4); border-right: 1px solid rgba(255,255,255,0.08); }
 .ch-cell:last-child { border-right: none; }
-.comp-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  border-top: 1px solid var(--rule);
-}
-.cr-cell {
-  padding: 0.55rem 0.75rem;
-  font-size: 0.82rem;
-  border-right: 1px solid var(--rule);
-  line-height: 1.4;
-}
+.comp-row { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--rule); }
+.cr-cell { padding: 0.55rem 0.75rem; font-size: 0.82rem; border-right: 1px solid var(--rule); line-height: 1.4; }
 .cr-cell:last-child { border-right: none; }
 .cr-cell.bad { color: #8b1a1a; }
 .cr-cell.good { color: var(--forest); font-weight: 500; }
 .cr-cell.label { color: var(--muted); font-size: 0.75rem; }
 
-/* ══════════════════════════════════
-   PRECEDENTS
-══════════════════════════════════ */
-.precedents {
-  background: var(--ink);
-  padding: 5rem 1.5rem;
-  position: relative; overflow: hidden;
-}
-.precedents::before {
-  content: '';
-  position: absolute; inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  opacity: 0.03; pointer-events: none;
-}
-.precedents-inner {
-  max-width: 680px;
-  margin: 0 auto;
-  position: relative;
-}
-.precedents-hed {
-  font-family: var(--f-disp);
-  font-size: clamp(1.6rem, 4.5vw, 2.2rem);
-  font-weight: 400;
-  color: #fff;
-  line-height: 1.2;
-  margin-bottom: 0.5rem;
-}
-.precedents-sub {
-  font-family: var(--f-disp);
-  font-style: italic;
-  color: rgba(247,244,237,0.35);
-  font-size: 1rem;
-  margin-bottom: 2.5rem;
-}
-
-.prec {
-  border-top: 1px solid rgba(247,244,237,0.08);
-  padding: 1.5rem 0;
-  display: grid;
-  grid-template-columns: 1fr 2fr;
-  gap: 1.5rem;
-}
+/* PRECEDENTS */
+.precedents { background: var(--ink); padding: 5rem 1.5rem; position: relative; overflow: hidden; }
+.precedents::before { content: ''; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E"); opacity: 0.03; pointer-events: none; }
+.precedents-inner { max-width: 680px; margin: 0 auto; position: relative; }
+.precedents-hed { font-family: var(--f-disp); font-size: clamp(1.6rem, 4.5vw, 2.2rem); font-weight: 400; color: #fff; line-height: 1.2; margin-bottom: 0.5rem; }
+.precedents-sub { font-family: var(--f-disp); font-style: italic; color: rgba(247,244,237,0.35); font-size: 1rem; margin-bottom: 2.5rem; }
+.prec { border-top: 1px solid rgba(247,244,237,0.08); padding: 1.5rem 0; display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; }
 .prec:last-child { border-bottom: 1px solid rgba(247,244,237,0.08); }
-.prec-place {
-  font-family: var(--f-disp);
-  font-size: 1rem;
-  font-weight: 600;
-  color: rgba(247,220,160,0.8);
-  line-height: 1.25;
-}
-.prec-city {
-  font-family: var(--f-sc);
-  font-size: 0.52rem;
-  letter-spacing: 0.12em;
-  color: rgba(247,244,237,0.2);
-  display: block;
-  margin-top: 0.2rem;
-}
-.prec-body {
-  font-size: 0.88rem;
-  line-height: 1.7;
-  color: rgba(247,244,237,0.55);
-  font-weight: 300;
-}
-.prec-body strong {
-  font-weight: 500;
-  color: rgba(247,244,237,0.85);
-}
+.prec-place { font-family: var(--f-disp); font-size: 1rem; font-weight: 600; color: rgba(247,220,160,0.8); line-height: 1.25; }
+.prec-city { font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.12em; color: rgba(247,244,237,0.2); display: block; margin-top: 0.2rem; }
+.prec-body { font-size: 0.88rem; line-height: 1.72; color: rgba(247,244,237,0.55); font-weight: 300; }
+.prec-body strong { font-weight: 500; color: rgba(247,244,237,0.85); }
 
-/* ══════════════════════════════════
-   THE ASK
-══════════════════════════════════ */
-.ask-section {
-  padding: 6rem 1.5rem;
-  max-width: 640px;
-  margin: 0 auto;
-  text-align: center;
-}
-
-.ask-hed {
-  font-family: var(--f-disp);
-  font-size: clamp(2rem, 6vw, 3.2rem);
-  font-weight: 400;
-  line-height: 1.1;
-  margin-bottom: 0.75rem;
-}
+/* ASK */
+.ask-section { padding: 6rem 1.5rem; max-width: 640px; margin: 0 auto; text-align: center; }
+.ask-hed { font-family: var(--f-disp); font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 400; line-height: 1.1; margin-bottom: 0.75rem; }
 .ask-hed em { font-style: italic; color: var(--clay); }
-
-.ask-sub {
-  font-family: var(--f-disp);
-  font-style: italic;
-  font-size: clamp(1rem, 2.5vw, 1.15rem);
-  color: var(--muted);
-  line-height: 1.6;
-  margin-bottom: 3rem;
-  max-width: 48ch;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.ask-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  align-items: center;
-}
-
-.btn-primary {
-  display: inline-block;
-  background: var(--clay);
-  color: #fff;
-  padding: 1rem 2.5rem;
-  font-family: var(--f-sc);
-  font-size: 0.7rem;
-  letter-spacing: 0.18em;
-  text-decoration: none;
-  transition: background 0.2s;
-}
+.ask-sub { font-family: var(--f-disp); font-style: italic; font-size: clamp(1rem, 2.5vw, 1.15rem); color: var(--muted); line-height: 1.6; margin-bottom: 2.5rem; max-width: 48ch; margin-left: auto; margin-right: auto; }
+.ask-actions { display: flex; flex-direction: column; gap: 1rem; align-items: center; }
+.btn-primary { display: inline-block; background: var(--clay); color: #fff; padding: 1rem 2.5rem; font-family: var(--f-sc); font-size: 0.7rem; letter-spacing: 0.18em; text-decoration: none; transition: background 0.2s; }
 .btn-primary:hover { background: #8a2810; }
-
-.btn-secondary {
-  font-family: var(--f-disp);
-  font-style: italic;
-  font-size: 1rem;
-  color: var(--tide);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  text-decoration-color: var(--rule);
-}
+.btn-secondary { font-family: var(--f-disp); font-style: italic; font-size: 1rem; color: var(--tide); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--rule); }
 .btn-secondary:hover { color: var(--clay); text-decoration-color: var(--clay); }
+.ask-path { margin-top: 3rem; padding: 2rem; border: 1px solid var(--rule); text-align: left; background: var(--warm); }
+.ask-path-label { font-family: var(--f-sc); font-size: 0.55rem; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 1rem; }
+.ask-step { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; align-items: flex-start; font-size: 0.875rem; line-height: 1.65; color: #3a3020; font-weight: 300; }
+.ask-step:last-child { margin-bottom: 0; }
+.ask-step-n { font-family: var(--f-disp); font-size: 1.1rem; font-weight: 600; color: var(--clay); line-height: 1.2; flex-shrink: 0; min-width: 1.5rem; }
+.ask-footer-note { margin-top: 2rem; font-family: var(--f-disp); font-style: italic; font-size: 0.88rem; color: var(--muted); line-height: 1.65; }
 
-.ask-footer-note {
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--rule);
-  font-family: var(--f-disp);
-  font-style: italic;
-  font-size: 0.92rem;
-  color: var(--muted);
-  line-height: 1.65;
-}
+.foot { background: var(--ink); padding: 1.5rem; font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.1em; color: rgba(247,244,237,0.2); line-height: 1.9; text-align: center; }
 
-/* ══════════════════════════════════
-   FOOT
-══════════════════════════════════ */
-.foot {
-  background: var(--ink);
-  padding: 1.5rem;
-  font-family: var(--f-sc);
-  font-size: 0.52rem;
-  letter-spacing: 0.1em;
-  color: rgba(247,244,237,0.2);
-  line-height: 1.9;
-  text-align: center;
-}
-
-/* ══════════════════════════════════
-   MOBILE
-══════════════════════════════════ */
 @media (max-width: 580px) {
   .hero-place { gap: 1.25rem; }
   .persona-grid { grid-template-columns: 1fr; }
-  .num-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .nc:nth-child(2) { border-right: none; }
-  .nc:nth-child(3) { border-top: 1px solid var(--rule); }
-  .nc:nth-child(3), .nc:nth-child(4) { border-right: 1px solid var(--rule); }
-  .nc:nth-child(4) { border-right: none; border-top: 1px solid var(--rule); }
-  .nc:nth-child(5), .nc:nth-child(6) { border-top: 1px solid var(--rule); }
-  .nc:nth-child(5) { border-right: 1px solid var(--rule); }
-  .nc:nth-child(6) { border-right: none; }
+  .benefits-grid { grid-template-columns: 1fr; }
+  .num-grid { grid-template-columns: repeat(2, 1fr); }
+  .nc:nth-child(3n) { border-right: 1px solid var(--rule); }
+  .nc:nth-child(2n) { border-right: none; }
+  .nc:nth-child(n+3) { border-top: 1px solid var(--rule); }
   .comp-head, .comp-row { grid-template-columns: 1fr 1fr; }
   .ch-cell:nth-child(2), .cr-cell:nth-child(2) { display: none; }
   .prec { grid-template-columns: 1fr; gap: 0.5rem; }
@@ -865,96 +223,83 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
 </head>
 <body>
 
-<!-- HERO -->
 <section class="hero">
   <div class="hero-inner">
     <div class="hero-kicker">Eastside Commons · Norfolk, Virginia · 2026</div>
-    <h1 class="hero-hed">
-      A Place<br>Worth <em>Building.</em>
-      <span class="line2">Together.</span>
-    </h1>
-    <p class="hero-sub">Every great neighborhood eventually prices out the people who made it great. In Norfolk, Virginia, there's a chance to build one that doesn't. This is what that looks like.</p>
+    <h1 class="hero-hed">A Place<br>Worth <em>Building.</em><span class="line2">Together.</span></h1>
+    <p class="hero-sub">Every great neighborhood eventually prices out the people who made it great. In Norfolk, Virginia, there is a rare chance to build one that doesn't. This is what that looks like — and why it matters to everyone in this city.</p>
     <div class="hero-place">
-      <div class="hp-item">
-        <span class="hp-val">73</span>
-        <span class="hp-label">City-owned acres</span>
-      </div>
-      <div class="hp-item">
-        <span class="hp-val">5,118</span>
-        <span class="hp-label">Homes possible</span>
-      </div>
-      <div class="hp-item">
-        <span class="hp-val">20yr</span>
-        <span class="hp-label">To build it together</span>
-      </div>
+      <div class="hp-item"><span class="hp-val">73</span><span class="hp-label">City-owned acres</span></div>
+      <div class="hp-item"><span class="hp-val">5,118</span><span class="hp-label">Homes possible</span></div>
+      <div class="hp-item"><span class="hp-val">20yr</span><span class="hp-label">To build it together</span></div>
     </div>
   </div>
   <div class="hero-scroll">scroll</div>
 </section>
 
-<!-- OPENING -->
 <section class="opening reveal">
   <h2 class="opening-hed">You know a neighborhood<br><em>after</em> it's already gone.</h2>
-  <p class="body-p">You know the one. Maybe you lived there before it changed, or you discovered it just in time, or someone told you what it used to be. The cheap rents that let artists and immigrants and small restaurants take root. The friction of different people doing different things in the same place. The feeling that something real was happening, unrehearsed.</p>
-  <p class="body-p">Then it worked. People noticed. The rents went up. The original residents got pushed out — to somewhere cheaper, somewhere farther, somewhere with fewer options. The coffee shops that replaced the laundromats were nicer, in a way that had nothing to do with the people who made it worth noticing in the first place.</p>
-  <p class="body-p">This is not a new story. It has happened to every great urban neighborhood in America. The conditions that generate vitality — cheap space, mixed uses, density of people doing different things — are destroyed by the success they produce. We've never figured out how to stop it.</p>
+  <p class="body-p">You know the one. Maybe you lived there before it changed, or you arrived just in time, or someone older told you what it used to be. The cheap space that let artists and immigrants and small restaurants take root. The friction of different people doing different things on the same block. The feeling that something real was happening, unrehearsed.</p>
+  <p class="body-p">Then it worked. People noticed. The rents went up. The original residents got pushed out — to somewhere cheaper, farther, with fewer options. The places that replaced them were nicer, in a way that had nothing to do with the people who made it worth noticing in the first place.</p>
+  <p class="body-p">This is not a new story. It has happened to every great neighborhood in America. The conditions that generate vitality — affordable space, mixed uses, density of people doing different things — are destroyed by the success they produce. We have never figured out how to stop it.</p>
   <p class="body-p"><strong>In Norfolk, Virginia, there is a chance to try.</strong></p>
 </section>
 
-<!-- NEIGHBORHOOD GALLERY -->
 <section class="gallery reveal">
   <div class="gallery-label">Where did the neighborhood go?</div>
   <div class="neighborhood-strip">
     <div class="nbhd">
-      <div class="nbhd-name">Williamsburg</div>
-      <div class="nbhd-city">Brooklyn, NY</div>
-      <div class="nbhd-then">Artists, Puerto Rican families, cheap lofts, the L train. A place made by people who had nowhere else to go.</div>
-      <div class="nbhd-now">Median rent $3,800/mo. The artists who built it can't afford to stay.</div>
-    </div>
-    <div class="nbhd">
-      <div class="nbhd-name">Mission District</div>
-      <div class="nbhd-city">San Francisco, CA</div>
-      <div class="nbhd-then">Latino cultural hub. Murals, taquerias, working families, the center of a community.</div>
-      <div class="nbhd-now">Tech workers and displacement. The murals stayed. The people didn't.</div>
-    </div>
-    <div class="nbhd">
-      <div class="nbhd-name">El Born</div>
-      <div class="nbhd-city">Barcelona, Spain</div>
-      <div class="nbhd-then">Overlooked medieval quarter. Cheap, rough, alive. Artists and immigrants and old families.</div>
-      <div class="nbhd-now">Boutique hotels and Airbnbs. Barcelonans priced out of Barcelona.</div>
+      <div class="nbhd-name">Church Street</div>
+      <div class="nbhd-city">Norfolk, VA — Eastside</div>
+      <div class="nbhd-then">The commercial heart of Black Norfolk for generations. Barbershops, insurance offices, theaters — the institutions of a self-sufficient community.</div>
+      <div class="nbhd-now">"Urban renewal" cleared it. The freeway came. The community scattered, and has not been made whole since.</div>
     </div>
     <div class="nbhd">
       <div class="nbhd-name">Shaw</div>
       <div class="nbhd-city">Washington, DC</div>
-      <div class="nbhd-then">Historic Black neighborhood. Go-go music, family businesses, generations of culture.</div>
-      <div class="nbhd-now">Median home value up 400% since 2000. Long-term residents displaced citywide.</div>
+      <div class="nbhd-then">Historic Black neighborhood. Go-go music, family businesses, generations of culture, the Howard University corridor.</div>
+      <div class="nbhd-now">Median home value up 400% since 2000. Long-term residents displaced across the region.</div>
+    </div>
+    <div class="nbhd">
+      <div class="nbhd-name">Williamsburg</div>
+      <div class="nbhd-city">Brooklyn, NY</div>
+      <div class="nbhd-then">Artists, Puerto Rican families, cheap lofts. Made by people who had nowhere else to go — and made something worth going to.</div>
+      <div class="nbhd-now">Median rent $3,800/mo. The people who built it can't afford to stay.</div>
+    </div>
+    <div class="nbhd">
+      <div class="nbhd-name">Mission District</div>
+      <div class="nbhd-city">San Francisco, CA</div>
+      <div class="nbhd-then">Latino cultural hub. Murals, taquerias, working families — the center of a living community.</div>
+      <div class="nbhd-now">Tech money and displacement. The murals stayed. The people didn't.</div>
+    </div>
+    <div class="nbhd">
+      <div class="nbhd-name">El Born</div>
+      <div class="nbhd-city">Barcelona, Spain</div>
+      <div class="nbhd-then">Overlooked medieval quarter. Cheap, rough, generative. Artists and immigrants and old families.</div>
+      <div class="nbhd-now">Boutique hotels and short-term rentals. Barcelonans priced out of Barcelona.</div>
     </div>
     <div class="nbhd ec">
       <div class="nbhd-name">Eastside Commons</div>
       <div class="nbhd-city">Norfolk, VA — 2026</div>
-      <div class="nbhd-then">73 city-owned acres. Highest elevation in a flooding city. The moment before it becomes anything.</div>
+      <div class="nbhd-then">73 city-owned acres. Highest ground in a flooding city. The moment before it becomes anything.</div>
       <div class="nbhd-now">This one doesn't have to end that way.</div>
     </div>
   </div>
   <p class="gallery-note">The conditions that make a place worth living in are destroyed by their own success — <em>unless the structure prevents it.</em></p>
 </section>
 
-<!-- THE SITE -->
 <section class="site-section">
   <div class="reveal">
     <span class="section-eyebrow">The opportunity</span>
     <h2 class="site-hed">The city of Norfolk owns<br><em>the land already.</em></h2>
-    <p class="body-p">In 2022, Norfolk's Economic Development Authority acquired the Military Circle Mall site — 73 acres at the I-264/I-64 nexus, in Ward 4, at the highest elevation in a city sinking 4–5mm per year into the Chesapeake — for a nominal sum. The land has been in public hands ever since.</p>
-    <p class="body-p">In most cities, the reason affordable housing is nearly impossible to build is simple: land costs a fortune. 25 to 40 percent of any project's total cost is just the ground beneath it. Here, the city already holds the asset. The hardest part — acquiring the land without debt — is already done.</p>
-
+    <p class="body-p">In 2022, Norfolk's Economic Development Authority acquired the Military Circle Mall site — 73 acres at the I-264/I-64 nexus, in Ward 4, at the highest elevation in a city sinking 4–5mm per year — for a nominal sum. The land has been in public hands ever since.</p>
+    <p class="body-p">In most cities, the reason permanently affordable housing is nearly impossible to build is simple: land costs a fortune. Twenty-five to forty percent of any project's total cost is just the ground beneath it. Here, the city already holds the asset. The hardest part — acquiring the land without debt — is already done.</p>
     <div class="fact">
       <span class="fact-val">$0</span>
-      <span class="fact-label">Land acquisition cost under the commons model. The city already owns it. The subsidy already exists. It's called public land.</span>
+      <span class="fact-label">Land acquisition cost under the commons model. The city already owns it. The subsidy already exists. It's called public land — and it belongs to all of us.</span>
     </div>
-
-    <p class="body-p">Since the acquisition: three developer proposals — Pharrell Williams, Emmitt Smith, Bruce Thompson — each fell apart, for reasons that likely include financing gaps, post-COVID construction cost spikes, and the challenge of structuring a large mixed-use deal in a market that doesn't have many comparable transactions. The city's current placeholder is a library and a fitness center. Not a plan — a signal that no one has yet decided what this land is for.</p>
-    <p class="body-p">The Eastside Civic League named the pattern: <strong>"Downtown Tunnel Vision 2.0."</strong> Resources that could transform the Eastside flow toward downtown instead. The civic league is organized, vocal, and right. What's been missing is a vision concrete enough to demand.</p>
-
+    <p class="body-p">Since the acquisition: three developer proposals — Pharrell Williams, Emmitt Smith, Bruce Thompson — each fell apart, for reasons that likely include financing gaps and post-COVID construction cost increases. The city's current placeholder is a library and a fitness center. Not a plan — a signal that no decision has been made.</p>
+    <p class="body-p">The Eastside Civic League named the pattern — <strong>"Downtown Tunnel Vision 2.0"</strong> — in a letter to City Council in March 2025. Resources that could transform the Eastside flow elsewhere instead. The civic league is organized, vocal, and right. What has been missing is a vision concrete enough to demand.</p>
     <div class="pq">
       <p>"The highest ground in a flooding city should be where people live — under community control, permanently — not where a mall waits out a lease."</p>
       <cite>— Eastside Commons planning brief, 2026</cite>
@@ -962,142 +307,177 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
   </div>
 </section>
 
-<!-- THE RULE -->
 <section class="rule-section">
   <div class="rule-inner reveal">
     <div class="rule-eyebrow">The one rule that changes everything</div>
     <h2 class="rule-hed">The city doesn't<br>sell the <em>land.</em></h2>
-    <p class="rule-p">That's it. That's the whole structural innovation. The city transfers the land to a Community Land Trust — a resident-governed, nonprofit entity that holds it permanently under ground lease. Buildings go up. People move in. Businesses open. The neighborhood grows and changes and becomes something worth living in.</p>
+    <p class="rule-p">That's it. The city transfers the land to a Community Land Trust — a resident-governed, nonprofit entity that holds it permanently under ground lease. Buildings go up. People move in. Businesses open. The neighborhood grows and becomes something worth living in.</p>
     <p class="rule-p">But the land never goes to market. No future city council can sell it. No developer can buy it. When the neighborhood succeeds — and it will — the rising land value flows back into the commons instead of out to shareholders. <strong>The condition that destroys every other great neighborhood is structurally prevented here.</strong></p>
-    <p class="rule-p">Because land is removed from the capital stack, construction costs fall 25–40% versus conventional development. That gap — closed by federal programs (LIHTC tax credit equity, Virginia Housing construction loans, CDFI impact debt) specifically designed for exactly this — is what makes the numbers work across every income band simultaneously.</p>
-    <p class="rule-p">This is not a new idea. The Champlain Housing Trust in Burlington, Vermont has done it for 30 years. 2,500 permanently affordable homes, resold at affordable prices through five ownership cycles. The model has a track record. What it needs is the right site and the political will.</p>
+    <p class="rule-p">Because land is removed from the capital stack, construction costs fall 25–40% versus conventional development. That gap is closed by federal programs — LIHTC tax credit equity, Virginia Housing construction loans, CDFI impact debt — specifically designed for this. The result is a neighborhood that works financially across every income band, simultaneously, without ongoing city subsidy.</p>
+    <div class="rule-governance">
+      <div class="rg-label">Who controls the CLT — and how</div>
+      <p class="rg-body">The CLT board is majority tenant and community-elected — not appointed by the city. Residents vote for representation. Major decisions require community approval. The city contributes the land via ground lease and then steps back; it has no ongoing appointment power. This is the Champlain Housing Trust model, which has governed 2,500 homes in Burlington, Vermont across 30 years and multiple hostile administrations without political capture. The structure is designed to be durable — including when the politics change.</p>
+    </div>
   </div>
 </section>
 
-<!-- WHO THIS IS FOR -->
+<section class="norfolk-section">
+  <div class="norfolk-inner reveal">
+    <div class="norfolk-eyebrow">The citywide argument</div>
+    <h2 class="norfolk-hed">This isn't charity.<br><em>It's infrastructure.</em></h2>
+    <p class="norfolk-sub">What water systems, roads, and transit do for a city — this does for housing.</p>
+    <p class="norfolk-p">Norfolk residents who aren't going to live at Military Circle have a fair question: what's in this for me? Does it cost me taxes? Does it help or hurt the city I live in?</p>
+    <p class="norfolk-p">The answer is the same answer cities give when they build a water main or extend a transit line: <strong>public infrastructure makes the whole city stronger.</strong> Eastside Commons is not a subsidy — it's a use of land the city already owns to generate revenue, reduce long-term costs, and build the kind of mixed-income community that produces better outcomes for everyone.</p>
+    <div class="benefits-grid">
+      <div class="benefit">
+        <span class="benefit-val">$43.5M</span>
+        <span class="benefit-label">Annual NOI at stabilization</span>
+        <div class="benefit-desc">The commons generates its own operating surplus. Ground lease payments flow to the city. No ongoing subsidy required — the project produces revenue.</div>
+      </div>
+      <div class="benefit">
+        <span class="benefit-val">Mixed</span>
+        <span class="benefit-label">Income — by design, not accident</span>
+        <div class="benefit-desc">40% deep affordable, 35% workforce and ownership, 25% market rate. Not a housing project. Not a luxury tower. A neighborhood where people at different incomes live next to each other — which is what the research consistently shows produces the best outcomes for everyone in it.</div>
+      </div>
+      <div class="benefit">
+        <span class="benefit-val">8–12ft</span>
+        <span class="benefit-label">Elevation — the whole city's asset</span>
+        <div class="benefit-desc">As Norfolk's lower-elevation neighborhoods face increasing flood events, displaced residents need somewhere to go. Military Circle is the most resilient ground in the city. Building permanent housing here now reduces the displacement crisis the whole city will otherwise pay for later.</div>
+      </div>
+      <div class="benefit">
+        <span class="benefit-val">1,590</span>
+        <span class="benefit-label">Locally-owned storefronts</span>
+        <div class="benefit-desc">Small businesses at 43% below market rent, with an option to own. The tax base, the jobs, the services — these benefit the whole city. Norfolk's independent business sector has been hollowing out for twenty years. This reverses the direction.</div>
+      </div>
+    </div>
+    <p class="norfolk-p" style="margin-top:2rem;">Cities build water systems because clean water benefits everyone. They build transit because mobility benefits everyone. <strong>Permanently affordable, mixed-income, self-sustaining housing at the most resilient site in Norfolk benefits everyone.</strong> The only question is whether the city acts before someone else decides what this land is for.</p>
+  </div>
+</section>
+
 <section class="personas">
   <div class="personas-inner reveal">
     <h2 class="personas-hed">This is for everyone.<br>And that's the point.</h2>
     <p class="personas-sub">A neighborhood that works for one income band is as monocultural as a suburb. Vitality requires mixing. The structure makes mixing possible without displacement.</p>
-
     <div class="persona-grid">
+
       <div class="persona">
         <div class="persona-role">The Eastside resident</div>
-        <div class="persona-name">You've been here.<br>You should be able to stay.</div>
-        <div class="persona-desc">CLT rental housing at 30–60% AMI. Storefronts at $1,200/mo — 43% below market — with a right of first offer to Eastside residents. CLT ownership condos at $150k, with $1,270/mo payments, in a market where renting the equivalent costs $1,650. You build equity. The neighborhood doesn't price you out when it succeeds.</div>
-        <div class="persona-hook">"I can own something for less than I pay in rent."</div>
+        <div class="persona-name">Can your mother afford to stay? Can your kids come back?</div>
+        <div class="persona-desc">CLT ownership condos at $150,000 — when the market is $295,000. Monthly payment of $1,270 when renting the equivalent costs $1,650. You build $36,000 in equity over ten years. When you sell, you keep your equity plus 25% of appreciation; the rest keeps the next home affordable for the next person. Storefronts at $1,200/month — 43% below market — with right of first offer to Eastside residents. The commons does not price out the people who built it.</div>
+        <div class="persona-hook">"I can own something for less than I pay in rent. And the neighborhood doesn't forget who was here first."</div>
       </div>
 
       <div class="persona">
-        <div class="persona-role">The digital nomad / remote worker</div>
-        <div class="persona-name">You want a place that's real. Before it gets polished.</div>
-        <div class="persona-desc">Purpose-built co-working infrastructure, fast fiber, and ground-floor activation designed for people working on different things in the same place. Market-rate units priced at genuine market rate — but in a building on land with no acquisition cost, in a metro with lower costs than the cities you're leaving. Coastal access. A neighborhood in formation, not in decline.</div>
-        <div class="persona-hook">"I want to be somewhere before it peaks."</div>
+        <div class="persona-role">The remote worker / new arrival</div>
+        <div class="persona-name">A real place, at the moment it's being made.</div>
+        <div class="persona-desc">Purpose-built co-working infrastructure, fast fiber, ground-floor activation designed for people working on different things in the same building. Market-rate units on land with no acquisition cost — comparable 2BR in Austin runs $2,400/month, Asheville $2,100, Denver $2,600. Norfolk: less, with water access, a naval history that fills the air with something particular, ODU and NSU a few miles away, and three hours from DC. And Flood Zone X — the highest, safest ground in a coastal region that is learning what climate risk actually means for real estate value.</div>
+        <div class="persona-hook">"I want to be somewhere before the magazine discovers it. And I want it to still be real when I get there."</div>
       </div>
 
       <div class="persona">
         <div class="persona-role">The cooperative entrepreneur</div>
         <div class="persona-name">You want to own what you build, not rent from someone who does.</div>
-        <div class="persona-desc">A cooperative development fund seeded by the commons' own operating surplus. A technical school — culinary, trades, digital, construction — that produces the workforce and graduates with skills that command real wages. Cooperative anchors: a grocery, a credit union, a fabrication space. A right of first offer on storefronts to cooperatives formed within the commons. The Mondragon move: education first, ownership second.</div>
-        <div class="persona-hook">"I can start a business I actually own."</div>
+        <div class="persona-desc">Mondragón — 80,000 worker-owners in the Basque Country, built from a single technical school in 1956 — started with education, not capital. Eastside Commons follows that logic: a technical school producing certified tradespeople, culinary graduates, and construction workers. Graduates get right of first offer on storefronts within the commons — the people who build it can own a piece of it. A cooperative development fund, seeded by CLT operating surplus, finances cooperative formation. Your storefront leases at $1,200/month, or you own it for $906/month through SBA 504.</div>
+        <div class="persona-hook">"I can start something I actually own, in a place I helped build."</div>
       </div>
 
       <div class="persona">
         <div class="persona-role">The climate-aware buyer</div>
-        <div class="persona-name">You understand what coastal real estate looks like in 20 years.</div>
-        <div class="persona-desc">Military Circle is 8–12 feet elevation. Flood Zone X — the lowest risk classification. Norfolk sinks 4–5mm per year. The neighborhoods around this site will face increasing flood events over the next two decades. This site will not. Climate-safe real estate in a coastal region is going to be genuinely scarce. The commons structure means the value of that resilience stays in the community.</div>
-        <div class="persona-hook">"This is the highest ground. And I'd actually own it."</div>
+        <div class="persona-name">You understand what coastal real estate looks like in 2040.</div>
+        <div class="persona-desc">Military Circle is 8–12 feet elevation, Flood Zone X. No mandatory federal flood insurance — saving $1,500–3,000 per year compared to Zone AE properties a mile away. Norfolk sinks 4–5mm annually. The neighborhoods around this site will face increasing flood events over the next two decades. This one will not. The CLT resale restriction means you capture your equity plus 25% of appreciation — not the full speculative return. The tradeoff: you bought at 49% below market, with insurance savings, in a community you help govern.</div>
+        <div class="persona-hook">"This is the highest ground. I'd rather own a piece of it than watch it from somewhere lower."</div>
       </div>
 
       <div class="persona">
         <div class="persona-role">The impact investor / CDFI</div>
-        <div class="persona-name">You want returns that are real and a structure that lasts.</div>
-        <div class="persona-desc">LIHTC 9% equity (~$68M site-wide), VHDA construction financing, CDFI impact debt at patient rates. Land removed from the capital stack means LTV is building-only — significantly reduced collateral risk. $43.5M projected annual NOI at Phase 3 stabilization. Phased buildout spreads construction risk over 20 years. The CLT ground lease is senior security. The model is precedented; the scale is not.</div>
-        <div class="persona-hook">"The structure reduces the risks that kill deals like this."</div>
+        <div class="persona-name">A structure that reduces the risks that kill deals like this.</div>
+        <div class="persona-desc">LIHTC 9% equity (~$68M site-wide), VHDA construction financing, CDFI impact debt at patient rates. Land removed from the capital stack means collateral is building-only — significantly reduced LTV risk. $43.5M projected annual NOI at Phase 3 stabilization, with Phase 1 cash-flow positive before Phase 3 begins. The CLT board is majority-tenant elected, not city-appointed — governance risk is structured, not assumed. The model is precedented at Champlain (2,500 units, 30 years); the scale here is larger, which is the honest risk. The honest opportunity: no comparable land assembly exists in the Hampton Roads metro.</div>
+        <div class="persona-hook">"The land is owned. The governance is defined. The federal programs exist. What's missing is the first mover."</div>
       </div>
 
       <div class="persona">
         <div class="persona-role">The urbanist / researcher</div>
-        <div class="persona-name">You want to see if this can actually work.</div>
-        <div class="persona-desc">A 3-acre sponge park with a sea level research station in partnership with ODU, Norfolk State, and HRSD. Data licensing revenue that funds the community wealth endowment. A living laboratory for mixed-income CLT development at a scale that hasn't been attempted. The question the field has been asking — can you build vitality and prevent displacement simultaneously? — finally gets a real answer.</div>
-        <div class="persona-hook">"This is the experiment that matters."</div>
+        <div class="persona-name">The question the field has been asking finally gets a real test.</div>
+        <div class="persona-desc">Can you build genuine vitality and prevent displacement simultaneously? The 40/35/25 tenure mix — deep affordable, workforce ownership, market rate — is designed to produce Jacobs-style friction without the displacement that follows success. A proposed sea level research station, designed for partnership with ODU, Norfolk State, and HRSD, creates a living laboratory. Track: affordability rate at Year 10, cooperative businesses formed per year, resident retention versus comparable Norfolk neighborhoods, flood mitigation versus control sites. This is the experiment that matters — at a scale that makes the results legible.</div>
+        <div class="persona-hook">"I want to see if this can actually work. And I want to measure it."</div>
       </div>
+
+      <div class="persona taxpayer">
+        <div class="persona-role">The Norfolk taxpayer — not involved, not opposed, just watching</div>
+        <div class="persona-name">Does this cost me anything? And what do I get?</div>
+        <div class="persona-desc">The city contributes land it already owns — no cash expenditure, no bond issuance for the land itself. Federal programs cover construction financing. The CLT pays ground lease to the city from Year 1. $43.5M annual NOI at stabilization generates tax revenue from a site currently producing almost none. Mixed-income design means no concentrated poverty — lower associated public safety costs, better school enrollment patterns, stronger local tax base. The sewer, the water main, the road — you didn't choose to opt into those either. They made your city function. This does the same thing, on land that already belongs to you.</div>
+        <div class="persona-hook">"I didn't ask for this. But I'll take a stronger tax base, less flooding, and a neighborhood that pays for itself."</div>
+      </div>
+
     </div>
   </div>
 </section>
 
-<!-- STRUCTURE -->
 <section class="structure">
   <div class="structure-inner reveal">
     <span class="section-eyebrow">How it works</span>
     <h2 class="structure-hed">Three layers,<br>one ground rule.</h2>
-    <p class="structure-sub">The CLT holds the land under all of it. What changes across layers is building economics and who captures value.</p>
-
+    <p class="structure-sub">The CLT holds the land under all of it. What changes across layers is building economics and who captures value — not whether the structure holds.</p>
     <div class="layer">
       <div class="layer-header">
         <span class="layer-n">01</span>
         <div>
           <div class="layer-title">Tenure diversity — not 96% anything</div>
-          <span class="layer-sub">Jane Jacobs principle: monocultures don't generate vitality</span>
+          <span class="layer-sub">Jane Jacobs: monocultures, whatever their income band, don't generate vitality</span>
         </div>
       </div>
-      <p class="layer-body">The revised mix: <strong>40% deep affordable</strong> (30–60% AMI, CLT rental) · <strong>35% workforce and ownership</strong> (60–100% AMI, CLT condos at $150k) · <strong>25% market rate</strong> (genuine market, on land with no acquisition cost — still cheaper to build than anywhere else in the metro). Mixed-income by design, not as a concession. Live-work units for artists and makers. Every income band under the same CLT ground rule.</p>
+      <p class="layer-body"><strong>40% deep affordable</strong> (30–60% AMI, CLT rental) · <strong>35% workforce and ownership</strong> (60–100% AMI, CLT condos at $150k) · <strong>25% market rate</strong> (genuine market, on land with no acquisition cost — still cheaper to deliver than anywhere else in the metro). Mixed-income by design, not concession. Live-work units for artists and makers. Every income band under the same ground rule: rising land value flows to the commons, not out.</p>
       <div class="layer-nums">
         <div class="ln"><span class="ln-val">5,118</span><span class="ln-label">Total homes</span></div>
         <div class="ln"><span class="ln-val">$150k</span><span class="ln-label">CLT condo (market: $295k)</span></div>
         <div class="ln"><span class="ln-val">$1,270</span><span class="ln-label">Monthly PITI vs $1,650 rent</span></div>
       </div>
     </div>
-
     <div class="layer">
       <div class="layer-header">
         <span class="layer-n">02</span>
         <div>
           <div class="layer-title">Cooperative enterprise zone</div>
-          <span class="layer-sub">Mondragon principle: ownership of the means of production</span>
+          <span class="layer-sub">Mondragón principle: education first, ownership second, internal capital third</span>
         </div>
       </div>
-      <p class="layer-body">The commercial layer is not just cheap rent — it's <strong>an ecosystem that produces business formation from within.</strong> A cooperative development fund (seeded by CLT operating surplus) finances cooperative formation. A technical school produces graduates with real skills and a right of first offer on storefronts. Cooperative anchors — grocery, credit union, fabrication space — provide the infrastructure. Small operators can own their storefront for $906/mo through SBA 504. The commons produces its own economy.</p>
+      <p class="layer-body">The commercial layer is not just cheap rent — it's <strong>an ecosystem that produces business ownership from within.</strong> A technical school — construction trades certification, culinary, digital skills — produces graduates with a right of first offer on storefronts in the commons. The people who build the neighborhood can own a piece of it. A cooperative development fund, seeded by CLT operating surplus, finances cooperative formation. Cooperative anchors — a grocery, a credit union, a fabrication space — provide the infrastructure that chain retail won't. Lease at $1,200/month or own for $906/month through SBA 504.</p>
       <div class="layer-nums">
-        <div class="ln"><span class="ln-val">1,590</span><span class="ln-label">Mom-and-pop storefronts</span></div>
+        <div class="ln"><span class="ln-val">1,590</span><span class="ln-label">Small operator storefronts</span></div>
         <div class="ln"><span class="ln-val">$1,200</span><span class="ln-label">CLT lease (market: $2,100)</span></div>
         <div class="ln"><span class="ln-val">$906</span><span class="ln-label">Own your storefront/mo</span></div>
       </div>
     </div>
-
     <div class="layer">
       <div class="layer-header">
         <span class="layer-n">03</span>
         <div>
           <div class="layer-title">Climate resilience infrastructure</div>
-          <span class="layer-sub">The highest ground becomes the permanent ground</span>
+          <span class="layer-sub">The highest ground becomes the permanent ground — for everyone who needs it</span>
         </div>
       </div>
-      <p class="layer-body">A 3-acre sponge park captures 70% of annual runoff and provides public open space. A sea level research station — in partnership with ODU, Norfolk State, and HRSD — generates data licensing revenue that funds the community wealth endowment. As flood events increase across lower-elevation neighborhoods, this site's resilience becomes an asset that benefits everyone who lives here, regardless of income. <strong>The community endowment is funded by the same infrastructure that protects the neighborhood.</strong></p>
+      <p class="layer-body">A 3-acre sponge park — in the tradition of Rotterdam's green infrastructure program and Philadelphia's $2.4B green stormwater initiative — captures 70% of annual runoff and provides public open space. A proposed sea level research station, designed for partnership with ODU, Norfolk State, and HRSD, generates data licensing revenue that funds the community wealth endowment. As flood events increase across lower-elevation Norfolk, displaced residents need somewhere to go. Military Circle is Flood Zone X. <strong>The endowment is funded by the same infrastructure that protects the neighborhood.</strong></p>
       <div class="layer-nums">
         <div class="ln"><span class="ln-val">8–12ft</span><span class="ln-label">Elevation (Flood Zone X)</span></div>
-        <div class="ln"><span class="ln-val">70%</span><span class="ln-label">Runoff captured</span></div>
+        <div class="ln"><span class="ln-val">70%</span><span class="ln-label">Annual runoff captured</span></div>
         <div class="ln"><span class="ln-val">$43.5M</span><span class="ln-label">Annual NOI at stabilization</span></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- NUMBERS -->
 <section class="numbers-section reveal">
   <span class="section-eyebrow">The numbers</span>
-  <h2 class="site-hed" style="margin-bottom:0.5rem;">Built from real parcel data.<br><em>Real federal programs.</em></h2>
-  <p class="body-p">19 confirmed EDA-owned parcels, real Norfolk GIS geometry. Construction costs from 2024 Norfolk market. Federal financing programs that exist and are designed for exactly this.</p>
-
+  <h2 class="numbers-hed">Built from real parcel data.<br><em>Real federal programs.</em></h2>
+  <p class="body-p">19 confirmed EDA-owned parcels, real Norfolk GIS geometry. Construction costs from the 2024 Norfolk market. Federal financing that exists and is designed for this kind of project.</p>
   <div class="num-grid">
     <div class="nc"><span class="nc-val">5,118</span><span class="nc-label">Homes over 20 years</span></div>
     <div class="nc"><span class="nc-val">$994M</span><span class="nc-label">Total buildout (3 phases)</span></div>
-    <div class="nc"><span class="nc-val">$43.5M</span><span class="nc-label">Annual NOI stabilized</span></div>
+    <div class="nc"><span class="nc-val">$43.5M</span><span class="nc-label">Annual NOI at stabilization</span></div>
     <div class="nc"><span class="nc-val">$68M</span><span class="nc-label">LIHTC equity site-wide</span></div>
     <div class="nc"><span class="nc-val">$34.9M</span><span class="nc-label">Land value locked in commons</span></div>
     <div class="nc"><span class="nc-val">1</span><span class="nc-label">Council vote needed (PD rezoning)</span></div>
   </div>
-
   <div class="comp">
     <div class="comp-head">
       <div class="ch-cell">Question</div>
@@ -1106,13 +486,13 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
     </div>
     <div class="comp-row">
       <div class="cr-cell label">Who owns the land?</div>
-      <div class="cr-cell bad">Developer (50yr lease or sale)</div>
+      <div class="cr-cell bad">Developer (long lease or sale)</div>
       <div class="cr-cell good">Community — forever</div>
     </div>
     <div class="comp-row">
-      <div class="cr-cell label">Affordable units</div>
-      <div class="cr-cell bad">10–20% (token)</div>
-      <div class="cr-cell good">Majority, across income bands</div>
+      <div class="cr-cell label">Income mix</div>
+      <div class="cr-cell bad">Mostly market rate</div>
+      <div class="cr-cell good">Mixed by design — all income bands</div>
     </div>
     <div class="comp-row">
       <div class="cr-cell label">Who captures rising value?</div>
@@ -1121,90 +501,84 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
     </div>
     <div class="comp-row">
       <div class="cr-cell label">What happens when it succeeds?</div>
-      <div class="cr-cell bad">Displacement</div>
+      <div class="cr-cell bad">Displacement of original residents</div>
       <div class="cr-cell good">The structure holds</div>
+    </div>
+    <div class="comp-row">
+      <div class="cr-cell label">Ongoing city subsidy required?</div>
+      <div class="cr-cell bad">Often yes (tax abatements, TIF)</div>
+      <div class="cr-cell good">No — generates revenue from Year 1</div>
     </div>
   </div>
 </section>
 
-<!-- PRECEDENTS -->
 <section class="precedents">
   <div class="precedents-inner reveal">
     <h2 class="precedents-hed">This isn't a theory.<br>It has a track record.</h2>
-    <p class="precedents-sub">Across ownership, cooperative enterprise, and climate resilience — each piece has been done. What hasn't been done is all three, at this scale, at once.</p>
-
+    <p class="precedents-sub">Across ownership, cooperative enterprise, and climate resilience — each piece has been done. The question is whether Norfolk will do all three together, before someone else decides what this land is for.</p>
     <div class="prec">
       <div>
         <div class="prec-place">Champlain Housing Trust</div>
         <span class="prec-city">Burlington, Vermont</span>
       </div>
-      <div class="prec-body"><strong>30 years. 2,500 permanently affordable homes.</strong> CLT condos resold at affordable prices through five ownership cycles. The gold standard for the land trust model. Founded in 1984 with city support, now the largest community land trust in the US. Proves the structure works — and stays.</div>
+      <div class="prec-body"><strong>30 years. 2,500 permanently affordable homes.</strong> CLT condos resold at affordable prices through five ownership cycles — the same below-market price passes to each new buyer. Majority-tenant board, community-elected. Founded 1984 with city support; now the largest CLT in the US. The governance has survived multiple hostile administrations. The structure holds.</div>
     </div>
-
     <div class="prec">
       <div>
-        <div class="prec-place">Mondragón Cooperative Corporation</div>
+        <div class="prec-place">Mondragón Cooperative</div>
         <span class="prec-city">Basque Country, Spain</span>
       </div>
-      <div class="prec-body">Started in 1956 with <strong>a technical school and 5 students.</strong> Now 80,000 worker-owners across 100 cooperatives, with an internal credit union that finances cooperative formation from within the network. The pattern: education → skills → cooperative ownership → internal capital → more cooperatives. The commercial layer of Eastside Commons follows this logic.</div>
+      <div class="prec-body">Started in 1956 with <strong>a technical school and five students.</strong> Now 80,000 worker-owners across 100 cooperatives, with an internal credit union that finances cooperative formation from within. Education first, cooperative ownership second, internal capital third. The pattern takes a generation. It compounds. Eastside Commons' cooperative enterprise layer follows this logic directly.</div>
     </div>
-
     <div class="prec">
       <div>
-        <div class="prec-place">Wuhan Sponge City Program</div>
-        <span class="prec-city">Wuhan, China</span>
+        <div class="prec-place">Rotterdam &amp; Philadelphia Green Infrastructure</div>
+        <span class="prec-city">Netherlands · Pennsylvania</span>
       </div>
-      <div class="prec-body">389 projects across 38.5 km². <strong>Flood events reduced 10×. Urban heat reduced 3°C. Adjacent land values up 2×.</strong> The research station model enables data licensing. Norfolk is a direct coastal analog — the same logic applies, with the added fact that the sponge park's revenue funds the community endowment that makes everything else permanent.</div>
+      <div class="prec-body">Rotterdam's water squares and green corridors made the city a global model for flood resilience — and increased adjacent property values measurably. Philadelphia's $2.4B green stormwater program reduced combined sewer overflows 80% while generating economic co-benefits citywide. <strong>The sponge park at Military Circle follows this playbook</strong> — and generates the data licensing revenue that funds the community endowment.</div>
     </div>
-
     <div class="prec">
       <div>
         <div class="prec-place">East Beach · Harbor Walk · Broad Creek</div>
         <span class="prec-city">Norfolk, Virginia</span>
       </div>
-      <div class="prec-body">Three large mixed-use redevelopments in Norfolk itself, all approved via <strong>Planned Development (PD) rezoning</strong> — one council vote, master plan governs all subsequent development. The city knows how to do this. The vehicle is precedented locally. Military Circle at 73 acres is the textbook case for PD designation.</div>
+      <div class="prec-body">Three large mixed-use redevelopments in Norfolk, all approved via <strong>Planned Development (PD) rezoning</strong> — one council vote, one master plan, all subsequent development governed without further Council action. The city has done this before, for projects with far weaker public interest rationale. Military Circle at 73 acres is the textbook case for PD designation.</div>
     </div>
   </div>
 </section>
 
-<!-- ASK -->
 <section class="ask-section reveal">
   <h2 class="ask-hed">The land is owned.<br>The plan <em>exists.</em><br>One vote.</h2>
-  <p class="ask-sub">Norfolk City Council rezones Military Circle as a Planned Development and charters a Community Land Trust. One vote. Everything else — the federal financing, the small developers, the cooperative infrastructure — follows from that commitment.</p>
-
+  <p class="ask-sub">Norfolk City Council rezones Military Circle as a Planned Development and charters a Community Land Trust. One vote. Everything else — federal financing, small developers, cooperative infrastructure — follows from that commitment.</p>
   <div class="ask-actions">
     <a href="./index.html" class="btn-primary">See the full site plan →</a>
     <a href="./zine.html" class="btn-secondary">Read the zine — print it, share it</a>
-    <a href="./pitch-coalition.html" class="btn-secondary">The community argument</a>
+    <a href="./pitch-coalition.html" class="btn-secondary">The community organizing argument</a>
   </div>
-
-  <p class="ask-footer-note">
-    This is an independent planning brief built from public data. The site plan is derived from 19 confirmed EDA-owned parcels in Norfolk's FY26 assessment roll. The financial model uses real federal program parameters and 2024 Norfolk construction costs. Nothing here requires a decision to believe — it requires a decision to act.<br><br>
-    The Eastside Civic League named the problem. This document names the solution. The next step is yours.
-  </p>
+  <div class="ask-path">
+    <div class="ask-path-label">How we get from here to the vote</div>
+    <div class="ask-step"><span class="ask-step-n">1</span><span>The Eastside Civic League presents the plan to Ward 4 Councilman JP Paige. The civic league is already organized. The plan gives them something specific to demand, not just oppose.</span></div>
+    <div class="ask-step"><span class="ask-step-n">2</span><span>Economic Development Director Sean Washington sees the numbers — $43.5M NOI, federal financing, no city subsidy — and understands this is a development proposal, not a charity ask.</span></div>
+    <div class="ask-step"><span class="ask-step-n">3</span><span>A PD rezoning application is filed. One council vote. The same vehicle used for East Beach, Harbor Walk, and Broad Creek — precedented locally, designed for exactly this scale.</span></div>
+    <div class="ask-step"><span class="ask-step-n">4</span><span>The CLT is chartered. Phase 1 parcel leases go out as a collaborative RFQ — many small developers under one CLT, not one master developer. Federal financing follows the first committed parcel.</span></div>
+  </div>
+  <p class="ask-footer-note">This is an independent planning brief built from public GIS data and real federal program parameters. The numbers are a model, not a guarantee — they reflect real Norfolk costs, real program rates, and a 20-year buildout that will require sustained civic engagement to defend. The Eastside Civic League named the problem. This document names the solution. What happens next depends on who shows up.</p>
 </section>
 
 <div class="foot">
   GIS data: gisshare.norfolk.gov + data.norfolk.gov FY26 Assessment · 19 EDA-owned parcels confirmed, 73.4ac ·
-  Financial models: Norfolk 2024 construction costs · HUD FY24 AMI $82,900 · LIHTC 9% credit · VHDA current rates · CDFI market rates ·
-  Sponge city: Wuhan Municipal Engineering Design & Research Institute, 2023 · CLT precedent: National CLT Network ·
+  Financial models: Norfolk 2024 construction costs · HUD FY24 AMI $82,900 · LIHTC 9% credit · VHDA current rates ·
+  Green infrastructure: Rotterdam Climate Proof programme · Philadelphia Green City Clean Waters 2021 ·
+  CLT governance: National CLT Network · Champlain Housing Trust annual report ·
   Draft for public discussion · jason-edelman.org/eastside-commons
 </div>
 
 <script>
-// Scroll-triggered reveal
-const observer = new IntersectionObserver(
-  (entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.classList.add('visible');
-        observer.unobserve(e.target);
-      }
-    });
-  },
-  { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+const obs = new IntersectionObserver(
+  es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } }),
+  { threshold: 0.07, rootMargin: '0px 0px -40px 0px' }
 );
-document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
 </script>
 </body>
 </html>
