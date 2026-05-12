@@ -136,8 +136,8 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
 .persona-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
 .persona { background: var(--paper); padding: 1.75rem 1.5rem; transition: background 0.2s; }
 .persona:hover { background: var(--warm); }
-.persona-role { font-family: var(--f-sc); font-size: 0.55rem; letter-spacing: 0.18em; color: var(--muted); margin-bottom: 0.4rem; }
-.persona-name { font-family: var(--f-disp); font-size: 1.15rem; font-weight: 600; line-height: 1.2; margin-bottom: 0.75rem; color: var(--ink); }
+.persona-role { font-family: var(--f-sc); font-size: 0.72rem; letter-spacing: 0.14em; color: var(--clay); margin-bottom: 0.5rem; text-transform: uppercase; }
+.persona-name { font-family: var(--f-disp); font-size: clamp(1.2rem, 3vw, 1.5rem); font-weight: 700; line-height: 1.15; margin-bottom: 0.85rem; color: var(--ink); }
 .persona-desc { font-size: 0.875rem; line-height: 1.72; color: #3a3020; font-weight: 300; }
 .persona-hook { font-family: var(--f-disp); font-size: 0.92rem; font-style: italic; color: var(--clay); margin-top: 0.75rem; line-height: 1.5; }
 .persona.taxpayer { border-top: 2px solid var(--gold); }
@@ -172,8 +172,8 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
 .nc-val { font-family: var(--f-disp); font-size: clamp(1.6rem, 5vw, 2.2rem); font-weight: 600; font-style: italic; color: var(--clay); display: block; line-height: 1; }
 .nc-label { font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.1em; color: var(--muted); display: block; margin-top: 0.4rem; line-height: 1.4; }
 .comp { margin: 2.5rem 0; border: 1px solid var(--rule); }
-.comp-head { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--ink); }
-.ch-cell { padding: 0.6rem 0.75rem; font-family: var(--f-sc); font-size: 0.52rem; letter-spacing: 0.12em; color: rgba(247,244,237,0.4); border-right: 1px solid rgba(255,255,255,0.08); }
+.comp-head { display: grid; grid-template-columns: 1fr 1fr 1fr; background: oklch(22% 0.015 80); }
+.ch-cell { padding: 0.6rem 0.75rem; font-family: var(--f-sc); font-size: 0.62rem; letter-spacing: 0.12em; color: rgba(247,244,237,0.85); border-right: 1px solid rgba(255,255,255,0.12); font-weight: 500; }
 .ch-cell:last-child { border-right: none; }
 .comp-row { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid var(--rule); }
 .cr-cell { padding: 0.55rem 0.75rem; font-size: 0.82rem; border-right: 1px solid var(--rule); line-height: 1.4; }
@@ -313,12 +313,12 @@ body { font-family: var(--f-body); font-weight: 300; line-height: 1.6; overflow-
 
 <section class="opening reveal" style="background:var(--warm);padding:3rem 1.5rem;">
   <div style="max-width:680px;margin:0 auto;">
-    <span class="section-eyebrow">The hard questions</span>
-    <h2 class="opening-hed" style="margin-bottom:1.5rem;">Who pays.<br>Who governs.<br><em>Why now.</em></h2>
-    <p class="body-p"><strong>Who pays?</strong> The city contributes land it already owns — no cash, no bond issuance. Federal programs (Low-Income Housing Tax Credits, Virginia Housing construction loans, community development lending) are specifically designed for this structure and cover construction financing. The project generates its own operating income from Year 1. No ongoing city subsidy required.</p>
-    <p class="body-p"><strong>Who governs it?</strong> A Community Land Trust — resident board, majority-elected by tenants. Not the city, not a developer. The Champlain Housing Trust has run this way for over 40 years through multiple hostile administrations. The structure holds because it's designed to.</p>
-    <p class="body-p"><strong>Won't this concentrate poverty?</strong> 40% deeply affordable, 35% workforce ownership, 25% market rate — same land, same block, same governance. Mixed-income by design. The research is consistent: economic mixing produces better outcomes for everyone in the neighborhood.</p>
-    <p class="body-p"><strong>Why hasn't anyone done this here before?</strong> Three private developer proposals have been shelved since the city acquired the land. The city's current placeholder is a library and a fitness center. The commons model hasn't been tried here because no one has formally proposed it yet.</p>
+    <span class="section-eyebrow">Before you ask</span>
+    <h2 class="opening-hed" style="margin-bottom:1.5rem;">The land is free.<br>The money exists.<br><em>The structure holds.</em></h2>
+    <p class="body-p">The city contributes land it already owns — no cash, no bond issuance. Federal programs cover construction financing. The project generates operating income from Year 1. No ongoing city subsidy.</p>
+    <p class="body-p">A resident-elected board — majority tenants, not city appointees. The Champlain Housing Trust has governed this way for over 40 years through multiple hostile administrations. The structure holds because it's legally designed to.</p>
+    <p class="body-p">40% deeply affordable, 35% workforce ownership condos, 25% market rate — same land, same block, same board. Every housing study on economic mixing reaches the same conclusion: it produces better outcomes for everyone in the neighborhood.</p>
+    <p class="body-p">Three private developer proposals have been shelved since the city acquired the land. The current city placeholder is a library and a fitness center. No one has formally proposed the commons model yet. This document is the proposal.</p>
   </div>
 </section>
 
