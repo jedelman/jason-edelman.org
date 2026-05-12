@@ -3164,12 +3164,12 @@ function selectInitialUse(eligible, parcel_specs, ctx) {
 
 // Reward function weights — the tunable knobs
 const DEFAULT_WEIGHTS = {
-  w_units:          0.20,  // total unit count (normalized to target)
-  w_affordable:     0.35,  // fraction affordable (vs 0.60 target) — increased
-  w_green_connect:  0.22,  // green corridor continuity — increased
-  w_walkability:    0.13,  // proximity of residential to transit/retail
-  w_conflict:      -0.06,  // conflict adjacency penalty
-  w_synergy:        0.04,  // synergy adjacency bonus
+  w_units:          0.12,  // total unit count (normalized to target)
+  w_affordable:     0.25,  // fraction affordable (vs 0.60 target)
+  w_green_connect:  0.16,  // green corridor continuity
+  w_walkability:    0.38,  // 5-min walk diversity — walkability uber alles
+  w_conflict:      -0.05,  // conflict adjacency penalty
+  w_synergy:        0.03,  // synergy adjacency bonus
   w_district_lock:  0.06,  // penalty for mutating away from district's intended use
 };
 
@@ -3211,16 +3211,55 @@ function scoreCandidate(candidate, t1, weights) {
     ? (greenConnected / greenZones.length) * Math.min(1, greenPct / PLANNING.TARGET_GREEN_PCT)
     : 0;
 
-  // ── Walkability score ──
-  // Residential zones score higher when adjacent to transit/retail/civic
+  // ── Walkability score — Jacobs-style 5-min walk diversity ──
+  // Score = diversity of reachable destinations within 2-hop radius, weighted by type
+  // Different destination types score independently (diminishing returns per type)
   const resZones = zones.filter(z => z.use.startsWith('RESIDENTIAL'));
-  const walkableUses = new Set(['RETAIL_GROUND','CIVIC','TRANSIT','PLAZA','GREEN_ACTIVE']);
+  const WALK_WEIGHTS = {
+    'RETAIL_GROUND': 0.28,   // daily errands — highest
+    'GREEN_ACTIVE':  0.22,   // park access
+    'TRANSIT':       0.20,   // mobility
+    'CIVIC':         0.14,   // community anchors
+    'PLAZA':         0.10,   // gathering space
+    'COOP_INCUBATOR':0.06,   // local business diversity
+  };
+
+  // Build adjacency lookup for 2-hop reach
+  const adjMap = new Map();
+  for (const z of zones) adjMap.set(z.id, new Set());
+  for (let i = 0; i < zones.length; i++) {
+    for (let j = i+1; j < zones.length; j++) {
+      if (zonesAdjacent(zones[i], zones[j])) {
+        adjMap.get(zones[i].id).add(zones[j].id);
+        adjMap.get(zones[j].id).add(zones[i].id);
+      }
+    }
+  }
+  const zoneById = new Map(zones.map(z => [z.id, z]));
+
   let walkSum = 0;
   for (const rz of resZones) {
-    const walkNeighbors = zones.filter(z2 =>
-      z2 !== rz && walkableUses.has(z2.use) && zonesAdjacent(rz, z2)
-    ).length;
-    walkSum += Math.min(1, walkNeighbors / 2);  // full score if 2+ walkable neighbors
+    // Collect all zones within 2 hops
+    const reach = new Set();
+    for (const n1id of adjMap.get(rz.id) || []) {
+      reach.add(n1id);
+      for (const n2id of adjMap.get(n1id) || []) {
+        if (n2id !== rz.id) reach.add(n2id);
+      }
+    }
+    // Score by destination type diversity — each type counted once with diminishing returns
+    const typeCounts = {};
+    for (const zid of reach) {
+      const z2 = zoneById.get(zid);
+      if (!z2 || !WALK_WEIGHTS[z2.use]) continue;
+      typeCounts[z2.use] = (typeCounts[z2.use] || 0) + 1;
+    }
+    let rzScore = 0;
+    for (const [use, count] of Object.entries(typeCounts)) {
+      // First instance full value, each additional 50% diminishing return
+      rzScore += WALK_WEIGHTS[use] * (1 - Math.pow(0.5, count));
+    }
+    walkSum += Math.min(1, rzScore);
   }
   const walkability_score = resZones.length > 0 ? walkSum / resZones.length : 0;
 
