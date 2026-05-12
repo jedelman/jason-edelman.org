@@ -126,7 +126,7 @@ jobs:
       - name: Post-deploy smoke test
         id: smoke
         run: |
-          sleep 10  # give Cloudflare a moment to propagate
+          sleep 30  # give Cloudflare time to propagate (Workers assets can take ~20s)
           node - << 'JS'
           const https = require('https');
 
