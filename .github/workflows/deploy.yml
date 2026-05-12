@@ -14,7 +14,9 @@ jobs:
       - name: Checkout repo with submodules
         uses: actions/checkout@v4
         with:
-          submodules: recursive   # pulls abolish-lawns and any future submodules
+          submodules: recursive
+          # Need full history so the log step can push back
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -26,14 +28,61 @@ jobs:
         run: npm ci
 
       - name: Build
+        id: build
         run: npm run build
-        # Runs scripts/build.mjs:
-        #   - copies static files → public/
-        #   - npm install && npm run build in each submodule
-        #   - copies submodule build output → public/<name>/
 
       - name: Deploy to Cloudflare Workers
+        id: deploy
         run: npx wrangler deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Write build log
+        if: always()
+        env:
+          BUILD_STATUS:  ${{ steps.build.outcome }}
+          DEPLOY_STATUS: ${{ steps.deploy.outcome }}
+          COMMIT_SHA:    ${{ github.sha }}
+          COMMIT_MSG:    ${{ github.event.head_commit.message }}
+          COMMIT_AUTHOR: ${{ github.event.head_commit.author.name }}
+          RUN_URL:       ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node - << 'JS'
+          const fs   = require('fs');
+          const path = require('path');
+          const file = path.join(process.cwd(), 'logs', 'build-log.json');
+
+          // Read existing log (array), append new entry, keep last 50
+          let history = [];
+          try { history = JSON.parse(fs.readFileSync(file, 'utf8')); } catch {}
+          if (!Array.isArray(history)) history = [];
+
+          const entry = {
+            ts:            new Date().toISOString(),
+            commit_sha:    process.env.COMMIT_SHA?.slice(0, 7),
+            commit_msg:    process.env.COMMIT_MSG,
+            commit_author: process.env.COMMIT_AUTHOR,
+            build:         process.env.BUILD_STATUS,
+            deploy:        process.env.DEPLOY_STATUS,
+            run_url:       process.env.RUN_URL,
+            overall:       (process.env.BUILD_STATUS === 'success' &&
+                            process.env.DEPLOY_STATUS === 'success') ? 'success' : 'failure',
+          };
+
+          history.unshift(entry);          // newest first
+          history = history.slice(0, 50);  // keep last 50
+
+          fs.writeFileSync(file, JSON.stringify(history, null, 2));
+          console.log('Log entry written:', JSON.stringify(entry, null, 2));
+          JS
+
+      - name: Commit and push build log
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add logs/build-log.json
+          # Only commit if there's actually a change
+          git diff --cached --quiet || git commit -m "ci: update build log [skip ci]"
+          git push
