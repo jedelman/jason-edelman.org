@@ -888,6 +888,10 @@ details[open] summary::before { content: '▼  '; }
 
       <!-- SVG map + 3D canvas (toggled) -->
       <div class="map-wrap" id="map-wrap-2d" style="position:relative;">
+        <!-- Error overlay — shown on pipeline failure, visible without console -->
+        <div id="map-error-overlay" style="display:none;position:absolute;inset:0;z-index:100;
+          background:rgba(4,4,2,0.92);color:#e8784a;font-family:var(--font-mono);font-size:0.7rem;
+          padding:1.5rem;line-height:1.8;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"></div>
         <svg id="site-plan" viewBox="0 0 960 760" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
           <text x="480" y="380" font-family="monospace" font-size="14" fill="#2a2820" text-anchor="middle">Loading GIS data…</text>
         </svg>
@@ -986,6 +990,23 @@ details[open] summary::before { content: '▼  '; }
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
 <script>
+// Global error handler — surfaces JS errors on the map for mobile debugging
+window.addEventListener('error', function(e) {
+  const overlay = document.getElementById('map-error-overlay');
+  if (overlay && overlay.style.display === 'none') {
+    overlay.textContent = '\u2717 JS Error\n\n' + e.message + '\n' + e.filename + ':' + e.lineno;
+    overlay.style.display = 'block';
+  }
+});
+window.addEventListener('unhandledrejection', function(e) {
+  const overlay = document.getElementById('map-error-overlay');
+  if (overlay && overlay.style.display === 'none') {
+    const msg = e.reason?.message || String(e.reason);
+    overlay.textContent = '\u2717 Unhandled promise rejection\n\n' + msg;
+    overlay.style.display = 'block';
+  }
+});
+
 // ═══════════════════════════════════════════════════════════════
 //  EASTSIDE COMMONS CONSTRAINT SOLVER
 //  All geometry derived from parcel data. No hardcoded coordinates.
@@ -5572,12 +5593,14 @@ async function triggerPipeline() {
   const progSection = document.getElementById('ea-progress-section');
   if (progSection) progSection.style.display = '';
   if (scoreHistory) scoreHistory.innerHTML = '';
+  const errOverlay = document.getElementById('map-error-overlay');
+  if (errOverlay) errOverlay.style.display = 'none';
 
   const params = {
     block_size_ft:       parseInt(document.getElementById('p-block-size').value),
     strategy:            document.getElementById('p-strategy').value,
     courtyard_inset_ft:  parseInt(document.getElementById('p-courtyard')?.value || 60),
-    ea_rounds:           parseInt(document.getElementById('p-rounds').value),
+    ea_rounds:           parseInt(document.getElementById('p-rounds').value) || (window.innerWidth < 700 ? 5 : 15),
     ea_candidates:       30,
     ea_mutation:         parseInt(document.getElementById('p-mutation').value) / 100,
     show_units:true, show_edges:true, show_labels:true, opacity:0.55,
@@ -5656,8 +5679,15 @@ async function triggerPipeline() {
       }
     );
   } catch(e) {
-    statusText.textContent = '\u2717 Error: ' + e.message;
-    console.error(e); btn.disabled=false; btn.textContent='\u25b6 Run pipeline';
+    const msg = e?.message || String(e);
+    statusText.textContent = '\u2717 Error: ' + msg;
+    console.error(e);
+    btn.disabled = false; btn.textContent = '\u25b6 Run pipeline';
+    const overlay = document.getElementById('map-error-overlay');
+    if (overlay) {
+      overlay.textContent = '\u2717 Pipeline error\n\n' + msg + (e?.stack ? '\n\n' + e.stack : '');
+      overlay.style.display = 'block';
+    }
   }
 }
 
