@@ -97,12 +97,30 @@ p strong { color: var(--ink); }
 .doc-footer { margin-top: 2.5rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); display: flex; justify-content: space-between; align-items: flex-end; }
 .footer-url { font-family: var(--f-hed); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); }
 .footer-note { font-size: 0.65rem; color: #888; max-width: 60ch; }
+
+/* Mobile */
+@media (max-width: 600px) {
+  body { padding: 0 1rem 3rem; }
+  .print-bar { margin: 0 -1rem 1.5rem; padding: 0.5rem 1rem; }
+  .doc-title { font-size: 2.2rem; }
+  .stat-bar { grid-template-columns: repeat(3, 1fr); }
+  .stat-bar .stat-cell:nth-child(4) { border-top: 1px solid var(--rule); }
+  .stat-bar .stat-cell:nth-child(5) { border-top: 1px solid var(--rule); }
+  .stat-val { font-size: 1.3rem; }
+  .two-col { grid-template-columns: 1fr; gap: 0; }
+  .three-col { grid-template-columns: 1fr; gap: 1rem; }
+  .ask-grid { grid-template-columns: 1fr; }
+  .doc-footer { flex-direction: column; gap: 0.5rem; }
+  .footer-note { max-width: 100%; }
+  .data-table { font-size: 0.75rem; }
+  .data-table th, .data-table td { padding: 0.25rem 0.35rem; }
+}
 </style>
 </head>
 <body>
 
 <div class="print-bar no-print">
-  <span>Eastside Commons — City Hall Brief · Draft 2025</span>
+  <span>Eastside Commons — City Hall Brief · Draft 2026</span>
   <button class="print-btn" onclick="window.print()">↓ Print / Save PDF</button>
 </div>
 
@@ -110,7 +128,7 @@ p strong { color: var(--ink); }
   <div class="doc-kicker">City of Norfolk · Economic Development · Ward 4</div>
   <div class="doc-title">Eastside<br><em>Commons</em></div>
   <div class="doc-sub">A phased, self-financing commons master plan for the 73-acre city-owned Military Circle site — Norfolk, Virginia.</div>
-  <div class="doc-meta">Draft for discussion · 2025 · jason-edelman.org/eastside-commons</div>
+  <div class="doc-meta">Draft for discussion · 2026 · jason-edelman.org/eastside-commons</div>
 </div>
 
 <div class="stat-bar">

@@ -100,12 +100,26 @@ p strong { color: var(--ink); }
 /* Footer */
 .footer { margin-top: 2.5rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); font-size: 0.7rem; color: #888; line-height: 1.6; }
 .footer-url { font-family: var(--f-mono); font-size: 0.68rem; color: var(--clay); display: block; margin-bottom: 0.3rem; }
+
+/* Mobile */
+@media (max-width: 600px) {
+  body { padding: 0 1rem 3rem; }
+  .print-bar { margin: 0 -1rem 1.5rem; padding: 0.5rem 1rem; }
+  .cover-title { font-size: 2.5rem; }
+  .inline-stats { flex-wrap: wrap; }
+  .is { min-width: 33%; border-top: 1px solid var(--rule); }
+  .is-val { font-size: 1.3rem; }
+  .compare { grid-template-columns: 1fr; }
+  .compare-col:first-child { border-right: none; border-bottom: 1px solid var(--rule); }
+  .sh { font-size: 1.1rem; }
+  .pq p { font-size: 0.92rem; }
+}
 </style>
 </head>
 <body>
 
 <div class="print-bar no-print">
-  <span>Eastside Commons — Community Vision · Draft 2025</span>
+  <span>Eastside Commons — Community Vision · Draft 2026</span>
   <button class="print-btn" onclick="window.print()">↓ Print / Save PDF</button>
 </div>
 
@@ -252,7 +266,7 @@ p strong { color: var(--ink); }
 
 <div class="footer">
   <span class="footer-url">jason-edelman.org/eastside-commons</span>
-  Interactive plan, full financial pro forma, and printable zine. GIS data: gisshare.norfolk.gov + data.norfolk.gov FY26 Assessment. 19 EDA-owned parcels, 73.4ac confirmed. All site plan geometry derived by constraint satisfaction from real parcel data — no hardcoded coordinates, no assumptions. Financial projections based on Norfolk 2024 costs and HUD FY24 AMI. Draft for community discussion · 2025.
+  Interactive plan, full financial pro forma, and printable zine. GIS data: gisshare.norfolk.gov + data.norfolk.gov FY26 Assessment. 19 EDA-owned parcels, 73.4ac confirmed. All site plan geometry derived by constraint satisfaction from real parcel data — no hardcoded coordinates, no assumptions. Financial projections based on Norfolk 2024 costs and HUD FY24 AMI. Draft for community discussion · 2026.
 </div>
 
 </body>

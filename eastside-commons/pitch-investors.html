@@ -90,12 +90,29 @@ p { font-size: 0.9rem; margin-bottom: 0.6rem; color: #2a2a2a; }
 .footnotes { margin-top: 2.5rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); font-size: 0.7rem; color: #888; line-height: 1.6; }
 .footer-row { display: flex; justify-content: space-between; align-items: flex-end; }
 .footer-url { font-family: var(--f-mono); font-size: 0.65rem; color: var(--accent); }
+
+/* Mobile */
+@media (max-width: 600px) {
+  body { padding: 0 1rem 3rem; }
+  .print-bar { margin: 0 -1rem 1.5rem; padding: 0.5rem 1rem; }
+  .header-strip { margin: 0 -1rem 1.5rem; padding: 1.5rem 1rem 1rem; }
+  .title { font-size: 2.2rem; }
+  .header-metrics { grid-template-columns: repeat(2, 1fr); }
+  .hm-val { font-size: 1.4rem; }
+  .two-col { grid-template-columns: 1fr; gap: 0; }
+  .three-col { grid-template-columns: 1fr; gap: 1rem; }
+  .returns-table { font-size: 0.78rem; }
+  .returns-table th, .returns-table td { padding: 0.3rem 0.4rem; }
+  .risk-table { font-size: 0.78rem; }
+  .risk-table th, .risk-table td { padding: 0.3rem 0.4rem; }
+  .footer-row { flex-direction: column; gap: 0.3rem; }
+}
 </style>
 </head>
 <body>
 
 <div class="print-bar no-print">
-  <span>Eastside Commons — Institutional Investor Brief · Draft 2025</span>
+  <span>Eastside Commons — Institutional Investor Brief · Draft 2026</span>
   <button class="print-btn" onclick="window.print()">↓ Print / Save PDF</button>
 </div>
 
@@ -233,7 +250,7 @@ p { font-size: 0.9rem; margin-bottom: 0.6rem; color: #2a2a2a; }
 <div class="footnotes">
   <div class="footer-row">
     <div class="footer-url">jason-edelman.org/eastside-commons</div>
-    <span>Interactive plan + full pro forma · GIS-derived geometry · Draft 2025</span>
+    <span>Interactive plan + full pro forma · GIS-derived geometry · Draft 2026</span>
   </div>
   <p style="margin-top:0.5rem;">Financial projections based on: Norfolk 2024 construction costs ($185k/unit affordable, $210k market-rate); HUD FY2024 AMI Norfolk-VB MSA ($82,900 4-person); LIHTC 9% credit current rate; VHDA published loan programs; Norfolk commercial rents (CoStar Q3 2024). NOI projections assume stabilized occupancy at Phase 3 completion (~2045). This document is for discussion purposes and does not constitute an offering. All figures subject to market conditions and city approvals.</p>
 </div>
