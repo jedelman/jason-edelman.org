@@ -7,11 +7,6 @@ account_id = "543fde7feabd0af945bfae926ceea7ad"
 directory = "public"
 not_found_handling = "single-page-application"
 
-# Custom domains — declared here so wrangler deploy doesn't wipe the dashboard binding
-[[routes]]
-pattern = "jason-edelman.org"
-custom_domain = true
-
-[[routes]]
-pattern = "www.jason-edelman.org"
-custom_domain = true
+# Custom domain bindings are managed in the Cloudflare dashboard.
+# Do NOT declare [[routes]] here — wrangler rewrites them on every deploy
+# and has historically broken the custom domain binding.
