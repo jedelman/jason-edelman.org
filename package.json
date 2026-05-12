@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "build": "node scripts/build.mjs",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "install-hooks": "sh scripts/install-hooks.sh",
+    "check": "node scripts/pre-commit.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

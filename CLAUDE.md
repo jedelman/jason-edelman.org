@@ -86,7 +86,14 @@ questions applied to a new kind of resource enclosure.
 
 ## Session start instructions
 
-**At the start of every session in this repo, load the memory substrate:**
+**At the start of every session in this repo:**
+
+1. Install the pre-commit hook (idempotent — safe to run every time):
+```bash
+sh scripts/install-hooks.sh
+```
+
+2. Load the memory substrate:
 
 ```bash
 git clone https://github.com/jedelman/claude-memory.git /tmp/claude-memory 2>/dev/null \
