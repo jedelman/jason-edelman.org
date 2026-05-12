@@ -784,10 +784,19 @@ details[open] summary::before { content: '▼  '; }
             Save the current EA result to share or restore exactly.
             The layout captures all slider positions, the random seed, and every zone assignment.
           </p>
+          <!-- Canonical badge -->
+          <div id="canonical-badge" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(72,136,168,0.12);border:1px solid var(--accent);border-radius:2px;">
+            <span style="color:var(--accent);font-size:0.65rem;letter-spacing:0.1em;">★ CANONICAL PLAN</span>
+            <span style="color:var(--muted);font-size:0.6rem;line-height:1.4;">The official Eastside Commons proposal. Seed EC202600.</span>
+          </div>
           <div class="save-btn-row">
             <button class="tool-btn" onclick="window.EC_Save?.saveToHash()" title="Set URL hash — copy address bar to share">⊞ Copy link</button>
             <button class="tool-btn" onclick="window.EC_Save?.saveToFile()" title="Download as JSON">↓ Save JSON</button>
             <button class="tool-btn" onclick="window.EC_Save?.loadFromFile()" title="Restore from saved JSON">↑ Load JSON</button>
+          </div>
+          <div class="save-btn-row" style="margin-top:0.4rem;">
+            <button class="tool-btn" onclick="newSeed()" title="Generate a new random seed and re-run">⟳ New seed</button>
+            <button class="tool-btn" onclick="loadCanonical()" title="Reset to the canonical plan (seed EC202600)">★ Load canonical</button>
           </div>
           <hr class="av-divider">
           <div class="av-header" style="margin-top:0.4rem;">Current seed</div>
@@ -1604,7 +1613,17 @@ function initTooltip() {
     // Wire pipeline to this solve's outputs
     initPipeline(parcels, proj, MAP, derived);
     // Auto-run pipeline after page paints
-    setTimeout(() => { if (typeof triggerPipeline!=='undefined') triggerPipeline(); }, 600);
+    setTimeout(() => {
+      if (typeof triggerPipeline === 'undefined') return;
+      // Load from URL hash if present, otherwise run canonical seed
+      const loaded = window.EC_Save ? window.EC_Save.loadFromHash() : loadFromHash?.();
+      if (!loaded) {
+        // No hash — start with canonical seed (already set as default)
+        setSeed(CANONICAL_SEED);
+        triggerPipeline();
+      }
+      // If hash loaded, restoreState() already called triggerPipeline()
+    }, 600);
   }, 0);
 })();
 
@@ -3111,9 +3130,20 @@ function scoreCandidate(candidate, t1, weights) {
 
 // ── SEEDABLE PRNG (mulberry32) ────────────────────────────────────────────────
 // Fast, high-quality 32-bit seeded PRNG. No dependencies.
-let _eaSeed = Date.now() >>> 0;
+//
+// CANONICAL seed — the official Eastside Commons plan.
+// This specific seed + default slider values produces the layout locked as
+// the canonical proposal. Share any other seed via the URL hash.
+const CANONICAL_SEED = 0xEC202600; // "EC2026" — Eastside Commons 2026
 
-function setSeed(s) { _eaSeed = (s >>> 0) || 1; }
+let _eaSeed = CANONICAL_SEED; // default; overridden by hash or "new seed"
+let _isCanonical = true;      // tracks whether current run matches canonical
+
+function setSeed(s) {
+  _eaSeed = (s >>> 0) || 1;
+  _isCanonical = (_eaSeed === (CANONICAL_SEED >>> 0));
+  updateCanonicalBadge();
+}
 
 function seededRandom() {
   _eaSeed |= 0; _eaSeed = _eaSeed + 0x6D2B79F5 | 0;
@@ -3123,6 +3153,42 @@ function seededRandom() {
 }
 
 function getCurrentSeed() { return _eaSeed >>> 0; }
+
+function newSeed() {
+  setSeed(Date.now() >>> 0);
+  showToast('New seed: ' + getCurrentSeed().toString(16).toUpperCase().padStart(8,'0'));
+  triggerPipeline();
+}
+
+function loadCanonical() {
+  setSeed(CANONICAL_SEED);
+  // Reset sliders to canonical defaults
+  const setSlider = (id, val, suffix='') => {
+    const el = document.getElementById(id);
+    const lbl = document.getElementById(id + '-val');
+    if (el) { el.value = val; if (lbl) lbl.textContent = val + suffix; }
+  };
+  setSlider('p-block-size', 200, 'ft');
+  setSlider('p-courtyard', 60, 'ft');
+  setSlider('p-rounds', 15);
+  setSlider('p-mutation', 10, '%');
+  setSlider('w-units', 20, '%');
+  setSlider('w-affordable', 35, '%');
+  setSlider('w-green', 22, '%');
+  setSlider('w-walk', 13, '%');
+  const sel = document.getElementById('p-strategy');
+  if (sel) sel.value = 'hybrid';
+  // Clear hash so URL is clean for canonical
+  history.replaceState(null, '', window.location.pathname);
+  showToast('Canonical plan loaded — seed EC202600');
+  triggerPipeline();
+}
+
+function updateCanonicalBadge() {
+  const badge = document.getElementById('canonical-badge');
+  if (!badge) return;
+  badge.style.display = _isCanonical ? '' : 'none';
+}
 
 function mutateCandidate(zones, mutation_rate) {
   // Deep copy
@@ -6754,7 +6820,7 @@ function showToast(msg) {
   toast._timer = setTimeout(() => toast.style.opacity = 0, 3500);
 }
 
-window.EC_Save = { captureState, saveToHash, saveToFile, loadFromFile, restoreState, showToast };
+window.EC_Save = { captureState, saveToHash, saveToFile, loadFromFile, restoreState, showToast, newSeed, loadCanonical, updateCanonicalBadge };
 
 // ── ANALYSIS VIEWS ───────────────────────────────────────────────────────────
 
@@ -6944,6 +7010,7 @@ function switchAnalysis(view, btn) {
   if (view === 'save') {
     const seedEl = document.getElementById('av-seed-display');
     if (seedEl) seedEl.textContent = getCurrentSeed().toString(16).toUpperCase().padStart(8,'0');
+    updateCanonicalBadge();
   }
 }
 
