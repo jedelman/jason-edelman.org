@@ -79,6 +79,7 @@
   <button class="toggle-btn on" id="tog-lines">Lines</button>
   <button class="toggle-btn on" id="tog-nodes">Nodes</button>
   <button class="toggle-btn on" id="tog-ground">Ground</button>
+  <button class="toggle-btn on" id="tog-detail">Detail</button>
 
   <button id="btn-run">▶ Solve</button>
   <span id="status">—</span>
@@ -1282,7 +1283,8 @@ const gBuildings = new THREE.Group();
 const gLines = new THREE.Group();
 const gNodes = new THREE.Group();
 const gGround = new THREE.Group();
-scene.add(gBuildings, gLines, gNodes, gGround);
+const gDetail = new THREE.Group(); // LOD: facade detail, hidden at city scale
+scene.add(gBuildings, gLines, gNodes, gGround, gDetail);
 
 // State
 let lastResult = null;
@@ -1364,6 +1366,11 @@ function hexColor(hex) {
 // P116 CascadeRoofs         — height cascade from spine (already in clusters)
 // P119 Arcades              — ground-floor arcade base on street-facing edge
 // ══════════════════════════════════════════════════════════════════════════════
+
+// ── LOD DETAIL GROUP ─────────────────────────────────────────────────────────
+// All facade detail (floor bands, windows, entry, parapet) goes here.
+// Toggled by camera distance in the render loop.
+let _detailTarget = null; // set before each building render pass
 
 // ── GEOMETRY HELPERS ─────────────────────────────────────────────────────────
 
@@ -1588,7 +1595,7 @@ function addDetailedBuilding(group, blk, heightFt, col, derived) {
     color: col, opacity: 0.88, transparent: true
   });
   const edgeMat = new THREE.LineBasicMaterial({
-    color: col.clone().multiplyScalar(1.5), opacity: 0.5, transparent: true
+    color: col.clone().multiplyScalar(1.1), opacity: 0.18, transparent: true
   });
 
   // P122: Base — always applied (ground floor is always active)
@@ -1609,23 +1616,12 @@ function addDetailedBuilding(group, blk, heightFt, col, derived) {
   // Top edge
   addTopRect(group, cx, cy, fw, fh, heightFt, edgeMat.clone());
 
-  // P166: Floor bands (2+ floors only — adds real vertical rhythm)
-  if (floors >= 2) {
-    addFloorBands(group, cx, cy, fw, fh, heightFt, floors, col);
-  }
-
-  // P164: Window bands on public face (3+ floors — enough surface to read)
-  if (floors >= 3) {
-    addWindowBands(group, cx, cy, fw, fh, baseH, heightFt, floors, col, face);
-  }
-
-  // P121: Entry recess on public face (all buildings)
-  addEntryRecess(group, cx, cy, fw, fh, baseH, col, face);
-
-  // P127: Parapet on private (rear) face (4+ floors — taller buildings read it)
-  if (floors >= 4) {
-    addParapet127(group, cx, cy, fw, fh, heightFt, col, face);
-  }
+  // P166/P164/P121/P127 — routed to gDetail (LOD: only shown when zoomed in)
+  const dg = gDetail;
+  if (floors >= 2) addFloorBands(dg, cx, cy, fw, fh, heightFt, floors, col);
+  if (floors >= 3) addWindowBands(dg, cx, cy, fw, fh, baseH, heightFt, floors, col, face);
+  addEntryRecess(dg, cx, cy, fw, fh, baseH, col, face);
+  if (floors >= 4) addParapet127(dg, cx, cy, fw, fh, heightFt, col, face);
 }
 
 
@@ -1769,11 +1765,11 @@ function buildP106Courtyard(group, blk, heightFt, col, openDir) {
     addBox(group, armX, cy + (fh - wallD) / 2, armW, wallD, lowerH, mat.clone());
     addTopRect(group, armX, cy + (fh - wallD) / 2, armW, wallD, lowerH, edgeMat.clone());
   }
-  // P166/P164 detail on courtyard arms (floor bands + windows on outer faces)
+  // P166/P164 detail on courtyard arms — LOD group
   const floors = blk.floors;
-  if (floors >= 2) addFloorBands(group, cx, cy, fw, fh, heightFt, floors, col);
-  if (floors >= 3) addWindowBands(group, cx, cy, fw, fh, 0, heightFt, floors, col, openDir === 'S' ? 'N' : openDir === 'N' ? 'S' : openDir === 'E' ? 'W' : 'E');
-  addEntryRecess(group, cx, cy, fw, fh, heightFt/floors, col, openDir);
+  if (floors >= 2) addFloorBands(gDetail, cx, cy, fw, fh, heightFt, floors, col);
+  if (floors >= 3) addWindowBands(gDetail, cx, cy, fw, fh, 0, heightFt, floors, col, openDir === 'S' ? 'N' : openDir === 'N' ? 'S' : openDir === 'E' ? 'W' : 'E');
+  addEntryRecess(gDetail, cx, cy, fw, fh, heightFt/floors, col, openDir);
 }
 
 // P119 Arcade: two-part section — wide low base + narrower tower
@@ -1906,6 +1902,7 @@ function clusterUrbanBlocks(hotNodes, derived) {
 
 function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
   while(gBuildings.children.length) gBuildings.remove(gBuildings.children[0]);
+  while(gDetail.children.length) gDetail.remove(gDetail.children[0]);
 
   const blocks = clusterUrbanBlocks(hotNodes, derived);
   if (!blocks.length) return;
@@ -2200,9 +2197,9 @@ function positionCamera(MAP) {
 }
 
 // ── TOGGLE BUTTONS ────────────────────────────────────────────────────────────
-['buildings','lines','nodes','ground'].forEach(id => {
+['buildings','lines','nodes','ground','detail'].forEach(id => {
   const btn = document.getElementById('tog-' + id);
-  const grp = { buildings: gBuildings, lines: gLines, nodes: gNodes, ground: gGround }[id];
+  const grp = { buildings: gBuildings, lines: gLines, nodes: gNodes, ground: gGround, detail: gDetail }[id];
   btn.addEventListener('click', () => {
     grp.visible = !grp.visible;
     btn.classList.toggle('on', grp.visible);
@@ -2298,6 +2295,9 @@ camera.lookAt(0, 0, 0);
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
+  // LOD: show facade detail only when camera is close enough to read it
+  const camDist = camera.position.length();
+  gDetail.visible = camDist < 800;
   renderer.render(scene, camera);
 }
 animate();
