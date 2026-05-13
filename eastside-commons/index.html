@@ -649,9 +649,9 @@ details[open] summary::before { content: '▼  '; }
 
   <div class="stat-row">
     <div class="stat"><span class="stat-val">73</span><span class="stat-label">Acres, city-owned</span></div>
-    <div class="stat"><span class="stat-val">$0</span><span class="stat-label">Land cost (CLT)</span></div>
-    <div class="stat"><span class="stat-val">1,600</span><span class="stat-label">Homes over 20 years</span></div>
-    <div class="stat"><span class="stat-val">60%</span><span class="stat-label">Permanently affordable</span></div>
+    <div class="stat"><span class="stat-val">$0</span><span class="stat-label">Land cost (CLT holds it)</span></div>
+    <div class="stat"><span class="stat-val">~3,200</span><span class="stat-label">Homes · 25×125 · 5-over-1</span></div>
+    <div class="stat"><span class="stat-val">~70/ac</span><span class="stat-label">Greenwich Village density</span></div>
   </div>
 
   <div class="prose">
@@ -935,8 +935,8 @@ details[open] summary::before { content: '▼  '; }
     <a href="/eastside-commons/pitch-investors" target="_blank" style="display:flex;flex-direction:column;justify-content:space-between;padding:0.85rem 1.1rem;background:var(--surface);border-right:1px solid var(--border);text-decoration:none;color:inherit;gap:0.5rem;">
       <div>
         <p style="font-family:var(--font-mono);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--accent);margin:0 0 0.3rem;">Pitch — Investors</p>
-        <p style="font-family:var(--font-mono);font-size:0.72rem;font-weight:500;color:var(--text);margin:0;">LIHTC · CDFI · NMTC</p>
-        <p style="font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);margin:0.2rem 0 0;">Capital stack · NOI · risk profile</p>
+        <p style="font-family:var(--font-mono);font-size:0.72rem;font-weight:500;color:var(--text);margin:0;">5-over-1 · CLT land · market rate</p>
+        <p style="font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);margin:0.2rem 0 0;">Deal structure · NOI · cap rate · per-building</p>
       </div>
       <span style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--accent);">Open &rarr;</span>
     </a>
@@ -2680,26 +2680,53 @@ const PLANNING = {
   // Road setbacks by class (ft from road edge to buildable zone)
   SETBACK: { HIGHWAY: 50, ARTERIAL: 20, COLLECTOR: 15, LOCAL: 10 },
 
+  // ── 5-OVER-1 TYPOLOGY (25×125 ft parcel) ──────────────────────────────────
+  // The canonical building unit: 25ft wide × 125ft deep lot.
+  // Ground floor: commercial (14ft ceiling, full footprint).
+  // Floors 2–6: Type V wood frame over Type I concrete podium.
+  // No parking podium. Street-facing. One at a time if you want.
+  // Reference: Izmir/Manisa (Turkey), Eixample ground typology, Chicago 25ft lot.
+  PARCEL_W_FT: 25,                // lot width
+  PARCEL_D_FT: 125,               // lot depth
+  PARCEL_SF: 25 * 125,            // 3,125 sf footprint
+  COMMERCIAL_FLOORS: 1,           // ground floor commercial
+  COMMERCIAL_CEILING_FT: 14,      // activated street wall
+  RESIDENTIAL_FLOORS: 5,          // wood frame over podium
+  FLOOR_HEIGHT_FT: 10,            // residential floor-to-floor
+  BUILDING_HEIGHT_FT: 14 + 5*10,  // 64ft — fits under 65ft residential limit
+  EFFICIENCY_RATIO: 0.82,         // net-to-gross residential
+  AVG_UNIT_SF: 850,               // 2BR equivalent planning average
+  MIN_UNIT_SF: 550,               // 1BR studio minimum
+  // Units per building: 5 floors × (25×125×0.82 / 850) = ~15 units
+  UNITS_PER_BUILDING: Math.round(5 * (25 * 125 * 0.82) / 850),  // ~15
+
   // Building envelope
-  MAX_BUILDING_DEPTH_FT: 50,      // natural ventilation limit
-  MIN_COURTYARD_RATIO: 0.30,      // min 30% of block as open space
-  DAYLIGHT_ANGLE_DEG: 45,         // courtyard width ≥ building height at this angle
-  MAX_HEIGHT_FT: { residential: 65, commercial: 45, civic: 55 },
+  MAX_BUILDING_DEPTH_FT: 125,     // full lot depth (no daylight constraint — rear courtyard handles it)
+  MIN_COURTYARD_RATIO: 0.25,      // 25% of block as open/green (parks, not parking)
+  MAX_HEIGHT_FT: { residential: 65, commercial: 45, civic: 55, mixed: 65 },
 
-  // Use mix targets (site-wide)
-  TARGET_UNITS: 1600,
-  TARGET_AFFORDABLE_PCT: 0.60,
-  TARGET_GREEN_PCT: 0.20,         // min 20% of site as green/open
+  // Use mix targets (site-wide) — YIMBY market-rate model
+  TARGET_UNITS: 3200,             // flood the zone: ~70 u/ac × 45ac buildable
+  TARGET_AFFORDABLE_PCT: 0.0,     // no mandatory affordability — CLT land removal IS the affordability
+  TARGET_GREEN_PCT: 0.25,         // 25% parks minimum — everyone gets a playground
 
-  // Density targets
-  FAR_MIN: 3.0, FAR_MAX: 4.5,    // floor area ratio range
-  MIN_UNIT_SF: 650,               // smallest unit allowed (sq ft)
-  AVG_UNIT_SF: 850,               // planning average
+  // Density targets — 5-over-1 is naturally 4.5–5.5 FAR on footprint
+  FAR_MIN: 4.0, FAR_MAX: 5.5,
+  DENSITY_TARGET_UAC: 70,         // units/acre — Greenwich Village is 75, Eixample is 142
 
-  // Tier 2 defaults (overridden by UI params)
-  BLOCK_SIZE_FT: 350,
-  STRATEGY: 'hybrid',             // 'grid' | 'parcel' | 'hybrid'
-  SPINE_WIDTH_FT: 80,             // pedestrian priority street
+  // Tier 2 defaults
+  BLOCK_SIZE_FT: 250,             // shorter blocks → more street activation
+  PARCEL_CUT_FT: 25,              // Jacobs grain = parcel width
+  STRATEGY: 'hybrid',
+  SPINE_WIDTH_FT: 60,             // pedestrian spine — narrower, more intimate
+
+  // Market rate financials (no LIHTC, no subsidy stack)
+  CONSTRUCTION_COST_PSF: 225,     // $/sf all-in, wood frame Type V (no podium parking)
+  COMMERCIAL_RENT_PSF: 28,        // NNN $/sf/yr (conservative; activated street → $35-45 yr 5+)
+  RESIDENTIAL_RENT_MO: 1650,      // market 2BR Norfolk 2024; first-mover discount
+  OPEX_PCT_MARKET: 0.38,          // market-rate OpEx (no LIHTC compliance overhead)
+  CAP_RATE: 0.055,                // 5.5% — Class B+ multifamily Hampton Roads
+  // No land cost — CLT holds it. This is the entire margin.
 
   // EA parameters
   EA_CANDIDATES: 30,
@@ -2710,76 +2737,64 @@ const PLANNING = {
 
 // ── USE TAXONOMY ──────────────────────────────────────────────────────────────
 const USES = {
-  RESIDENTIAL_MARKET:     { id:'RM', label:'Market-rate housing',     color:'#c87818', priority:2 },
-  RESIDENTIAL_AFFORDABLE: { id:'RA', label:'Affordable housing (CLT)',color:'#d4940c', priority:1 },
-  RESIDENTIAL_CLT_OWN:    { id:'RC', label:'CLT homeownership',       color:'#e8b820', priority:1 },
-  RETAIL_GROUND:          { id:'RG', label:'Ground-floor retail',     color:'#e83808', priority:3 },
-  CIVIC:                  { id:'CV', label:'Civic / community',       color:'#1868b8', priority:2 },
-  PLAZA:                  { id:'PZ', label:'Plaza / hardscape',       color:'#6888a8', priority:3 },
-  GREEN_ACTIVE:           { id:'GA', label:'Active park / recreation',color:'#22a838', priority:2 },
-  GREEN_PASSIVE:          { id:'GP', label:'Wetland / ecological',    color:'#0e7828', priority:1 },
-  RESEARCH:               { id:'RS', label:'Research station',        color:'#18a0c8', priority:3 },
-  TRANSIT:                { id:'TR', label:'Transit / Tide station',  color:'#0858b8', priority:1 },
-  INFRASTRUCTURE:         { id:'IN', label:'Infrastructure / utility',color:'#4a4038', priority:3 },
-  // Phase 0 + cooperative economy uses
-  MARKET_HALL:            { id:'MH', label:'Indoor market (Phase 0)', color:'#b84898', priority:0 }, // priority 0 = placed first
-  WORKSHOP_FABRICATION:   { id:'WF', label:'Workshop / fabrication',  color:'#886838', priority:2 },
-  DEPOT_YARD:             { id:'DY', label:'Equipment / materials yard',color:'#585030', priority:3 },
-  LIVE_WORK:              { id:'LW', label:'Live/work (CLT trades)',   color:'#d87828', priority:1 },
-  COOP_INCUBATOR:         { id:'CI', label:'Cooperative incubator',   color:'#2898a8', priority:2 },
+  // ── PRIMARY: 5-over-1 mixed use ──────────────────────────────────────────
+  MIXED_USE_5OVER1:   { id:'MX', label:'5-over-1 (ground commercial + 5 residential)', color:'#c84818', priority:0 },
+  // Market rate residential (pure residential parcels — interior courts, upper streets)
+  RESIDENTIAL_MARKET: { id:'RM', label:'Market-rate residential',    color:'#c87818', priority:1 },
+  // CLT ownership — the same building, land held permanently. No subsidy needed.
+  RESIDENTIAL_CLT_OWN:{ id:'RC', label:'CLT homeownership (~$150k)', color:'#e8b820', priority:1 },
+  // ── PLAY: parks and public space ─────────────────────────────────────────
+  GREEN_ACTIVE:       { id:'GA', label:'Active park / playground',   color:'#22a838', priority:1 },
+  GREEN_PASSIVE:      { id:'GP', label:'Wetland / bioswale / ecological', color:'#0e7828', priority:1 },
+  PLAZA:              { id:'PZ', label:'Plaza / hardscape gathering', color:'#6888a8', priority:2 },
+  // ── CIVIC / ANCHOR ───────────────────────────────────────────────────────
+  CIVIC:              { id:'CV', label:'Civic / library / clinic',   color:'#1868b8', priority:2 },
+  MARKET_HALL:        { id:'MH', label:'Eastside Market (Phase 0)',  color:'#b84898', priority:0 },
+  TRANSIT:            { id:'TR', label:'Transit / Tide station',     color:'#0858b8', priority:1 },
+  // ── INFRASTRUCTURE ───────────────────────────────────────────────────────
+  RESEARCH:           { id:'RS', label:'Research / sponge station',  color:'#18a0c8', priority:3 },
+  INFRASTRUCTURE:     { id:'IN', label:'Infrastructure / utility',   color:'#4a4038', priority:3 },
+  // ── LIVE-WORK (narrow typology variant) ──────────────────────────────────
+  LIVE_WORK:          { id:'LW', label:'Live/work studio (25×50 variant)', color:'#d87828', priority:2 },
 };
 
 // Adjacency graph: which uses can mutate into which (T3 mutation operator)
 const USE_ADJACENCY = {
-  RESIDENTIAL_MARKET:     ['RESIDENTIAL_AFFORDABLE','RETAIL_GROUND','GREEN_ACTIVE'],
-  RESIDENTIAL_AFFORDABLE: ['RESIDENTIAL_MARKET','RESIDENTIAL_CLT_OWN','RETAIL_GROUND'],
-  RESIDENTIAL_CLT_OWN:    ['RESIDENTIAL_AFFORDABLE','CIVIC','GREEN_ACTIVE','LIVE_WORK'],
-  RETAIL_GROUND:          ['CIVIC','PLAZA','RESIDENTIAL_MARKET','COOP_INCUBATOR'],
-  CIVIC:                  ['RETAIL_GROUND','PLAZA','GREEN_ACTIVE','RESIDENTIAL_CLT_OWN','COOP_INCUBATOR'],
-  PLAZA:                  ['CIVIC','GREEN_ACTIVE','RETAIL_GROUND','MARKET_HALL'],
-  GREEN_ACTIVE:           ['GREEN_PASSIVE','PLAZA','RESIDENTIAL_AFFORDABLE','LIVE_WORK'],
-  GREEN_PASSIVE:          ['GREEN_ACTIVE','RESEARCH','INFRASTRUCTURE'],
-  RESEARCH:               ['GREEN_PASSIVE','CIVIC','INFRASTRUCTURE','WORKSHOP_FABRICATION'],
-  TRANSIT:                ['CIVIC','PLAZA','RETAIL_GROUND','DEPOT_YARD','WORKSHOP_FABRICATION'],
-  INFRASTRUCTURE:         ['GREEN_PASSIVE','TRANSIT','DEPOT_YARD'],
-  // New cooperative economy uses
-  MARKET_HALL:            ['RETAIL_GROUND','CIVIC','PLAZA','COOP_INCUBATOR'],
-  WORKSHOP_FABRICATION:   ['LIVE_WORK','DEPOT_YARD','RESEARCH','TRANSIT'],
-  DEPOT_YARD:             ['WORKSHOP_FABRICATION','TRANSIT','INFRASTRUCTURE'],
-  LIVE_WORK:              ['RESIDENTIAL_CLT_OWN','WORKSHOP_FABRICATION','GREEN_ACTIVE'],
-  COOP_INCUBATOR:         ['RETAIL_GROUND','CIVIC','MARKET_HALL','WORKSHOP_FABRICATION'],
+  MIXED_USE_5OVER1:   ['RESIDENTIAL_MARKET','RESIDENTIAL_CLT_OWN','GREEN_ACTIVE','PLAZA','LIVE_WORK'],
+  RESIDENTIAL_MARKET: ['MIXED_USE_5OVER1','RESIDENTIAL_CLT_OWN','GREEN_ACTIVE','PLAZA'],
+  RESIDENTIAL_CLT_OWN:['MIXED_USE_5OVER1','RESIDENTIAL_MARKET','GREEN_ACTIVE','CIVIC','LIVE_WORK'],
+  GREEN_ACTIVE:       ['GREEN_PASSIVE','PLAZA','MIXED_USE_5OVER1','RESIDENTIAL_MARKET'],
+  GREEN_PASSIVE:      ['GREEN_ACTIVE','RESEARCH','INFRASTRUCTURE'],
+  PLAZA:              ['CIVIC','GREEN_ACTIVE','MIXED_USE_5OVER1','MARKET_HALL','TRANSIT'],
+  CIVIC:              ['PLAZA','GREEN_ACTIVE','MIXED_USE_5OVER1','RESIDENTIAL_CLT_OWN'],
+  MARKET_HALL:        ['MIXED_USE_5OVER1','PLAZA','CIVIC'],
+  TRANSIT:            ['CIVIC','PLAZA','MIXED_USE_5OVER1','INFRASTRUCTURE'],
+  RESEARCH:           ['GREEN_PASSIVE','CIVIC','INFRASTRUCTURE'],
+  INFRASTRUCTURE:     ['GREEN_PASSIVE','TRANSIT'],
+  LIVE_WORK:          ['MIXED_USE_5OVER1','RESIDENTIAL_CLT_OWN','GREEN_ACTIVE'],
 };
 
-// Conflict matrix: adjacency penalty [A][B] = penalty score (higher = worse)
+// Conflict matrix
 const CONFLICT = {
-  RESIDENTIAL_MARKET:     { INFRASTRUCTURE:5, GREEN_PASSIVE:1, DEPOT_YARD:6, WORKSHOP_FABRICATION:4 },
-  RESIDENTIAL_AFFORDABLE: { INFRASTRUCTURE:5, GREEN_PASSIVE:1, DEPOT_YARD:6, WORKSHOP_FABRICATION:4 },
-  RESIDENTIAL_CLT_OWN:    { DEPOT_YARD:5, WORKSHOP_FABRICATION:3 },
-  RETAIL_GROUND:          { GREEN_PASSIVE:2, INFRASTRUCTURE:4, DEPOT_YARD:3 },
-  GREEN_PASSIVE:          { RETAIL_GROUND:2, RESIDENTIAL_MARKET:1, RESIDENTIAL_AFFORDABLE:1, DEPOT_YARD:5 },
-  TRANSIT:                { GREEN_PASSIVE:3, INFRASTRUCTURE:1 },
-  DEPOT_YARD:             { RESIDENTIAL_MARKET:6, RESIDENTIAL_AFFORDABLE:6, GREEN_PASSIVE:5, RETAIL_GROUND:3 },
-  WORKSHOP_FABRICATION:   { RESIDENTIAL_MARKET:4, RESIDENTIAL_AFFORDABLE:4 },
+  MIXED_USE_5OVER1:   { GREEN_PASSIVE:2, INFRASTRUCTURE:3 },
+  RESIDENTIAL_MARKET: { INFRASTRUCTURE:4, GREEN_PASSIVE:1 },
+  RESIDENTIAL_CLT_OWN:{ INFRASTRUCTURE:3 },
+  GREEN_PASSIVE:      { MIXED_USE_5OVER1:2, RESIDENTIAL_MARKET:1 },
 };
 
-// Synergy matrix: adjacency bonus [A][B] = bonus score
+// Synergy matrix — the whole point: mixed use NEXT TO parks NEXT TO more mixed use
 const SYNERGY = {
-  RESIDENTIAL_MARKET:     { GREEN_ACTIVE:3, GREEN_PASSIVE:2, PLAZA:2, RETAIL_GROUND:2 },
-  RESIDENTIAL_AFFORDABLE: { GREEN_ACTIVE:3, GREEN_PASSIVE:2, PLAZA:2, CIVIC:2 },
-  RESIDENTIAL_CLT_OWN:    { GREEN_ACTIVE:4, PLAZA:3, CIVIC:3, GREEN_PASSIVE:2, LIVE_WORK:3 },
-  RETAIL_GROUND:          { PLAZA:3, CIVIC:2, TRANSIT:3, RESIDENTIAL_MARKET:1, COOP_INCUBATOR:3, MARKET_HALL:3 },
-  CIVIC:                  { PLAZA:3, GREEN_ACTIVE:2, RETAIL_GROUND:2, TRANSIT:2, COOP_INCUBATOR:3 },
-  PLAZA:                  { RETAIL_GROUND:3, CIVIC:3, GREEN_ACTIVE:2, TRANSIT:2, MARKET_HALL:2 },
-  GREEN_ACTIVE:           { RESIDENTIAL_MARKET:3, RESIDENTIAL_AFFORDABLE:3, PLAZA:2, LIVE_WORK:3 },
-  GREEN_PASSIVE:          { RESEARCH:4, GREEN_ACTIVE:3 },
-  RESEARCH:               { GREEN_PASSIVE:4, CIVIC:2, WORKSHOP_FABRICATION:3 },
-  TRANSIT:                { RETAIL_GROUND:3, PLAZA:3, CIVIC:2, DEPOT_YARD:3, WORKSHOP_FABRICATION:2 },
-  // New cooperative economy synergies
-  MARKET_HALL:            { RETAIL_GROUND:3, COOP_INCUBATOR:4, PLAZA:2, CIVIC:2 },
-  WORKSHOP_FABRICATION:   { LIVE_WORK:5, DEPOT_YARD:4, RESEARCH:3, TRANSIT:2 },
-  DEPOT_YARD:             { WORKSHOP_FABRICATION:4, TRANSIT:3 },
-  LIVE_WORK:              { WORKSHOP_FABRICATION:5, GREEN_ACTIVE:3, RESIDENTIAL_CLT_OWN:3 },
-  COOP_INCUBATOR:         { MARKET_HALL:4, RETAIL_GROUND:3, CIVIC:3, WORKSHOP_FABRICATION:2 },
+  MIXED_USE_5OVER1:   { GREEN_ACTIVE:5, PLAZA:4, TRANSIT:4, MARKET_HALL:4, CIVIC:3, RESIDENTIAL_MARKET:2, LIVE_WORK:3 },
+  RESIDENTIAL_MARKET: { GREEN_ACTIVE:4, PLAZA:3, MIXED_USE_5OVER1:3, TRANSIT:2 },
+  RESIDENTIAL_CLT_OWN:{ GREEN_ACTIVE:5, PLAZA:4, CIVIC:4, MIXED_USE_5OVER1:3, LIVE_WORK:3 },
+  GREEN_ACTIVE:       { MIXED_USE_5OVER1:5, RESIDENTIAL_MARKET:4, RESIDENTIAL_CLT_OWN:5, PLAZA:3, CIVIC:2 },
+  GREEN_PASSIVE:      { GREEN_ACTIVE:4, RESEARCH:4 },
+  PLAZA:              { MIXED_USE_5OVER1:4, CIVIC:4, GREEN_ACTIVE:3, MARKET_HALL:4, TRANSIT:3 },
+  CIVIC:              { PLAZA:4, GREEN_ACTIVE:3, MIXED_USE_5OVER1:3, TRANSIT:2 },
+  MARKET_HALL:        { MIXED_USE_5OVER1:5, PLAZA:4, CIVIC:3 },
+  TRANSIT:            { MIXED_USE_5OVER1:4, PLAZA:3, CIVIC:2 },
+  LIVE_WORK:          { MIXED_USE_5OVER1:4, GREEN_ACTIVE:3, RESIDENTIAL_CLT_OWN:3 },
+  RESEARCH:           { GREEN_PASSIVE:4, CIVIC:2 },
 };
 
 // Planning principle: GREEN_FIRST
@@ -3038,90 +3053,76 @@ function computeEligibleUses(props) {
     return uses;
   }
 
-  // ── DISTRICT IDENTITY TAKES PRIORITY over spatial flags ──
-  // Check parcel spec first — a CLT parcel is always CLT regardless of
-  // where it sits in the site.
   const specs = props.parcel_specs || [];
   const isCLT    = specs.some(s => s && s.startsWith('CLT'));
   const isCivic  = specs.some(s => s && (s.startsWith('CIVIC') || s === 'HOUSING_A_530'));
   const isHsgB   = specs.some(s => s === 'HOUSING_B_S');
   const isSponge = specs.some(s => s === 'SPONGE_PARCEL');
   const isMallCore = specs.some(s => s === 'MALL_CORE');
+  const isMainSt = specs.some(s => s && s.startsWith('MAIN_ST'));
 
   if (isSponge) {
     uses.push('GREEN_PASSIVE', 'GREEN_ACTIVE', 'RESEARCH');
     return uses;
   }
 
+  // CLT parcels: 5-over-1 or CLT ownership or green — land is permanently held
   if (isCLT) {
-    uses.push('RESIDENTIAL_CLT_OWN', 'RESIDENTIAL_AFFORDABLE', 'GREEN_ACTIVE', 'CIVIC');
-    // Near main street: can have retail ground floor
+    uses.push('MIXED_USE_5OVER1', 'RESIDENTIAL_CLT_OWN', 'GREEN_ACTIVE', 'CIVIC');
     if (props.in_main_st || props.road_adj.includes('VA_BEACH_BLVD'))
-      uses.push('RETAIL_GROUND', 'PLAZA');
+      uses.push('PLAZA', 'MARKET_HALL');
     return uses;
   }
 
+  // Civic / housing A: 5-over-1 primary, parks secondary
   if (isCivic) {
-    uses.push('CIVIC', 'PLAZA', 'GREEN_ACTIVE', 'RESIDENTIAL_AFFORDABLE', 'RETAIL_GROUND');
+    uses.push('MIXED_USE_5OVER1', 'CIVIC', 'PLAZA', 'GREEN_ACTIVE');
     return uses;
   }
 
+  // Housing B south: dense mixed use with transit orientation
   if (isHsgB) {
-    // HOUSING_B_S is always residential — tide adjacency adds transit but doesn't remove housing
-    uses.push('RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_CLT_OWN', 'GREEN_ACTIVE');
-    if (props.near_tide) uses.push('TRANSIT', 'PLAZA', 'RETAIL_GROUND');
+    uses.push('MIXED_USE_5OVER1', 'RESIDENTIAL_MARKET', 'GREEN_ACTIVE');
+    if (props.near_tide) uses.push('TRANSIT', 'PLAZA');
     return uses;
   }
 
+  // Main street corridor: Eastside Market + 5-over-1
+  if (isMainSt || props.in_main_st) {
+    uses.push('MIXED_USE_5OVER1', 'MARKET_HALL', 'PLAZA', 'CIVIC');
+    return uses;
+  }
+
+  // Mall core: full 5-over-1 transformation
   if (isMallCore) {
-    // Mall core can be anything — split east/west at spine guides initial use
-    uses.push('RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_MARKET', 'RESIDENTIAL_CLT_OWN',
-              'RETAIL_GROUND', 'CIVIC', 'PLAZA', 'GREEN_ACTIVE');
-    return uses;
-  }
-
-  // ── SPATIAL RULES for unrecognised zones ──
-
-  if (props.in_setback) {
-    uses.push('GREEN_ACTIVE', 'GREEN_PASSIVE', 'INFRASTRUCTURE');
+    uses.push('MIXED_USE_5OVER1', 'RESIDENTIAL_MARKET', 'RESIDENTIAL_CLT_OWN',
+              'GREEN_ACTIVE', 'PLAZA', 'CIVIC', 'MARKET_HALL');
     return uses;
   }
 
   if (props.near_sponge) {
     uses.push('GREEN_PASSIVE', 'GREEN_ACTIVE', 'RESEARCH');
-    if (props.area_ac > 0.3) uses.push('RESIDENTIAL_AFFORDABLE');
-    return uses;
-  }
-
-  if (props.in_main_st) {
-    uses.push('RETAIL_GROUND', 'CIVIC', 'PLAZA', 'RESIDENTIAL_MARKET', 'RESIDENTIAL_AFFORDABLE');
     return uses;
   }
 
   if (props.on_spine) {
-    uses.push('GREEN_ACTIVE', 'PLAZA', 'CIVIC', 'TRANSIT');
+    uses.push('GREEN_ACTIVE', 'PLAZA', 'CIVIC', 'TRANSIT', 'MIXED_USE_5OVER1');
     return uses;
   }
 
   if (props.road_adj.includes('I264') && !props.road_adj.includes('VA_BEACH_BLVD')) {
-    uses.push('INFRASTRUCTURE', 'GREEN_PASSIVE', 'GREEN_ACTIVE', 'TRANSIT');
+    uses.push('INFRASTRUCTURE', 'GREEN_PASSIVE', 'GREEN_ACTIVE');
     return uses;
   }
 
-  // Near tide but not a known parcel type
   if (props.near_tide && props.area_ac < 1.0) {
-    uses.push('TRANSIT', 'PLAZA', 'RETAIL_GROUND', 'CIVIC');
+    uses.push('TRANSIT', 'PLAZA', 'MIXED_USE_5OVER1', 'CIVIC');
     return uses;
   }
 
-  // Default interior: full mix
-  uses.push(
-    'RESIDENTIAL_MARKET', 'RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_CLT_OWN',
-    'RETAIL_GROUND', 'CIVIC', 'PLAZA', 'GREEN_ACTIVE'
-  );
-  if (props.road_adj.includes('N_MILITARY_HWY') && props.area_ac > 1.0) {
-    uses.push('CIVIC');
-  }
+  // Default interior: 5-over-1 is the primary product, parks cut through
+  uses.push('MIXED_USE_5OVER1', 'RESIDENTIAL_MARKET', 'RESIDENTIAL_CLT_OWN',
+            'GREEN_ACTIVE', 'PLAZA', 'CIVIC');
 
   return [...new Set(uses)];
 }
@@ -3131,9 +3132,9 @@ function selectInitialUse(eligible, parcel_specs, ctx) {
   if (ctx.near_tide) return 'TRANSIT';
   if (ctx.near_sponge) return 'GREEN_PASSIVE';
   if (ctx.on_spine) return 'PLAZA';
-  if (ctx.in_main_st) return 'RETAIL_GROUND';
+  if (ctx.in_main_st) return eligible.includes('MARKET_HALL') ? 'MARKET_HALL' : 'MIXED_USE_5OVER1';
 
-  // Use parcel spec as a hint
+  // Parcel spec hints
   if (parcel_specs.some(s => s && s.startsWith('CIVIC'))) {
     return eligible.includes('CIVIC') ? 'CIVIC' : eligible[0];
   }
@@ -3162,15 +3163,17 @@ function selectInitialUse(eligible, parcel_specs, ctx) {
 //  Rounds: 15
 // ════════════════════════════════════════════════════════════════════════════════
 
-// Reward function weights — the tunable knobs
+// Reward function weights — YIMBY market-rate model
+// Walkability + green dominate. No affordability target (CLT land = affordability).
+// Synergy weight high because mixed-use adjacency IS the value proposition.
 const DEFAULT_WEIGHTS = {
-  w_units:          0.12,  // total unit count (normalized to target)
-  w_affordable:     0.25,  // fraction affordable (vs 0.60 target)
-  w_green_connect:  0.16,  // green corridor continuity
-  w_walkability:    0.38,  // 5-min walk diversity — walkability uber alles
-  w_conflict:      -0.05,  // conflict adjacency penalty
-  w_synergy:        0.03,  // synergy adjacency bonus
-  w_district_lock:  0.06,  // penalty for mutating away from district's intended use
+  w_units:          0.15,  // unit count (normalized to higher target)
+  w_affordable:     0.00,  // dropped — CLT land removal handles it structurally
+  w_green_connect:  0.20,  // parks must connect — no isolated green patches
+  w_walkability:    0.42,  // Jacobs diversity within 5-min walk — the whole bet
+  w_conflict:      -0.05,  // conflict penalty
+  w_synergy:        0.12,  // high — mixed-use adjacency creates the value
+  w_district_lock:  0.06,  // honor parcel assignments
 };
 
 function scoreCandidate(candidate, t1, weights) {
@@ -3180,18 +3183,18 @@ function scoreCandidate(candidate, t1, weights) {
 
   // ── Unit count score ──
   let total_units = 0;
-  let affordable_units = 0;
   for (const z of zones) {
-    if (!['RESIDENTIAL_MARKET','RESIDENTIAL_AFFORDABLE','RESIDENTIAL_CLT_OWN'].includes(z.use)) continue;
-    const buildable_ac = z.area_ac * (1 - PLANNING.MIN_COURTYARD_RATIO) * z.constraints.far;
-    const units = Math.floor(buildable_ac * 43560 / PLANNING.AVG_UNIT_SF);
-    total_units += units;
-    if (z.use !== 'RESIDENTIAL_MARKET') affordable_units += units;
+    if (z.use === 'MIXED_USE_5OVER1') {
+      // Count 25×125 buildings that fit in the zone, × UNITS_PER_BUILDING
+      const buildings = Math.floor(z.area_ac * 43560 * (1 - PLANNING.MIN_COURTYARD_RATIO) / PLANNING.PARCEL_SF);
+      total_units += buildings * PLANNING.UNITS_PER_BUILDING;
+    } else if (['RESIDENTIAL_MARKET','RESIDENTIAL_CLT_OWN'].includes(z.use)) {
+      const buildable_ac = z.area_ac * (1 - PLANNING.MIN_COURTYARD_RATIO);
+      total_units += Math.floor(buildable_ac * 43560 / PLANNING.AVG_UNIT_SF * (PLANNING.FAR_MIN / 1));
+    }
   }
   const units_score = Math.min(1, total_units / PLANNING.TARGET_UNITS);
-  const affordable_score = total_units > 0
-    ? Math.min(1, affordable_units / (total_units * PLANNING.TARGET_AFFORDABLE_PCT))
-    : 0;
+  const affordable_score = 1.0;  // not scored — CLT land is the mechanism
 
   // ── Green connectivity score ──
   // Score = fraction of green zones that are adjacent to another green zone
@@ -3216,12 +3219,12 @@ function scoreCandidate(candidate, t1, weights) {
   // Different destination types score independently (diminishing returns per type)
   const resZones = zones.filter(z => z.use.startsWith('RESIDENTIAL'));
   const WALK_WEIGHTS = {
-    'RETAIL_GROUND': 0.28,   // daily errands — highest
-    'GREEN_ACTIVE':  0.22,   // park access
-    'TRANSIT':       0.20,   // mobility
-    'CIVIC':         0.14,   // community anchors
-    'PLAZA':         0.10,   // gathering space
-    'COOP_INCUBATOR':0.06,   // local business diversity
+    'MIXED_USE_5OVER1': 0.30,   // ground-floor commercial IS the daily errand — highest
+    'GREEN_ACTIVE':     0.24,   // park — everyone's playground
+    'TRANSIT':          0.18,   // mobility
+    'CIVIC':            0.12,   // community anchors
+    'PLAZA':            0.10,   // gathering
+    'MARKET_HALL':      0.06,   // Eastside Market anchor
   };
 
   // Build adjacency lookup for 2-hop reach
@@ -3282,8 +3285,8 @@ function scoreCandidate(candidate, t1, weights) {
   let lock_score = 0;
   const DISTRICT_LOCKS = {
     'SPONGE':    ['GREEN_PASSIVE', 'GREEN_ACTIVE', 'RESEARCH'],
-    'CLT':       ['RESIDENTIAL_CLT_OWN', 'RESIDENTIAL_AFFORDABLE'],
-    'HOUSING_B': ['RESIDENTIAL_AFFORDABLE', 'RESIDENTIAL_CLT_OWN'],
+    'CLT':       ['MIXED_USE_5OVER1', 'RESIDENTIAL_CLT_OWN', 'GREEN_ACTIVE'],
+    'HOUSING_B': ['MIXED_USE_5OVER1', 'RESIDENTIAL_MARKET', 'GREEN_ACTIVE'],
   };
   let lock_total = 0, lock_count = 0;
   for (const z of zones) {
@@ -7535,103 +7538,141 @@ function renderFinancialsView(zones) {
 
   const AMI = NORFOLK_AMI;
 
-  // ── Unit counts ──
+  // ── YIMBY MARKET-RATE MODEL ─────────────────────────────────────────────
+  // No LIHTC. No federal subsidy stack. CLT land removal is the entire mechanism.
+  // 5-over-1: ground commercial + 5 wood-frame residential floors.
+  // 25ft × 125ft parcels. One building at a time. Anyone can build one.
+  // Affordable because land is free, not because HUD says so.
+
+  // ── Unit counts (from solver) ──
   let totalUnits = 0, cltUnits = 0, marketUnits = 0;
+  const mxZones = zones.filter(z => z.use === 'MIXED_USE_5OVER1' && !z.district?.includes('COURTYARD'));
   const resZones = zones.filter(z => z.use.startsWith('RESIDENTIAL') && !z.district?.includes('COURTYARD'));
-  for (const z of resZones) {
+  for (const z of [...mxZones, ...resZones]) {
     const u = z.units?.unit_count || 0;
-    const af = z.units?.affordable_units || 0;
     totalUnits += u;
     if (z.use === 'RESIDENTIAL_MARKET') marketUnits += u;
-    else cltUnits += Math.min(af, u);
+    else cltUnits += u;
   }
-  const belowMarketUnits = totalUnits - marketUnits;
-  const cltCondoTarget = Math.round(cltUnits * 0.30);
-  const rentalUnits = belowMarketUnits - cltCondoTarget;
+  // CLT split: ~40% ownership condos, ~60% market-rate rental (no AMI cap — market sets the price)
+  const cltCondoTarget = Math.round(cltUnits * 0.40);
+  const rentalUnits = totalUnits - cltCondoTarget;
 
-  // ── Storefronts ──
-  const retailZones = zones.filter(z => z.use === 'RETAIL_GROUND' || z.in_main_st);
-  const totalRetailAc = retailZones.reduce((s, z) => s + z.area_ac, 0);
-  const storeFrontCount = Math.round(totalRetailAc * 43560 / (18 * 50));
-  const smallPEStorefronts = Math.round(storeFrontCount * 0.75);
-  const avgStoreSqft = 900;  // 18ft × 50ft bay
+  // ── Per-building 5-over-1 geometry ──
+  const PARCEL_W = 25, PARCEL_D = 125;                   // feet
+  const PARCEL_SF = PARCEL_W * PARCEL_D;                 // 3,125 sf footprint
+  const EFFICIENCY = 0.82;                               // net/gross ratio
+  const COMMERCIAL_FLOORS = 1, RESIDENTIAL_FLOORS = 5;
+  const AVG_UNIT_SF = 850;
+  const unitsPerBuilding = Math.round(RESIDENTIAL_FLOORS * PARCEL_SF * EFFICIENCY / AVG_UNIT_SF); // ~15
+  const commercialSFPerBuilding = PARCEL_SF * EFFICIENCY;  // ~2,563 sf net ground floor
 
-  // ── Retail scenarios ──
-  const mktRent_sqft = 28;        // Norfolk market NNN $/sqft/yr
-  const cltRent_sqft = 16;        // CLT rate (land cost removed)
-  const mktMonthly  = Math.round(mktRent_sqft * avgStoreSqft / 12);
-  const cltMonthly  = Math.round(cltRent_sqft * avgStoreSqft / 12);
-  const rentSavings = mktMonthly - cltMonthly;
-  const rentDiscount = Math.round((1 - cltRent_sqft / mktRent_sqft) * 100);
-  const annualRetailIncome = smallPEStorefronts * cltRent_sqft * avgStoreSqft / 1000;
+  // Total buildings implied by unit count
+  const totalBuildings = Math.max(1, Math.round(totalUnits / unitsPerBuilding));
+  const totalCommercialSF = totalBuildings * commercialSFPerBuilding;
 
-  // Storefront buyout — CLT building purchase (land stays in trust)
-  const bldgCostPerSqft = 150;    // commercial construction cost basis
-  const bldgValue = avgStoreSqft * bldgCostPerSqft;  // $135k
-  const sba504Down = 0.10;
-  const sba504DownAmt = Math.round(bldgValue * sba504Down);
-  const sba504Loan = bldgValue - sba504DownAmt;
-  const sbaRate = 0.065, sbaTerm = 20;
-  const sbaMonthly = Math.round(sba504Loan * (sbaRate/12) / (1 - Math.pow(1+sbaRate/12, -sbaTerm*12)));
-  const buyVsLeaseMonthly = cltMonthly - sbaMonthly;  // positive = ownership cheaper than lease
+  // ── Construction cost (no land, no LIHTC, Type V over Type I podium) ──
+  // $225/sf gross for wood-frame residential (Hampton Roads 2024, 5-over-1)
+  // $275/sf gross for concrete podium ground floor
+  const resCostPerSF = 225;
+  const comCostPerSF = 275;
+  const costPerBuilding = (RESIDENTIAL_FLOORS * PARCEL_SF * resCostPerSF
+                         + COMMERCIAL_FLOORS  * PARCEL_SF * comCostPerSF) / 1e3;  // $k
+  const totalBuildCost = totalBuildings * costPerBuilding / 1e3;  // $M
 
-  // ── Housing scenarios ──
-  // CLT condo pricing: construction cost basis minus LIHTC equity + subsidy stack
-  // Kindred-calibrated: $360k all-in, less $180k LIHTC+Virginia Housing subsidy = $180k basis
-  // CLT removes land → buyer price ~$150k (matches canonical numbers)
-  const lihtcPerUnit = 180000;   // LIHTC equity + Virginia Housing below-mkt debt (per affordable unit)
-  const cltCondoPrice = AMI.cost_per_unit_affordable - lihtcPerUnit - 30000;  // ~$150k
-  const mktCondoPrice = 295000;   // Norfolk market 2BR condo comparable (2024)
+  // Cost per residential unit (builder's cost, no land)
+  const costPerUnit = Math.round(costPerBuilding * 1000 / unitsPerBuilding);
+
+  // ── Land value removed by CLT ──
+  const landValueLocked = (73.4 * AMI.land_value_per_ac / 1e6).toFixed(1);
+  // Per-building land value (at ~2 buildings/acre of buildable): ~$237k removed
+  const landPerBuilding = Math.round(73.4 * AMI.land_value_per_ac / totalBuildings);
+
+  // ── Revenue model (market-rate, no AMI cap) ──
+  // Residential rents: Norfolk market 2026, mixed 1BR/2BR/studio
+  const avgMktRent = 1750;                               // blended $/mo (1BR $1,450 → 2BR $1,950)
+  const vacancyRate = 0.05;                              // 5% vacancy (tight Hampton Roads market)
+  const annualResGross = totalUnits * avgMktRent * 12 * (1 - vacancyRate) / 1e6;
+
+  // Commercial rents: ground floor NNN, street-activated
+  const mktRent_sqft = 30;                              // $/sf/yr NNN (activated ground floor)
+  const cltRent_sqft = 18;                              // CLT discount: land removed, ~40% below market
+  const annualComGross = totalCommercialSF * cltRent_sqft / 1e6;
+
+  // OpEx: market-rate multifamily = 38% (no affordable compliance overhead)
+  const opexPct = 0.38;
+  const totalGross = annualResGross + annualComGross;
+  const noi = (totalGross * (1 - opexPct)).toFixed(1);
+
+  // ── Cap rate math (the thing that actually matters now) ──
+  const CAP_RATE = 0.055;   // 5.5% — Norfolk market-rate multifamily 2024
+  const impliedValue = parseFloat(noi) / CAP_RATE;      // $M at stabilization
+  const impliedValuePerUnit = Math.round(impliedValue * 1e6 / totalUnits);
+
+  // Developer margin per building (value created – cost, CLT holds land)
+  const buildingNOI = parseFloat(noi) * 1e6 / totalBuildings;
+  const buildingValue = buildingNOI / CAP_RATE;
+  const buildingMargin = Math.round(buildingValue - costPerBuilding * 1000);
+  const buildingMarginPct = Math.round(buildingMargin / (costPerBuilding * 1000) * 100);
+
+  // ── CLT condo ownership scenario ──
+  // Price = construction cost per unit (no land, no developer profit on condos — they make it on rentals)
+  // This is the Istanbul/Bali model: cost-basis ownership on CLT land
+  const cltCondoPrice = costPerUnit;                     // ~$150-165k at $225/sf × 850sf + share of podium
+  const mktCondoPrice = 295000;                          // Norfolk market 2BR condo (2024)
   const condoDiscount = Math.round((1 - cltCondoPrice / mktCondoPrice) * 100);
 
-  // FHA loan on CLT condo
-  const fhaDown = 0.035;
-  const fhaDownAmt = Math.round(cltCondoPrice * fhaDown);
-  const fhaLoan = cltCondoPrice - fhaDownAmt;
-  const fhaRate = 0.068, fhaTerm = 30;
-  const fhaMI = Math.round(fhaLoan * 0.0085 / 12);  // FHA MIP ~0.85%/yr
-  const fhaPrinInt = Math.round(fhaLoan * (fhaRate/12) / (1 - Math.pow(1+fhaRate/12, -fhaTerm*12)));
-  const propTax = Math.round(cltCondoPrice * 0.011 / 12);   // Norfolk rate ~1.1%
-  const insurance = 85;                                        // homeowner's insurance est.
-  const fhaTotalPITI = fhaPrinInt + fhaMI + propTax + insurance;
-  const mktRent2br = AMI.brackets[4].monthly;  // market rate ~$1,650/mo
-  const ownershipSavings = mktRent2br - fhaTotalPITI;
+  // Conventional mortgage on CLT condo (no FHA required — cost basis is low enough)
+  const convDown = 0.10;                                 // 10% down conventional
+  const convDownAmt = Math.round(cltCondoPrice * convDown);
+  const convLoan = cltCondoPrice - convDownAmt;
+  const convRate = 0.068, convTerm = 30;
+  const convPI = Math.round(convLoan * (convRate/12) / (1 - Math.pow(1+convRate/12, -convTerm*12)));
+  const propTax = Math.round(cltCondoPrice * 0.011 / 12);
+  const insurance = 75;
+  const totalPITI = convPI + propTax + insurance;        // no PMI at 10% down conventional
+  const mktRent2br = AMI.brackets[4].monthly;
+  const ownershipSavings = mktRent2br - totalPITI;
 
-  // 10-year equity build (resale-restricted: owner keeps 25% of appreciation)
-  const appreciation = 0.035;  // Norfolk 10yr avg appreciation ~3.5%/yr
+  // 10-year equity (CLT: owner keeps 25% appreciation + all principal paydown)
+  const appreciation = 0.04;                             // 4%/yr — conservative for improving neighborhood
   const futureValue = Math.round(cltCondoPrice * Math.pow(1+appreciation, 10));
   const totalAppreciation = futureValue - cltCondoPrice;
-  const ownerShare = Math.round(totalAppreciation * 0.25);  // CLT formula: owner keeps 25%
-  const principalPaid = Math.round(fhaLoan - fhaLoan * Math.pow(1+fhaRate/12, -(fhaTerm*12)) +
-    fhaLoan * (fhaRate/12) / (1-Math.pow(1+fhaRate/12,-fhaTerm*12)) /
-    (fhaRate/12) * (1 - Math.pow(1+fhaRate/12,-10*12)));  // approx principal after 10yr
-  // simpler: use amortization approximation
-  const balance10yr = Math.round(fhaLoan * Math.pow(1+fhaRate/12, 10*12) -
-    fhaPrinInt * (Math.pow(1+fhaRate/12, 10*12) - 1) / (fhaRate/12));
-  const equityBuilt = Math.round(ownerShare + (fhaLoan - balance10yr));
+  const ownerShare = Math.round(totalAppreciation * 0.25);
+  const balance10yr = Math.round(convLoan * Math.pow(1+convRate/12, 10*12) -
+    convPI * (Math.pow(1+convRate/12, 10*12) - 1) / (convRate/12));
+  const equityBuilt = Math.round(ownerShare + (convLoan - balance10yr));
 
-  // ── Construction cost / financing stack ──
-  const phase1Units = Math.round(totalUnits * 0.30);
-  const phase2Units = Math.round(totalUnits * 0.33);
-  const phase3Units = totalUnits - phase1Units - phase2Units;
-  const phase1Cost = phase1Units * AMI.cost_per_unit_affordable / 1e6;
-  const phase2Cost = phase2Units * AMI.cost_per_unit_affordable / 1e6;
-  const phase3Cost = phase3Units * AMI.cost_per_unit_market / 1e6;
-  const totalCost = phase1Cost + phase2Cost + phase3Cost;
-  const lihtcTotal = (belowMarketUnits * 180000) / 1e6;
-  const landValueLocked = (73.4 * AMI.land_value_per_ac / 1e6).toFixed(1);
-  const cityBondEst = 18;
-  const avgRent60AMI = AMI.brackets[2].monthly;
-  const annualResIncome = (rentalUnits * avgRent60AMI * 12 / 1e6).toFixed(1);
-  const opexPct = 0.38;
-  const noi = ((parseFloat(annualResIncome) + annualRetailIncome / 1000) * (1 - opexPct)).toFixed(1);
+  // ── Per-building deal (the magic: a local developer can do ONE building) ──
+  const bldgEquityReq = Math.round(costPerBuilding * 1000 * 0.25);   // 25% equity, 75% construction loan
+  const bldgDebt = Math.round(costPerBuilding * 1000 * 0.75);
+  const bldgDebtService = Math.round(bldgDebt * 0.065 / 12 * 12);    // annual at 6.5%
+  const bldgAnnualNOI = Math.round(buildingNOI);
+  const bldgDSCR = (bldgAnnualNOI / bldgDebtService).toFixed(2);
 
-  // ── Small PE deal ──
-  const avgParcelUnits = 25;
-  const avgParcelCost = Math.round(avgParcelUnits * AMI.cost_per_unit_affordable / 1000);
-  const avgLIHTC = Math.round(avgParcelUnits * lihtcPerUnit / 1000);
-  const avgDebt = Math.round((avgParcelCost - avgLIHTC) * 0.65);
-  const avgEquity = Math.round(avgParcelCost - avgLIHTC - avgDebt);
+  // ── Phasing (one building at a time — no master developer required) ──
+  // Phase 1: ~30% of buildings = ~first 18 months, CLT North + Housing A parcels
+  const phase1Bldgs = Math.round(totalBuildings * 0.30);
+  const phase2Bldgs = Math.round(totalBuildings * 0.35);
+  const phase3Bldgs = totalBuildings - phase1Bldgs - phase2Bldgs;
+  const phase1Units = phase1Bldgs * unitsPerBuilding;
+  const phase2Units = phase2Bldgs * unitsPerBuilding;
+  const phase3Units = phase3Bldgs * unitsPerBuilding;
+  const phase1Cost = phase1Bldgs * costPerBuilding / 1e3;
+  const phase2Cost = phase2Bldgs * costPerBuilding / 1e3;
+  const phase3Cost = phase3Bldgs * costPerBuilding / 1e3;
+  const totalCost = totalBuildCost;
+
+  // ── Commercial (storefronts in ground floor of MX buildings) ──
+  const storeFrontCount = Math.round(totalCommercialSF / (25 * 50));  // 1,250sf avg bay
+  const smallPEStorefronts = Math.round(storeFrontCount * 0.80);
+  const avgStoreSqft = Math.round(commercialSFPerBuilding / 2);       // ~2 bays per building avg
+  const mktMonthly = Math.round(mktRent_sqft * avgStoreSqft / 12);
+  const cltMonthly = Math.round(cltRent_sqft * avgStoreSqft / 12);
+  const rentSavings = mktMonthly - cltMonthly;
+  const rentDiscount = Math.round((1 - cltRent_sqft / mktRent_sqft) * 100);
+  const annualRetailIncome = annualComGross * 1000;  // $k
+  const avgRent60AMI = avgMktRent;  // for ramp chart compatibility
 
   // ── Render helpers ──
   const FR = (label, val, accent=false, note='') =>
@@ -7655,114 +7696,110 @@ function renderFinancialsView(zones) {
   el.innerHTML = `
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:2.5rem 3.5rem;">
 
-    <!-- COL 1: STOREFRONT SCENARIOS -->
+    <!-- COL 1: ONE BUILDING -->
     <div>
-      ${FH('Mom-and-pop storefront')}
-      ${SCENARIO(`${smallPEStorefronts} storefronts reserved for small operators`, `18ft × 50ft bays · CLT ground lease · no land speculation`)}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.6rem 0;">
-        ${BIG('market lease/mo', `$${mktMonthly.toLocaleString()}`, false)}
-        ${BIG('CLT lease/mo', `$${cltMonthly.toLocaleString()}`)}
-      </div>
-      ${FR('Monthly savings vs. market', `$${rentSavings.toLocaleString()}/mo`, true)}
-      ${FR('Annual savings', `$${(rentSavings*12).toLocaleString()}/yr`, true)}
-      ${FR('Discount vs. market', `${rentDiscount}%`, true)}
-      ${FR('Lease term', '5-yr renewable')}
-      ${FR('NNN structure', 'Tenant pays taxes, insurance, maintenance')}
-      ${FN('Land cost is removed from the equation entirely. A family restaurant, nail salon, or bookshop pays for the space it uses — not for the city-owned ground beneath it.')}
+      ${FH('One building. Anyone can do this.')}
+      ${SCENARIO(`25ft &times; 125ft &middot; 6 stories &middot; ${unitsPerBuilding} units + ground commercial`, `Type V wood frame over Type I concrete podium. IBC &sect;510.2. No master developer. No federal program. Just a building permit and a construction loan.`)}
+      ${FR('Parcel footprint', `${PARCEL_W}ft &times; ${PARCEL_D}ft = ${PARCEL_SF.toLocaleString()}sf`)}
+      ${FR('Ground floor commercial (NNN)', `${Math.round(commercialSFPerBuilding).toLocaleString()}sf net`)}
+      ${FR('Residential floors', `${RESIDENTIAL_FLOORS} wood-frame floors`)}
+      ${FR('Units per building', `${unitsPerBuilding} @ ${AVG_UNIT_SF}sf avg`)}
+      ${FR('Construction cost', `~$${Math.round(costPerBuilding).toLocaleString()}k`)}
+      ${FR('Land cost', '$0', true, 'CLT holds land permanently')}
+      ${FR('Cost per unit (no land)', `$${costPerUnit.toLocaleString()}`, true)}
 
-      ${FH('Storefront buyout option')}
-      ${FN('CLT operators can purchase their building at cost basis. Land stays in trust permanently — no land speculation, ever.')}
-      ${FR('Building value (cost basis)', `$${bldgValue.toLocaleString()}`)}
-      ${FR('SBA 504 down payment (10%)', `$${sba504DownAmt.toLocaleString()}`, true)}
-      ${FR('Loan amount', `$${sba504Loan.toLocaleString()}`)}
-      ${FR('Rate / term', `6.5% / 20yr`)}
-      ${FR('Monthly payment (ownership)', `$${sbaMonthly.toLocaleString()}/mo`, true)}
-      ${FR('vs. leasing same space', `$${cltMonthly.toLocaleString()}/mo`)}
-      ${FR('Ownership cheaper by', `$${Math.abs(buyVsLeaseMonthly).toLocaleString()}/mo`, buyVsLeaseMonthly > 0)}
-      ${FN('SBA 504 is the federal small-business loan program. 10% down, 20-year fixed. You own your shop for less than you pay in rent.')}
+      ${FH('Deal structure')}
+      ${FR('Equity required (25%)', `$${(bldgEquityReq/1000).toFixed(0)}k`, true)}
+      ${FR('Construction loan (75%)', `$${(bldgDebt/1000).toFixed(0)}k`)}
+      ${FR('Annual debt service', `$${(bldgDebtService/1000).toFixed(0)}k/yr`)}
+      ${FR('Annual building NOI', `$${(bldgAnnualNOI/1000).toFixed(0)}k/yr`, true)}
+      ${FR('DSCR', bldgDSCR, parseFloat(bldgDSCR) >= 1.20)}
+      ${FR('Implied building value (5.5% cap)', `$${(buildingValue/1000).toFixed(0)}k`)}
+      ${FR('Developer margin (value \u2212 cost)', `$${(buildingMargin/1000).toFixed(0)}k (${buildingMarginPct}%)`, buildingMarginPct > 0)}
+      ${FN('$' + (bldgEquityReq/1000).toFixed(0) + 'k gets you ' + unitsPerBuilding + ' homes and ' + Math.round(commercialSFPerBuilding).toLocaleString() + 'sf of street-level commercial. A family office. A credit union. A church with a construction fund. Not Blackstone.')}
     </div>
 
-    <!-- COL 2: HOUSING CONDO SCENARIOS -->
+    <!-- COL 2: MARKET-RATE RENTAL -->
     <div>
-      ${FH('CLT ownership condos')}
-      ${SCENARIO(`${cltCondoTarget.toLocaleString()} units available as resale-restricted condos`, `Lake Champlain CLT model · you build equity · commons stays affordable`)}
+      ${FH('Market-rate rental (the flood)')}
+      ${SCENARIO(`${totalUnits.toLocaleString()} units at market rate`, `No AMI cap. No income certification. No compliance overhead. Market sets the price \u2014 and we\u2019re flooding it.`)}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.6rem 0;">
-        ${BIG('market condo', `$${(mktCondoPrice/1000).toFixed(0)}k`, false)}
-        ${BIG('CLT price', `$${(cltCondoPrice/1000).toFixed(0)}k`)}
+        ${BIG('avg rent/mo', `$${avgMktRent.toLocaleString()}`, false)}
+        ${BIG('cost/unit (no land)', `$${costPerUnit.toLocaleString()}`)}
       </div>
-      ${FR('Price discount vs. market', `${condoDiscount}%`, true)}
-      ${FR('How?', 'Land removed from price · LIHTC equity applied')}
-      ${FH('Monthly cost breakdown (FHA)')}
-      ${FR('Down payment (3.5% FHA)', `$${fhaDownAmt.toLocaleString()}`)}
-      ${FR('Loan amount', `$${fhaLoan.toLocaleString()}`)}
-      ${FR('Rate / term', `6.8% / 30yr`)}
-      ${FR('Principal + interest', `$${fhaPrinInt.toLocaleString()}/mo`)}
-      ${FR('FHA mortgage insurance', `$${fhaMI.toLocaleString()}/mo`)}
+      ${FR('Gross residential income', `$${annualResGross.toFixed(1)}M/yr`)}
+      ${FR('Ground floor commercial', `$${annualComGross.toFixed(1)}M/yr NNN`)}
+      ${FR('Total gross income', `$${totalGross.toFixed(1)}M/yr`)}
+      ${FR('OpEx (38% \u2014 no compliance overhead)', `-$${(totalGross * opexPct).toFixed(1)}M/yr`)}
+      ${FR('NOI at stabilization', `$${noi}M/yr`, true)}
+      ${FR('Cap rate (market-rate Norfolk)', '5.5%')}
+      ${FR('Implied site value', `$${impliedValue.toFixed(0)}M`, true)}
+      ${FR('Land value locked by CLT', `$${landValueLocked}M`, true)}
+      ${FH('Why rents come down')}
+      ${FR('Norfolk vacancy rate (2024)', '~3.8% \u2014 critically undersupplied')}
+      ${FR('Units added (this site)', totalUnits.toLocaleString())}
+      ${FR('Supply increase to corridor', `${(totalUnits/85000*100).toFixed(1)}% \u2014 meaningful`)}
+      ${FN('Broke Tidewater kids want walkable Brooklyn-style housing. This is supply-side urbanism: flood the zone with quality product, let market pricing do the rest. Parents are mad. Good.')}
+    </div>
+
+    <!-- COL 3: CLT OWNERSHIP CONDOS -->
+    <div>
+      ${FH('CLT ownership condos (~$' + Math.round(cltCondoPrice/1000) + 'k)')}
+      ${SCENARIO(`${cltCondoTarget.toLocaleString()} units sold at cost basis \u2014 land stays in the commons`, `Istanbul model: you pay what it costs to build. The land was never yours to buy.`)}
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.6rem 0;">
+        ${BIG('Norfolk market condo', `$${(mktCondoPrice/1000).toFixed(0)}k`, false)}
+        ${BIG('CLT price (cost basis)', `$${(cltCondoPrice/1000).toFixed(0)}k`)}
+      </div>
+      ${FR('Discount vs. market', `${condoDiscount}%`, true)}
+      ${FR('Why cheaper?', 'Land cost removed. Not subsidized \u2014 priced correctly.')}
+      ${FH('Monthly ownership cost')}
+      ${FR('Down payment (10% conventional)', `$${convDownAmt.toLocaleString()}`)}
+      ${FR('Loan amount', `$${convLoan.toLocaleString()}`)}
+      ${FR('Rate / term', '6.8% / 30yr \u00b7 no PMI')}
+      ${FR('Principal + interest', `$${convPI.toLocaleString()}/mo`)}
       ${FR('Property tax (1.1%)', `$${propTax.toLocaleString()}/mo`)}
-      ${FR('Homeowner\'s insurance', `$${insurance}/mo`)}
-      ${FR('Total monthly PITI', `$${fhaTotalPITI.toLocaleString()}/mo`, true)}
-      ${FR('vs. market rent (2BR)', `$${mktRent2br.toLocaleString()}/mo`)}
-      ${FR('Monthly advantage', `$${Math.abs(ownershipSavings).toLocaleString()}/mo ${ownershipSavings>0?'cheaper':'more'}`, ownershipSavings > 0)}
-      ${FN('You pay less than market rent — and you\'re building equity. Not subsidized charity. Ownership.')}
-    </div>
-
-    <!-- COL 3: EQUITY + WEALTH -->
-    <div>
+      ${FR('Insurance', `$${insurance}/mo`)}
+      ${FR('Total PITI', `$${totalPITI.toLocaleString()}/mo`, true)}
+      ${FR('Market rent same unit', `$${avgMktRent.toLocaleString()}/mo`)}
+      ${FR('Monthly savings vs. renting', `$${Math.abs(ownershipSavings).toLocaleString()}/mo`, ownershipSavings > 0)}
       ${FH('10-year wealth picture')}
-      ${FN('CLT resale formula: owner keeps 25% of appreciation + all principal paid down. Commons retains 75% to keep the next unit affordable.')}
       ${FR('Purchase price', `$${cltCondoPrice.toLocaleString()}`)}
-      ${FR('10-yr appreciation (3.5%/yr)', `$${futureValue.toLocaleString()}`)}
-      ${FR('Owner\'s share of appreciation (25%)', `$${ownerShare.toLocaleString()}`, true)}
-      ${FR('Principal paid down (10yr)', `$${(fhaLoan - balance10yr).toLocaleString()}`, true)}
+      ${FR('Value at year 10 (4%/yr)', `$${futureValue.toLocaleString()}`)}
+      ${FR('Owner\u2019s share (25% of appreciation)', `$${ownerShare.toLocaleString()}`, true)}
+      ${FR('Principal paid down', `$${(convLoan - balance10yr).toLocaleString()}`, true)}
       ${FR('Total equity built', `$${equityBuilt.toLocaleString()}`, true)}
-      ${FR('Market renter\'s equity (10yr)', '$0', false)}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin:0.8rem 0;">
-        ${BIG('CLT owner equity (10yr)', `$${equityBuilt.toLocaleString()}`)}
-        ${BIG('market renter equity (10yr)', '$0', false)}
-      </div>
-      ${FN('The CLT model doesn\'t give you a windfall. It gives you a foundation. Real wealth — the kind that doesn\'t evict the next person.')}
-
-      ${FH('Site-wide impact')}
-      ${FR('Total units', totalUnits.toLocaleString(), true)}
-      ${FR('CLT rental (≤60% AMI)', rentalUnits.toLocaleString())}
-      ${FR('CLT condos (ownership)', cltCondoTarget.toLocaleString(), true)}
-      ${FR('Market-rate', marketUnits.toLocaleString())}
-      ${FR('Land value locked in commons', `$${landValueLocked}M`, true)}
-      ${FR('LIHTC equity raised', `~$${lihtcTotal.toFixed(0)}M`)}
-      ${FR('City bond (infrastructure)', `~$${cityBondEst}M`)}
-      ${FR('Total buildout cost', `~$${totalCost.toFixed(0)}M`)}
-      ${FR('NOI at stabilization', `~$${noi}M/yr`, true)}
+      ${FN('CLT keeps 75% of appreciation so the next buyer can afford it too. You get a foundation. Not a windfall. A home.')}
     </div>
 
-    <!-- COL 4: SMALL PE + PHASING -->
+    <!-- COL 4: BUILD ONE AT A TIME -->
     <div>
-      ${FH('Small developer deal structure')}
-      ${SCENARIO('Each T4 parcel is a standalone deal', 'Small enough for a cooperative, family office, or BIPOC developer. Not requiring institutional scale.')}
-      ${FR('Avg parcel size', '~0.3ac')}
-      ${FR('Avg units / parcel', `${avgParcelUnits} units`)}
-      ${FR('Total construction cost', `~$${avgParcelCost}k`)}
-      ${FR('LIHTC tax credit equity', `~$${avgLIHTC}k`, true)}
-      ${FR('VHDA construction loan (65%)', `~$${avgDebt}k`)}
-      ${FR('Developer equity required', `~$${avgEquity}k`, true)}
-      ${FN(`$${avgEquity}k to develop ${avgParcelUnits} permanently affordable homes. That's a credit union, a church, a worker co-op. Not Blackstone.`)}
-
-      ${FH('Phased buildout')}
-      ${FR('Phase 1 (2026–28)', `${phase1Units} units · ~$${phase1Cost.toFixed(0)}M`)}
-      ${FR('Phase 2 (2029–32)', `${phase2Units} units · ~$${phase2Cost.toFixed(0)}M`)}
-      ${FR('Phase 3 (2033+, Tide opens)', `${phase3Units} units · ~$${phase3Cost.toFixed(0)}M`)}
-      ${FR('Total buildout', `~$${totalCost.toFixed(0)}M`)}
-      ${FR('Storefronts (total)', storeFrontCount)}
-      ${FR('Mom-and-pop operators', `${smallPEStorefronts} (${rentDiscount}% below market)`, true)}
-      ${FR('Annual retail income', `~$${annualRetailIncome.toFixed(0)}k`)}
-      ${FR('Annual residential income', `~$${annualResIncome}M`)}
-      ${FR('NOI', `~$${noi}M/yr`, true)}
-      ${FN('Phase 3 timing aligns with Tide light rail extension (~2033). Transit-adjacent density at that point is self-financing at market. Phases 1–2 are the commons investment. Phase 3 is the return.')}
+      ${FH('Build one building at a time')}
+      ${SCENARIO(`${totalBuildings} buildings &middot; ${totalUnits.toLocaleString()} units &middot; $${totalCost.toFixed(0)}M total`, `No master developer. No single point of failure. ${totalBuildings} independent deals, each financeable by a local operator.`)}
+      ${FR('Phase 1 (2026\u201328, CLT North + Housing A)', `${phase1Bldgs} bldgs \u00b7 ${phase1Units} units \u00b7 $${phase1Cost.toFixed(0)}M`)}
+      ${FR('Phase 2 (2029\u201332, Housing B + Spine)', `${phase2Bldgs} bldgs \u00b7 ${phase2Units} units \u00b7 $${phase2Cost.toFixed(0)}M`)}
+      ${FR('Phase 3 (2033+, Tide-adjacent)', `${phase3Bldgs} bldgs \u00b7 ${phase3Units} units \u00b7 $${phase3Cost.toFixed(0)}M`)}
+      ${FR('Total buildout', `$${totalCost.toFixed(0)}M across ${totalBuildings} deals`, true)}
+      ${FH('Ground floor commercial')}
+      ${FR('Total commercial sf', `${Math.round(totalCommercialSF).toLocaleString()}sf`)}
+      ${FR('Storefronts', storeFrontCount)}
+      ${FR('CLT-rate operators', `${smallPEStorefronts} bays @ $${cltRent_sqft}/sf NNN`)}
+      ${FR('CLT discount vs market ($${mktRent_sqft}/sf)', `${rentDiscount}%`, true)}
+      ${FR('Annual commercial income', `$${annualComGross.toFixed(2)}M/yr`)}
+      ${FH('Site-wide at stabilization')}
+      ${FR('Total units', totalUnits.toLocaleString(), true)}
+      ${FR('CLT condos (ownership @ cost)', cltCondoTarget.toLocaleString(), true)}
+      ${FR('Market-rate rental', rentalUnits.toLocaleString())}
+      ${FR('Land value in CLT (never sold)', `$${landValueLocked}M`, true)}
+      ${FR('NOI', `$${noi}M/yr`, true)}
+      ${FR('Implied value (5.5% cap)', `$${impliedValue.toFixed(0)}M`, true)}
+      ${FN('Phase 3 timing aligns with Tide light rail extension (~2033). At that point the site is self-evidently transit-adjacent and market financing is trivial.')}
     </div>
 
-    <!-- ── YEAR-BY-YEAR RAMP ── -->
-    ${renderRampChart({ totalUnits, belowMarketUnits, marketUnits, storeFrontCount,
-      smallPEStorefronts, cltRent_sqft, avgStoreSqft, avgRent60AMI,
-      opexPct, phase1Cost, phase2Cost, phase3Cost, lihtcTotal: parseFloat(lihtcTotal) })}
+    <!-- YEAR-BY-YEAR RAMP -->
+    ${renderRampChart({ totalUnits, belowMarketUnits: rentalUnits, marketUnits: cltCondoTarget,
+      storeFrontCount, smallPEStorefronts, cltRent_sqft, avgStoreSqft,
+      avgRent60AMI: avgMktRent, opexPct,
+      phase1Cost, phase2Cost, phase3Cost, lihtcTotal: 0 })}
 
   </div>`;
 }
