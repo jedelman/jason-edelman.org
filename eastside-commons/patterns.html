@@ -475,23 +475,43 @@ window.EC_FieldSolver = (() => {
   });
 
   defPattern(53, 'Main Gateways', 1.0, (field,gw,gh,cs,MAP,site)=>{
+    // Gateways mark the entries into the commons — where people arrive from
+    // the city and cross the threshold. They need to be at the actual EDA
+    // entry points, not the map edges.
     const s=site.derived.SPINE; if(!s) return;
     const scx=s.x+s.w/2;
-    // North and south gateways — high pressure at site entries
-    paintGaussian(field,gw,gh,cs,MAP, scx, MAP.y0+20, 55, 1.3);
-    paintGaussian(field,gw,gh,cs,MAP, scx, MAP.y1-20, 55, 1.3);
-    // East and west entries
-    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+20, (MAP.y0+MAP.y1)*0.55, 40, 0.9);
-    paintGaussian(field,gw,gh,cs,MAP, MAP.x1-20, (MAP.y0+MAP.y1)*0.55, 40, 0.9);
+    const ti=site.derived.TIDE;
+    // South: TIDE station — primary transit gateway
+    const southY=ti?ti.y:MAP.y1-30;
+    paintGaussian(field,gw,gh,cs,MAP, scx, southY, 70, 1.4);
+    // North: top of spine — Va Beach Blvd crossing
+    const b=site.derived.BAND;
+    paintGaussian(field,gw,gh,cs,MAP, scx, b?b.y+b.h:MAP.y0+60, 65, 1.2);
+    // West entry: mid-height of west EDA edge (people arriving from neighbourhood)
+    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+60, (MAP.y0+MAP.y1)*0.5, 55, 0.95);
+    // East entry: RESEARCH station side
+    const rs=site.derived.RESEARCH;
+    paintGaussian(field,gw,gh,cs,MAP, rs?rs.x:MAP.x1-80, (MAP.y0+MAP.y1)*0.5, 55, 0.95);
+    // Spreading paths from each gateway into the site
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+60,(MAP.y0+MAP.y1)*0.5, scx,(MAP.y0+MAP.y1)*0.5, 20, 0.55);
   });
 
   defPattern(60, 'Accessible Green', 0.9, (field,gw,gh,cs,MAP,site)=>{
+    // Green space accessible within 3-min walk of every dwelling.
+    // Primary: sponge park. Secondary: west housing greens. Tertiary: east research green.
     const sg=site.derived.SPONGE; if(!sg) return;
-    // Pressure across sponge park — distributed green
     paintEllipse(field,gw,gh,cs,MAP, sg.cx,sg.cy,sg.rx*1.3,sg.ry*1.3, 1.0);
-    // Secondary green pressure west of spine
     const s=site.derived.SPINE;
-    if(s) paintEllipse(field,gw,gh,cs,MAP, s.x-60,(MAP.y0+MAP.y1)*0.45, 70,50, 0.6);
+    // West housing green corridors
+    if(s){
+      paintEllipse(field,gw,gh,cs,MAP, s.x-60,(MAP.y0+MAP.y1)*0.35, 70,50, 0.65);
+      paintEllipse(field,gw,gh,cs,MAP, s.x-60,(MAP.y0+MAP.y1)*0.65, 70,50, 0.65);
+    }
+    // East: green buffer between sponge and research station
+    const rs=site.derived.RESEARCH;
+    if(rs) paintEllipse(field,gw,gh,cs,MAP, (sg.cx+sg.rx+rs.x)/2,(sg.cy+rs.y+rs.h/2)/2, 55,40, 0.7);
+    // Far east green edge (park boundary)
+    paintSegment(field,gw,gh,cs,MAP, MAP.x1-50,MAP.y0+60, MAP.x1-50,MAP.y1-60, 35, 0.55);
   });
 
   defPattern(67, 'Common Land', 0.8, (field,gw,gh,cs,MAP,site)=>{
@@ -511,16 +531,36 @@ window.EC_FieldSolver = (() => {
   });
 
   defPattern(37, 'House Cluster', 0.9, (field,gw,gh,cs,MAP,site)=>{
-    const s=site.derived.SPINE, sg=site.derived.SPONGE; if(!s) return;
+    // Housing clusters occupy the full west zone — not a single column.
+    // The west side of the spine (sl) to the west EDA edge is where
+    // cooperative housing lives: CLT parcels, shared courtyards, common land.
+    // Paint a distributed field across the entire zone, with clusters at
+    // the natural social grouping size (~8-12 units per cluster).
+    const s=site.derived.SPINE; if(!s) return;
     const sl=s.x;
-    paintSegment(field,gw,gh,cs,MAP, sl-80,MAP.y0+60, sl-80,MAP.y1-60, 60, 0.9);
-    if(sg) paintEllipse(field,gw,gh,cs,MAP, sg.cx,sg.cy+sg.ry+60,80,45, 0.8);
-    // From previous pass: amplify where combined field is mid-range (0.2–0.6) —
-    // these are the transitional zones where housing clusters want to be.
-    if(site.combined) {
+    const westWidth=sl-MAP.x0;  // full width of west zone
+    const clusterR=Math.min(westWidth*0.28, 75); // cluster radius
+    // Six cluster centres distributed across west zone
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+20:MAP.y0+80;
+    const botY=MAP.y1-40;
+    const zoneH=botY-topY;
+    // Two columns × three rows
+    const cols=[MAP.x0+westWidth*0.28, MAP.x0+westWidth*0.68];
+    const rows=[topY+zoneH*0.18, topY+zoneH*0.50, topY+zoneH*0.82];
+    for(const cx of cols) for(const cy of rows)
+      paintGaussian(field,gw,gh,cs,MAP, cx,cy, clusterR, 1.0);
+    // Background wash across full west zone — low amplitude, continuous
+    // Extend to actual MAP south edge to catch SW corner voids
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,topY, MAP.x0+20,MAP.y1-10, westWidth*0.85, 0.38);
+    // From previous pass: reinforce where pressure is already forming
+    if(site.combined){
       for(let i=0;i<field.length;i++){
-        const v=site.combined[i];
-        if(v>0.2&&v<0.6) field[i]+=v*0.4;
+        const cx_=i%gw, px=MAP.x0+cx_*cs;
+        if(px<sl&&px>MAP.x0){ // west zone only
+          const v=site.combined[i];
+          if(v>0.15&&v<0.65) field[i]+=v*0.45;
+        }
       }
     }
   });
@@ -537,13 +577,18 @@ window.EC_FieldSolver = (() => {
   });
 
   defPattern(87, 'Shops', 1.0, (field,gw,gh,cs,MAP,site)=>{
+    // Individually owned shops line the main street band — the full depth
+    // of the band, not just the bottom edge. Shop fronts face the street;
+    // the pressure fills the entire commercial zone.
     const b=site.derived.BAND; if(!b) return;
     const s=site.derived.SPINE; if(!s) return;
-    // Commercial pressure along main street band and spine ground floor
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+b.h*0.6, MAP.x1-20,b.y+b.h*0.6, 25, 1.1);
-    // Spine ground floor shops
-    paintSegment(field,gw,gh,cs,MAP, s.x,MAP.y0+40, s.x,MAP.y1-40, 15, 0.9);
-    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,MAP.y0+40, s.x+s.w,MAP.y1-40, 15, 0.9);
+    const bandH=b.h; // full band depth
+    // Fill the band with commercial pressure
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+bandH*0.3, MAP.x1-20,b.y+bandH*0.3, bandH*0.5, 1.1);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+bandH*0.75, MAP.x1-20,b.y+bandH*0.75, bandH*0.4, 0.9);
+    // Spine ground floor: active frontage the full height of the site
+    paintSegment(field,gw,gh,cs,MAP, s.x,MAP.y0+40, s.x,MAP.y1-40, 18, 0.95);
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,MAP.y0+40, s.x+s.w,MAP.y1-40, 18, 0.95);
   });
 
   defPattern(88, 'Street Cafe', 0.85, (field,gw,gh,cs,MAP,site)=>{
@@ -638,10 +683,10 @@ window.EC_FieldSolver = (() => {
     const s=site.derived.SPINE; if(!s) return;
     const ro=site.derived.ROSS;
     // ROSS leasehold is currently hardscape — prime repair zone
-    if(ro) paintGaussian(field,gw,gh,cs,MAP, ro.x+ro.w/2,ro.y+ro.h/2, 60, 1.0);
-    // Existing parking areas west of spine, south of band
+    if(ro) paintGaussian(field,gw,gh,cs,MAP, ro.x+ro.w/2,ro.y+ro.h/2, 80, 1.1);
+    // Existing parking/hardscape west of spine: large zone, needs building repair
     const b=site.derived.BAND;
-    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+b.h+30, s.x-10,b.y+b.h+80, 40, 0.8);
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+b.h+20, s.x-10,MAP.y1-20, 55, 0.9);
     // Subtract pressure from green zones — buildings don't go here
     if(sg){
       for(let i=0;i<field.length;i++){
@@ -661,7 +706,9 @@ window.EC_FieldSolver = (() => {
     const s=site.derived.SPINE; if(!s) return;
     // High building pressure north of sponge, low south
     const northY=sg.cy-sg.ry-20;
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+30,MAP.y0+30, MAP.x1-30,northY, 35, 0.9);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+30,MAP.y0+30, MAP.x1-30,northY, 55, 0.95);
+    // Also: west zone north half has good solar access — priority for housing
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,MAP.y0+30, s.x-10,northY, 40, 0.75);
     // High outdoor pressure south of spine nodes
     const scx=s.x+s.w/2;
     paintGaussian(field,gw,gh,cs,MAP, scx-60, s.y+s.h*0.35+30, 40, 0.6);
@@ -696,22 +743,27 @@ window.EC_FieldSolver = (() => {
   });
 
   defPattern(109, 'Long Thin House', 0.75, (field,gw,gh,cs,MAP,site)=>{
-    // The 25ft-wide strip house — long axis perpendicular to street, thin frontage.
-    // Pressure forms thin parallel bands along the housing zone west of spine.
+    // The strip house: ~25ft frontage, running deep into the parcel (E-W).
+    // Stacked N-S with shared walls. The strips ARE the pattern — between
+    // them is shared outdoor space, not void.
+    // Strip width ~14px (25ft at site scale), spacing ~32px (gap = ~18ft courtyard).
     const s=site.derived.SPINE; if(!s) return;
     const sl=s.x;
-    // Strip houses run E-W, stacked N-S — paint horizontal pressure bands
-    const bandSpacing=32; // ~25ft at our scale
-    let y=s.y+40;
-    while(y<s.y+s.h-40){
-      paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,y, sl-8,y, 10, 0.85);
-      y+=bandSpacing;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+16:s.y+40;
+    const stripW=14, spacing=32;
+    // West zone: full width E-W strips
+    const westLeft=MAP.x0+16, westRight=sl-8;
+    let y=topY;
+    while(y<s.y+s.h-30){
+      paintSegment(field,gw,gh,cs,MAP, westLeft,y, westRight,y, stripW, 1.0);
+      y+=spacing;
     }
-    // Also east side of spine — commercial strip frontage
-    let ey=s.y+60;
+    // East zone: shorter strips off spine (commercial depth ~70px)
+    let ey=topY+20;
     while(ey<s.y+s.h-60){
-      paintSegment(field,gw,gh,cs,MAP, s.x+s.w+4,ey, s.x+s.w+70,ey, 8, 0.65);
-      ey+=bandSpacing*1.4;
+      paintSegment(field,gw,gh,cs,MAP, s.x+s.w+4,ey, s.x+s.w+72,ey, 10, 0.72);
+      ey+=spacing*1.3;
     }
   });
 
@@ -737,26 +789,36 @@ window.EC_FieldSolver = (() => {
   });
 
   defPattern(115, 'Courtyards Which Live', 0.7, (field,gw,gh,cs,MAP,site)=>{
-    // Every building must wrap a courtyard on three sides.
-    // Pressure forms a hollow-ring pattern: strong at building perimeter,
-    // near-zero at building center — the courtyard void.
+    // Every housing cluster wraps a south-facing courtyard on three sides.
+    // Ring pressure: peak at building perimeter, hollow at courtyard center.
+    // Clusters distributed across the full west zone to match P37.
     const s=site.derived.SPINE; if(!s) return;
-    // Building clusters east and west of spine
-    const clusters=[
-      {cx:s.x+s.w+40, cy:s.y+s.h*0.3, r:35},
-      {cx:s.x+s.w+40, cy:s.y+s.h*0.65, r:35},
-      {cx:s.x-50,     cy:s.y+s.h*0.35, r:30},
-      {cx:s.x-50,     cy:s.y+s.h*0.62, r:30},
+    const sl=s.x;
+    const westWidth=sl-MAP.x0;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+20:MAP.y0+80;
+    const botY=MAP.y1-40;
+    const zoneH=botY-topY;
+    // West clusters — match P37 distribution
+    const westClusters=[
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.18, r:28},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.18, r:28},
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.50, r:28},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.50, r:28},
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.82, r:28},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.82, r:28},
     ];
-    for(const {cx,cy,r} of clusters){
-      // Ring pressure: peak at r, zero at center and far field
+    // East clusters
+    const eastClusters=[
+      {cx:s.x+s.w+45, cy:s.y+s.h*0.28, r:32},
+      {cx:s.x+s.w+45, cy:s.y+s.h*0.60, r:32},
+    ];
+    for(const {cx,cy,r} of [...westClusters,...eastClusters]){
       for(let i=0;i<field.length;i++){
         const fx=i%gw, fy=Math.floor(i/gw);
         const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
         const d=Math.hypot(px-cx,py-cy);
-        // Gaussian ring: max at d=r, falls to 0 at d=0 and d=2r
-        const ring=Math.exp(-((d-r)*(d-r))/(r*0.5)**2)*0.85;
-        field[i]+=ring;
+        field[i]+=Math.exp(-((d-r)*(d-r))/(r*0.45)**2)*0.9;
       }
     }
   });
