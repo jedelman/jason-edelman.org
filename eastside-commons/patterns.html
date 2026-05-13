@@ -128,8 +128,8 @@
   </div>
   <div class="ctrl-group">
     <span class="ctrl-label">Resolution</span>
-    <input type="range" id="ctrl-res" min="10" max="100" value="25" step="5">
-    <span class="ctrl-val" id="val-res">25ft</span>
+    <input type="range" id="ctrl-res" min="5" max="100" value="10" step="5">
+    <span class="ctrl-val" id="val-res">10ft</span>
   </div>
   <div class="ctrl-group">
     <span class="ctrl-label">Threshold</span>
@@ -1037,7 +1037,7 @@ window.EC_FieldSolver = (() => {
     const proj = (lon,lat) => { const r=_proj(lon,lat); return Array.isArray(r)?r:[r.x,r.y]; };
     const MAX_PASSES  = opts.passes   || 16;
     const EPSILON     = opts.eps      || 0.008;
-    const CELL_SIZE   = opts.cellSize || 25;  // feet per cell
+    const CELL_SIZE   = opts.cellSize || 10;  // feet per cell
     const ftToSvg     = opts.ftToSvg  || ((fx,fy)=>[fx,fy]); // fallback: identity
     const THRESHOLD   = opts.threshold|| 0.2;
     const log = [];
@@ -1139,6 +1139,9 @@ window.EC_FieldSolver = (() => {
       saturatedAt,
       patternColors: Object.fromEntries(
         Object.entries(PATTERNS).map(([id,p])=>[id,p.color])
+      ),
+      patternNames: Object.fromEntries(
+        Object.entries(PATTERNS).map(([id,p])=>[id,p.name])
       ),
     };
   }
@@ -1386,28 +1389,80 @@ function renderHotNodes(hotNodes, patternColors) {
   }
 }
 
-function renderBuildings(buildings, patternColors) {
+function renderBuildings(buildings, patternColors, patternNames) {
   const ns='http://www.w3.org/2000/svg';
   const layer=document.getElementById('layer-buildings');
   layer.innerHTML='';
   if(!buildings||buildings.length===0) return;
   const toSvg = window._ftToSvg || ((x,y)=>[x,y]);
-  // Width/height scaling: use ftToSvg on corners
   const svgW_=(fw)=>{const[x0]=toSvg(0,0),[x1]=toSvg(fw,0);return Math.abs(x1-x0);};
   const svgH_=(fh)=>{const[,y0]=toSvg(0,0),[,y1]=toSvg(0,fh);return Math.abs(y1-y0);};
+
   for (const b of buildings) {
     const hex=patternColors[b.domPid]||'#888888';
     const [r,g,bl]=hexToRgb(hex);
     const opacity=Math.min(0.85, 0.3+b.avgStrong*0.12);
-    const [sx,sy]=toSvg(b.x,b.y+b.h); // bottom-left in ft → top-left in svg
+
+    // Footprint rect
+    const [sx,sy]=toSvg(b.x, b.y+b.h);
+    const sw=svgW_(b.w), sh=svgH_(b.h);
     const rect=document.createElementNS(ns,'rect');
     rect.setAttribute('x',sx.toFixed(1)); rect.setAttribute('y',sy.toFixed(1));
-    rect.setAttribute('width',svgW_(b.w).toFixed(1)); rect.setAttribute('height',svgH_(b.h).toFixed(1));
+    rect.setAttribute('width',sw.toFixed(1)); rect.setAttribute('height',sh.toFixed(1));
     rect.setAttribute('fill',`rgba(${r},${g},${bl},${opacity.toFixed(2)})`);
-    rect.setAttribute('stroke',`rgba(${r},${g},${bl},0.7)`);
+    rect.setAttribute('stroke',`rgba(${r},${g},${bl},0.85)`);
     rect.setAttribute('stroke-width','1');
     rect.setAttribute('rx','2');
     layer.appendChild(rect);
+
+    // Label — only if footprint is large enough to hold text
+    if (sw < 18 || sh < 10) continue;
+
+    // Centroid in SVG coords
+    const [cx,cy]=toSvg(b.x+b.w/2, b.y+b.h/2);
+
+    // Pattern name: shortest readable form
+    const fullName = (patternNames&&patternNames[b.domPid]) || ('P'+b.domPid);
+    // Abbreviate: first word, or whole name if short
+    const words = fullName.split(' ');
+    const shortName = words.length > 1 && sw < 60
+      ? words.map(w=>w[0]).join('').toUpperCase()   // initials if narrow
+      : fullName.length > 14 && sw < 80
+      ? words.slice(0,2).join(' ')                   // first two words
+      : fullName;
+
+    // Co-occurrence count badge
+    const nPat = Math.round(b.avgStrong);
+
+    // Main label
+    const lbl=document.createElementNS(ns,'text');
+    lbl.setAttribute('x',cx.toFixed(1));
+    lbl.setAttribute('y',(cy - (sh>20?4:0)).toFixed(1));
+    lbl.setAttribute('text-anchor','middle');
+    lbl.setAttribute('dominant-baseline','middle');
+    lbl.setAttribute('fill',`rgba(${r},${g},${bl},1)`);
+    lbl.setAttribute('font-size', sw<40?'4.5': sw<70?'5.5':'6.5');
+    lbl.setAttribute('font-family','monospace');
+    lbl.setAttribute('font-weight','600');
+    lbl.setAttribute('letter-spacing','0.5');
+    lbl.setAttribute('pointer-events','none');
+    lbl.textContent = shortName;
+    layer.appendChild(lbl);
+
+    // Pattern count badge — shown if tall enough
+    if (sh > 22 && nPat > 0) {
+      const badge=document.createElementNS(ns,'text');
+      badge.setAttribute('x',cx.toFixed(1));
+      badge.setAttribute('y',(cy+7).toFixed(1));
+      badge.setAttribute('text-anchor','middle');
+      badge.setAttribute('dominant-baseline','middle');
+      badge.setAttribute('fill',`rgba(${r},${g},${bl},0.65)`);
+      badge.setAttribute('font-size','4');
+      badge.setAttribute('font-family','monospace');
+      badge.setAttribute('pointer-events','none');
+      badge.textContent = `${nPat} patterns`;
+      layer.appendChild(badge);
+    }
   }
 }
 
@@ -1496,7 +1551,7 @@ function renderSnapshot(snapshot, result) {
 
   // Buildings
   if(isBuildings) {
-    renderBuildings(result.buildings, result.patternColors);
+    renderBuildings(result.buildings, result.patternColors, result.patternNames);
   } else {
     document.getElementById('layer-buildings').innerHTML='';
   }
