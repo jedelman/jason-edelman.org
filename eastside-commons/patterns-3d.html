@@ -1144,7 +1144,7 @@ window.EC_FieldSolver = (() => {
     const panStart = new THREE.Vector2(), panEnd = new THREE.Vector2(), panDelta = new THREE.Vector2();
     const offset = new THREE.Vector3();
     const quat = new THREE.Quaternion().setFromUnitVectors(camera.up, new THREE.Vector3(0,1,0));
-    const quatInverse = quat.clone().invert();
+    const quatInverse = quat.clone().inverse ? quat.clone().inverse() : quat.clone().invert();
 
     function rotateLeft(angle) { sphericalDelta.theta -= angle; }
     function rotateUp(angle) { sphericalDelta.phi -= angle; }
