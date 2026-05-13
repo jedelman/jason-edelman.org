@@ -1770,6 +1770,7 @@ function buildP106Courtyard(group, blk, heightFt, col, openDir) {
     addTopRect(group, armX, cy + (fh - wallD) / 2, armW, wallD, lowerH, edgeMat.clone());
   }
   // P166/P164 detail on courtyard arms (floor bands + windows on outer faces)
+  const floors = blk.floors;
   if (floors >= 2) addFloorBands(group, cx, cy, fw, fh, heightFt, floors, col);
   if (floors >= 3) addWindowBands(group, cx, cy, fw, fh, 0, heightFt, floors, col, openDir === 'S' ? 'N' : openDir === 'N' ? 'S' : openDir === 'E' ? 'W' : 'E');
   addEntryRecess(group, cx, cy, fw, fh, heightFt/floors, col, openDir);
