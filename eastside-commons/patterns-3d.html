@@ -82,7 +82,12 @@
   <button class="toggle-btn on" id="tog-ground">Ground</button>
   <button class="toggle-btn on" id="tog-detail">Detail</button>
   <button class="toggle-btn on" id="tog-trees">Trees</button>
+  <button class="toggle-btn" id="btn-fly" onclick="if(_flyActive) stopFlythrough(); else startFlythrough();">▶ Fly</button>
 
+  <div class="ctrl-group">
+    <span class="ctrl-label">Speed</span>
+    <input type="range" id="ctrl-speed" min="0.00005" max="0.0008" value="0.00018" step="0.00005">
+  </div>
   <button id="btn-run">▶ Solve</button>
   <span id="status">—</span>
 </div>
@@ -1494,7 +1499,7 @@ function buildGround(MAP, parcels, proj) {
     if (!p.is_eda || !p.rings?.[0]) continue;
     const pts = p.rings[0].map(([lon,lat]) => {
       const [fx,fy] = proj(lon,lat);
-      return ftTo3(fx, fy, 0);
+      return ftTo3(fx, fy, -1.5);
     });
     if (pts.length < 3) continue;
     pts.push(pts[0].clone());
@@ -1508,7 +1513,7 @@ function buildGround(MAP, parcels, proj) {
   const matGround = new THREE.MeshLambertMaterial({ color: 0x0d1a0a, side: THREE.DoubleSide });
   const groundMesh = new THREE.Mesh(geoGround, matGround);
   groundMesh.rotation.x = -Math.PI/2;
-  groundMesh.position.set(0, -1, 0);
+  groundMesh.position.set(0, -3, 0);
   gGround.add(groundMesh);
 
   // Grid
@@ -1804,22 +1809,23 @@ function addDetailedBuilding(group, blk, heightFt, col, derived) {
 // If yes → exclusion (don't build), mark as void/park.
 function isExclusion(blk, derived) {
   const { cx, cy } = blk;
-  // SPONGE park ellipse
+  // SPONGE: only exclude the core ellipse (no buffer) — rim gets courtyard typology
   const sp = derived.SPONGE;
   if (sp) {
-    const ex = (cx - sp.cx) / (sp.rx + 40), ey = (cy - sp.cy) / (sp.ry + 40);
-    if (ex*ex + ey*ey < 1) return 'sponge';
+    const ex = (cx - sp.cx) / sp.rx, ey = (cy - sp.cy) / sp.ry;
+    if (ex*ex + ey*ey < 0.75) return 'sponge'; // tighter: only inner 75%
   }
-  // BASIN (water feature — hard exclusion)
+  // BASIN (water feature — hard exclusion, small)
   const ba = derived.BASIN;
   if (ba) {
-    const ex = (cx - ba.cx) / (ba.rx + 20), ey = (cy - ba.cy) / (ba.ry + 20);
+    const ex = (cx - ba.cx) / (ba.rx + 10), ey = (cy - ba.cy) / (ba.ry + 10);
     if (ex*ex + ey*ey < 1) return 'basin';
   }
-  // BAND (main street zone — no tall buildings, handle separately)
+  // BAND: NOT an exclusion — it's a street zone that gets arcade typology.
+  // Only exclude a narrow carriageway strip (innermost 20ft of band).
   const bd = derived.BAND;
-  if (bd && cy < bd.y + bd.h && cy > bd.y) return 'band';
-  // TIDE station (transit plaza)
+  if (bd && cy > bd.y && cy < bd.y + Math.min(bd.h * 0.15, 25)) return 'band';
+  // TIDE station plaza (small transit zone)
   const td = derived.TIDE;
   if (td && cx > td.x && cx < td.x+td.w && cy > td.y && cy < td.y+td.h) return 'tide';
   return null;
@@ -1846,8 +1852,9 @@ function isArcadeTypology(blk, derived) {
   if (!sp) return false;
   const distToSpine = Math.abs(blk.cx - (sp.x + sp.w/2));
   if (distToSpine < sp.w * 1.5) return true;
+  // BAND: blocks within 150ft north of band top edge get arcade base
   const bd = derived.BAND;
-  if (bd && blk.cy < bd.y + bd.h + 80) return true;
+  if (bd && blk.cy >= bd.y + bd.h && blk.cy < bd.y + bd.h + 150) return true;
   return false;
 }
 
@@ -2406,9 +2413,14 @@ function render3D(result) {
   buildFieldLines(fieldLines, MAP, PATTERNS);
   buildHotNodes3D(hotNodes, PATTERNS);
   buildGreenery(hotNodes, derived, MAP, fieldLines);
+  _flyCurve = buildFlythroughPath(derived, MAP, hotNodes);
 }
 
 // ── SOLVE ─────────────────────────────────────────────────────────────────────
+document.getElementById('ctrl-speed').addEventListener('input', e => {
+  _flySpeed = parseFloat(e.target.value);
+});
+
 document.getElementById('btn-run').addEventListener('click', async () => {
   const btn = document.getElementById('btn-run');
   const status = document.getElementById('status');
@@ -2464,6 +2476,129 @@ resize();
 // Position camera at default (before first solve)
 camera.position.set(0, 800, 1200);
 camera.lookAt(0, 0, 0);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FLYTHROUGH — cinematic camera path through the site
+// Generates a CatmullRomCurve3 through key spatial moments:
+//   approach → spine entry → courtyard → park grove → residential → overview
+// Camera follows with a smooth lookAhead offset so it always faces forward.
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _flyCurve = null;
+let _flyActive = false;
+let _flyT = 0;
+let _flySpeed = 0.00018; // fraction of curve per frame (~30s at 60fps)
+let _flyLookAheadT = 0.012;
+let _flyRAF = null;
+
+function buildFlythroughPath(derived, MAP, hotNodes) {
+  if (!derived || !MAP) return null;
+
+  const sp = derived.SPINE;
+  const bd = derived.BAND;
+  const sponge = derived.SPONGE;
+
+  // Approximate site center
+  const cx = (MAP.x0 + MAP.x1) / 2;
+  const cy = (MAP.y0 + MAP.y1) / 2;
+
+  // Camera eye height for each waypoint (in ft)
+  const EYE_HIGH = 200;   // overview
+  const EYE_MID = 80;     // district level
+  const EYE_WALK = 18;    // street level
+  const EYE_FLY = 40;     // low fly-over
+
+  // Build waypoints: [ft_x, ft_y, eye_height_ft]
+  // These thread through the narrative: arrive → spine → park → housing → depart
+  const wpts = [];
+
+  // 1. Approach from south-west, high
+  wpts.push([MAP.x0 + (MAP.x1-MAP.x0)*0.15, MAP.y0 - 300, EYE_HIGH]);
+
+  // 2. Arrival threshold — south edge, mid height
+  wpts.push([MAP.x0 + (MAP.x1-MAP.x0)*0.3, MAP.y0 + 80, EYE_MID]);
+
+  // 3. Main street band — street level
+  if (bd) wpts.push([cx - 100, bd.y + bd.h * 0.6, EYE_WALK]);
+
+  // 4. Spine entry — look down spine
+  if (sp) {
+    const spCX = sp.x + sp.w/2, spCY = sp.y + sp.h*0.2;
+    wpts.push([spCX, spCY, EYE_WALK + 10]);
+  }
+
+  // 5. Spine midpoint — rise to see context
+  if (sp) {
+    wpts.push([sp.x + sp.w/2, sp.y + sp.h/2, EYE_FLY]);
+  }
+
+  // 6. Activity peak — fly toward strongest hot node if available
+  if (hotNodes && hotNodes.length) {
+    const peak = [...hotNodes].sort((a,b) => b.nStrong - a.nStrong)[0];
+    wpts.push([peak.x, peak.y - 60, EYE_FLY]);
+    wpts.push([peak.x + 50, peak.y + 20, EYE_WALK + 8]);
+  }
+
+  // 7. Spine north end
+  if (sp) wpts.push([sp.x + sp.w/2, sp.y + sp.h * 0.85, EYE_MID]);
+
+  // 8. Sponge park — fly through the grove
+  if (sponge) {
+    wpts.push([sponge.cx - sponge.rx * 0.5, sponge.cy - sponge.ry * 0.3, EYE_WALK + 5]);
+    wpts.push([sponge.cx, sponge.cy, EYE_WALK]); // park center
+    wpts.push([sponge.cx + sponge.rx * 0.6, sponge.cy + sponge.ry * 0.4, EYE_FLY]);
+  }
+
+  // 9. Residential quarter — east side, street level
+  wpts.push([MAP.x0 + (MAP.x1-MAP.x0)*0.75, cy + 100, EYE_WALK]);
+
+  // 10. Rise to overview
+  wpts.push([cx + 100, cy + 200, EYE_HIGH]);
+
+  // 11. Depart north-east, banking
+  wpts.push([MAP.x1 + 200, MAP.y1 + 300, EYE_HIGH * 1.5]);
+
+  // Convert ft waypoints to Three.js world coords
+  const pts3 = wpts.map(([fx, fy, fz]) => ftTo3(fx, fy, fz));
+
+  return new THREE.CatmullRomCurve3(pts3, false, 'catmullrom', 0.5);
+}
+
+function startFlythrough() {
+  if (!_flyCurve) return;
+  _flyActive = true;
+  _flyT = 0;
+  controls.enabled = false; // disable orbit during fly
+  document.getElementById('btn-fly').textContent = '⏹ Stop';
+  document.getElementById('btn-fly').classList.add('on');
+  flyStep();
+}
+
+function stopFlythrough() {
+  _flyActive = false;
+  if (_flyRAF) { cancelAnimationFrame(_flyRAF); _flyRAF = null; }
+  controls.enabled = true;
+  document.getElementById('btn-fly').textContent = '▶ Fly';
+  document.getElementById('btn-fly').classList.remove('on');
+}
+
+function flyStep() {
+  if (!_flyActive || !_flyCurve) return;
+  _flyT += _flySpeed;
+  if (_flyT >= 1) { stopFlythrough(); return; }
+
+  const pos = _flyCurve.getPoint(_flyT);
+  const lookT = Math.min(_flyT + _flyLookAheadT, 0.9999);
+  const target = _flyCurve.getPoint(lookT);
+
+  camera.position.copy(pos);
+  camera.lookAt(target);
+  controls.target.copy(target);
+
+  renderer.render(scene, camera);
+  _flyRAF = requestAnimationFrame(flyStep);
+}
+
 
 // ── RENDER LOOP ───────────────────────────────────────────────────────────────
 function animate() {
