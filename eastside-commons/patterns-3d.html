@@ -47,6 +47,7 @@
 <body>
 
 <div id="header">
+  <a href="index.html" style="font-size:0.58rem;color:var(--muted);text-decoration:none;letter-spacing:0.08em;white-space:nowrap" title="Back to site plan">← Site Plan</a>
   <h1>EC · Pattern Solver · 3D</h1>
 
   <div class="ctrl-group">
@@ -80,6 +81,7 @@
   <button class="toggle-btn on" id="tog-nodes">Nodes</button>
   <button class="toggle-btn on" id="tog-ground">Ground</button>
   <button class="toggle-btn on" id="tog-detail">Detail</button>
+  <button class="toggle-btn on" id="tog-trees">Trees</button>
 
   <button id="btn-run">▶ Solve</button>
   <span id="status">—</span>
@@ -1286,6 +1288,177 @@ const gGround = new THREE.Group();
 const gDetail = new THREE.Group(); // LOD: facade detail, hidden at city scale
 scene.add(gBuildings, gLines, gNodes, gGround, gDetail);
 
+// ══════════════════════════════════════════════════════════════════════════════
+// GREENERY — P171 Tree Places + P51 Green Streets
+//
+// P171: Trees as social markers — placed at activity nodes, courtyard entries,
+//       path intersections. Not decoration; they mark where life concentrates.
+// P51:  Green Streets — tree rows along movement corridors (spine edges,
+//       main street band edge, sponge park rim).
+//
+// Tree geometry: trunk (CylinderGeometry) + canopy (SphereGeometry).
+// Species variation encoded by canopy shape and color.
+// ══════════════════════════════════════════════════════════════════════════════
+
+const gTrees = new THREE.Group();
+scene.add(gTrees);
+
+// Canopy colors — four species types
+const CANOPY_COLORS = [
+  new THREE.Color(0x3a6b2a), // deep oak
+  new THREE.Color(0x4a7c35), // maple mid
+  new THREE.Color(0x2d5e20), // pine dark
+  new THREE.Color(0x5a8c40), // birch light
+];
+const TRUNK_COLOR = new THREE.Color(0x5a3a20);
+
+// Shared geometries (instanced for performance)
+const trunkGeo = new THREE.CylinderGeometry(0.6, 0.9, 1, 6);
+const canopyGeos = [
+  new THREE.SphereGeometry(1, 7, 5),                          // round oak
+  new THREE.SphereGeometry(1, 7, 5).scale(1, 1.3, 1),        // tall maple — scale returns geo
+  new THREE.ConeGeometry(1, 2.2, 7),                          // conical pine
+  new THREE.SphereGeometry(1, 7, 5).scale(1.3, 0.85, 1.3),   // spreading birch
+];
+// Note: .scale() on BufferGeometry returns the geometry itself, so these are valid.
+
+function makeTree(group, fx, fy, trunkH, canopyR, species) {
+  species = species % 4;
+  const pos = ftTo3(fx, fy, 0);
+
+  // Trunk
+  const tMat = new THREE.MeshLambertMaterial({ color: TRUNK_COLOR });
+  const tGeo = new THREE.CylinderGeometry(0.6, 0.9, trunkH, 6);
+  tGeo.translate(0, trunkH / 2, 0);
+  const trunk = new THREE.Mesh(tGeo, tMat);
+  trunk.position.copy(pos);
+  group.add(trunk);
+
+  // Canopy
+  const cCol = CANOPY_COLORS[species].clone();
+  // Slight random hue variation per tree
+  cCol.offsetHSL((Math.random() - 0.5) * 0.08, (Math.random() - 0.5) * 0.1, (Math.random() - 0.5) * 0.08);
+  const cMat = new THREE.MeshLambertMaterial({ color: cCol, transparent: true, opacity: 0.92 });
+
+  const cGeo = species === 2
+    ? new THREE.ConeGeometry(canopyR * 0.75, canopyR * 2.2, 7)
+    : new THREE.SphereGeometry(canopyR, 7, 5);
+
+  // Scale for species character
+  if (species === 3) cGeo.scale(1.3, 0.85, 1.3); // spreading
+  else if (species === 1) cGeo.scale(1, 1.3, 1);  // tall
+
+  cGeo.translate(0, 0, 0);
+  const canopy = new THREE.Mesh(cGeo, cMat);
+  canopy.position.copy(pos);
+  canopy.position.y = trunkH + canopyR * (species === 2 ? 1.1 : 0.55);
+  group.add(canopy);
+}
+
+function buildGreenery(hotNodes, derived, MAP, fieldLines) {
+  while (gTrees.children.length) gTrees.remove(gTrees.children[0]);
+  if (!derived || !MAP) return;
+
+  const placed = []; // track positions to avoid overlap
+  const MIN_DIST = 18; // ft between trees
+
+  function canPlace(fx, fy) {
+    for (const [px, py] of placed) {
+      if (Math.hypot(fx - px, fy - py) < MIN_DIST) return false;
+    }
+    return true;
+  }
+  function plant(fx, fy, trunkH, canopyR, species) {
+    if (fx < MAP.x0 || fx > MAP.x1 || fy < MAP.y0 || fy > MAP.y1) return;
+    if (!canPlace(fx, fy)) return;
+    placed.push([fx, fy]);
+    makeTree(gTrees, fx, fy, trunkH, canopyR, species);
+  }
+
+  // ── P171: Trees at hot node peaks (activity markers) ─────────────────────
+  // Top-tier nodes already have landmark columns — add a tree cluster nearby
+  if (hotNodes) {
+    const maxS = Math.max(...hotNodes.map(n => n.nStrong));
+    const elite = hotNodes.filter(n => n.nStrong >= maxS * 0.6);
+    for (const node of elite) {
+      // Ring of 3-5 trees around the node at ~20ft radius
+      const count = 3 + Math.floor((node.nStrong / maxS) * 2);
+      for (let i = 0; i < count; i++) {
+        const a = (i / count) * Math.PI * 2 + node.x * 0.01;
+        const r = 20 + (i % 2) * 8;
+        plant(node.x + Math.cos(a) * r, node.y + Math.sin(a) * r,
+              12 + Math.random() * 8, 10 + Math.random() * 4, i % 4);
+      }
+    }
+  }
+
+  // ── P51: Green Streets — spine edges ─────────────────────────────────────
+  if (derived.SPINE) {
+    const s = derived.SPINE;
+    const step = 40; // ft between street trees
+    for (let fy = MAP.y0 + 20; fy < MAP.y1; fy += step + (Math.random() - 0.5) * 10) {
+      // West edge of spine
+      plant(s.x - 12, fy, 14, 9, 0);
+      // East edge of spine
+      plant(s.x + s.w + 12, fy, 14, 9, 0);
+    }
+  }
+
+  // ── P51: Main street band — street trees along south edge ─────────────────
+  if (derived.BAND) {
+    const bd = derived.BAND;
+    const bandNorthY = bd.y + bd.h;
+    const step = 35;
+    for (let fx = MAP.x0 + 20; fx < MAP.x1; fx += step + (Math.random() - 0.5) * 8) {
+      // Trees just north of band (sidewalk tree strip)
+      plant(fx, bandNorthY + 10, 12, 8, 1);
+    }
+  }
+
+  // ── P106: Sponge park — scattered grove ──────────────────────────────────
+  if (derived.SPONGE) {
+    const sp = derived.SPONGE;
+    // Dense canopy grove in the park ellipse
+    // Use a deterministic grid with jitter, keep inside ellipse
+    const gridStep = 28;
+    let seed = 42;
+    const rng = () => { seed = (seed * 1664525 + 1013904223) & 0xffffffff; return (seed >>> 0) / 0xffffffff; };
+    for (let gx = sp.cx - sp.rx; gx < sp.cx + sp.rx; gx += gridStep) {
+      for (let gy = sp.cy - sp.ry; gy < sp.cy + sp.ry; gy += gridStep) {
+        const jx = gx + (rng() - 0.5) * gridStep * 0.7;
+        const jy = gy + (rng() - 0.5) * gridStep * 0.7;
+        // Inside ellipse?
+        const ex = (jx - sp.cx) / sp.rx, ey = (jy - sp.cy) / sp.ry;
+        if (ex*ex + ey*ey < 0.85) { // slightly inside rim
+          const species = Math.floor(rng() * 4);
+          plant(jx, jy, 10 + rng() * 8, 8 + rng() * 5, species);
+        }
+      }
+    }
+    // Rim planting — denser ring at park edge
+    const rimCount = 24;
+    for (let i = 0; i < rimCount; i++) {
+      const a = (i / rimCount) * Math.PI * 2;
+      const r = 0.88 + rng() * 0.08;
+      plant(sp.cx + Math.cos(a) * sp.rx * r, sp.cy + Math.sin(a) * sp.ry * r,
+            16, 11, i % 4);
+    }
+  }
+
+  // ── P171: Courtyard trees — one per courtyard void ───────────────────────
+  // We don't have courtyard centers directly, so use the exclusion zone centroids
+  // from field line seeds that fall in the sponge rim
+  if (derived.RESEARCH) {
+    const r = derived.RESEARCH;
+    // A small grove next to the research station
+    for (let i = 0; i < 4; i++) {
+      plant(r.x - 15 - i * 14, r.y + r.h / 2 + (i % 2 - 0.5) * 20, 11, 7, 2);
+    }
+  }
+}
+
+
+
 // State
 let lastResult = null;
 let HT_SCALE = 2.5;
@@ -2197,9 +2370,9 @@ function positionCamera(MAP) {
 }
 
 // ── TOGGLE BUTTONS ────────────────────────────────────────────────────────────
-['buildings','lines','nodes','ground','detail'].forEach(id => {
+['buildings','lines','nodes','ground','detail','trees'].forEach(id => {
   const btn = document.getElementById('tog-' + id);
-  const grp = { buildings: gBuildings, lines: gLines, nodes: gNodes, ground: gGround, detail: gDetail }[id];
+  const grp = { buildings: gBuildings, lines: gLines, nodes: gNodes, ground: gGround, detail: gDetail, trees: gTrees }[id];
   btn.addEventListener('click', () => {
     grp.visible = !grp.visible;
     btn.classList.toggle('on', grp.visible);
@@ -2232,6 +2405,7 @@ function render3D(result) {
   buildBuildings(buildings, derived, PATTERNS, hotNodes);
   buildFieldLines(fieldLines, MAP, PATTERNS);
   buildHotNodes3D(hotNodes, PATTERNS);
+  buildGreenery(hotNodes, derived, MAP, fieldLines);
 }
 
 // ── SOLVE ─────────────────────────────────────────────────────────────────────
