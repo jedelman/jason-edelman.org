@@ -7344,11 +7344,19 @@ const NORFOLK_AMI = {
     { label: '80% AMI', pct: 0.80, monthly: Math.round(82900 * 0.80 / 12 * 0.30), color: '#c87818' },
     { label: 'Market rate', pct: null, monthly: 1650, color: '#888' },
   ],
-  // Construction cost estimate: Norfolk 2024 (per unit, includes soft costs)
-  cost_per_unit_affordable: 185000,   // CLT/affordable unit: ~$185k
-  cost_per_unit_market: 210000,       // market rate: ~$210k
+  // Construction cost — Kindred-calibrated (St. Paul's / Tidewater Gardens, Norfolk 2023-25)
+  // Kindred Phase 3 (Kinship): $85M / 191 units = $445k/unit all-in (land+demo+construction+soft)
+  // Eastside Commons adjustment: no demolition (-$25k), CLT removes land carry (-$60k)
+  // → affordable all-in: ~$360k/unit; market: ~$385k/unit
+  cost_per_unit_affordable: 360000,   // all-in: construction + soft costs + financing; no land/demo
+  cost_per_unit_market: 385000,       // market-rate all-in (lighter subsidy stack, higher finish)
   // CLT ground lease: land cost removed from equation
   land_value_per_ac: 475000,          // Norfolk commercial land ~$475k/ac
+  // Phase cadence calibrated to Kindred: ~190 units / 24 months per phase
+  phase_cadence_units: 190,
+  phase_cadence_months: 24,
+  // Kindred comp: $300M total / 714 units = $420k blended
+  kindred_cost_per_unit_blended: 420000,
 };
 
 function renderPeopleView(zones) {
@@ -7568,9 +7576,11 @@ function renderFinancialsView(zones) {
   const buyVsLeaseMonthly = cltMonthly - sbaMonthly;  // positive = ownership cheaper than lease
 
   // ── Housing scenarios ──
-  // CLT condo pricing: construction cost basis minus LIHTC equity already in
-  const lihtcPerUnit = 15000;
-  const cltCondoPrice = AMI.cost_per_unit_affordable - lihtcPerUnit - 20000;  // ~$150k
+  // CLT condo pricing: construction cost basis minus LIHTC equity + subsidy stack
+  // Kindred-calibrated: $360k all-in, less $180k LIHTC+Virginia Housing subsidy = $180k basis
+  // CLT removes land → buyer price ~$150k (matches canonical numbers)
+  const lihtcPerUnit = 180000;   // LIHTC equity + Virginia Housing below-mkt debt (per affordable unit)
+  const cltCondoPrice = AMI.cost_per_unit_affordable - lihtcPerUnit - 30000;  // ~$150k
   const mktCondoPrice = 295000;   // Norfolk market 2BR condo comparable (2024)
   const condoDiscount = Math.round((1 - cltCondoPrice / mktCondoPrice) * 100);
 
@@ -7608,7 +7618,7 @@ function renderFinancialsView(zones) {
   const phase2Cost = phase2Units * AMI.cost_per_unit_affordable / 1e6;
   const phase3Cost = phase3Units * AMI.cost_per_unit_market / 1e6;
   const totalCost = phase1Cost + phase2Cost + phase3Cost;
-  const lihtcTotal = (belowMarketUnits * lihtcPerUnit) / 1e6;
+  const lihtcTotal = (belowMarketUnits * 180000) / 1e6;
   const landValueLocked = (73.4 * AMI.land_value_per_ac / 1e6).toFixed(1);
   const cityBondEst = 18;
   const avgRent60AMI = AMI.brackets[2].monthly;
