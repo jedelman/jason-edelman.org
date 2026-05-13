@@ -1445,7 +1445,7 @@ window.EC_PatternSolver = (() => {
       const promenade = (sg.instances||[]).find(i => i.patternId === 31);
       if (!promenade) return [];
       return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
-        .filter(i => instanceNearSpline(i, promenade, 40))
+        .filter(i => instanceNearSpline(i, promenade, 90))
         .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel } }));
     },
     instantiate(cand) {
@@ -1504,7 +1504,7 @@ window.EC_PatternSolver = (() => {
     // Rule: streets near green zones become green corridors — bike/ped lanes,
     // trees in roadway, slowed cars. Detect spine adjacency to GREEN_ACTIVE.
     detect(sg, proj, MAP) {
-      const G = _derivedG;
+      const G = window._derivedG;
       if (!G?.SPINE) return [];
       const green = (sg.instances||[]).filter(i => [60,67,71].includes(i.patternId));
       // Sample points along spine and find those near green instances
@@ -1557,9 +1557,9 @@ window.EC_PatternSolver = (() => {
     instantiate(cand) {
       const { x, y, w, h } = cand.geom;
       const sw=30, sh=30;
-      // Place square adjacent to cluster centroid, slightly offset
+      // Place square adjacent to cluster — just outside its bounding box edge
       return mkInstance(61, 'polygon',
-        rectPts(x + w*0.3, y + h*0.3, sw, sh),
+        rectPts(x + w + 8, y + h*0.3, sw, sh),
         { use:'plaza', capacity_people:80, hardscape_pct:0.6, trees:4 });
     },
     forces(inst, neighbors) {
@@ -1607,7 +1607,7 @@ window.EC_PatternSolver = (() => {
     // Rule: buildings step down in height as they move away from the spine.
     // Detect BuildingComplex instances and tag them with height-from-spine gradient.
     detect(sg, proj, MAP) {
-      const G = _derivedG;
+      const G = window._derivedG;
       if (!G?.SPINE) return [];
       const spineX = G.SPINE.x + G.SPINE.w/2;
       return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
@@ -1634,12 +1634,11 @@ window.EC_PatternSolver = (() => {
   // When a parent instance exists, these child patterns MUST fire against it.
   // Children query sg.childrenOf(parentId) to find siblings.
   const REQUIRES = {
-    37:  [67, 60],       // HouseCluster requires CommonLand, AccessibleGreen
+    37:  [67, 60, 61],   // HouseCluster requires CommonLand, AccessibleGreen, SmallSquare
     95:  [115, 122],     // BuildingComplex requires CourtyardsWhichLive, BuildingFronts
     109: [115, 127],     // LongThinHouse requires Courtyard, IntimacyGradient
     31:  [87, 88, 46],   // Promenade requires Shops, Cafe, Market
     30:  [53],           // ActivityNode requires Gateway
-    37:  [67, 60, 61],   // HouseCluster also requires SmallSquare nearby
     100: [87, 88],       // PedestrianStreet requires Shops and Cafe
   };
 
@@ -1901,8 +1900,13 @@ window.EC_PatternSolver = (() => {
             continue;
           }
 
-          // Priority conflict: different pattern owns this location at higher priority
-          const conflict = _sg.instances.find(i =>
+          // Priority conflict: different pattern owns this location at higher priority.
+          // Splines, rings, and informational tags (P116 cascade-of-roofs) are overlays —
+          // they annotate rather than claim space, so skip the conflict check for them.
+          const OVERLAY_TYPES = new Set(['spline', 'rings']);
+          const INFORMATIONAL = new Set([116, 87, 88]); // overlays that annotate existing instances
+          const isOverlay = OVERLAY_TYPES.has(inst.geomType) || INFORMATIONAL.has(inst.patternId);
+          const conflict = isOverlay ? null : _sg.instances.find(i =>
             i.id !== inst.id && i.patternId !== inst.patternId &&
             instanceDist(i, inst) < 20 &&
             PATTERNS[i.patternId]?.priority < pattern.priority);
@@ -2072,8 +2076,20 @@ window.EC_PatternSolver = (() => {
 
   function instanceNearSpline(inst, spline, threshold) {
     const ic = centroidOf(inst.geomType==='polygon_array'?inst.geom.flat():inst.geom);
-    for (const pt of (spline.geom || [])) {
-      if (ptDist(ic, pt) < threshold) return true;
+    const pts = spline.geom || [];
+    // Check distance to each segment of the spline (not just endpoints)
+    for (let i = 0; i < pts.length; i++) {
+      if (ptDist(ic, pts[i]) < threshold) return true;
+      if (i < pts.length - 1) {
+        // Distance from ic to segment pts[i]→pts[i+1]
+        const ax = pts[i].x, ay = pts[i].y, bx = pts[i+1].x, by = pts[i+1].y;
+        const dx = bx-ax, dy = by-ay, len2 = dx*dx+dy*dy;
+        if (len2 > 0) {
+          const t = Math.max(0, Math.min(1, ((ic.x-ax)*dx+(ic.y-ay)*dy)/len2));
+          const px = ax+t*dx, py = ay+t*dy;
+          if (ptDist(ic, {x:px,y:py}) < threshold) return true;
+        }
+      }
     }
     return false;
   }
