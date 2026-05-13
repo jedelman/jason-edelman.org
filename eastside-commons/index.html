@@ -5815,7 +5815,7 @@ async function triggerPipeline() {
               const st2 = window._getPipelineState?.() || {};
               const psResult = window.EC_PatternSolver.solve(
                 st2.parcels, st2.proj, {x0:139,y0:163,x1:841,y1:653},
-                window._derivedG, { passes:4, cluster_k:40 }
+                window._derivedG, { recurse:3, cluster_k:40 }
               );
               window._patternSolverResult = psResult;
               const patEl = document.getElementById('res-patterns');
@@ -7538,9 +7538,15 @@ function renderPatternAnimation(snapshots) {
             <feGaussianBlur stdDeviation="3" result="blur"/>
             <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
           </filter>
+          <marker id="panim-arrow" markerWidth="6" markerHeight="6"
+            refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L6,3 z" fill="oklch(55% 0.01 145)"/>
+          </marker>
         </defs>
         <!-- EDA parcel ghost -->
         <g id="panim-ghost" opacity="0.15"></g>
+        <!-- Hierarchy edges (parent→child lines) -->
+        <g id="panim-edges" opacity="0.5"></g>
         <!-- Pattern instances -->
         <g id="panim-instances"></g>
         <!-- Building points -->
@@ -7548,6 +7554,11 @@ function renderPatternAnimation(snapshots) {
         <!-- Labels -->
         <g id="panim-labels"></g>
       </svg>
+      <!-- Tooltip -->
+      <div id="panim-tooltip" style="display:none;position:fixed;z-index:300;
+        background:oklch(14% 0.01 145);border:1px solid oklch(28% 0.01 145);
+        padding:0.5rem 0.75rem;font-family:var(--font-mono,'monospace');
+        font-size:0.58rem;line-height:1.8;max-width:220px;pointer-events:none;"></div>
       <!-- Sidebar: instance counts -->
       <div id="panim-sidebar" style="width:200px;flex-shrink:0;overflow-y:auto;
         padding:0.75rem;border-left:1px solid oklch(20% 0.008 145);
@@ -7586,24 +7597,220 @@ function renderPatternAnimation(snapshots) {
     return [];
   }
 
-  function instToSVG(inst) {
+  function instToSVG(inst, isNew) {
     const color = P_COLOR[inst.patternId] || '#888';
     const pts = geomToPts(inst);
     if (!pts || pts.length === 0) return null;
     const g = document.createElementNS('http://www.w3.org/2000/svg','g');
     g.setAttribute('data-pid', inst.patternId);
     g.setAttribute('data-id', inst.id);
+    g.setAttribute('data-parent', inst.parent_id || '');
+    g.style.cursor = 'pointer';
+
+    const highlight = isNew ? '1' : '0.72';
 
     if (inst.geomType === 'point' || inst.geomType === 'point_cloud') {
       for (const p of pts) {
         const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
         c.setAttribute('cx', p.x || 0);
         c.setAttribute('cy', p.y || 0);
-        c.setAttribute('r', 5);
+        c.setAttribute('r', isNew ? 7 : 5);
         c.setAttribute('fill', color);
-        c.setAttribute('opacity', '0.85');
-        c.setAttribute('filter', 'url(#panim-glow)');
+        c.setAttribute('opacity', highlight);
+        if (isNew) c.setAttribute('filter', 'url(#panim-glow)');
         g.appendChild(c);
+      }
+    } else if (inst.geomType === 'spline') {
+      if (pts.length >= 2) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+        line.setAttribute('points', pts.map(p => `${p.x||0},${p.y||0}`).join(' '));
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', isNew ? '4' : '2.5');
+        line.setAttribute('fill', 'none');
+        line.setAttribute('opacity', highlight);
+        if (isNew) line.setAttribute('filter', 'url(#panim-glow)');
+        g.appendChild(line);
+      }
+    } else {
+      const allRings = inst.geomType === 'polygon_array' ? inst.geom : [inst.geom];
+      for (const ring of allRings) {
+        if (!ring || ring.length < 3) continue;
+        const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+        poly.setAttribute('points', ring.map(p => `${p.x||0},${p.y||0}`).join(' '));
+        poly.setAttribute('fill', color);
+        poly.setAttribute('fill-opacity', isNew ? '0.25' : '0.12');
+        poly.setAttribute('stroke', color);
+        poly.setAttribute('stroke-width', isNew ? '2' : '1');
+        poly.setAttribute('opacity', highlight);
+        g.appendChild(poly);
+      }
+    }
+    return g;
+  }
+
+  // Compute centroid of an instance (for edge drawing)
+  function instCentroid(inst) {
+    const pts = geomToPts(inst);
+    if (!pts || pts.length === 0) return null;
+    return { x: pts.reduce((s,p)=>s+(p.x||0),0)/pts.length,
+             y: pts.reduce((s,p)=>s+(p.y||0),0)/pts.length };
+  }
+
+  function renderPass(idx) {
+    const snap = snapshots[idx];
+    if (!snap) return;
+
+    const edgeLayer  = panel.querySelector('#panim-edges');
+    const instLayer  = panel.querySelector('#panim-instances');
+    const bldgLayer  = panel.querySelector('#panim-bldgpts');
+    const labelLayer = panel.querySelector('#panim-labels');
+    const sidebar    = panel.querySelector('#panim-sidebar');
+    const labelEl    = panel.querySelector('#panim-label');
+    const tooltip    = document.getElementById('panim-tooltip');
+
+    edgeLayer.innerHTML = '';
+    instLayer.innerHTML = '';
+    bldgLayer.innerHTML = '';
+    labelLayer.innerHTML = '';
+
+    // Header label — distinguish intro vs recurse
+    const phase = snap.isRecurse
+      ? `♻ Recurse ${snap.recurseIdx} — all scales · ${snap.instances.length} instances`
+      : `▶ Pass ${snap.pass} — Scale ${snap.scale} · ${snap.instances.length} instances`;
+    labelEl.textContent = phase;
+    labelEl.style.color = snap.isRecurse ? '#4ac8a8' : 'var(--text,#e8dfc8)';
+
+    // Build id→inst lookup for this snapshot
+    const byId = {};
+    for (const i of snap.instances) byId[i.id] = i;
+
+    // Draw hierarchy edges: parent centroid → child centroid
+    for (const inst of snap.instances) {
+      if (!inst.parent_id || !byId[inst.parent_id]) continue;
+      const parent = byId[inst.parent_id];
+      const pc = instCentroid(parent);
+      const cc = instCentroid(inst);
+      if (!pc || !cc) continue;
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', pc.x); line.setAttribute('y1', pc.y);
+      line.setAttribute('x2', cc.x); line.setAttribute('y2', cc.y);
+      line.setAttribute('stroke', P_COLOR[parent.patternId] || '#888');
+      line.setAttribute('stroke-width', '1');
+      line.setAttribute('stroke-dasharray', '3,3');
+      line.setAttribute('marker-end', 'url(#panim-arrow)');
+      edgeLayer.appendChild(line);
+    }
+
+    // Draw instances — new ones brighter
+    const newIds = new Set(snap.instances.filter(i => i.pass_created === snap.pass).map(i => i.id));
+    for (const inst of snap.instances) {
+      const el = instToSVG(inst, newIds.has(inst.id));
+      if (!el) continue;
+
+      // Tooltip on hover
+      el.addEventListener('mouseenter', (e) => {
+        const pats = window.EC_PatternSolver?.PATTERNS || {};
+        const pat  = pats[inst.patternId];
+        const req  = window.EC_PatternSolver?.REQUIRES?.[inst.patternId] || [];
+        const parentInst = inst.parent_id ? byId[inst.parent_id] : null;
+        const children = snap.instances.filter(i => i.parent_id === inst.id);
+        tooltip.style.display = 'block';
+        tooltip.innerHTML = `
+          <div style="color:${P_COLOR[inst.patternId]||'#888'};font-weight:700;margin-bottom:0.3rem;">
+            P${inst.patternId} ${pat?.name || ''}
+          </div>
+          <div style="color:oklch(55% 0.01 145);">Scale: ${['','District','Block','Group','Building','Edge'][pat?.scale||0]}</div>
+          <div style="color:oklch(55% 0.01 145);">Created: pass ${inst.pass_created}</div>
+          <div style="color:oklch(55% 0.01 145);">Mutations: ${inst.mutation_count||0}</div>
+          ${parentInst ? `<div style="color:oklch(50% 0.01 145);margin-top:0.2rem;">
+            Parent: <span style="color:${P_COLOR[parentInst.patternId]||'#888'}">P${parentInst.patternId}</span>
+          </div>` : ''}
+          ${children.length ? `<div style="color:oklch(50% 0.01 145);">
+            Children: ${[...new Set(children.map(c=>c.patternId))].map(p=>`<span style="color:${P_COLOR[p]||'#888'}">P${p}</span>`).join(' ')}
+          </div>` : ''}
+          ${req.length ? `<div style="color:oklch(45% 0.01 145);margin-top:0.2rem;">Requires: P${req.join(', P')}</div>` : ''}
+          ${inst.data ? `<div style="color:oklch(40% 0.01 145);margin-top:0.2rem;font-size:0.5rem;">${
+            Object.entries(inst.data).filter(([k])=>typeof inst.data[k]!=='object').slice(0,4)
+              .map(([k,v])=>`${k}: ${v}`).join('<br>')
+          }</div>` : ''}
+        `;
+      });
+      el.addEventListener('mousemove', (e) => {
+        tooltip.style.left = (e.clientX + 14) + 'px';
+        tooltip.style.top  = (e.clientY - 10) + 'px';
+      });
+      el.addEventListener('mouseleave', () => {
+        tooltip.style.display = 'none';
+      });
+
+      instLayer.appendChild(el);
+    }
+
+    // Building points
+    for (const bp of snap.buildingPoints) {
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', bp.x || 0);
+      c.setAttribute('cy', bp.y || 0);
+      c.setAttribute('r', 2.5);
+      c.setAttribute('fill', '#c87818');
+      c.setAttribute('opacity', '0.6');
+      bldgLayer.appendChild(c);
+    }
+
+    // Labels — only on new instances, less clutter
+    for (const inst of snap.instances.filter(i => newIds.has(i.id)).slice(0, 30)) {
+      const pts = geomToPts(inst);
+      if (!pts || pts.length === 0) continue;
+      const cx = pts.reduce((s,p) => s+(p.x||0),0)/pts.length;
+      const cy = pts.reduce((s,p) => s+(p.y||0),0)/pts.length;
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', cx);
+      txt.setAttribute('y', cy - 8);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('font-size','7');
+      txt.setAttribute('fill', P_COLOR[inst.patternId] || '#aaa');
+      txt.setAttribute('font-family','monospace');
+      txt.setAttribute('font-weight','700');
+      txt.textContent = `P${inst.patternId}`;
+      labelLayer.appendChild(txt);
+    }
+
+    // Sidebar
+    const pats = window.EC_PatternSolver?.PATTERNS || {};
+    const hierRows = Object.keys(snap.counts).sort((a,b) => +a-+b).map(pid => {
+      const cnt   = snap.counts[pid];
+      const name  = pats[pid]?.name || `P${pid}`;
+      const color = P_COLOR[+pid] || '#888';
+      const req   = window.EC_PatternSolver?.REQUIRES?.[+pid] || [];
+      const childStr = req.length
+        ? `<span style="color:oklch(32% 0.01 145);"> →P${req.join(',P')}</span>` : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:baseline;
+          padding:0.15rem 0;border-bottom:1px solid oklch(16% 0.006 145);">
+          <div style="overflow:hidden;">
+            <span style="color:${color};font-weight:600;">P${pid}</span>
+            <span style="color:oklch(42% 0.01 145);font-size:0.5rem;margin-left:0.25rem;">${name}</span>
+            ${childStr}
+          </div>
+          <span style="color:var(--text,#e8dfc8);font-weight:700;flex-shrink:0;margin-left:0.4rem;">${cnt}</span>
+        </div>`;
+    }).join('');
+
+    const phaseLabel = snap.isRecurse
+      ? `<span style="color:#4ac8a8;">♻ Recurse ${snap.recurseIdx}</span>`
+      : `<span style="color:var(--accent,#c87818);">▶ Intro pass ${snap.pass}</span>`;
+
+    sidebar.innerHTML = `
+      <div style="font-size:0.52rem;margin-bottom:0.5rem;">${phaseLabel}</div>
+      ${hierRows}
+      <div style="margin-top:0.6rem;padding-top:0.4rem;
+        border-top:1px solid oklch(20% 0.008 145);
+        color:var(--muted,#6a6050);font-size:0.5rem;line-height:1.9;">
+        <div>${snap.buildingPoints.length} bldg pts · ${snap.buildings.length} buildings</div>
+        <div style="color:oklch(28% 0.01 145);">-- dashed = parent→child</div>
+        <div style="color:oklch(28% 0.01 145);">hover instance for details</div>
+      </div>
+    `;
+  }
       }
     } else if (inst.geomType === 'spline') {
       if (pts.length >= 2) {
@@ -7632,113 +7839,6 @@ function renderPatternAnimation(snapshots) {
       }
     }
     return g;
-  }
-
-  function renderPass(idx) {
-    const snap = snapshots[idx];
-    if (!snap) return;
-
-    const instLayer  = panel.querySelector('#panim-instances');
-    const bldgLayer  = panel.querySelector('#panim-bldgpts');
-    const labelLayer = panel.querySelector('#panim-labels');
-    const sidebar    = panel.querySelector('#panim-sidebar');
-    const labelEl    = panel.querySelector('#panim-label');
-
-    instLayer.innerHTML = '';
-    bldgLayer.innerHTML = '';
-    labelLayer.innerHTML = '';
-
-    // Label
-    const scaleName = SCALE_LABEL[snap.scale] || `${snap.scale}`;
-    labelEl.textContent = `Pass ${snap.pass} — Scale ${snap.scale}: ${scaleName} · ${snap.instances.length} instances`;
-
-    // Draw all instances up to this pass (cumulative)
-    const seen = new Set();
-    for (const inst of snap.instances) {
-      if (seen.has(inst.id)) continue;
-      seen.add(inst.id);
-      const el = instToSVG(inst);
-      if (el) instLayer.appendChild(el);
-    }
-
-    // Draw building points
-    for (const bp of snap.buildingPoints) {
-      const isNew = snap.pass >= 2;  // building points appear from pass 2
-      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
-      c.setAttribute('cx', bp.x || 0);
-      c.setAttribute('cy', bp.y || 0);
-      c.setAttribute('r', 3);
-      c.setAttribute('fill', '#c87818');
-      c.setAttribute('opacity', '0.7');
-      bldgLayer.appendChild(c);
-    }
-
-    // Pattern labels at instance centroids (for new instances in this pass)
-    const newInsts = snap.instances.filter(i => i.pass_created === snap.pass);
-    for (const inst of newInsts.slice(0, 20)) {  // max 20 labels to avoid clutter
-      const pts = geomToPts(inst);
-      if (!pts || pts.length === 0) continue;
-      const cx = pts.reduce((s,p) => s+(p.x||0),0)/pts.length;
-      const cy = pts.reduce((s,p) => s+(p.y||0),0)/pts.length;
-      const pat = window.EC_PatternSolver?.PATTERNS?.[inst.patternId];
-      if (!pat) continue;
-      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
-      txt.setAttribute('x', cx);
-      txt.setAttribute('y', cy - 7);
-      txt.setAttribute('text-anchor','middle');
-      txt.setAttribute('font-size','7');
-      txt.setAttribute('fill', P_COLOR[inst.patternId] || '#888');
-      txt.setAttribute('font-family','monospace');
-      txt.setAttribute('font-weight','600');
-      txt.textContent = `P${inst.patternId}`;
-      labelLayer.appendChild(txt);
-    }
-
-    // Sidebar: pattern counts + hierarchy tree
-    const pats = window.EC_PatternSolver?.PATTERNS || {};
-    const hier = snap.hierarchy || {};
-
-    // Build hierarchy display: top-level instances (no parent) with children indented
-    const topLevel = snap.instances.filter(i => !i.parent_id);
-    const byPattern = {};
-    for (const i of topLevel) {
-      byPattern[i.patternId] = byPattern[i.patternId] || [];
-      byPattern[i.patternId].push(i);
-    }
-
-    const hierRows = Object.keys(snap.counts).sort((a,b) => +a-+b).map(pid => {
-      const cnt = snap.counts[pid];
-      const name = pats[pid]?.name || `P${pid}`;
-      const color = P_COLOR[+pid] || '#888';
-      const scale = pats[pid]?.scale;
-      const scaleName = scale ? ['','District','Block','Group','Building','Edge'][scale] : '';
-      // Find children this pattern commonly has
-      const req = window.EC_PatternSolver?.REQUIRES?.[+pid] || [];
-      const childStr = req.length ? `<span style="color:oklch(35% 0.01 145);"> → P${req.join(',P')}</span>` : '';
-      return `<div style="display:flex;justify-content:space-between;align-items:baseline;
-          padding:0.15rem 0 0.05rem;border-bottom:1px solid oklch(16% 0.006 145);">
-          <div>
-            <span style="color:${color};font-weight:600;">P${pid}</span>
-            <span style="color:oklch(45% 0.01 145);margin-left:0.3rem;font-size:0.52rem;">${name}</span>
-            ${childStr}
-          </div>
-          <span style="color:var(--text,#e8dfc8);font-weight:700;margin-left:0.5rem;">${cnt}</span>
-        </div>`;
-    }).join('');
-
-    sidebar.innerHTML = `
-      <div style="color:var(--accent,#c87818);letter-spacing:0.1em;text-transform:uppercase;
-        font-size:0.52rem;margin-bottom:0.6rem;font-weight:600;">Pattern Instances</div>
-      ${hierRows}
-      <div style="margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid oklch(20% 0.008 145);
-        color:var(--muted,#6a6050);font-size:0.52rem;line-height:1.8;">
-        <div>${snap.buildingPoints.length} building points</div>
-        <div>${snap.buildings.length} coalesced buildings</div>
-        <div style="color:oklch(35% 0.01 145);margin-top:0.3rem;font-size:0.5rem;">
-          → = required children
-        </div>
-      </div>
-    `;
   }
 
   // Controls
@@ -8562,12 +8662,121 @@ window.EC_PatternSolver = (() => {
   }
 
   // ── 6. MAIN SOLVER LOOP ──────────────────────────────────────────────────
+  // Phase A: N_SCALES intro passes — one new scale introduced per pass
+  //          (district → block → group → building → edge)
+  // Phase B: N_RECURSE recursive passes — all scales fire simultaneously,
+  //          re-detecting from the geometry already placed, refining positions
+  //          via force relaxation. This is the recursive refinement.
   function solve(parcels, proj, MAP, derivedG, opts = {}) {
-    const MAX_PASSES  = opts.passes || 4;
-    const CLUSTER_K   = opts.cluster_k || 40;
+    const N_SCALES   = Object.keys(S).length;   // 5 intro passes
+    const N_RECURSE  = opts.recurse || 3;        // recursive refinement passes
+    const CLUSTER_K  = opts.cluster_k || 40;
     const log = [];
 
     _sg = { instances: [], buildingPoints: [], buildings: [], zones: [], pass: 0, snapshots: [] };
+
+    const patternOrder = Object.values(PATTERNS).sort((a,b) => a.priority - b.priority);
+
+    const totalPasses = N_SCALES + N_RECURSE;
+
+    for (let pass = 0; pass < totalPasses; pass++) {
+      _sg.pass = pass;
+
+      // Intro phase: open one scale per pass (1→2→3→4→5)
+      // Recurse phase: all scales open, re-derive from geometry
+      const isRecurse  = pass >= N_SCALES;
+      const passScale  = isRecurse ? S.EDGE : Math.min(S.EDGE, S.DISTRICT + pass);
+      const recurseIdx = isRecurse ? (pass - N_SCALES + 1) : 0;
+      const label = isRecurse
+        ? `Pass ${pass} — Recurse ${recurseIdx}/${N_RECURSE} (all scales)`
+        : `Pass ${pass} — Scale ≤ ${passScale}: ${['','District','Block','Group','Building','Edge'][passScale]}`;
+      log.push(label);
+
+      let newInsts = 0, mutated = 0;
+
+      for (const pattern of patternOrder) {
+        if (pattern.scale > passScale) continue;
+
+        // On recursive passes, patterns re-detect from existing geometry.
+        // They can update/reposition instances and add missing children.
+        let candidates = [];
+        try { candidates = pattern.detect(_sg, proj, MAP) || []; }
+        catch(e) { log.push(`  P${pattern.id} detect error: ${e.message}`); continue; }
+
+        for (const cand of candidates) {
+          let inst;
+          try { inst = pattern.instantiate(cand, _sg); }
+          catch(e) { log.push(`  P${pattern.id} instantiate error: ${e.message}`); continue; }
+          if (!inst) continue;
+
+          // Dedup: same pattern near this location already?
+          const dup = sg_query.nearDuplicate(inst);
+          if (dup) {
+            dup.mutation_count++;
+            mutated++;
+            if (cand.context?.parent && !dup.parent_id) adoptInstance(cand.context.parent, dup);
+            continue;
+          }
+
+          // Priority conflict: different pattern owns this location at higher priority
+          const conflict = _sg.instances.find(i =>
+            i.id !== inst.id && i.patternId !== inst.patternId &&
+            instanceDist(i, inst) < 20 &&
+            PATTERNS[i.patternId]?.priority < pattern.priority);
+          if (conflict) continue;
+
+          _sg.instances.push(inst);
+          newInsts++;
+        }
+      }
+
+      log.push(`  +${newInsts} new, ${mutated} mutated (total: ${_sg.instances.length})`);
+
+      // Emit building points
+      _sg.buildingPoints = _sg.instances.flatMap(emitBuildingPoints);
+
+      // Force relaxation — runs every pass after the first intro pass
+      // Recursive passes get stronger relaxation (more iterations)
+      if (pass > 0) {
+        const relaxIter = isRecurse ? 2 : 1;
+        for (let r = 0; r < relaxIter; r++) applyForces(_sg.instances);
+      }
+
+      // Coalesce buildings
+      _sg.buildings = coalesceToBuildings(_sg.buildingPoints, CLUSTER_K);
+      log.push(`  ${_sg.buildingPoints.length} pts → ${_sg.buildings.length} buildings`);
+
+      // Snapshot
+      _sg.snapshots.push({
+        pass,
+        scale: passScale,
+        isRecurse,
+        recurseIdx,
+        label,
+        instances: _sg.instances.map(i => ({ ...i, geom: JSON.parse(JSON.stringify(i.geom)) })),
+        buildingPoints: [..._sg.buildingPoints],
+        buildings: [..._sg.buildings],
+        counts: Object.fromEntries(
+          Object.entries(PATTERNS)
+            .map(([id]) => [id, _sg.instances.filter(i => i.patternId === +id).length])
+            .filter(([,v]) => v > 0)
+        ),
+        hierarchy: _sg.instances.reduce((h, i) => {
+          if (i.parent_id) {
+            h[i.parent_id] = h[i.parent_id] || [];
+            h[i.parent_id].push(i.id);
+          }
+          return h;
+        }, {}),
+      });
+    }
+
+    const counts = {};
+    for (const inst of _sg.instances) counts[inst.patternId] = (counts[inst.patternId]||0)+1;
+    log.push(`Final counts: ${JSON.stringify(counts)}`);
+
+    return { sceneGraph: _sg, log, buildings: _sg.buildings, counts };
+  }
 
     const patternOrder = Object.values(PATTERNS)
       .sort((a, b) => a.priority - b.priority);
