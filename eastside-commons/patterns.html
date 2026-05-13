@@ -1269,8 +1269,8 @@ function drawSiteFacts(derived, ftToSvg) {
   }
   if(derived.BAND){
     const b=derived.BAND;
-    layer.appendChild(L(MAP.x0,b.y+b.h,MAP.x1,b.y+b.h,'rgba(200,120,24,0.35)','1','8,5'));
-    layer.appendChild(T(MAP.x0+22,b.y+b.h-5,'VA BEACH BLVD','rgba(200,120,24,0.5)','5','start'));
+    layer.appendChild(L(b.x, b.y+b.h, b.x+b.w, b.y+b.h,'rgba(200,120,24,0.35)','1','8,5'));
+    layer.appendChild(T(b.x+66, b.y+b.h-16,'VA BEACH BLVD','rgba(200,120,24,0.5)','5','start'));
   }
   if(derived.SPONGE){
     const sg=derived.SPONGE;
@@ -1286,7 +1286,7 @@ function drawSiteFacts(derived, ftToSvg) {
     ib.setAttribute('rx',fsW(sg.rx*0.38));ib.setAttribute('ry',fsH(sg.ry*0.38));
     ib.setAttribute('fill','rgba(40,180,80,0.12)');ib.setAttribute('stroke','rgba(40,180,80,0.28)');
     ib.setAttribute('stroke-width','0.5');ib.setAttribute('pointer-events','none');layer.appendChild(ib);
-    layer.appendChild(T(sg.cx,sg.cy+3,'SPONGE','rgba(40,180,80,0.72)','6'));
+    layer.appendChild(T(sg.cx,sg.cy,'SPONGE','rgba(40,180,80,0.72)','6'));
   }
   if(derived.ROSS){
     const ro=derived.ROSS;
