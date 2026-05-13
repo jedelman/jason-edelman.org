@@ -1357,16 +1357,240 @@ function hexColor(hex) {
 // Re-cluster hot nodes at urban block scale and extrude as buildings.
 // The solver's buildFootprints produces phone-booth-scale results at 10ft res;
 // we need ~80-250ft blocks. So we ignore solver buildings and re-cluster here.
+// ══════════════════════════════════════════════════════════════════════════════
+// PATTERN-DRIVEN BUILDING GEOMETRY
+// P105 SouthFacingOutdoors  — notch on south face, buildings lean toward sun
+// P106 PositiveOutdoorSpace — U/L courtyard typology; voids mark exclusions
+// P116 CascadeRoofs         — height cascade from spine (already in clusters)
+// P119 Arcades              — ground-floor arcade base on street-facing edge
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ── GEOMETRY HELPERS ─────────────────────────────────────────────────────────
+
+// Add a box mesh (base at y=0) to a group
+function addBox(group, cx, cy, w, d, h, mat) {
+  const geo = new THREE.BoxGeometry(w, h, d);
+  geo.translate(0, h / 2, 0);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.copy(ftTo3(cx, cy, 0));
+  group.add(mesh);
+}
+
+// Add a top-edge outline rectangle
+function addTopRect(group, cx, cy, fw, fh, heightFt, mat) {
+  const pts = [
+    ftTo3(cx - fw/2, cy - fh/2, heightFt),
+    ftTo3(cx + fw/2, cy - fh/2, heightFt),
+    ftTo3(cx + fw/2, cy + fh/2, heightFt),
+    ftTo3(cx - fw/2, cy + fh/2, heightFt),
+    ftTo3(cx - fw/2, cy - fh/2, heightFt),
+  ];
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
+}
+
+// ── TYPOLOGY CLASSIFIERS ─────────────────────────────────────────────────────
+
+// P106: Is this block centroid inside a protected outdoor zone?
+// If yes → exclusion (don't build), mark as void/park.
+function isExclusion(blk, derived) {
+  const { cx, cy } = blk;
+  // SPONGE park ellipse
+  const sp = derived.SPONGE;
+  if (sp) {
+    const ex = (cx - sp.cx) / (sp.rx + 40), ey = (cy - sp.cy) / (sp.ry + 40);
+    if (ex*ex + ey*ey < 1) return 'sponge';
+  }
+  // BASIN (water feature — hard exclusion)
+  const ba = derived.BASIN;
+  if (ba) {
+    const ex = (cx - ba.cx) / (ba.rx + 20), ey = (cy - ba.cy) / (ba.ry + 20);
+    if (ex*ex + ey*ey < 1) return 'basin';
+  }
+  // BAND (main street zone — no tall buildings, handle separately)
+  const bd = derived.BAND;
+  if (bd && cy < bd.y + bd.h && cy > bd.y) return 'band';
+  // TIDE station (transit plaza)
+  const td = derived.TIDE;
+  if (td && cx > td.x && cx < td.x+td.w && cy > td.y && cy < td.y+td.h) return 'tide';
+  return null;
+}
+
+// P106: Should this block be a courtyard typology?
+// Yes if: large cluster, near public edge, not on spine
+function isCourtyardTypology(blk, derived) {
+  const sp = derived.SPONGE;
+  if (!sp) return false;
+  // Near sponge park but outside it → wrap it with U-shape
+  const distToSponge = Math.hypot(blk.cx - sp.cx, blk.cy - sp.cy);
+  const rim = Math.max(sp.rx, sp.ry) + 80;
+  if (distToSponge < rim && distToSponge > Math.min(sp.rx, sp.ry)) return true;
+  // Large block count → enough pressure to warrant courtyard
+  if (blk.count > 12 && blk.fw > 100 && blk.fh > 100) return true;
+  return false;
+}
+
+// P119: Should this block have an arcade base?
+// Yes if: on spine edge, or adjacent to BAND (main street)
+function isArcadeTypology(blk, derived) {
+  const sp = derived.SPINE;
+  if (!sp) return false;
+  const distToSpine = Math.abs(blk.cx - (sp.x + sp.w/2));
+  if (distToSpine < sp.w * 1.5) return true;
+  const bd = derived.BAND;
+  if (bd && blk.cy < bd.y + bd.h + 80) return true;
+  return false;
+}
+
+// P105: South notch direction — fraction [0..1] of depth to cut from south face
+function southNotchDepth(blk, derived) {
+  // Bigger notch farther from spine (more ground-level scale)
+  const sp = derived.SPINE;
+  if (!sp) return 0;
+  const dist = Math.abs(blk.cx - (sp.x + sp.w/2));
+  const t = Math.min(dist / 500, 1);
+  return 0.15 + t * 0.2; // 15-35% of depth
+}
+
+// ── GEOMETRY BUILDERS ─────────────────────────────────────────────────────────
+
+// Solid box with P105 south notch
+// The notch is a rectangular void on the south face (low-z in Three.js = low-y in ft)
+// Implemented as two boxes: east wing + west wing with gap in south face
+function buildP105Solid(group, blk, heightFt, col) {
+  const { cx, cy, fw, fh } = blk;
+  const notchD = fh * southNotchDepth(blk, { SPINE: group._derived?.SPINE });
+  const notchW = fw * 0.45; // 45% of width open to south
+
+  const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
+  const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
+
+  // North slab (full width, full depth minus notch)
+  const northD = fh - notchD;
+  const northCY = cy + notchD / 2; // shifted north
+  addBox(group, cx, northCY, fw, northD, heightFt, mat.clone());
+  addTopRect(group, cx, northCY, fw, northD, heightFt, edgeMat.clone());
+
+  // West wing (fills south-west)
+  const wingW = (fw - notchW) / 2;
+  if (wingW > 8) {
+    const wingCX = cx - notchW/2 - wingW/2;
+    addBox(group, wingCX, cy - fh/2 + notchD/2, wingW, notchD, heightFt * 0.7, mat.clone());
+    addTopRect(group, wingCX, cy - fh/2 + notchD/2, wingW, notchD, heightFt * 0.7, edgeMat.clone());
+  }
+  // East wing
+  if (wingW > 8) {
+    const wingCX = cx + notchW/2 + wingW/2;
+    addBox(group, wingCX, cy - fh/2 + notchD/2, wingW, notchD, heightFt * 0.7, mat.clone());
+    addTopRect(group, wingCX, cy - fh/2 + notchD/2, wingW, notchD, heightFt * 0.7, edgeMat.clone());
+  }
+}
+
+// P106 U-shape: three arms wrapping a south-facing courtyard
+// courtyard opens toward sponge park (or south if no park reference)
+// openDir: 'S' | 'N' | 'E' | 'W'
+function buildP106Courtyard(group, blk, heightFt, col, openDir) {
+  const { cx, cy, fw, fh } = blk;
+  const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
+  const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
+
+  const wallW = Math.max(fw * 0.28, 28); // arm width ~28% of total
+  const wallD = Math.max(fh * 0.28, 28);
+  const lowerH = heightFt * 0.65; // side arms slightly lower
+
+  if (openDir === 'S' || openDir === 'N') {
+    const armD = fh * 0.65;
+    const backY = openDir === 'S' ? cy + (fh - armD) / 2 : cy - (fh - armD) / 2;
+    const armY  = openDir === 'S' ? cy - (fh - armD) / 2 : cy + (fh - armD) / 2;
+
+    // Back wall (opposite open face) — full height
+    addBox(group, cx, backY, fw, fh - armD, heightFt, mat.clone());
+    addTopRect(group, cx, backY, fw, fh - armD, heightFt, edgeMat.clone());
+
+    // Left arm
+    addBox(group, cx - (fw - wallW) / 2, armY, wallW, armD, lowerH, mat.clone());
+    addTopRect(group, cx - (fw - wallW) / 2, armY, wallW, armD, lowerH, edgeMat.clone());
+
+    // Right arm
+    addBox(group, cx + (fw - wallW) / 2, armY, wallW, armD, lowerH, mat.clone());
+    addTopRect(group, cx + (fw - wallW) / 2, armY, wallW, armD, lowerH, edgeMat.clone());
+
+  } else { // E or W
+    const armW = fw * 0.65;
+    const backX = openDir === 'E' ? cx - (fw - armW) / 2 : cx + (fw - armW) / 2;
+    const armX  = openDir === 'E' ? cx + (fw - armW) / 2 : cx - (fw - armW) / 2;
+
+    addBox(group, backX, cy, fw - armW, fh, heightFt, mat.clone());
+    addTopRect(group, backX, cy, fw - armW, fh, heightFt, edgeMat.clone());
+
+    addBox(group, armX, cy - (fh - wallD) / 2, armW, wallD, lowerH, mat.clone());
+    addTopRect(group, armX, cy - (fh - wallD) / 2, armW, wallD, lowerH, edgeMat.clone());
+
+    addBox(group, armX, cy + (fh - wallD) / 2, armW, wallD, lowerH, mat.clone());
+    addTopRect(group, armX, cy + (fh - wallD) / 2, armW, wallD, lowerH, edgeMat.clone());
+  }
+}
+
+// P119 Arcade: two-part section — wide low base + narrower tower
+function buildP119Arcade(group, blk, heightFt, col) {
+  const { cx, cy, fw, fh } = blk;
+  const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
+  const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
+
+  const arcadeH = 14; // ~1 floor in ft (actual, unscaled)
+  const arcadeExt = 12; // ft overhang on street edge
+  const towerW = fw * 0.72;
+  const towerD = fh * 0.72;
+
+  // Full-footprint arcade base (1 floor, wider)
+  addBox(group, cx, cy, fw + arcadeExt, fh, arcadeH * HT_SCALE, mat.clone());
+  addTopRect(group, cx, cy, fw + arcadeExt, fh, arcadeH * HT_SCALE, edgeMat.clone());
+
+  // Tower above arcade
+  const towerH = Math.max(heightFt - arcadeH * HT_SCALE, 20);
+  addBox(group, cx, cy, towerW, towerD, towerH, mat.clone());
+  // top rect at full tower height
+  addTopRect(group, cx, cy, towerW, towerD, arcadeH * HT_SCALE + towerH, edgeMat.clone());
+}
+
+// P106 exclusion zone: render as a glowing park void, not a building
+function buildExclusionVoid(group, blk, exclusionType, derived) {
+  const { cx, cy, fw, fh } = blk;
+  let col, label;
+  if (exclusionType === 'sponge' || exclusionType === 'basin') {
+    col = new THREE.Color(0x1a4a30); // deep green
+  } else if (exclusionType === 'band') {
+    col = new THREE.Color(0x2a2a18); // dark street tone
+  } else {
+    col = new THREE.Color(0x1a2a3a); // neutral void
+  }
+
+  // Low platform at ground — marks the void
+  const platH = 1.5 * HT_SCALE;
+  const geo = new THREE.BoxGeometry(fw, platH, fh);
+  geo.translate(0, platH / 2, 0);
+  const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.4, transparent: true });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.copy(ftTo3(cx, cy, 0));
+  group.add(mesh);
+
+  // Dashed perimeter at grade
+  const perimMat = new THREE.LineBasicMaterial({ color: 0x40a070, opacity: 0.35, transparent: true });
+  const pts = [
+    ftTo3(cx-fw/2, cy-fh/2, 1), ftTo3(cx+fw/2, cy-fh/2, 1),
+    ftTo3(cx+fw/2, cy+fh/2, 1), ftTo3(cx-fw/2, cy+fh/2, 1),
+    ftTo3(cx-fw/2, cy-fh/2, 1),
+  ];
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), perimMat));
+}
+
+// ── CLUSTER + ASSIGN TYPOLOGIES ───────────────────────────────────────────────
+
 function clusterUrbanBlocks(hotNodes, derived) {
   if (!hotNodes || !hotNodes.length) return [];
-  const spineX = derived.SPINE ? derived.SPINE.x + derived.SPINE.w/2 : 0;
 
-  // Cluster radius: ~150ft — one city block
-  const R = 150;
+  const R = 150; // ft cluster radius — one city block
   const used = new Uint8Array(hotNodes.length);
   const blocks = [];
-
-  // Sort by nStrong desc so strongest nodes seed clusters
   const sorted = hotNodes.map((n,i) => ({...n, _i: i})).sort((a,b) => b.nStrong - a.nStrong);
 
   for (const seed of sorted) {
@@ -1381,20 +1605,18 @@ function clusterUrbanBlocks(hotNodes, derived) {
       }
     }
 
-    // Bounding box of cluster
     const xs = members.map(n => n.x), ys = members.map(n => n.y);
     const minX = Math.min(...xs), maxX = Math.max(...xs);
     const minY = Math.min(...ys), maxY = Math.max(...ys);
     const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-
-    // Footprint: clamp to 40-180ft per side (real building block scale)
     const fw = Math.max(40, Math.min(180, maxX - minX + 40));
     const fh = Math.max(40, Math.min(180, maxY - minY + 40));
 
-    // Height: P116 cascade from spine distance
+    // P116: spine distance → floors
+    const spineX = derived.SPINE ? derived.SPINE.x + derived.SPINE.w/2 : 0;
     const distFromSpine = Math.abs(cx - spineX);
-    const t = Math.min(distFromSpine / 550, 1); // 550ft = max meaningful distance
-    const floors = 7 - Math.round(t * 4); // 7 → 3
+    const t = Math.min(distFromSpine / 550, 1);
+    const floors = 7 - Math.round(t * 4);
 
     // Dominant pattern
     const tally = {};
@@ -1405,7 +1627,33 @@ function clusterUrbanBlocks(hotNodes, derived) {
     const domPid = Object.entries(tally).sort((a,b) => b[1]-a[1])[0]?.[0];
     const avgStrong = members.reduce((s,m) => s + m.nStrong, 0) / members.length;
 
-    blocks.push({ cx, cy, fw, fh, floors, domPid, avgStrong, count: members.length });
+    // P106 exclusion check
+    const excl = isExclusion({ cx, cy, fw, fh }, derived);
+
+    // Typology assignment
+    let typology = 'solid'; // default
+    if (!excl) {
+      if (isCourtyardTypology({ cx, cy, fw, fh, count: members.length }, derived)) {
+        typology = 'courtyard';
+      } else if (isArcadeTypology({ cx, cy }, derived)) {
+        typology = 'arcade';
+      } else if (floors >= 5) {
+        typology = 'p105'; // south notch on taller buildings
+      }
+    } else {
+      typology = 'exclusion';
+    }
+
+    // Courtyard open direction: face toward sponge park
+    let openDir = 'S';
+    if (typology === 'courtyard' && derived.SPONGE) {
+      const dx = derived.SPONGE.cx - cx, dy = derived.SPONGE.cy - cy;
+      if (Math.abs(dx) > Math.abs(dy)) openDir = dx > 0 ? 'E' : 'W';
+      else openDir = dy > 0 ? 'N' : 'S';
+    }
+
+    blocks.push({ cx, cy, fw, fh, floors, domPid, avgStrong, count: members.length,
+                  typology, openDir, exclusion: excl });
   }
   return blocks;
 }
@@ -1416,43 +1664,62 @@ function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
   const blocks = clusterUrbanBlocks(hotNodes, derived);
   if (!blocks.length) return;
 
-  const spineX = derived.SPINE ? derived.SPINE.x + derived.SPINE.w/2 : 0;
-
-  // Muted palette: desaturate pattern colors, vary by floor count
   function blockColor(pid, floors) {
     const base = (PATTERNS[pid] && PATTERNS[pid].color) ? PATTERNS[pid].color : '#4a6040';
-    // darken low-floor buildings, brighten tall ones
     const r = parseInt(base.slice(1,3), 16);
     const g = parseInt(base.slice(3,5), 16);
     const b = parseInt(base.slice(5,7), 16);
-    const lum = 0.5 + (floors - 3) / 8; // 3 floors=0.5, 7 floors=1.0
+    // Tighter lum range: 0.45–0.85. Avoids washed-out bright colors.
+    const lum = 0.45 + (floors - 3) / 10;
     return new THREE.Color(r/255 * lum, g/255 * lum, b/255 * lum);
   }
+
+  // Attach derived to group so helpers can access it (P105 notch depth needs SPINE)
+  gBuildings._derived = derived;
 
   for (const blk of blocks) {
     const heightFt = blk.floors * 12 * HT_SCALE;
     const col = blockColor(blk.domPid, blk.floors);
 
-    // Main box — base at y=0
-    const geo = new THREE.BoxGeometry(blk.fw, heightFt, blk.fh);
-    geo.translate(0, heightFt / 2, 0);
-    const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.copy(ftTo3(blk.cx, blk.cy, 0));
-    gBuildings.add(mesh);
-
-    // Top edge wireframe only — cleaner than full edges
-    const topEdges = [
-      ftTo3(blk.cx - blk.fw/2, blk.cy - blk.fh/2, heightFt),
-      ftTo3(blk.cx + blk.fw/2, blk.cy - blk.fh/2, heightFt),
-      ftTo3(blk.cx + blk.fw/2, blk.cy + blk.fh/2, heightFt),
-      ftTo3(blk.cx - blk.fw/2, blk.cy + blk.fh/2, heightFt),
-      ftTo3(blk.cx - blk.fw/2, blk.cy - blk.fh/2, heightFt),
-    ];
-    const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.8), opacity: 0.6, transparent: true });
-    gBuildings.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(topEdges), edgeMat));
+    if (blk.typology === 'exclusion') {
+      buildExclusionVoid(gBuildings, blk, blk.exclusion, derived);
+    } else if (blk.typology === 'courtyard') {
+      buildP106Courtyard(gBuildings, blk, heightFt, col, blk.openDir);
+    } else if (blk.typology === 'arcade') {
+      buildP119Arcade(gBuildings, blk, heightFt, col);
+    } else if (blk.typology === 'p105') {
+      // Give p105 helper access to derived via closure
+      const savedDerived = derived;
+      const blkWithDerived = { ...blk };
+      // Inline south notch depth (no closure trick needed — just pass derived)
+      const notchD = blk.fh * (0.15 + Math.min(Math.abs(blk.cx - (derived.SPINE?.x + derived.SPINE?.w/2 || 0)) / 500, 1) * 0.2);
+      const notchW = blk.fw * 0.45;
+      const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
+      const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
+      // North slab
+      const northD = blk.fh - notchD;
+      const northCY = blk.cy + notchD / 2;
+      addBox(gBuildings, blk.cx, northCY, blk.fw, northD, heightFt, mat.clone());
+      addTopRect(gBuildings, blk.cx, northCY, blk.fw, northD, heightFt, edgeMat.clone());
+      // Wings
+      const wingW = (blk.fw - notchW) / 2;
+      if (wingW > 8) {
+        [-1, 1].forEach(side => {
+          const wingCX = blk.cx + side * (notchW/2 + wingW/2);
+          addBox(gBuildings, wingCX, blk.cy - blk.fh/2 + notchD/2, wingW, notchD, heightFt * 0.7, mat.clone());
+          addTopRect(gBuildings, wingCX, blk.cy - blk.fh/2 + notchD/2, wingW, notchD, heightFt * 0.7, edgeMat.clone());
+        });
+      }
+    } else {
+      // Solid — simple box, P116 heights already applied
+      const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
+      const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
+      addBox(gBuildings, blk.cx, blk.cy, blk.fw, blk.fh, heightFt, mat);
+      addTopRect(gBuildings, blk.cx, blk.cy, blk.fw, blk.fh, heightFt, edgeMat);
+    }
   }
 }
+
 
 // ── FIELD LINES ───────────────────────────────────────────────────────────────
 function buildFieldLines(fieldLines, MAP, PATTERNS) {
