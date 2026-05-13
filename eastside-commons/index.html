@@ -5825,6 +5825,10 @@ async function triggerPipeline() {
               psResult.log.forEach(l => console.log(l));
               console.log('counts:', psResult.counts);
               console.groupEnd();
+              // Launch animation slider
+              if (psResult.sceneGraph.snapshots?.length > 0) {
+                renderPatternAnimation(psResult.sceneGraph.snapshots);
+              }
             } catch(e) { console.error('[PatternSolver]', e); }
           }
 
@@ -7466,6 +7470,307 @@ function showToast(msg) {
 
 window.EC_Save = { captureState, saveToHash, saveToFile, loadFromFile, loadFromHash, restoreState, showToast, newSeed, loadCanonical, updateCanonicalBadge };
 
+// ── PATTERN SOLVER ANIMATION ──────────────────────────────────────────────
+// Renders an SVG overlay that steps through pattern solver passes.
+// Shows instances appearing pass-by-pass with pattern labels + instance counts.
+function renderPatternAnimation(snapshots) {
+  // Remove any existing panel
+  document.getElementById('pattern-anim-panel')?.remove();
+
+  const MAP = { x0:139, y0:163, x1:841, y1:653 };
+  const W = MAP.x1 - MAP.x0;
+  const H = MAP.y1 - MAP.y0;
+
+  // Color per pattern (use existing USE_TYPES colors where available, else derive)
+  const P_COLOR = {
+    29:'#4a7ac8', 30:'#c87818', 31:'#c84818', 36:'#8050c0',
+    37:'#3888a8', 46:'#b84898', 51:'#28a848', 53:'#888830',
+    60:'#28b848', 67:'#20a038', 71:'#2898c8', 79:'#e8b820',
+    87:'#e83808', 88:'#d85808', 95:'#c87818', 96:'#a86018',
+    104:'#607848', 105:'#488060', 106:'#389060', 107:'#309050',
+    109:'#c87818', 114:'#406898', 115:'#a04898', 122:'#c84030',
+    127:'#905028', 46:'#b84898',
+  };
+
+  const SCALE_LABEL = { 1:'District', 2:'Block', 3:'Group', 4:'Building', 5:'Edge' };
+
+  let currentPass = 0;
+  let playing = false;
+  let playTimer = null;
+
+  // Build panel HTML
+  const panel = document.createElement('div');
+  panel.id = 'pattern-anim-panel';
+  panel.style.cssText = `
+    position:absolute; top:0; left:0; right:0; bottom:0;
+    background:var(--bg, #0e1208);
+    z-index:200; display:flex; flex-direction:column;
+    font-family:var(--font-mono,'monospace');
+  `;
+
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;padding:0.6rem 1rem;
+      background:oklch(12% 0.008 145);border-bottom:1px solid oklch(22% 0.01 145);
+      flex-shrink:0;">
+      <span style="font-size:0.65rem;letter-spacing:0.14em;text-transform:uppercase;
+        color:var(--accent,#c87818);font-weight:600;">Pattern Solver</span>
+      <button id="panim-prev" style="background:none;border:1px solid oklch(30% 0.01 145);
+        color:var(--text,#e8dfc8);padding:0.2rem 0.6rem;cursor:pointer;font-family:inherit;
+        font-size:0.65rem;">◀ prev</button>
+      <button id="panim-play" style="background:none;border:1px solid oklch(30% 0.01 145);
+        color:var(--accent,#c87818);padding:0.2rem 0.6rem;cursor:pointer;font-family:inherit;
+        font-size:0.65rem;min-width:3.5rem;">▶ play</button>
+      <button id="panim-next" style="background:none;border:1px solid oklch(30% 0.01 145);
+        color:var(--text,#e8dfc8);padding:0.2rem 0.6rem;cursor:pointer;font-family:inherit;
+        font-size:0.65rem;">next ▶</button>
+      <input type="range" id="panim-slider" min="0" max="${snapshots.length-1}"
+        value="0" style="flex:1;accent-color:var(--accent,#c87818);">
+      <span id="panim-label" style="font-size:0.62rem;color:var(--text,#e8dfc8);
+        white-space:nowrap;min-width:12rem;">Pass 0 — Scale 1: District</span>
+      <button id="panim-close" style="background:none;border:none;color:var(--muted,#6a6050);
+        cursor:pointer;font-size:1rem;padding:0 0.4rem;">✕</button>
+    </div>
+    <div style="display:flex;flex:1;overflow:hidden;">
+      <svg id="panim-svg" viewBox="${MAP.x0} ${MAP.y0} ${W} ${H}"
+        style="flex:1;background:oklch(9% 0.005 145);" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <filter id="panim-glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <!-- EDA parcel ghost -->
+        <g id="panim-ghost" opacity="0.15"></g>
+        <!-- Pattern instances -->
+        <g id="panim-instances"></g>
+        <!-- Building points -->
+        <g id="panim-bldgpts"></g>
+        <!-- Labels -->
+        <g id="panim-labels"></g>
+      </svg>
+      <!-- Sidebar: instance counts -->
+      <div id="panim-sidebar" style="width:200px;flex-shrink:0;overflow-y:auto;
+        padding:0.75rem;border-left:1px solid oklch(20% 0.008 145);
+        font-size:0.58rem;line-height:2;"></div>
+    </div>
+  `;
+
+  document.body.appendChild(panel);
+
+  // Draw ghost parcels
+  const ghost = panel.querySelector('#panim-ghost');
+  if (window.PARCEL_DATA?.parcels) {
+    const proj = window._getPipelineState?.()?.proj;
+    for (const p of window.PARCEL_DATA.parcels) {
+      if (!p.is_eda || !p.rings?.[0]) continue;
+      const ring = p.rings[0];
+      if (!proj) continue;
+      const pts = ring.map(([lon,lat]) => {
+        const [sx, sy] = proj([lon, lat]);
+        return `${sx},${sy}`;
+      }).join(' ');
+      const pg = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      pg.setAttribute('points', pts);
+      pg.setAttribute('fill', 'oklch(40% 0.01 145)');
+      pg.setAttribute('stroke', 'oklch(60% 0.01 145)');
+      pg.setAttribute('stroke-width', '1');
+      ghost.appendChild(pg);
+    }
+  }
+
+  function geomToPts(inst) {
+    // Returns array of {x,y} from any geom type
+    if (!inst.geom) return [];
+    if (inst.geomType === 'polygon_array') return inst.geom.flat();
+    if (Array.isArray(inst.geom)) return inst.geom;
+    return [];
+  }
+
+  function instToSVG(inst) {
+    const color = P_COLOR[inst.patternId] || '#888';
+    const pts = geomToPts(inst);
+    if (!pts || pts.length === 0) return null;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('data-pid', inst.patternId);
+    g.setAttribute('data-id', inst.id);
+
+    if (inst.geomType === 'point' || inst.geomType === 'point_cloud') {
+      for (const p of pts) {
+        const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        c.setAttribute('cx', p.x || 0);
+        c.setAttribute('cy', p.y || 0);
+        c.setAttribute('r', 5);
+        c.setAttribute('fill', color);
+        c.setAttribute('opacity', '0.85');
+        c.setAttribute('filter', 'url(#panim-glow)');
+        g.appendChild(c);
+      }
+    } else if (inst.geomType === 'spline') {
+      if (pts.length >= 2) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+        line.setAttribute('points', pts.map(p => `${p.x||0},${p.y||0}`).join(' '));
+        line.setAttribute('stroke', color);
+        line.setAttribute('stroke-width', '3');
+        line.setAttribute('fill', 'none');
+        line.setAttribute('opacity', '0.9');
+        line.setAttribute('filter', 'url(#panim-glow)');
+        g.appendChild(line);
+      }
+    } else {
+      // polygon or polygon_array
+      const allRings = inst.geomType === 'polygon_array' ? inst.geom : [inst.geom];
+      for (const ring of allRings) {
+        if (!ring || ring.length < 3) continue;
+        const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+        poly.setAttribute('points', ring.map(p => `${p.x||0},${p.y||0}`).join(' '));
+        poly.setAttribute('fill', color);
+        poly.setAttribute('fill-opacity', '0.18');
+        poly.setAttribute('stroke', color);
+        poly.setAttribute('stroke-width', '1.5');
+        poly.setAttribute('opacity', '0.9');
+        g.appendChild(poly);
+      }
+    }
+    return g;
+  }
+
+  function renderPass(idx) {
+    const snap = snapshots[idx];
+    if (!snap) return;
+
+    const instLayer  = panel.querySelector('#panim-instances');
+    const bldgLayer  = panel.querySelector('#panim-bldgpts');
+    const labelLayer = panel.querySelector('#panim-labels');
+    const sidebar    = panel.querySelector('#panim-sidebar');
+    const labelEl    = panel.querySelector('#panim-label');
+
+    instLayer.innerHTML = '';
+    bldgLayer.innerHTML = '';
+    labelLayer.innerHTML = '';
+
+    // Label
+    const scaleName = SCALE_LABEL[snap.scale] || `${snap.scale}`;
+    labelEl.textContent = `Pass ${snap.pass} — Scale ${snap.scale}: ${scaleName} · ${snap.instances.length} instances`;
+
+    // Draw all instances up to this pass (cumulative)
+    const seen = new Set();
+    for (const inst of snap.instances) {
+      if (seen.has(inst.id)) continue;
+      seen.add(inst.id);
+      const el = instToSVG(inst);
+      if (el) instLayer.appendChild(el);
+    }
+
+    // Draw building points
+    for (const bp of snap.buildingPoints) {
+      const isNew = snap.pass >= 2;  // building points appear from pass 2
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', bp.x || 0);
+      c.setAttribute('cy', bp.y || 0);
+      c.setAttribute('r', 3);
+      c.setAttribute('fill', '#c87818');
+      c.setAttribute('opacity', '0.7');
+      bldgLayer.appendChild(c);
+    }
+
+    // Pattern labels at instance centroids (for new instances in this pass)
+    const newInsts = snap.instances.filter(i => i.pass_created === snap.pass);
+    for (const inst of newInsts.slice(0, 20)) {  // max 20 labels to avoid clutter
+      const pts = geomToPts(inst);
+      if (!pts || pts.length === 0) continue;
+      const cx = pts.reduce((s,p) => s+(p.x||0),0)/pts.length;
+      const cy = pts.reduce((s,p) => s+(p.y||0),0)/pts.length;
+      const pat = window.EC_PatternSolver?.PATTERNS?.[inst.patternId];
+      if (!pat) continue;
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', cx);
+      txt.setAttribute('y', cy - 7);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('font-size','7');
+      txt.setAttribute('fill', P_COLOR[inst.patternId] || '#888');
+      txt.setAttribute('font-family','monospace');
+      txt.setAttribute('font-weight','600');
+      txt.textContent = `P${inst.patternId}`;
+      labelLayer.appendChild(txt);
+    }
+
+    // Sidebar counts
+    const pats = window.EC_PatternSolver?.PATTERNS || {};
+    const countRows = Object.entries(snap.counts)
+      .sort((a,b) => +a[0] - +b[0])
+      .map(([pid, cnt]) => {
+        const name = pats[pid]?.name || `P${pid}`;
+        const color = P_COLOR[+pid] || '#888';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;
+          padding:0.1rem 0;border-bottom:1px solid oklch(18% 0.006 145);">
+          <span style="color:${color};">P${pid} ${name}</span>
+          <span style="color:var(--text,#e8dfc8);font-weight:600;">${cnt}</span>
+        </div>`;
+      }).join('');
+
+    sidebar.innerHTML = `
+      <div style="color:var(--muted,#6a6050);letter-spacing:0.12em;text-transform:uppercase;
+        font-size:0.55rem;margin-bottom:0.5rem;">Pattern Instances</div>
+      ${countRows}
+      <div style="margin-top:0.75rem;color:var(--muted,#6a6050);font-size:0.55rem;">
+        ${snap.buildingPoints.length} bldg points<br>
+        ${snap.buildings.length} buildings
+      </div>
+    `;
+  }
+
+  // Controls
+  const slider = panel.querySelector('#panim-slider');
+  const playBtn = panel.querySelector('#panim-play');
+
+  slider.addEventListener('input', () => {
+    currentPass = +slider.value;
+    renderPass(currentPass);
+  });
+
+  panel.querySelector('#panim-prev').addEventListener('click', () => {
+    currentPass = Math.max(0, currentPass - 1);
+    slider.value = currentPass;
+    renderPass(currentPass);
+  });
+
+  panel.querySelector('#panim-next').addEventListener('click', () => {
+    currentPass = Math.min(snapshots.length-1, currentPass + 1);
+    slider.value = currentPass;
+    renderPass(currentPass);
+  });
+
+  playBtn.addEventListener('click', () => {
+    if (playing) {
+      clearInterval(playTimer);
+      playing = false;
+      playBtn.textContent = '▶ play';
+    } else {
+      playing = true;
+      playBtn.textContent = '⏸ pause';
+      if (currentPass >= snapshots.length - 1) { currentPass = 0; slider.value = 0; }
+      playTimer = setInterval(() => {
+        currentPass++;
+        slider.value = currentPass;
+        renderPass(currentPass);
+        if (currentPass >= snapshots.length - 1) {
+          clearInterval(playTimer);
+          playing = false;
+          playBtn.textContent = '▶ play';
+        }
+      }, 900);
+    }
+  });
+
+  panel.querySelector('#panim-close').addEventListener('click', () => {
+    clearInterval(playTimer);
+    panel.remove();
+  });
+
+  // Initial render
+  renderPass(0);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // EC_PatternSolver — Alexander Pattern Language constraint solver
 //
@@ -7768,7 +8073,7 @@ window.EC_PatternSolver = (() => {
     },
     instantiate(cand) {
       // Don't create a new instance — just tag the existing parcel for force application
-      return mkInstance(104, 'point', [centroidOf(cand.geom)],
+      return mkInstance(104, 'point', [{ x: cand.geom.x + cand.geom.w/2, y: cand.geom.y + cand.geom.h/2 }],
         { repair: true, target_parcel: cand.context.parcel.id });
     },
     forces(inst, neighbors) {
@@ -7787,7 +8092,7 @@ window.EC_PatternSolver = (() => {
       return bldgs.map(b => ({ geom: instanceBounds(b), context:{ bldg:b, greens } }));
     },
     instantiate(cand) {
-      return mkInstance(105, 'point', [centroidOf(cand.geom)], { type:'orientation_constraint' });
+      return mkInstance(105, 'point', [{ x: cand.geom.x + cand.geom.w/2, y: cand.geom.y + cand.geom.h/2 }], { type:'orientation_constraint' });
     },
     forces(inst, neighbors) {
       // Each building → force northward if it's south of its nearest green
@@ -8135,7 +8440,7 @@ window.EC_PatternSolver = (() => {
     const CLUSTER_K   = opts.cluster_k || 40;
     const log = [];
 
-    _sg = { instances: [], buildingPoints: [], buildings: [], zones: [], pass: 0 };
+    _sg = { instances: [], buildingPoints: [], buildings: [], zones: [], pass: 0, snapshots: [] };
 
     const patternOrder = Object.values(PATTERNS)
       .sort((a, b) => a.priority - b.priority);
@@ -8183,6 +8488,20 @@ window.EC_PatternSolver = (() => {
       // Step 4: coalesce to buildings
       _sg.buildings = coalesceToBuildings(_sg.buildingPoints, CLUSTER_K);
       log.push(`  Buildings coalesced: ${_sg.buildings.length}`);
+
+      // Snapshot this pass for animation
+      _sg.snapshots.push({
+        pass,
+        scale: passScale,
+        instances: _sg.instances.map(i => ({ ...i, geom: JSON.parse(JSON.stringify(i.geom)) })),
+        buildingPoints: [..._sg.buildingPoints],
+        buildings: [..._sg.buildings],
+        counts: Object.fromEntries(
+          Object.entries(PATTERNS)
+            .map(([id]) => [id, _sg.instances.filter(i => i.patternId === +id).length])
+            .filter(([,v]) => v > 0)
+        ),
+      });
     }
 
     // Final: count pattern instances
