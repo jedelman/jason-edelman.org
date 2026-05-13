@@ -7694,27 +7694,49 @@ function renderPatternAnimation(snapshots) {
       labelLayer.appendChild(txt);
     }
 
-    // Sidebar counts
+    // Sidebar: pattern counts + hierarchy tree
     const pats = window.EC_PatternSolver?.PATTERNS || {};
-    const countRows = Object.entries(snap.counts)
-      .sort((a,b) => +a[0] - +b[0])
-      .map(([pid, cnt]) => {
-        const name = pats[pid]?.name || `P${pid}`;
-        const color = P_COLOR[+pid] || '#888';
-        return `<div style="display:flex;justify-content:space-between;align-items:center;
-          padding:0.1rem 0;border-bottom:1px solid oklch(18% 0.006 145);">
-          <span style="color:${color};">P${pid} ${name}</span>
-          <span style="color:var(--text,#e8dfc8);font-weight:600;">${cnt}</span>
+    const hier = snap.hierarchy || {};
+
+    // Build hierarchy display: top-level instances (no parent) with children indented
+    const topLevel = snap.instances.filter(i => !i.parent_id);
+    const byPattern = {};
+    for (const i of topLevel) {
+      byPattern[i.patternId] = byPattern[i.patternId] || [];
+      byPattern[i.patternId].push(i);
+    }
+
+    const hierRows = Object.keys(snap.counts).sort((a,b) => +a-+b).map(pid => {
+      const cnt = snap.counts[pid];
+      const name = pats[pid]?.name || `P${pid}`;
+      const color = P_COLOR[+pid] || '#888';
+      const scale = pats[pid]?.scale;
+      const scaleName = scale ? ['','District','Block','Group','Building','Edge'][scale] : '';
+      // Find children this pattern commonly has
+      const req = window.EC_PatternSolver?.REQUIRES?.[+pid] || [];
+      const childStr = req.length ? `<span style="color:oklch(35% 0.01 145);"> → P${req.join(',P')}</span>` : '';
+      return `<div style="display:flex;justify-content:space-between;align-items:baseline;
+          padding:0.15rem 0 0.05rem;border-bottom:1px solid oklch(16% 0.006 145);">
+          <div>
+            <span style="color:${color};font-weight:600;">P${pid}</span>
+            <span style="color:oklch(45% 0.01 145);margin-left:0.3rem;font-size:0.52rem;">${name}</span>
+            ${childStr}
+          </div>
+          <span style="color:var(--text,#e8dfc8);font-weight:700;margin-left:0.5rem;">${cnt}</span>
         </div>`;
-      }).join('');
+    }).join('');
 
     sidebar.innerHTML = `
-      <div style="color:var(--muted,#6a6050);letter-spacing:0.12em;text-transform:uppercase;
-        font-size:0.55rem;margin-bottom:0.5rem;">Pattern Instances</div>
-      ${countRows}
-      <div style="margin-top:0.75rem;color:var(--muted,#6a6050);font-size:0.55rem;">
-        ${snap.buildingPoints.length} bldg points<br>
-        ${snap.buildings.length} buildings
+      <div style="color:var(--accent,#c87818);letter-spacing:0.1em;text-transform:uppercase;
+        font-size:0.52rem;margin-bottom:0.6rem;font-weight:600;">Pattern Instances</div>
+      ${hierRows}
+      <div style="margin-top:0.75rem;padding-top:0.5rem;border-top:1px solid oklch(20% 0.008 145);
+        color:var(--muted,#6a6050);font-size:0.52rem;line-height:1.8;">
+        <div>${snap.buildingPoints.length} building points</div>
+        <div>${snap.buildings.length} coalesced buildings</div>
+        <div style="color:oklch(35% 0.01 145);margin-top:0.3rem;font-size:0.5rem;">
+          → = required children
+        </div>
       </div>
     `;
   }
@@ -7908,17 +7930,28 @@ window.EC_PatternSolver = (() => {
   });
 
   defPattern(53, 'Main Gateways', S.DISTRICT, {
+    // One gateway per Activity Node (P30) that doesn't yet have one.
+    // Also one per site boundary entry point (4 cardinal entries, singletons).
     detect(sg, proj, MAP) {
-      // Gateways at the four major site entry points
-      return [
-        { geom:{ type:'point', x: MAP.x0 + 20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'west' } },
-        { geom:{ type:'point', x: MAP.x1 - 20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'east' } },
-        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y0 + 20 }, context:{ edge:'north' } },
-        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y1 - 20 }, context:{ edge:'south' } },
-      ];
+      const fromNodes = sg_query.missingChild(30, 53).map(node => ({
+        geom: { type:'point', x: node.geom[0]?.x || 490, y: node.geom[0]?.y || 400 },
+        context: { edge: 'node', parent: node },
+      }));
+      // Site boundary entries — only if none exist yet
+      const existing = sg_query.ofPattern(53);
+      const boundaryEntries = existing.length === 0 ? [
+        { geom:{ type:'point', x: MAP.x0+20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'west',  parent:null } },
+        { geom:{ type:'point', x: MAP.x1-20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'east',  parent:null } },
+        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y0+20 }, context:{ edge:'north', parent:null } },
+        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y1-20 }, context:{ edge:'south', parent:null } },
+      ] : [];
+      return [...fromNodes, ...boundaryEntries];
     },
     instantiate(cand) {
-      return mkInstance(53, 'point', [cand.geom], { edge: cand.context.edge, width_ft: 40 });
+      const inst = mkInstance(53, 'point', [cand.geom],
+        { edge: cand.context.edge, width_ft: 40 });
+      if (cand.context.parent) adoptInstance(cand.context.parent, inst);
+      return inst;
     },
     forces() { return []; },
   });
@@ -7926,24 +7959,36 @@ window.EC_PatternSolver = (() => {
   // ── SCALE 2: BLOCK ───────────────────────────────────────────────────────
 
   defPattern(60, 'Accessible Green', S.BLOCK, {
-    // Rule: every residential building point must be within 264px (~3-min walk at 8.5ft/px)
-    // of a GREEN instance. Detects gaps and emits green polygons to fill them.
+    // Two detection modes:
+    // A) P37 clusters missing a P60 child → emit green adjacent to cluster
+    // B) Gap scan: residential building points too far from any green
     detect(sg, proj, MAP) {
-      const WALK_PX = 264;  // 3-min walk ≈ 1320ft ÷ 8.5ft/px
-      const resPts = buildingPointsByPattern(sg, [79, 87, 37]);
-      const greenInsts = (sg.instances || []).filter(i => [60,67,71].includes(i.patternId));
-      // Find residential points more than WALK_PX from any green
+      // Mode A: hierarchy-driven
+      const fromClusters = sg_query.missingChild(37, 60).map(cluster => {
+        const b = instanceBounds(cluster);
+        return {
+          geom: { type:'polygon', pts: rectPts(b.x - 20, b.y + b.h + 10, b.w + 40, 45) },
+          context: { parent: cluster, gap: false },
+        };
+      });
+      // Mode B: gap scan (only if building points exist)
+      const WALK_PX = 264;
+      const resPts = buildingPointsByPattern(sg, [79, 87, 37, 95]);
+      const greenInsts = sg_query.ofPattern(60).concat(sg_query.ofPattern(67)).concat(sg_query.ofPattern(71));
       const gaps = resPts.filter(bp => {
         const nearest = nearestInstance(bp, greenInsts);
         return !nearest || nearest.dist > WALK_PX;
       });
-      if (gaps.length === 0) return [];
-      // Cluster gaps → candidate green zones
-      const clusters = knnCluster(gaps, Math.ceil(gaps.length / 8), 60);
-      return clusters.map(c => ({ geom:{ type:'polygon', pts: hullOf(c) }, context:{ gap:true } }));
+      const gapCandidates = gaps.length > 0
+        ? knnCluster(gaps, Math.ceil(gaps.length / 8), 60)
+            .map(c => ({ geom:{ type:'polygon', pts: hullOf(c) }, context:{ gap:true, parent:null } }))
+        : [];
+      return [...fromClusters, ...gapCandidates];
     },
     instantiate(cand) {
-      return mkInstance(60, 'polygon', cand.geom.pts, { min_area_sqft: 5000 });
+      const inst = mkInstance(60, 'polygon', cand.geom.pts, { min_area_sqft: 5000 });
+      if (cand.context.parent) adoptInstance(cand.context.parent, inst);
+      return inst;
     },
     forces(inst, neighbors) {
       // Green zones attract House Cluster (P37) instances toward them
@@ -7953,19 +7998,19 @@ window.EC_PatternSolver = (() => {
   });
 
   defPattern(67, 'Common Land', S.BLOCK, {
-    // Rule: each residential cluster gets a common land polygon, south-facing.
-    // Detect: find House Cluster instances, emit a polygon to their south.
+    // Rule: each House Cluster gets exactly one Common Land, to its south.
+    // Detect: P37 instances that don't yet have a P67 child.
     detect(sg) {
-      return (sg.instances || [])
-        .filter(i => i.patternId === 37)
-        .map(cluster => ({
-          geom: southOf(cluster, 60),  // polygon 60px south of cluster centroid
-          context: { cluster },
-        }));
+      return sg_query.missingChild(37, 67).map(cluster => ({
+        geom: southOf(cluster, 40),
+        context: { cluster },
+      }));
     },
     instantiate(cand) {
-      return mkInstance(67, 'polygon', cand.geom.pts,
+      const inst = mkInstance(67, 'polygon', cand.geom.pts,
         { south_facing: true, parent_cluster: cand.context.cluster.id });
+      adoptInstance(cand.context.cluster, inst);
+      return inst;
     },
     forces(inst, neighbors) {
       // Common land repels parking (P97/P103), attracts outdoor room (P69)
@@ -8184,25 +8229,29 @@ window.EC_PatternSolver = (() => {
   // ── SCALE 4: BUILDING FORM ───────────────────────────────────────────────
 
   defPattern(115, 'Courtyards Which Live', S.BUILDING, {
-    // Rule: every building parcel gets a courtyard void with view out + 2 crossing paths.
+    // Every P95/P109 building parcel missing a P115 child gets a courtyard.
     detect(sg) {
-      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
-        .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel } }));
+      const missing95  = sg_query.missingChild(95, 115);
+      const missing109 = sg_query.missingChild(109, 115);
+      return [...missing95, ...missing109].map(parcel => ({
+        geom: instanceBounds(parcel), context: { parcel },
+      }));
     },
     instantiate(cand) {
       const { x, y, w, h } = cand.geom;
       const inset = Math.min(w, h) * 0.25;
       const cy_pts = rectPts(x+inset, y+inset, w-2*inset, h-2*inset);
-      // Two crossing paths: horizontal and vertical through courtyard centroid
-      const cx = x + w/2, cy = y + h/2;
-      return mkInstance(115, 'polygon', cy_pts, {
+      const cx = x + w/2, cy_c = y + h/2;
+      const inst = mkInstance(115, 'polygon', cy_pts, {
         type: 'courtyard_void',
         paths: [
-          [{ x: x, y: cy }, { x: x+w, y: cy }],   // E-W crossing
-          [{ x: cx, y: y }, { x: cx, y: y+h }],   // N-S crossing
+          [{ x, y: cy_c }, { x: x+w, y: cy_c }],
+          [{ x: cx, y }, { x: cx, y: y+h }],
         ],
         parent_parcel: cand.context.parcel.id,
       });
+      adoptInstance(cand.context.parcel, inst);
+      return inst;
     },
     forces(inst, neighbors) {
       // Courtyard needs view out — pull toward nearest larger open space
@@ -8322,19 +8371,97 @@ window.EC_PatternSolver = (() => {
   });
 
   // ── 2. SCENE GRAPH ──────────────────────────────────────────────────────
-  let _sg = null;  // { instances:[], buildingPoints:[], zones:[], pass:0 }
+  let _sg = null;
+
+  // Parent → required children mapping.
+  // When a parent instance exists, these child patterns MUST fire against it.
+  // Children query sg.childrenOf(parentId) to find siblings.
+  const REQUIRES = {
+    37:  [67, 60],       // HouseCluster requires CommonLand, AccessibleGreen
+    95:  [115, 122],     // BuildingComplex requires CourtyardsWhichLive, BuildingFronts
+    109: [115, 127],     // LongThinHouse requires Courtyard, IntimacyGradient
+    31:  [87, 88, 46],   // Promenade requires Shops, Cafe, Market
+    30:  [53],           // ActivityNode requires Gateway
+  };
+
+  // Dedup radius per pattern (px): how close must an existing same-type instance
+  // be before we treat it as "already handled" and skip/mutate instead of creating new
+  const DEDUP_R = {
+    29: 9999,  // DensityRings: singleton
+    31: 9999,  // Promenade: singleton
+    53:  80,   // Gateways: one per entry point (~80px apart)
+    30:  60,   // ActivityNodes: one per node
+    37: 100,   // HouseCluster: one per cluster location
+    67:  80,   // CommonLand: one per cluster
+    71: 9999,  // StillWater: singleton
+    46: 9999,  // Market: singleton
+    95:  30,   // BuildingComplex: per parcel strip
+    104: 40,
+    105: 40,
+    106: 40,
+    109: 30,   // LongThinHouse: per parcel
+    115: 30,   // Courtyard: per building
+    122: 30,
+    127: 30,
+    87:  25,   // Shop: per bay
+    88:  50,   // Cafe: every ~3rd shop
+  };
 
   function mkInstance(patternId, geomType, geom, data) {
     return {
       id: `inst_${patternId}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
       patternId,
-      geomType,   // 'point' | 'spline' | 'polygon' | 'polygon_array' | 'point_cloud'
-      geom,       // array of {x,y} or nested arrays
-      data,       // pattern-specific metadata
+      geomType,
+      geom,
+      data,
       force_accum: [0, 0],
       pass_created: _sg?.pass || 0,
-      refs: [],   // ids of other instances this one interacts with
+      parent_id: null,    // set when instantiated as child of a parent
+      children: [],       // child instance ids
+      refs: [],
+      mutation_count: 0,  // how many times forces have moved this instance
     };
+  }
+
+  // Scene graph query helpers
+  const sg_query = {
+    // All instances of a given pattern
+    ofPattern: (pid) => (_sg?.instances || []).filter(i => i.patternId === pid),
+
+    // Children of a given parent instance
+    childrenOf: (parentId) => (_sg?.instances || []).filter(i => i.parent_id === parentId),
+
+    // Parents of a given pattern type
+    parentsRequiring: (childPid) =>
+      Object.entries(REQUIRES)
+        .filter(([,children]) => children.includes(childPid))
+        .map(([parentPid]) => sg_query.ofPattern(+parentPid))
+        .flat(),
+
+    // Parent instances that are MISSING a required child of type childPid
+    missingChild: (parentPid, childPid) =>
+      sg_query.ofPattern(parentPid).filter(parent =>
+        !parent.children.some(cid => {
+          const c = (_sg?.instances || []).find(i => i.id === cid);
+          return c && c.patternId === childPid;
+        })
+      ),
+
+    // Nearest existing instance of same pattern within dedup radius
+    nearDuplicate: (inst) => {
+      const r = DEDUP_R[inst.patternId] ?? 50;
+      return (_sg?.instances || []).find(i =>
+        i.id !== inst.id &&
+        i.patternId === inst.patternId &&
+        instanceDist(i, inst) < r
+      );
+    },
+  };
+
+  // Register child under parent in the scene graph
+  function adoptInstance(parent, child) {
+    child.parent_id = parent.id;
+    if (!parent.children.includes(child.id)) parent.children.push(child.id);
   }
 
   // ── 3. BUILDING POINTS ──────────────────────────────────────────────────
@@ -8447,11 +8574,11 @@ window.EC_PatternSolver = (() => {
 
     for (let pass = 0; pass < MAX_PASSES; pass++) {
       _sg.pass = pass;
-      const passScale = Math.min(S.EDGE, S.DISTRICT + pass);  // introduce one scale per pass
+      const passScale = Math.min(S.EDGE, S.DISTRICT + pass);
       log.push(`Pass ${pass} — scale ≤ ${passScale}`);
 
-      // Step 1: detect + instantiate patterns at this scale
-      let newInsts = 0;
+      let newInsts = 0, dedupSkipped = 0, mutated = 0;
+
       for (const pattern of patternOrder) {
         if (pattern.scale > passScale) continue;
         let candidates = [];
@@ -8464,32 +8591,46 @@ window.EC_PatternSolver = (() => {
           catch(e) { log.push(`  P${pattern.id} instantiate error: ${e.message}`); continue; }
           if (!inst) continue;
 
-          // Conflict resolution: check if this location is already owned by higher-priority pattern
-          const existing = _sg.instances.find(i =>
+          // ── Dedup guard: same pattern already covers this location? ──
+          const dup = sg_query.nearDuplicate(inst);
+          if (dup) {
+            // Mutate the existing instance rather than adding a new one.
+            // For now: apply any force from the new candidate's context toward the dup.
+            dup.mutation_count++;
+            mutated++;
+            // Adopt the dup under the new candidate's parent if not already adopted
+            if (cand.context?.parent && !dup.parent_id) {
+              adoptInstance(cand.context.parent, dup);
+            }
+            continue;
+          }
+
+          // ── Priority conflict: different pattern at same location, lower priority wins ──
+          const conflict = (_sg.instances).find(i =>
             i.id !== inst.id && i.patternId !== inst.patternId &&
             instanceDist(i, inst) < 20 &&
             PATTERNS[i.patternId]?.priority < pattern.priority);
+          if (conflict) continue;
 
-          if (!existing) {
-            _sg.instances.push(inst);
-            newInsts++;
-          }
+          _sg.instances.push(inst);
+          newInsts++;
         }
       }
-      log.push(`  +${newInsts} instances (total: ${_sg.instances.length})`);
 
-      // Step 2: emit building points for all instances
+      log.push(`  +${newInsts} new, ${mutated} mutated, ${dedupSkipped} deduped (total: ${_sg.instances.length})`);
+
+      // Step 2: emit building points
       _sg.buildingPoints = _sg.instances.flatMap(emitBuildingPoints);
       log.push(`  Building points: ${_sg.buildingPoints.length}`);
 
-      // Step 3: apply force relaxation
+      // Step 3: force relaxation
       if (pass > 0) applyForces(_sg.instances);
 
-      // Step 4: coalesce to buildings
+      // Step 4: coalesce buildings
       _sg.buildings = coalesceToBuildings(_sg.buildingPoints, CLUSTER_K);
-      log.push(`  Buildings coalesced: ${_sg.buildings.length}`);
+      log.push(`  Buildings: ${_sg.buildings.length}`);
 
-      // Snapshot this pass for animation
+      // Snapshot with hierarchy info
       _sg.snapshots.push({
         pass,
         scale: passScale,
@@ -8501,18 +8642,24 @@ window.EC_PatternSolver = (() => {
             .map(([id]) => [id, _sg.instances.filter(i => i.patternId === +id).length])
             .filter(([,v]) => v > 0)
         ),
+        // Hierarchy: parent → children map for this snapshot
+        hierarchy: _sg.instances.reduce((h, i) => {
+          if (i.parent_id) {
+            h[i.parent_id] = h[i.parent_id] || [];
+            h[i.parent_id].push(i.id);
+          }
+          return h;
+        }, {}),
       });
     }
 
-    // Final: count pattern instances
     const counts = {};
-    for (const inst of _sg.instances) {
-      counts[inst.patternId] = (counts[inst.patternId] || 0) + 1;
-    }
-    log.push(`Pattern instance counts: ${JSON.stringify(counts)}`);
+    for (const inst of _sg.instances) counts[inst.patternId] = (counts[inst.patternId]||0)+1;
+    log.push(`Pattern counts: ${JSON.stringify(counts)}`);
 
     return { sceneGraph: _sg, log, buildings: _sg.buildings, counts };
   }
+
 
   // ── 7. GEOMETRY HELPERS ──────────────────────────────────────────────────
 
@@ -8698,8 +8845,9 @@ window.EC_PatternSolver = (() => {
     solve,
     getSceneGraph: () => _sg,
     PATTERNS,
+    REQUIRES,
     SCALES: S,
-    // Debug: count instances per pattern
+    query: () => sg_query,
     counts: () => {
       if (!_sg) return {};
       const c = {};
