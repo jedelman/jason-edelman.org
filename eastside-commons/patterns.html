@@ -192,12 +192,12 @@
       <div id="info-content">
         <div class="stat-grid">
           <div class="stat-box"><div class="n" id="s-lines">—</div><div class="l">Field Lines</div></div>
-          <div class="stat-box"><div class="n" id="s-nodes">—</div><div class="l">Hot Nodes</div></div>
+          <div class="stat-box"><div class="n" id="s-nodes">—</div><div class="l">Nodes / Bldgs</div></div>
           <div class="stat-box"><div class="n" id="s-patterns">—</div><div class="l">Patterns</div></div>
           <div class="stat-box"><div class="n" id="s-ms">—</div><div class="l">ms</div></div>
         </div>
         <p><em>Field model:</em> each pattern deposits pressure across the site. A location matters because multiple patterns want it simultaneously — not because one pattern owns it.</p>
-        <p><em>Passes</em>: how many times the full pattern set re-senses from the combined field. More passes = stronger convergence.</p>
+        <p><em>Max passes</em> caps the run. <em>Saturate ε</em>: if mean field change drops below ε, the solver stops early. With patterns in tension (P104 vs P60, P115 vs P122), the field may oscillate and never saturate — that's correct behaviour.</p>
         <p><em>Resolution</em>: grid cell size. Smaller = finer lines, slower.</p>
         <p><em>Threshold</em>: minimum combined pressure to trace a field line.</p>
         <p><em>Line weight</em>: proportional to combined pressure at that point. <em>Color</em>: dominant pattern mix.</p>
@@ -310,6 +310,15 @@ window.EC_FieldSolver = (() => {
     100:'#40b0c0', // PedStreet       — cyan
     109:'#906030', // LongThinHouse   — brown
     116:'#c06080', // CascadeRoofs    — rose
+    46: '#e8b020', // Market          — gold
+    104:'#806040', // SiteRepair      — earth
+    105:'#d08820', // SouthFacing     — ochre
+    106:'#50c0a0', // PositiveOutdoor — turquoise
+    109:'#a06838', // LongThinHouse   — terracotta
+    114:'#7090c0', // HierarchyOpen   — steel blue
+    115:'#30a870', // CourtyardsLive  — jade
+    122:'#e06040', // BuildingFronts  — coral
+    127:'#9060b0', // IntimacyGrad    — violet
   };
 
   // Pattern metadata for sense functions
@@ -600,6 +609,199 @@ window.EC_FieldSolver = (() => {
       }
     }
   });
+
+  // ── PATTERNS ADDED IN FIELD MODEL PHASE ─────────────────────────────────
+
+  defPattern(46, 'Market of Many Shops', 0.9, (field,gw,gh,cs,MAP,site)=>{
+    // A covered market concentrates at the promenade midpoint — the most public
+    // moment of the spine. Strong, localized pressure at spine centre.
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2, scy=s.y+s.h*0.5;
+    paintGaussian(field,gw,gh,cs,MAP, scx,scy, 55, 1.4);
+    // Secondary market node at TIDE gateway
+    if(site.derived.TIDE){
+      const ti=site.derived.TIDE;
+      paintGaussian(field,gw,gh,cs,MAP, ti.x+ti.w/2, ti.y-20, 35, 0.8);
+    }
+  });
+
+  defPattern(104, 'Site Repair', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Buildings belong on the worst land — parking lots, hardscape —
+    // not on green or water. Pressure field is INVERTED from green:
+    // high building pressure where green pressure is low.
+    const sg=site.derived.SPONGE;
+    if(!sg) return;
+    // Paint strong repulsion around sponge and basin
+    // by adding NEGATIVE pressure near green zones
+    // (implemented as low field values — other patterns avoid these zones)
+    // Positive pressure in hard-paved zones: east of spine, ROSS area
+    const s=site.derived.SPINE; if(!s) return;
+    const ro=site.derived.ROSS;
+    // ROSS leasehold is currently hardscape — prime repair zone
+    if(ro) paintGaussian(field,gw,gh,cs,MAP, ro.x+ro.w/2,ro.y+ro.h/2, 60, 1.0);
+    // Existing parking areas west of spine, south of band
+    const b=site.derived.BAND;
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+b.h+30, s.x-10,b.y+b.h+80, 40, 0.8);
+    // Subtract pressure from green zones — buildings don't go here
+    if(sg){
+      for(let i=0;i<field.length;i++){
+        const cx_=i%gw, cy_=Math.floor(i/gw);
+        const px=MAP.x0+cx_*cs, py=MAP.y0+cy_*cs;
+        const nx=(px-sg.cx)/sg.rx, ny=(py-sg.cy)/sg.ry;
+        if(nx*nx+ny*ny<1.2) field[i]=Math.max(0,field[i]-0.6);
+      }
+    }
+  });
+
+  defPattern(105, 'South Facing Outdoors', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    // Buildings should be north of their outdoor/green space so the
+    // outdoor area catches southern light. Pressure gradient: building
+    // mass pushed north, open space pushed south.
+    const sg=site.derived.SPONGE; if(!sg) return;
+    const s=site.derived.SPINE; if(!s) return;
+    // High building pressure north of sponge, low south
+    const northY=sg.cy-sg.ry-20;
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+30,MAP.y0+30, MAP.x1-30,northY, 35, 0.9);
+    // High outdoor pressure south of spine nodes
+    const scx=s.x+s.w/2;
+    paintGaussian(field,gw,gh,cs,MAP, scx-60, s.y+s.h*0.35+30, 40, 0.6);
+    paintGaussian(field,gw,gh,cs,MAP, scx+60, s.y+s.h*0.65+30, 40, 0.6);
+  });
+
+  defPattern(106, 'Positive Outdoor Space', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Outdoor space between buildings must have a definite, convex shape.
+    // Pressure in the voids between building clusters — enforces shaped courtyards
+    // rather than leftover gaps.
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    // Positive void pressure: the spaces that SHOULD be outdoor
+    // — pockets between spine and sponge, between housing clusters
+    const sg=site.derived.SPONGE;
+    if(sg){
+      // Crescent between spine and sponge east edge
+      paintGaussian(field,gw,gh,cs,MAP, (s.x+s.w+sg.cx-sg.rx)/2, sg.cy, 45, 0.9);
+    }
+    // Courtyard voids within housing band (west of spine)
+    paintGaussian(field,gw,gh,cs,MAP, s.x-50, s.y+s.h*0.35, 38, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-50, s.y+s.h*0.65, 38, 0.8);
+    // Pocket space south of market
+    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.55, 32, 0.7);
+    // From previous pass: add pressure where combined is mid-low (potential void zones)
+    if(site.combined){
+      for(let i=0;i<field.length;i++){
+        const v=site.combined[i];
+        if(v>0.15&&v<0.35) field[i]+=v*0.35;
+      }
+    }
+  });
+
+  defPattern(109, 'Long Thin House', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    // The 25ft-wide strip house — long axis perpendicular to street, thin frontage.
+    // Pressure forms thin parallel bands along the housing zone west of spine.
+    const s=site.derived.SPINE; if(!s) return;
+    const sl=s.x;
+    // Strip houses run E-W, stacked N-S — paint horizontal pressure bands
+    const bandSpacing=32; // ~25ft at our scale
+    let y=s.y+40;
+    while(y<s.y+s.h-40){
+      paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,y, sl-8,y, 10, 0.85);
+      y+=bandSpacing;
+    }
+    // Also east side of spine — commercial strip frontage
+    let ey=s.y+60;
+    while(ey<s.y+s.h-60){
+      paintSegment(field,gw,gh,cs,MAP, s.x+s.w+4,ey, s.x+s.w+70,ey, 8, 0.65);
+      ey+=bandSpacing*1.4;
+    }
+  });
+
+  defPattern(114, 'Hierarchy of Open Space', 0.65, (field,gw,gh,cs,MAP,site)=>{
+    // Every outdoor space must look into a smaller AND a larger space.
+    // Creates a fractal nesting: pocket (r~20) inside courtyard (r~50)
+    // inside square (r~100) inside park (r~200).
+    const sg=site.derived.SPONGE;
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    // Park scale — the sponge itself
+    if(sg) paintEllipse(field,gw,gh,cs,MAP, sg.cx,sg.cy,sg.rx,sg.ry, 0.5);
+    // Square scale — at activity nodes
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.25, 60, 0.7);
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.75, 60, 0.7);
+    // Courtyard scale — between strip houses
+    paintGaussian(field,gw,gh,cs,MAP, s.x-45,s.y+s.h*0.3, 28, 0.65);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-45,s.y+s.h*0.5, 28, 0.65);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-45,s.y+s.h*0.7, 28, 0.65);
+    // Pocket scale — alcoves off promenade
+    const pocketPts=[[scx-18,s.y+s.h*0.2],[scx+18,s.y+s.h*0.4],[scx-18,s.y+s.h*0.6],[scx+18,s.y+s.h*0.8]];
+    for(const [px,py] of pocketPts) paintGaussian(field,gw,gh,cs,MAP,px,py,14,0.55);
+  });
+
+  defPattern(115, 'Courtyards Which Live', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Every building must wrap a courtyard on three sides.
+    // Pressure forms a hollow-ring pattern: strong at building perimeter,
+    // near-zero at building center — the courtyard void.
+    const s=site.derived.SPINE; if(!s) return;
+    // Building clusters east and west of spine
+    const clusters=[
+      {cx:s.x+s.w+40, cy:s.y+s.h*0.3, r:35},
+      {cx:s.x+s.w+40, cy:s.y+s.h*0.65, r:35},
+      {cx:s.x-50,     cy:s.y+s.h*0.35, r:30},
+      {cx:s.x-50,     cy:s.y+s.h*0.62, r:30},
+    ];
+    for(const {cx,cy,r} of clusters){
+      // Ring pressure: peak at r, zero at center and far field
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        const d=Math.hypot(px-cx,py-cy);
+        // Gaussian ring: max at d=r, falls to 0 at d=0 and d=2r
+        const ring=Math.exp(-((d-r)*(d-r))/(r*0.5)**2)*0.85;
+        field[i]+=ring;
+      }
+    }
+  });
+
+  defPattern(122, 'Building Fronts', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    // No setbacks. Building faces align flush to the promenade/street edge.
+    // Pressure concentrated in thin bands along both sides of spine —
+    // exactly where building facades should land.
+    const s=site.derived.SPINE; if(!s) return;
+    const edgeW=8; // thin facade pressure strip
+    // West face of spine: buildings front directly onto promenade
+    paintSegment(field,gw,gh,cs,MAP, s.x,s.y+30, s.x,s.y+s.h-30, edgeW, 1.1);
+    // East face
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,s.y+30, s.x+s.w,s.y+s.h-30, edgeW, 1.1);
+    // Band frontage along main street south edge
+    const b=site.derived.BAND;
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+b.h, MAP.x1-20,b.y+b.h, edgeW, 0.9);
+  });
+
+  defPattern(127, 'Intimacy Gradient', 0.65, (field,gw,gh,cs,MAP,site)=>{
+    // Public → semi-public → semi-private → private sequence inward from street.
+    // A depth gradient away from circulation paths.
+    // In field terms: pressure decreases with depth from promenade/street.
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    // Gradient radiates outward from spine centerline — near spine is public,
+    // far from spine is private. Paint inverse-distance field.
+    for(let i=0;i<field.length;i++){
+      const fx=i%gw;
+      const px=MAP.x0+fx*cs;
+      const dist=Math.abs(px-scx);
+      // Four depth bands: 0-40px (public), 40-90px (semi-pub), 90-160px (semi-priv), 160+(private)
+      // Pressure concentrated at the TRANSITIONS between bands — where building edges sit
+      const band=[40,90,160].map(b=>Math.exp(-((dist-b)*(dist-b))/(12*12))*0.7);
+      field[i]+=band.reduce((a,b)=>a+b,0);
+    }
+    // Also north-south gradient: entries (promenade ends) are most public
+    for(let i=0;i<field.length;i++){
+      const fy=Math.floor(i/gw);
+      const py=MAP.y0+fy*cs;
+      const distN=Math.min(py-MAP.y0, MAP.y1-py);
+      field[i]+=Math.exp(-(distN*distN)/(60*60))*0.5;
+    }
+  });
+
 
   // ── FIELD LINE TRACER ─────────────────────────────────────────────────────
   // Trace splines along ridges of the combined field.
