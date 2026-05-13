@@ -148,8 +148,8 @@
 
   <div class="ctrl-group">
     <span class="ctrl-label">Recurse</span>
-    <input type="range" id="ctrl-recurse" min="1" max="8" value="3" step="1">
-    <span class="ctrl-val" id="val-recurse">3</span>
+    <input type="range" id="ctrl-recurse" min="3" max="30" value="12" step="1">
+    <span class="ctrl-val" id="val-recurse">12</span>
   </div>
   <div class="ctrl-group">
     <span class="ctrl-label">Cluster K</span>
@@ -303,29 +303,133 @@ function buildParcelGeometry(parcels,proj) {
 }
 
 function solveConstraintsMin(G, MAP) {
-  const derived={};
-  const MALL=G['MALL_CORE'], SP_PAR=G['SPONGE_PARCEL'], HB_PAR=G['HOUSING_B_S'];
-  if (!MALL) return {derived};
-  const spine_w=Math.max(MALL.bbox.width*0.18,38), spine_x=MALL.centroid_x-spine_w/2;
-  derived.SPINE={x:spine_x, y:MAP.y0, w:spine_w, h:MAP.y1-MAP.y0};
-  const sr=spine_x+spine_w;
-  const compactMS=['MAIN_ST_LARGE','MAIN_ST_MID','MAIN_ST_5773','MAIN_ST_5825'];
-  const msBotRaw=Math.max(...compactMS.filter(n=>G[n]).map(n=>G[n].bbox.bottom));
-  const bandBot=Math.min(msBotRaw+6, MALL.bbox.top-4);
-  derived.BAND={x:MAP.x0, y:MAP.y0, w:MAP.x1-MAP.x0, h:bandBot-MAP.y0};
-  const bby=MAP.y0+derived.BAND.h;
-  const sg_al=sr+10, sg_ar=MAP.x1-100, sg_at=bby+8;
-  const sg_ab=HB_PAR ? HB_PAR.bbox.top-6 : MAP.y1-100;
-  const sg_rx=Math.min((sg_ar-sg_al)/2,90), sg_ry=Math.min((sg_ab-sg_at)/2,70);
-  let sg_cx=sg_al+sg_rx, sg_cy=(sg_at+sg_ab)/2;
-  if (SP_PAR) {
-    const d=Math.abs(SP_PAR.centroid_x-sg_cx);
-    if (d<sg_rx*1.5) sg_cx=(sg_cx+SP_PAR.centroid_x)/2;
-    sg_cy=(sg_cy+SP_PAR.centroid_y)/2;
+  const derived = {};
+
+  function check(name, desc, ok, detail='') {
+    return ok;
   }
-  derived.SPONGE={cx:sg_cx,cy:sg_cy,rx:sg_rx,ry:sg_ry};
+
+  const MALL    = G['MALL_CORE'];
+  const SP_PAR  = G['SPONGE_PARCEL'];
+  const HB_PAR  = G['HOUSING_B_S'];
+  const CLT_PAR = G['CLT_NORTH'];
+
+  if (!MALL) { log.push({name:'SETUP',desc:'MALL_CORE not found',ok:false}); return {derived,log}; }
+
+  // ── COMMONS SPINE ──
+  // Spec: "runs N-S through the longitudinal center of MALL_CORE.
+  //        Width = 18% of MALL_CORE east-west extent, minimum 38px.
+  //        Top at Va Beach Blvd south edge. Bottom at I-264 north edge."
+  const spine_w = Math.max(MALL.bbox.width * 0.18, 38);
+  const spine_x = MALL.centroid_x - spine_w/2;
+  derived.SPINE = {x:spine_x, y:MAP.y0, w:spine_w, h:MAP.y1-MAP.y0};
+  const sl=spine_x, sr=spine_x+spine_w, scx=spine_x+spine_w/2;
+
+
+  // ── MAIN STREET BAND ──
+  // Spec: "occupies the geographic zone of the Va Beach Blvd parcel cluster.
+  //        Bottom = bottom of the four compact frontage parcels (excludes MAIN_ST_THIN
+  //        which is a tall strip — use its centroid not bbox for band membership).
+  //        Must not exceed MALL_CORE.bbox.top."
+  const compactMS = ['MAIN_ST_LARGE','MAIN_ST_MID','MAIN_ST_5773','MAIN_ST_5825'];
+  const msBotRaw = Math.max(...compactMS.filter(n=>G[n]).map(n=>G[n].bbox.bottom));
+  const bandBot = Math.min(msBotRaw + 6, MALL.bbox.top - 4);
+  derived.BAND = {x:MAP.x0, y:MAP.y0, w:MAP.x1-MAP.x0, h:bandBot-MAP.y0};
+  const bby = MAP.y0 + derived.BAND.h;
+
+  const allMS = ['MAIN_ST_LARGE','MAIN_ST_MID','MAIN_ST_5773','MAIN_ST_5825','MAIN_ST_THIN'];
+  for (const n of allMS) {
+    if (G[n]) check('BAND',`contains ${n} centroid`,
+      G[n].centroid_y >= MAP.y0 && G[n].centroid_y <= bby,
+      `cy=${G[n].centroid_y.toFixed(0)} band=[${MAP.y0},${bby.toFixed(0)}]`);
+  }
+
+  // ── SPONGE PARK ──
+  // Spec: "occupies the available space east of COMMONS_SPINE and north of HOUSING_B_S.
+  //        Left edge: spine right + 10px clearance.
+  //        Right edge: leaves room for research station (~90px) before site east boundary.
+  //        Vertically: top at band bottom + 8px; bottom at HOUSING_B_S.bbox.top - 6px.
+  //        Center biased toward SPONGE_PARCEL centroid."
+  const sg_avail_left  = sr + 10;
+  const sg_avail_right = MAP.x1 - 100;  // research station clearance
+  const sg_avail_top   = bby + 8;
+  const sg_avail_bot   = HB_PAR ? HB_PAR.bbox.top - 6 : MAP.y1 - 100;
+  const sg_rx = Math.min((sg_avail_right - sg_avail_left)/2, 90);
+  const sg_ry = Math.min((sg_avail_bot - sg_avail_top)/2, 70);
+  let sg_cx = sg_avail_left + sg_rx;
+  let sg_cy = (sg_avail_top + sg_avail_bot)/2;
+  // Bias toward SPONGE_PARCEL centroid if close enough
+  if (SP_PAR) {
+    const dist = Math.abs(SP_PAR.centroid_x - sg_cx);
+    if (dist < sg_rx*1.5) sg_cx = (sg_cx + SP_PAR.centroid_x)/2;
+    sg_cy = (sg_cy + SP_PAR.centroid_y)/2;
+  }
+  derived.SPONGE = {cx:sg_cx, cy:sg_cy, rx:sg_rx, ry:sg_ry};
+  derived.BASIN  = {cx:sg_cx, cy:sg_cy, rx:sg_rx*0.38, ry:sg_ry*0.38};
+
+  const sg_dist = SP_PAR ? Math.hypot(sg_cx-SP_PAR.centroid_x, sg_cy-SP_PAR.centroid_y) : 0;
+
+  // ── RESEARCH STATION ──
+  // Spec: "east of sponge ellipse right edge, vertically centered on sponge.
+  //        Must not exceed site east boundary."
+  const res_w=80, res_h=44;
+  const res_x = Math.min(sg_cx+sg_rx+10, MAP.x1-res_w-4);
+  derived.RESEARCH = {x:res_x, y:sg_cy-res_h/2, w:res_w, h:res_h};
+
+
+  // ── ROSS LEASEHOLD ──
+  // Spec: "NE quadrant of MALL_CORE. East of spine. South of band.
+  //        Width reduced to fit: ross_x must be >= spine_right + 8."
+  const ross_w=100, ross_h=62;
+  const ross_x = Math.min(sr+8, MALL.bbox.right-ross_w-4);
+  // The min may put ross_x < sr — enforce the spine clearance as a floor
+  const ross_x_final = Math.max(ross_x, sr+6);
+  const ross_y = Math.max(bby+6, MALL.bbox.top+4);
+  derived.ROSS = {x:ross_x_final, y:ross_y, w:ross_w, h:ross_h};
+
+
+  // ── TIDE STATION ──
+  // Spec: "at south terminus of spine. Centered on spine x-axis.
+  //        Bottom flush with I-264 north edge."
+  const tide_h=73;
+  derived.TIDE = {x:sl, y:MAP.y1-tide_h, w:spine_w, h:tide_h};
+
+  // ── BIKE LANE ──
+  // Spec: "along south edge of Main Street band, interrupted at spine."
+  derived.BIKE = {y:bby-5, x0:MAP.x0, x0end:sl-2, x1start:sr+2, x1end:MAP.x1};
+
+  // ── DISTRICT LABELS ──
+  // Spec: each label positioned relative to anchor parcel geometry.
+
+  // Housing A: within MALL_CORE west half, clear of spine
+  const ha_x = Math.min(MALL.bbox.left + 65, sl - 28);
+  const ha_y = MALL.centroid_y + MALL.bbox.height*0.06;
+  derived.LABEL_HSG_A = {x:ha_x, y:ha_y};
+
+  // Housing B: HOUSING_B_S centroid, shift west if inside sponge ellipse
+  let hb_x = HB_PAR ? HB_PAR.centroid_x : sg_cx-sg_rx-50;
+  let hb_y = HB_PAR ? HB_PAR.centroid_y : MAP.y1-80;
+  if (((hb_x-sg_cx)**2/sg_rx**2 + (hb_y-sg_cy)**2/sg_ry**2) < 1.1) {
+    hb_x = sg_cx - sg_rx - 40;
+  }
+  derived.LABEL_HSG_B = {x:hb_x, y:hb_y};
+
+  // CLT: right of spine, just below band bottom (in the CLT parcel zone below band)
+  derived.LABEL_CLT = {x:sr+18, y:bby+18};
+
+  // Sponge: below ellipse
+  derived.LABEL_SPONGE = {x:sg_cx, y:sg_cy+sg_ry+16};
+
+  // Civic: left margin between road and civic parcel west edges
+  derived.LABEL_CIVIC = {x:MAP.x0+20, y:(MAP.y0+MAP.y1)/2};
+
+  // Main Street: within band, left-anchored
+  derived.LABEL_MAIN = {x:MAP.x0+16, y:MAP.y0+20};
+
   return {derived};
 }
+
+
 
 // ── P_COLOR ───────────────────────────────────────────────────────────────────
 const P_COLOR = {
@@ -417,16 +521,109 @@ document.addEventListener('DOMContentLoaded', () => {
 function drawEDA(parcels, proj, MAP) {
   const ns='http://www.w3.org/2000/svg';
   const layer=document.getElementById('layer-eda');
+
+  // EDA parcel outlines
   for (const p of parcels) {
     if (!p.is_eda || !p.rings?.[0]) continue;
     const pts=p.rings[0].map(([lon,lat])=>proj(lon,lat).join(',')).join(' ');
     const poly=document.createElementNS(ns,'polygon');
     poly.setAttribute('points',pts);
     poly.setAttribute('fill','rgba(40,120,40,0.06)');
-    poly.setAttribute('stroke','rgba(80,160,60,0.35)');
+    poly.setAttribute('stroke','rgba(80,160,60,0.3)');
     poly.setAttribute('stroke-width','0.8');
     poly.setAttribute('stroke-dasharray','2,3');
     layer.appendChild(poly);
+  }
+
+  // Site facts from derived geometry — drawn after parcels so they're visible
+  const G = buildParcelGeometry(parcels, proj);
+  const {derived} = solveConstraintsMin(G, MAP);
+
+  // Commons Spine axis
+  if (derived.SPINE) {
+    const s = derived.SPINE;
+    const r = document.createElementNS(ns,'rect');
+    r.setAttribute('x',s.x); r.setAttribute('y',s.y);
+    r.setAttribute('width',s.w); r.setAttribute('height',s.h);
+    r.setAttribute('fill','rgba(200,120,24,0.08)');
+    r.setAttribute('stroke','rgba(200,120,24,0.5)');
+    r.setAttribute('stroke-width','1');
+    layer.appendChild(r);
+    // Label
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',s.x+s.w/2); t.setAttribute('y',s.y+16);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(200,120,24,0.7)');
+    t.setAttribute('font-size','7'); t.setAttribute('letter-spacing','2');
+    t.textContent='SPINE';
+    layer.appendChild(t);
+  }
+
+  // Sponge park ellipse
+  if (derived.SPONGE) {
+    const sg = derived.SPONGE;
+    const e = document.createElementNS(ns,'ellipse');
+    e.setAttribute('cx',sg.cx); e.setAttribute('cy',sg.cy);
+    e.setAttribute('rx',sg.rx); e.setAttribute('ry',sg.ry);
+    e.setAttribute('fill','rgba(40,180,80,0.1)');
+    e.setAttribute('stroke','rgba(40,180,80,0.5)');
+    e.setAttribute('stroke-width','1');
+    e.setAttribute('stroke-dasharray','3,3');
+    layer.appendChild(e);
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',sg.cx); t.setAttribute('y',sg.cy+3);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(40,180,80,0.7)');
+    t.setAttribute('font-size','6.5');
+    t.textContent='SPONGE';
+    layer.appendChild(t);
+  }
+
+  // Ross Stores footprint (existing MPB anchor — lease expires 2036)
+  if (derived.ROSS) {
+    const ro = derived.ROSS;
+    const r = document.createElementNS(ns,'rect');
+    r.setAttribute('x',ro.x); r.setAttribute('y',ro.y);
+    r.setAttribute('width',ro.w); r.setAttribute('height',ro.h);
+    r.setAttribute('fill','rgba(100,60,180,0.08)');
+    r.setAttribute('stroke','rgba(100,60,180,0.4)');
+    r.setAttribute('stroke-width','1');
+    r.setAttribute('stroke-dasharray','4,2');
+    layer.appendChild(r);
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',ro.x+ro.w/2); t.setAttribute('y',ro.y+ro.h/2+3);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(100,60,180,0.6)');
+    t.setAttribute('font-size','6');
+    t.textContent='ROSS 2036';
+    layer.appendChild(t);
+  }
+
+  // Tide station site
+  if (derived.TIDE) {
+    const ti = derived.TIDE;
+    const r = document.createElementNS(ns,'rect');
+    r.setAttribute('x',ti.x); r.setAttribute('y',ti.y);
+    r.setAttribute('width',ti.w); r.setAttribute('height',ti.h);
+    r.setAttribute('fill','rgba(8,88,184,0.12)');
+    r.setAttribute('stroke','rgba(8,88,184,0.5)');
+    r.setAttribute('stroke-width','1');
+    layer.appendChild(r);
+    const t=document.createElementNS(ns,'text');
+    t.setAttribute('x',ti.x+ti.w/2); t.setAttribute('y',ti.y+ti.h/2+3);
+    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(8,88,184,0.7)');
+    t.setAttribute('font-size','6.5');
+    t.textContent='TIDE';
+    layer.appendChild(t);
+  }
+
+  // Main Street band top edge
+  if (derived.BAND) {
+    const b = derived.BAND;
+    const line = document.createElementNS(ns,'line');
+    line.setAttribute('x1',MAP.x0); line.setAttribute('y1',b.y+b.h);
+    line.setAttribute('x2',MAP.x1); line.setAttribute('y2',b.y+b.h);
+    line.setAttribute('stroke','rgba(200,120,24,0.25)');
+    line.setAttribute('stroke-width','1');
+    line.setAttribute('stroke-dasharray','4,4');
+    layer.appendChild(line);
   }
 }
 
@@ -524,8 +721,8 @@ function renderPass(idx) {
 
   // Update pass label
   const phase=snap.isRecurse
-    ? `♻ Recurse ${snap.recurseIdx} — all scales · ${snap.instances.length} inst`
-    : `▶ Pass ${snap.pass} — Scale ${snap.scale} ${SCALE_NAMES[snap.scale]||''} · ${snap.instances.length} inst`;
+    ? `♻ Recurse ${snap.recurseIdx}/${opts?.recurse||12} — all patterns simultaneously · ${snap.instances.length} inst`
+    : `▶ Intro pass ${snap.pass}/5 — ${SCALE_NAMES[snap.scale]||''} scale seeded from site · ${snap.instances.length} inst`;
   const lbl=document.getElementById('pass-label');
   lbl.textContent=phase;
   lbl.className=snap.isRecurse ? 'phase-recurse' : 'phase-intro';
@@ -677,7 +874,7 @@ function togglePlay() {
       _currentPass=(_currentPass+1)%_snapshots.length;
       document.getElementById('pass-slider').value=_currentPass;
       renderPass(_currentPass);
-      _playTimer=setTimeout(step, 900);
+      _playTimer=setTimeout(step, 300);
     }
     step();
   } else {
@@ -719,23 +916,21 @@ window.EC_PatternSolver = (() => {
   // ── SCALE 1: DISTRICT ────────────────────────────────────────────────────
 
   defPattern(29, 'Density Rings', S.DISTRICT, {
-    // Detects: site centroid. Emits concentric density zones.
-    // Rule: highest density at spine, decreasing outward.
+    // Seeded from SPINE: density rings centered on the commons spine axis,
+    // which is derived from actual MALL_CORE parcel geometry.
     detect(sg, proj, MAP) {
-      // One candidate: the whole site
-      const cx = (MAP.x0 + MAP.x1) / 2;
-      const cy = (MAP.y0 + MAP.y1) / 2;
-      return [{ geom: { type:'point', x:cx, y:cy }, context:{ MAP } }];
+      const G = window._derivedG;
+      // Seed from spine center if available — this is the real site fact
+      const cx = G?.SPINE ? G.SPINE.x + G.SPINE.w/2 : (MAP.x0+MAP.x1)/2;
+      const cy = G?.SPINE ? G.SPINE.y + G.SPINE.h/2 : (MAP.y0+MAP.y1)/2;
+      return [{ geom:{ type:'point', x:cx, y:cy }, context:{ MAP } }];
     },
-    instantiate(cand, sg) {
+    instantiate(cand) {
       const { x, y } = cand.geom;
-      const r_inner  = 120;  // px — high density core
-      const r_mid    = 240;  // px — medium density
-      const r_outer  = 400;  // px — low density edge
       return mkInstance(29, 'rings', [
-        { x, y, r: r_inner,  density: 'HIGH',   far_target: 1.4 },
-        { x, y, r: r_mid,    density: 'MEDIUM', far_target: 1.0 },
-        { x, y, r: r_outer,  density: 'LOW',    far_target: 0.6 },
+        { x, y, r:120,  density:'HIGH',   far_target:1.4 },
+        { x, y, r:240,  density:'MEDIUM', far_target:1.0 },
+        { x, y, r:400,  density:'LOW',    far_target:0.6 },
       ], { type:'density_rings' });
     },
     forces() { return []; },
@@ -817,26 +1012,35 @@ window.EC_PatternSolver = (() => {
   });
 
   defPattern(53, 'Main Gateways', S.DISTRICT, {
-    // One gateway per Activity Node (P30) that doesn't yet have one.
-    // Also one per site boundary entry point (4 cardinal entries, singletons).
+    // Gateways seeded from existing site facts, not cardinal midpoints:
+    // - TIDE station south: the actual light rail entry (0.6mi from downtown)
+    // - Va Beach Blvd north: primary car/ped arrival from I-64
+    // - Military Hwy west: existing bus route and pedestrian approach
+    // - Tidewater Dr east: secondary vehicle entry
     detect(sg, proj, MAP) {
       const fromNodes = sg_query.missingChild(30, 53).map(node => ({
         geom: { type:'point', x: node.geom[0]?.x || 490, y: node.geom[0]?.y || 400 },
-        context: { edge: 'node', parent: node },
+        context: { edge:'node', parent:node },
       }));
-      // Site boundary entries — only if none exist yet
       const existing = sg_query.ofPattern(53);
-      const boundaryEntries = existing.length === 0 ? [
-        { geom:{ type:'point', x: MAP.x0+20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'west',  parent:null } },
-        { geom:{ type:'point', x: MAP.x1-20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'east',  parent:null } },
-        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y0+20 }, context:{ edge:'north', parent:null } },
-        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y1-20 }, context:{ edge:'south', parent:null } },
-      ] : [];
+      if (existing.length > 0) return fromNodes;
+      const G = window._derivedG;
+      const spx = G?.SPINE ? G.SPINE.x + G.SPINE.w/2 : (MAP.x0+MAP.x1)/2;
+      const boundaryEntries = [
+        { geom:{ type:'point', x:spx, y:MAP.y1-20 },
+          context:{ edge:'south_tide', label:'TIDE station', parent:null } },
+        { geom:{ type:'point', x:spx, y:MAP.y0+20 },
+          context:{ edge:'north_vbb', label:'Va Beach Blvd', parent:null } },
+        { geom:{ type:'point', x:MAP.x0+20, y:(MAP.y0+MAP.y1)*0.55 },
+          context:{ edge:'west_military', label:'N Military Hwy', parent:null } },
+        { geom:{ type:'point', x:MAP.x1-20, y:(MAP.y0+MAP.y1)*0.55 },
+          context:{ edge:'east_tidewater', label:'Tidewater Dr', parent:null } },
+      ];
       return [...fromNodes, ...boundaryEntries];
     },
     instantiate(cand) {
       const inst = mkInstance(53, 'point', [cand.geom],
-        { edge: cand.context.edge, width_ft: 40 });
+        { edge:cand.context.edge, label:cand.context.label||cand.context.edge, width_ft:40 });
       if (cand.context.parent) adoptInstance(cand.context.parent, inst);
       return inst;
     },
