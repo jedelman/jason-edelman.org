@@ -1388,6 +1388,247 @@ function addTopRect(group, cx, cy, fw, fh, heightFt, mat) {
   group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// FACADE DETAIL — pattern-driven surface articulation
+//
+// P122 Building Fronts  — active ground floor base, distinct from shaft
+// P127 Intimacy Gradient — public face open/banded, rear face solid/recessed
+// P121 Path Shape        — recessed entry notch on the street-facing face
+// P164 Street Windows    — horizontal fenestration bands per floor
+// P166 Gallery Surround  — cornice/ledge line at each floor level
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Which face is "public" (street-facing)?
+// In ft coords: south face = low-y edge (toward main street / BAND).
+// North face = high-y edge (toward housing / park).
+// Returns 'S' | 'N' | 'E' | 'W' based on which derived zone the block faces.
+function publicFace(blk, derived) {
+  const bd = derived.BAND;
+  const sp = derived.SPINE;
+  if (!sp) return 'S';
+  const spineX = sp.x + sp.w / 2;
+  // Blocks east of spine face west (toward spine)
+  // Blocks west of spine face east (toward spine)
+  // Blocks near band face south
+  if (bd && blk.cy < bd.y + bd.h + 200) return 'S';
+  if (blk.cx > spineX + sp.w) return 'W';
+  if (blk.cx < spineX - sp.w) return 'E';
+  return 'S';
+}
+
+// P166: Floor-level cornice lines on all four faces of a box
+// Thin horizontal lines at each floor level — encodes vertical rhythm
+function addFloorBands(group, cx, cy, fw, fh, heightFt, floors, col) {
+  if (floors < 2) return;
+  const floorH = heightFt / floors;
+  const bandMat = new THREE.LineBasicMaterial({
+    color: col.clone().multiplyScalar(1.5),
+    transparent: true, opacity: 0.45
+  });
+  const hw = fw / 2, hd = fh / 2;
+
+  for (let f = 1; f < floors; f++) {
+    const y = f * floorH;
+    // All four faces as horizontal lines at this floor level
+    const faces = [
+      // South face (low-z in three.js)
+      [ftTo3(cx-hw, cy-hd, y), ftTo3(cx+hw, cy-hd, y)],
+      // North face
+      [ftTo3(cx-hw, cy+hd, y), ftTo3(cx+hw, cy+hd, y)],
+      // West face
+      [ftTo3(cx-hw, cy-hd, y), ftTo3(cx-hw, cy+hd, y)],
+      // East face
+      [ftTo3(cx+hw, cy-hd, y), ftTo3(cx+hw, cy+hd, y)],
+    ];
+    for (const [a, b] of faces) {
+      group.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints([a, b]), bandMat.clone()
+      ));
+    }
+  }
+}
+
+// P122: Base differentiation — ground floor as distinct volume
+// Ground floor: slightly wider, lighter color (active, permeable)
+// Returns the base height used so shaft can start above it
+function addBase122(group, cx, cy, fw, fh, heightFt, floors, col) {
+  const baseFloors = 1;
+  const baseH = (heightFt / floors) * baseFloors;
+  const baseExpand = 4; // ft overhang beyond shaft
+
+  // Base: slightly wider, warmer, more opaque
+  const baseMat = new THREE.MeshLambertMaterial({
+    color: col.clone().lerp(new THREE.Color(0.9, 0.8, 0.6), 0.18),
+    opacity: 0.95, transparent: true
+  });
+  const baseGeo = new THREE.BoxGeometry(fw + baseExpand, baseH, fh + baseExpand);
+  baseGeo.translate(0, baseH / 2, 0);
+  const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+  baseMesh.position.copy(ftTo3(cx, cy, 0));
+  group.add(baseMesh);
+
+  // Base top edge — slightly brighter line
+  const baseEdgeMat = new THREE.LineBasicMaterial({
+    color: col.clone().lerp(new THREE.Color(1, 0.9, 0.7), 0.3).multiplyScalar(1.4),
+    transparent: true, opacity: 0.6
+  });
+  const bew = (fw + baseExpand) / 2, bed = (fh + baseExpand) / 2;
+  const bePts = [
+    ftTo3(cx-bew, cy-bed, baseH), ftTo3(cx+bew, cy-bed, baseH),
+    ftTo3(cx+bew, cy+bed, baseH), ftTo3(cx-bew, cy+bed, baseH),
+    ftTo3(cx-bew, cy-bed, baseH)
+  ];
+  group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(bePts), baseEdgeMat));
+
+  return baseH;
+}
+
+// P164: Fenestration bands — horizontal window-strip geometry on public face
+// Implemented as a series of thin flat planes (glass-like) per floor
+function addWindowBands(group, cx, cy, fw, fh, baseH, heightFt, floors, col, face) {
+  if (floors < 2) return;
+  const floorH = (heightFt - baseH) / Math.max(floors - 1, 1);
+  const winH = floorH * 0.38; // window occupies 38% of floor height
+  const winInset = 1.5; // ft inset from face
+  const winMat = new THREE.MeshBasicMaterial({
+    color: col.clone().lerp(new THREE.Color(0.7, 0.85, 1.0), 0.4).multiplyScalar(1.2),
+    transparent: true, opacity: 0.25, side: THREE.DoubleSide
+  });
+
+  const hw = fw / 2, hd = fh / 2;
+
+  for (let f = 1; f < floors; f++) {
+    const yBot = baseH + (f - 1) * floorH + floorH * 0.15;
+    const yTop = yBot + winH;
+    const yMid = (yBot + yTop) / 2;
+    const winHh = winH / 2;
+
+    let geo, pos;
+    if (face === 'S') {
+      geo = new THREE.PlaneGeometry(fw * 0.82, winH);
+      pos = ftTo3(cx, cy - hd + winInset, yMid);
+      // no rotation needed — PlaneGeometry faces +z by default in Three.js
+    } else if (face === 'N') {
+      geo = new THREE.PlaneGeometry(fw * 0.82, winH);
+      pos = ftTo3(cx, cy + hd - winInset, yMid);
+    } else if (face === 'W') {
+      geo = new THREE.PlaneGeometry(fh * 0.82, winH);
+      pos = ftTo3(cx - hw + winInset, cy, yMid);
+      geo.rotateY(Math.PI / 2);
+    } else { // E
+      geo = new THREE.PlaneGeometry(fh * 0.82, winH);
+      pos = ftTo3(cx + hw - winInset, cy, yMid);
+      geo.rotateY(Math.PI / 2);
+    }
+
+    const mesh = new THREE.Mesh(geo, winMat.clone());
+    mesh.position.copy(pos);
+    group.add(mesh);
+  }
+}
+
+// P121: Entry recess — small notch box on public face, ground floor only
+function addEntryRecess(group, cx, cy, fw, fh, baseH, col, face) {
+  const recessW = Math.min(fw * 0.22, 20); // ft wide
+  const recessD = 6; // ft deep
+  const recessH = baseH * 0.92;
+  const darkMat = new THREE.MeshLambertMaterial({
+    color: col.clone().multiplyScalar(0.35), opacity: 0.95, transparent: true
+  });
+
+  let rx, ry;
+  const hw = fw / 2, hd = fh / 2;
+  if (face === 'S')      { rx = cx; ry = cy - hd + recessD / 2; }
+  else if (face === 'N') { rx = cx; ry = cy + hd - recessD / 2; }
+  else if (face === 'W') { rx = cx - hw + recessD / 2; ry = cy; }
+  else                   { rx = cx + hw - recessD / 2; ry = cy; }
+
+  const isNS = face === 'S' || face === 'N';
+  const rw = isNS ? recessW : recessD;
+  const rd = isNS ? recessD  : recessW;
+
+  addBox(group, rx, ry, rw, rd, recessH, darkMat);
+}
+
+// P127: Intimacy gradient — rear face (opposite public) gets a parapet bump
+// A small solid element at the top of the rear face signals the private edge
+function addParapet127(group, cx, cy, fw, fh, heightFt, col, face) {
+  const parapetH = 3 * HT_SCALE; // ~3ft visible bump
+  const parapetD = 6; // ft depth
+  const parapetMat = new THREE.MeshLambertMaterial({
+    color: col.clone().multiplyScalar(0.8), opacity: 0.9, transparent: true
+  });
+
+  // Rear face = opposite of public face
+  const hw = fw / 2, hd = fh / 2;
+  let rx, ry, pw, pd;
+  if (face === 'S')      { rx = cx; ry = cy + hd - parapetD/2; pw = fw; pd = parapetD; }
+  else if (face === 'N') { rx = cx; ry = cy - hd + parapetD/2; pw = fw; pd = parapetD; }
+  else if (face === 'W') { rx = cx + hw - parapetD/2; ry = cy; pw = parapetD; pd = fh; }
+  else                   { rx = cx - hw + parapetD/2; ry = cy; pw = parapetD; pd = fh; }
+
+  const geo = new THREE.BoxGeometry(pw, parapetH, pd);
+  geo.translate(0, parapetH / 2, 0);
+  const mesh = new THREE.Mesh(geo, parapetMat);
+  // position at top of building
+  const base3 = ftTo3(rx, ry, 0);
+  mesh.position.set(base3.x, heightFt, base3.z);
+  group.add(mesh);
+}
+
+// ── MASTER DETAIL APPLICATOR ─────────────────────────────────────────────────
+// Called instead of bare addBox for the main building shaft.
+// Applies all relevant pattern details based on typology + floor count.
+function addDetailedBuilding(group, blk, heightFt, col, derived) {
+  const { cx, cy, fw, fh, floors, typology } = blk;
+  const face = publicFace(blk, derived);
+
+  // Main shaft material
+  const shaftMat = new THREE.MeshLambertMaterial({
+    color: col, opacity: 0.88, transparent: true
+  });
+  const edgeMat = new THREE.LineBasicMaterial({
+    color: col.clone().multiplyScalar(1.5), opacity: 0.5, transparent: true
+  });
+
+  // P122: Base — always applied (ground floor is always active)
+  const baseH = addBase122(group, cx, cy, fw, fh, heightFt, floors, col);
+
+  // Shaft above base
+  const shaftH = heightFt - baseH;
+  if (shaftH > 4) {
+    const shaftCY_world = baseH + shaftH / 2;
+    const shaftGeo = new THREE.BoxGeometry(fw, shaftH, fh);
+    shaftGeo.translate(0, shaftH / 2, 0);
+    const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat.clone());
+    const pos = ftTo3(cx, cy, 0);
+    shaftMesh.position.set(pos.x, baseH, pos.z);
+    group.add(shaftMesh);
+  }
+
+  // Top edge
+  addTopRect(group, cx, cy, fw, fh, heightFt, edgeMat.clone());
+
+  // P166: Floor bands (2+ floors only — adds real vertical rhythm)
+  if (floors >= 2) {
+    addFloorBands(group, cx, cy, fw, fh, heightFt, floors, col);
+  }
+
+  // P164: Window bands on public face (3+ floors — enough surface to read)
+  if (floors >= 3) {
+    addWindowBands(group, cx, cy, fw, fh, baseH, heightFt, floors, col, face);
+  }
+
+  // P121: Entry recess on public face (all buildings)
+  addEntryRecess(group, cx, cy, fw, fh, baseH, col, face);
+
+  // P127: Parapet on private (rear) face (4+ floors — taller buildings read it)
+  if (floors >= 4) {
+    addParapet127(group, cx, cy, fw, fh, heightFt, col, face);
+  }
+}
+
+
 // ── TYPOLOGY CLASSIFIERS ─────────────────────────────────────────────────────
 
 // P106: Is this block centroid inside a protected outdoor zone?
@@ -1528,6 +1769,10 @@ function buildP106Courtyard(group, blk, heightFt, col, openDir) {
     addBox(group, armX, cy + (fh - wallD) / 2, armW, wallD, lowerH, mat.clone());
     addTopRect(group, armX, cy + (fh - wallD) / 2, armW, wallD, lowerH, edgeMat.clone());
   }
+  // P166/P164 detail on courtyard arms (floor bands + windows on outer faces)
+  if (floors >= 2) addFloorBands(group, cx, cy, fw, fh, heightFt, floors, col);
+  if (floors >= 3) addWindowBands(group, cx, cy, fw, fh, 0, heightFt, floors, col, openDir === 'S' ? 'N' : openDir === 'N' ? 'S' : openDir === 'E' ? 'W' : 'E');
+  addEntryRecess(group, cx, cy, fw, fh, heightFt/floors, col, openDir);
 }
 
 // P119 Arcade: two-part section — wide low base + narrower tower
@@ -1743,26 +1988,24 @@ function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
       const notchW = blk.fw * 0.45;
       const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
       const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
-      // North slab
+      // North slab — detailed
       const northD = blk.fh - notchD;
       const northCY = blk.cy + notchD / 2;
-      addBox(gBuildings, blk.cx, northCY, blk.fw, northD, heightFt, mat.clone());
-      addTopRect(gBuildings, blk.cx, northCY, blk.fw, northD, heightFt, edgeMat.clone());
-      // Wings
+      const northBlk = {...blk, cy: northCY, fh: northD};
+      addDetailedBuilding(gBuildings, northBlk, heightFt, col, derived);
+      // Wings — detailed (shorter)
       const wingW = (blk.fw - notchW) / 2;
       if (wingW > 8) {
         [-1, 1].forEach(side => {
           const wingCX = blk.cx + side * (notchW/2 + wingW/2);
-          addBox(gBuildings, wingCX, blk.cy - blk.fh/2 + notchD/2, wingW, notchD, heightFt * 0.7, mat.clone());
-          addTopRect(gBuildings, wingCX, blk.cy - blk.fh/2 + notchD/2, wingW, notchD, heightFt * 0.7, edgeMat.clone());
+          const wingCY = blk.cy - blk.fh/2 + notchD/2;
+          const wingBlk = {...blk, cx: wingCX, cy: wingCY, fw: wingW, fh: notchD, floors: Math.max(Math.round(blk.floors * 0.7), 2)};
+          addDetailedBuilding(gBuildings, wingBlk, heightFt * 0.7, col, derived);
         });
       }
     } else {
-      // Solid — simple box, P116 heights already applied
-      const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
-      const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
-      addBox(gBuildings, blk.cx, blk.cy, blk.fw, blk.fh, heightFt, mat);
-      addTopRect(gBuildings, blk.cx, blk.cy, blk.fw, blk.fh, heightFt, edgeMat);
+      // Solid — P122/P127/P164/P166 facade detail
+      addDetailedBuilding(gBuildings, blk, heightFt, col, derived);
     }
   }
 }
