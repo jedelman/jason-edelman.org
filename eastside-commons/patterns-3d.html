@@ -1354,55 +1354,103 @@ function hexColor(hex) {
   return parseInt(hex.replace('#',''), 16);
 }
 
-function buildBuildings(buildings, derived, PATTERNS) {
-  while(gBuildings.children.length) gBuildings.remove(gBuildings.children[0]);
-  if (!buildings || !buildings.length) return;
-
-  // Spine x for distance-to-height
+// Re-cluster hot nodes at urban block scale and extrude as buildings.
+// The solver's buildFootprints produces phone-booth-scale results at 10ft res;
+// we need ~80-250ft blocks. So we ignore solver buildings and re-cluster here.
+function clusterUrbanBlocks(hotNodes, derived) {
+  if (!hotNodes || !hotNodes.length) return [];
   const spineX = derived.SPINE ? derived.SPINE.x + derived.SPINE.w/2 : 0;
-  const siteH = derived.SPINE ? derived.SPINE.h : 1000;
 
-  for (const b of buildings) {
-    // Height: P116 cascade — closer to spine = taller
-    // avgStrong encodes pattern count; use it + distance from spine
-    const distFromSpine = Math.abs((b.x + b.w/2) - spineX);
-    const maxDist = 600; // ft — beyond this = min height
-    const t = Math.min(distFromSpine / maxDist, 1);
-    // floors: 7 at spine → 3 at edge; P116 mapping
-    const floors = Math.round(7 - t * 4);
-    const heightFt = floors * 12 * HT_SCALE; // 12ft/floor, scaled
+  // Cluster radius: ~150ft — one city block
+  const R = 150;
+  const used = new Uint8Array(hotNodes.length);
+  const blocks = [];
 
-    // color from dominant pattern
-    const pid = b.domPid;
-    const patColor = (PATTERNS[pid] && PATTERNS[pid].color) ? PATTERNS[pid].color : '#506050';
+  // Sort by nStrong desc so strongest nodes seed clusters
+  const sorted = hotNodes.map((n,i) => ({...n, _i: i})).sort((a,b) => b.nStrong - a.nStrong);
 
-    const w = b.w, d = b.h; // footprint in ft
+  for (const seed of sorted) {
+    if (used[seed._i]) continue;
+    const members = [seed];
+    used[seed._i] = 1;
+    for (const n of sorted) {
+      if (used[n._i]) continue;
+      if (Math.hypot(n.x - seed.x, n.y - seed.y) < R) {
+        members.push(n);
+        used[n._i] = 1;
+      }
+    }
 
-    const geo = new THREE.BoxGeometry(w, heightFt, d);
-    // Shift so base is at y=0
-    geo.translate(0, heightFt/2, 0);
+    // Bounding box of cluster
+    const xs = members.map(n => n.x), ys = members.map(n => n.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
 
-    const mat = new THREE.MeshLambertMaterial({
-      color: hexColor(patColor),
-      transparent: true,
-      opacity: 0.82,
-    });
+    // Footprint: clamp to 40-180ft per side (real building block scale)
+    const fw = Math.max(40, Math.min(180, maxX - minX + 40));
+    const fh = Math.max(40, Math.min(180, maxY - minY + 40));
+
+    // Height: P116 cascade from spine distance
+    const distFromSpine = Math.abs(cx - spineX);
+    const t = Math.min(distFromSpine / 550, 1); // 550ft = max meaningful distance
+    const floors = 7 - Math.round(t * 4); // 7 → 3
+
+    // Dominant pattern
+    const tally = {};
+    for (const m of members) {
+      const top = Object.entries(m.weights || {}).sort((a,b) => b[1]-a[1])[0];
+      if (top) tally[top[0]] = (tally[top[0]] || 0) + 1;
+    }
+    const domPid = Object.entries(tally).sort((a,b) => b[1]-a[1])[0]?.[0];
+    const avgStrong = members.reduce((s,m) => s + m.nStrong, 0) / members.length;
+
+    blocks.push({ cx, cy, fw, fh, floors, domPid, avgStrong, count: members.length });
+  }
+  return blocks;
+}
+
+function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
+  while(gBuildings.children.length) gBuildings.remove(gBuildings.children[0]);
+
+  const blocks = clusterUrbanBlocks(hotNodes, derived);
+  if (!blocks.length) return;
+
+  const spineX = derived.SPINE ? derived.SPINE.x + derived.SPINE.w/2 : 0;
+
+  // Muted palette: desaturate pattern colors, vary by floor count
+  function blockColor(pid, floors) {
+    const base = (PATTERNS[pid] && PATTERNS[pid].color) ? PATTERNS[pid].color : '#4a6040';
+    // darken low-floor buildings, brighten tall ones
+    const r = parseInt(base.slice(1,3), 16);
+    const g = parseInt(base.slice(3,5), 16);
+    const b = parseInt(base.slice(5,7), 16);
+    const lum = 0.5 + (floors - 3) / 8; // 3 floors=0.5, 7 floors=1.0
+    return new THREE.Color(r/255 * lum, g/255 * lum, b/255 * lum);
+  }
+
+  for (const blk of blocks) {
+    const heightFt = blk.floors * 12 * HT_SCALE;
+    const col = blockColor(blk.domPid, blk.floors);
+
+    // Main box — base at y=0
+    const geo = new THREE.BoxGeometry(blk.fw, heightFt, blk.fh);
+    geo.translate(0, heightFt / 2, 0);
+    const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
     const mesh = new THREE.Mesh(geo, mat);
-    // Position at footprint center
-    const center3 = ftTo3(b.x + b.w/2, b.y + b.h/2, 0);
-    mesh.position.copy(center3);
+    mesh.position.copy(ftTo3(blk.cx, blk.cy, 0));
     gBuildings.add(mesh);
 
-    // Wireframe top edges
-    const edgeMat = new THREE.LineBasicMaterial({ color: hexColor(patColor), opacity: 0.5, transparent: true });
-    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(w, heightFt, d));
-    const wireframe = new THREE.LineSegments(edges, edgeMat);
-    wireframe.position.copy(center3);
-    wireframe.position.y += heightFt/2;
-    wireframe.position.y -= heightFt/2; // re-center properly
-    const wf2 = new THREE.LineSegments(edges, edgeMat);
-    wf2.position.copy(center3);
-    gBuildings.add(wf2);
+    // Top edge wireframe only — cleaner than full edges
+    const topEdges = [
+      ftTo3(blk.cx - blk.fw/2, blk.cy - blk.fh/2, heightFt),
+      ftTo3(blk.cx + blk.fw/2, blk.cy - blk.fh/2, heightFt),
+      ftTo3(blk.cx + blk.fw/2, blk.cy + blk.fh/2, heightFt),
+      ftTo3(blk.cx - blk.fw/2, blk.cy + blk.fh/2, heightFt),
+      ftTo3(blk.cx - blk.fw/2, blk.cy - blk.fh/2, heightFt),
+    ];
+    const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.8), opacity: 0.6, transparent: true });
+    gBuildings.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(topEdges), edgeMat));
   }
 }
 
@@ -1411,51 +1459,63 @@ function buildFieldLines(fieldLines, MAP, PATTERNS) {
   while(gLines.children.length) gLines.remove(gLines.children[0]);
   if (!fieldLines || !fieldLines.length) return;
 
-  // Max pressure for normalization
+  // Only top 50% by seed pressure — reduce clutter
+  const pressures = fieldLines.map(l => l.seedPressure || 0).sort((a,b) => b-a);
+  const cutoff = pressures[Math.floor(pressures.length * 0.5)] || 0;
+
   let maxP = 0;
-  for (const line of fieldLines) for (const pt of line.pts) if ((pt.v||pt.total||0) > maxP) maxP = (pt.v||pt.total||0);
+  for (const line of fieldLines) for (const pt of line.pts) if ((pt.v||0) > maxP) maxP = pt.v||0;
   if (maxP === 0) maxP = 1;
 
-  for (const line of fieldLines) {
-    const pts = line.pts;
-    if (pts.length < 2) continue;
+  // Tallest building height estimate for elevation base
+  const maxBldgH = 7 * 12 * HT_SCALE;
 
-    // Build 3D points: x=ft_x, z=-ft_y, y=pressure*heightScale
+  for (const line of fieldLines) {
+    if ((line.seedPressure||0) < cutoff) continue;
+    const pts = line.pts;
+    if (pts.length < 3) continue;
+
+    // Float field lines above buildings
     const points3 = pts.map(pt => {
-      const pNorm = (pt.v||pt.total||0) / maxP;
-      const heightFt = pNorm * 120 * HT_SCALE; // max 120ft * scale
+      const pNorm = (pt.v || 0) / maxP;
+      const heightFt = maxBldgH + 20 + pNorm * 60 * HT_SCALE;
       return ftTo3(pt.x, pt.y, heightFt);
     });
 
-    // Dominant pattern color
+    // Dominant pattern at midpoint
     let domPid = null, domW = 0;
-    if (pts[Math.floor(pts.length/2)].weights) {
-      for (const [pid, w] of Object.entries(pts[Math.floor(pts.length/2)].weights)) {
+    const mid = pts[Math.floor(pts.length/2)];
+    if (mid.weights) {
+      for (const [pid, w] of Object.entries(mid.weights)) {
         if (w > domW) { domW = w; domPid = pid; }
       }
     }
-    const lineColor = (PATTERNS[domPid] && PATTERNS[domPid].color) ? hexColor(PATTERNS[domPid].color) : 0x40a060;
-    const pressure = line.seedPressure || 0;
-    const opacity = 0.3 + pressure * 0.5;
+    const lineColor = (PATTERNS[domPid] && PATTERNS[domPid].color)
+      ? hexColor(PATTERNS[domPid].color) : 0x80c080;
+    const opacity = 0.5 + (line.seedPressure || 0) * 0.4;
 
-    const mat = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: Math.min(opacity, 0.85) });
-    const geo = new THREE.BufferGeometry().setFromPoints(points3);
-    gLines.add(new THREE.Line(geo, mat));
+    const mat = new THREE.LineBasicMaterial({ color: lineColor, transparent: true, opacity: Math.min(opacity, 0.92) });
+    gLines.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points3), mat));
   }
 }
 
 // ── HOT NODES ─────────────────────────────────────────────────────────────────
+// Only render top-tier nodes — these become landmark/activity markers
 function buildHotNodes3D(hotNodes, PATTERNS) {
   while(gNodes.children.length) gNodes.remove(gNodes.children[0]);
   if (!hotNodes || !hotNodes.length) return;
 
   const maxStrong = Math.max(...hotNodes.map(n => n.nStrong));
+  // Only top 8% by nStrong = true activity peaks
+  const threshold = maxStrong * 0.72;
+  const elite = hotNodes.filter(n => n.nStrong >= threshold);
+  if (!elite.length) return;
 
-  for (const node of hotNodes) {
-    const h = (node.nStrong / Math.max(maxStrong, 1)) * 200 * HT_SCALE;
-    const r = 8 + (node.nStrong / Math.max(maxStrong,1)) * 24;
+  for (const node of elite) {
+    const t = (node.nStrong - threshold) / Math.max(maxStrong - threshold, 1);
+    const h = (60 + t * 120) * HT_SCALE; // 60-180ft above ground
+    const r = 12 + t * 18;
 
-    // Get dominant pattern color
     let domPid = null, domW = 0;
     if (node.weights) {
       for (const [pid, w] of Object.entries(node.weights)) {
@@ -1464,23 +1524,21 @@ function buildHotNodes3D(hotNodes, PATTERNS) {
     }
     const col = (PATTERNS[domPid] && PATTERNS[domPid].color) ? hexColor(PATTERNS[domPid].color) : 0xe08030;
 
-    // Vertical cylinder = "column" or "tower marker"
-    const geo = new THREE.CylinderGeometry(r*0.4, r, h, 8);
+    // Slender column — landmark, not clutter
+    const geo = new THREE.CylinderGeometry(r * 0.35, r * 0.55, h, 8);
     geo.translate(0, h/2, 0);
-    const mat = new THREE.MeshLambertMaterial({ color: col, transparent: true, opacity: 0.75 });
+    const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.9, transparent: true });
     const mesh = new THREE.Mesh(geo, mat);
-    const pos3 = ftTo3(node.x, node.y, 0);
-    mesh.position.copy(pos3);
+    mesh.position.copy(ftTo3(node.x, node.y, 0));
     gNodes.add(mesh);
 
-    // Glow disc at base
-    const discGeo = new THREE.CircleGeometry(r*1.5, 16);
-    discGeo.rotateX(-Math.PI/2);
-    const discMat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.2, side: THREE.DoubleSide });
-    const disc = new THREE.Mesh(discGeo, discMat);
-    disc.position.copy(pos3);
-    disc.position.y = 0.5;
-    gNodes.add(disc);
+    // Ring at top
+    const ringGeo = new THREE.TorusGeometry(r * 0.8, 2, 6, 16);
+    const ringMat = new THREE.MeshBasicMaterial({ color: col });
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.position.copy(ftTo3(node.x, node.y, h));
+    ring.rotation.x = Math.PI / 2;
+    gNodes.add(ring);
   }
 }
 
@@ -1552,7 +1610,7 @@ function render3D(result) {
   const { fieldLines, hotNodes, buildings, MAP, derived, PATTERNS, proj } = result;
   buildGround(MAP, PARCEL_DATA.parcels, proj);
   buildSiteFacts3D(derived);
-  buildBuildings(buildings, derived, PATTERNS);
+  buildBuildings(buildings, derived, PATTERNS, hotNodes);
   buildFieldLines(fieldLines, MAP, PATTERNS);
   buildHotNodes3D(hotNodes, PATTERNS);
 }
