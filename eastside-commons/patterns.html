@@ -128,8 +128,8 @@
   </div>
   <div class="ctrl-group">
     <span class="ctrl-label">Resolution</span>
-    <input type="range" id="ctrl-res" min="4" max="20" value="10" step="2">
-    <span class="ctrl-val" id="val-res">10px</span>
+    <input type="range" id="ctrl-res" min="10" max="100" value="25" step="5">
+    <span class="ctrl-val" id="val-res">25ft</span>
   </div>
   <div class="ctrl-group">
     <span class="ctrl-label">Threshold</span>
@@ -165,7 +165,7 @@
       <g id="layer-buildings"></g>
       <g id="layer-labels"></g>
     </svg>
-    <div id="canvas-label">Military Circle · 73.4 ac · Norfolk VA · field model</div>
+    <div id="canvas-label">Military Circle · 73.4 ac · Norfolk VA · field model · ft</div>
     <div id="pass-bar">
       <button id="btn-prev">◀</button>
       <input type="range" id="pass-slider" min="0" value="0">
@@ -198,7 +198,7 @@
         </div>
         <p><em>Field model:</em> each pattern deposits pressure across the site. A location matters because multiple patterns want it simultaneously — not because one pattern owns it.</p>
         <p><em>Max passes</em> caps the run. <em>Saturate ε</em>: if mean field change drops below ε, the solver stops early. With patterns in tension (P104 vs P60, P115 vs P122), the field may oscillate and never saturate — that's correct behaviour.</p>
-        <p><em>Resolution</em>: grid cell size. Smaller = finer lines, slower.</p>
+        <p><em>Resolution</em>: grid cell size in feet. 10ft = fine, 25ft = standard, 50ft = fast. Patterns use real architectural distances.</p>
         <p><em>Threshold</em>: minimum combined pressure to trace a field line.</p>
         <p><em>Line weight</em>: proportional to combined pressure at that point. <em>Color</em>: dominant pattern mix.</p>
       </div>
@@ -212,25 +212,59 @@ const PARCEL_DATA = {"parcels":[{"acct":"00438200","gpin":"","spec":"","area_ac"
 
 // ── PROJECTION + GIS ─────────────────────────────────────────────────────────
 function buildProjection(parcels) {
+  // Project to feet from site south-west corner.
+  // 1° lat ≈ 111320m; 1° lon ≈ cos(lat)*111320m.
+  // Y axis: north = +y (we flip for SVG later).
   const edaParcels = parcels.filter(p => p.is_eda);
   let minLon=Infinity, maxLon=-Infinity, minLat=Infinity, maxLat=-Infinity;
   for (const p of edaParcels) {
     for (const ring of p.rings) {
       for (const [lon,lat] of ring) {
-        if (lon<minLon) minLon=lon; if (lon>maxLon) maxLon=lon;
-        if (lat<minLat) minLat=lat; if (lat>maxLat) maxLat=lat;
+        if(lon<minLon)minLon=lon; if(lon>maxLon)maxLon=lon;
+        if(lat<minLat)minLat=lat; if(lat>maxLat)maxLat=lat;
       }
     }
   }
-  const padLon=(maxLon-minLon)*0.18, padLat=(maxLat-minLat)*0.20;
-  minLon-=padLon; maxLon+=padLon; minLat-=padLat; maxLat+=padLat;
-  const MAP={x0:139,y0:163,x1:841,y1:653};
-  const mapW=MAP.x1-MAP.x0, mapH=MAP.y1-MAP.y0;
-  function proj(lon,lat) {
-    return [MAP.x0+(lon-minLon)/(maxLon-minLon)*mapW,
-            MAP.y1-(lat-minLat)/(maxLat-minLat)*mapH];
+  const latRad = (minLat+maxLat)/2 * Math.PI/180;
+  const M_PER_DEG_LON = Math.cos(latRad)*111320;
+  const M_PER_DEG_LAT = 111320;
+  const FT_PER_M = 3.28084;
+
+  // Site bounds in feet (south-west origin, north = +y)
+  const siteWft = (maxLon-minLon)*M_PER_DEG_LON*FT_PER_M;
+  const siteHft = (maxLat-minLat)*M_PER_DEG_LAT*FT_PER_M;
+
+  // Pad 12% each side so EDA isn't clipped
+  const padX = siteWft*0.12, padY = siteHft*0.12;
+
+  // Field-space MAP in feet (origin = SW corner of padded bbox)
+  const MAP = {
+    x0: -padX,       y0: -padY,
+    x1: siteWft+padX, y1: siteHft+padY,
+    // Convenience
+    siteWft, siteHft,
+    // SVG viewport (unchanged — only used for rendering)
+    svgX0:139, svgY0:163, svgX1:841, svgY1:653,
+  };
+
+  // proj(lon, lat) → [ft_x, ft_y]  (north = +y, south-west origin)
+  function proj(lon, lat) {
+    const fx = (lon - minLon) * M_PER_DEG_LON * FT_PER_M;
+    const fy = (lat - minLat) * M_PER_DEG_LAT * FT_PER_M;
+    return [fx, fy];
   }
-  return {proj,MAP};
+
+  // ftToSvg(fx, fy) → [svgX, svgY]  (flip y for SVG)
+  const svgW = MAP.svgX1-MAP.svgX0, svgH = MAP.svgY1-MAP.svgY0;
+  const ftW  = MAP.x1-MAP.x0,       ftH  = MAP.y1-MAP.y0;
+  function ftToSvg(fx, fy) {
+    return [
+      MAP.svgX0 + (fx-MAP.x0)/ftW * svgW,
+      MAP.svgY1 - (fy-MAP.y0)/ftH * svgH,   // flip: north (+fy) → top (−svgY)
+    ];
+  }
+
+  return {proj, MAP, ftToSvg};
 }
 
 function buildParcelGeometry(parcels,proj) {
@@ -246,44 +280,68 @@ function buildParcelGeometry(parcels,proj) {
       }
     }
     if(n===0)continue;
+    // In feet (north=+y): top=north=maxY, bottom=south=minY
     geom[p.spec]={centroid_x:cx/n,centroid_y:cy/n,
-      bbox:{left:minX,right:maxX,top:minY,bottom:maxY,width:maxX-minX,height:maxY-minY}};
+      bbox:{left:minX,right:maxX,top:maxY,bottom:minY,width:maxX-minX,height:maxY-minY}};
   }
   return geom;
 }
 
 function solveConstraintsMin(G, MAP) {
+  // All values in feet. Parcel geometry (G) is already in feet from buildParcelGeometry.
   const derived = {};
-  const MALL=G['MALL_CORE'], SP_PAR=G['SPONGE_PARCEL'],
-        HB_PAR=G['HOUSING_B_S'];
+  const MALL=G['MALL_CORE'], SP_PAR=G['SPONGE_PARCEL'], HB_PAR=G['HOUSING_B_S'];
   if (!MALL) return {derived};
-  const spine_w=Math.max(MALL.bbox.width*0.18,38);
-  const spine_x=MALL.centroid_x-spine_w/2;
-  derived.SPINE={x:spine_x,y:MAP.y0,w:spine_w,h:MAP.y1-MAP.y0};
-  const sl=spine_x,sr=spine_x+spine_w,scx=spine_x+spine_w/2;
+
+  // Commons Spine: 18% of MALL width, min 120ft wide, full N-S site height
+  // Feet coordinate system: north = +y, south = -y (SW origin).
+  // bbox.top = northernmost (max y), bbox.bottom = southernmost (min y).
+  // SPINE runs full N-S (MAP.y0 to MAP.y1).
+  const spine_w = Math.max(MALL.bbox.width*0.18, 120);
+  const spine_x = MALL.centroid_x - spine_w/2;
+  derived.SPINE = {x:spine_x, y:MAP.y0, w:spine_w, h:MAP.y1-MAP.y0};
+  const sl=spine_x, sr=spine_x+spine_w, scx=spine_x+spine_w/2;
+
+  // Main Street Band: southern edge of site (low y) up to south edge of MS parcels.
+  // MS parcels are at the south of the site (small y values in ft).
+  // Band = zone from MAP.y0 (south boundary) northward to MS north edge.
   const compactMS=['MAIN_ST_LARGE','MAIN_ST_MID','MAIN_ST_5773','MAIN_ST_5825'];
-  const msBotRaw=Math.max(...compactMS.filter(n=>G[n]).map(n=>G[n].bbox.bottom));
-  const bandBot=Math.min(msBotRaw+6,MALL.bbox.top-4);
-  derived.BAND={x:MAP.x0,y:MAP.y0,w:MAP.x1-MAP.x0,h:bandBot-MAP.y0};
-  const bby=MAP.y0+derived.BAND.h;
-  const sg_avail_left=sr+10, sg_avail_right=MAP.x1-100;
-  const sg_avail_top=bby+8;
-  const sg_avail_bot=HB_PAR?HB_PAR.bbox.top-6:MAP.y1-100;
-  const sg_rx=Math.min((sg_avail_right-sg_avail_left)/2,90);
-  const sg_ry=Math.min((sg_avail_bot-sg_avail_top)/2,70);
-  let sg_cx=sg_avail_left+sg_rx, sg_cy=(sg_avail_top+sg_avail_bot)/2;
-  if(SP_PAR){const dist=Math.abs(SP_PAR.centroid_x-sg_cx);if(dist<sg_rx*1.5)sg_cx=(sg_cx+SP_PAR.centroid_x)/2;sg_cy=(sg_cy+SP_PAR.centroid_y)/2;}
-  derived.SPONGE={cx:sg_cx,cy:sg_cy,rx:sg_rx,ry:sg_ry};
-  derived.BASIN={cx:sg_cx,cy:sg_cy,rx:sg_rx*0.38,ry:sg_ry*0.38};
-  const res_w=80,res_h=44;
-  const res_x=Math.min(sg_cx+sg_rx+10,MAP.x1-res_w-4);
-  derived.RESEARCH={x:res_x,y:sg_cy-res_h/2,w:res_w,h:res_h};
-  const ross_w=100,ross_h=62;
-  const ross_x=Math.max(Math.min(sr+8,MALL.bbox.right-ross_w-4),sr+6);
-  derived.ROSS={x:ross_x,y:Math.max(bby+6,MALL.bbox.top+4),w:ross_w,h:ross_h};
-  const tide_h=73;
-  derived.TIDE={x:sl,y:MAP.y1-tide_h,w:spine_w,h:tide_h};
-  derived.BIKE={y:bby-5,x0:MAP.x0,x0end:sl-2,x1start:sr+2,x1end:MAP.x1};
+  // top = northernmost edge of MS parcels (the edge closest to the interior)
+  const msBotRaw=Math.max(...compactMS.filter(n=>G[n]).map(n=>G[n].bbox.top));
+  const bandTop=Math.min(msBotRaw+20, MALL.bbox.bottom+15);
+  derived.BAND={x:MAP.x0, y:MAP.y0, w:MAP.x1-MAP.x0, h:bandTop-MAP.y0};
+  const bby=MAP.y0+derived.BAND.h;  // north edge of band in ft
+
+  // Sponge Park: east of spine, between band north edge and housing south edge
+  const sg_avail_left=sr+30, sg_avail_right=MAP.x1-300;
+  const sg_avail_south=bby+25;
+  const sg_avail_north=HB_PAR ? HB_PAR.bbox.bottom-20 : MAP.y1-300;
+  const sg_rx=Math.min((sg_avail_right-sg_avail_left)/2, 300);
+  const sg_ry=Math.min((sg_avail_north-sg_avail_south)/2, 230);
+  let sg_cx=sg_avail_left+sg_rx, sg_cy=(sg_avail_south+sg_avail_north)/2;
+  if(SP_PAR){
+    const dist=Math.abs(SP_PAR.centroid_x-sg_cx);
+    if(dist<sg_rx*1.5) sg_cx=(sg_cx+SP_PAR.centroid_x)/2;
+    sg_cy=(sg_cy+SP_PAR.centroid_y)/2;
+  }
+  derived.SPONGE={cx:sg_cx, cy:sg_cy, rx:Math.max(sg_rx,50), ry:Math.max(sg_ry,50)};
+  derived.BASIN ={cx:sg_cx, cy:sg_cy, rx:Math.max(sg_rx,50)*0.38, ry:Math.max(sg_ry,50)*0.38};
+
+  // Research Station: ~300×150ft east of sponge
+  const res_w=300, res_h=150;
+  const res_x=Math.min(sg_cx+sg_rx+30, MAP.x1-res_w-15);
+  derived.RESEARCH={x:res_x, y:sg_cy-res_h/2, w:res_w, h:res_h};
+
+  // Ross Leasehold: ~330×200ft east of spine
+  const ross_w=330, ross_h=200;
+  const ross_x=Math.max(Math.min(sr+25, MALL.bbox.right-ross_w-15), sr+20);
+  derived.ROSS={x:ross_x, y:bby+20, w:ross_w, h:ross_h};
+
+  // TIDE station: ~200ft deep at south end of spine (small y = south)
+  const tide_h=200;
+  derived.TIDE={x:sl, y:MAP.y0, w:spine_w, h:tide_h};
+  derived.BIKE={y:bby+15, x0:MAP.x0, x0end:sl-8, x1start:sr+8, x1end:MAP.x1};
+
   return {derived};
 }
 
@@ -432,15 +490,15 @@ window.EC_FieldSolver = (() => {
 
   defPattern(29, 'Density Rings', 1.0, (field,gw,gh,cs,MAP,site)=>{
     const s=site.derived.SPINE; if(!s) return;
-    // Pressure concentrates along the spine axis — the organizing structure
+    // Spine axis — the primary organizing pressure (400ft wide influence)
     paintSegment(field,gw,gh,cs,MAP, s.x+s.w/2,s.y, s.x+s.w/2,s.y+s.h, s.w*2, 1.2);
-    // Density rings: concentric halos at 100, 200, 350px from spine center
+    // Density rings at 330ft, 660ft, 1150ft from spine centre
     const scx=s.x+s.w/2, scy=s.y+s.h/2;
-    for (const r of [100,200,350]) {
+    for (const r of [330,660,1150]) {
       for (let theta=0;theta<Math.PI*2;theta+=0.15) {
         const px=scx+Math.cos(theta)*r, py=scy+Math.sin(theta)*r;
         if(px>=MAP.x0&&px<=MAP.x1&&py>=MAP.y0&&py<=MAP.y1)
-          paintGaussian(field,gw,gh,cs,MAP,px,py,18,0.15);
+          paintGaussian(field,gw,gh,cs,MAP,px,py,60,0.15);
       }
     }
   });
@@ -449,17 +507,17 @@ window.EC_FieldSolver = (() => {
     const s=site.derived.SPINE; if(!s) return;
     // Strong pressure at two nodes: upper and lower spine thirds
     const scx=s.x+s.w/2;
-    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.25, 70, 1.5);
-    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.75, 70, 1.5);
-    // Secondary nodes at main entries
-    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+30, (MAP.y0+MAP.y1)*0.5, 45, 0.8);
-    paintGaussian(field,gw,gh,cs,MAP, MAP.x1-30, (MAP.y0+MAP.y1)*0.5, 45, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.25, 230, 1.5);
+    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.75, 230, 1.5);
+    // Secondary nodes at main entries (~100ft radius)
+    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+100, (MAP.y0+MAP.y1)*0.5, 150, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, MAP.x1-100, (MAP.y0+MAP.y1)*0.5, 150, 0.8);
   });
 
   defPattern(31, 'Promenade', 1.1, (field,gw,gh,cs,MAP,site)=>{
     const s=site.derived.SPINE; if(!s) return;
     // The promenade runs the full spine length — strong linear pressure
-    paintSegment(field,gw,gh,cs,MAP, s.x+s.w/2,s.y+10, s.x+s.w/2,s.y+s.h-10, 28, 1.4);
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w/2,s.y+30, s.x+s.w/2,s.y+s.h-30, 90, 1.4);
   });
 
   defPattern(36, 'Degrees of Publicness', 0.7, (field,gw,gh,cs,MAP,site)=>{
@@ -467,10 +525,11 @@ window.EC_FieldSolver = (() => {
     // Gradient from spine (most public) outward — a pressure ridge
     // Paint bands of decreasing pressure east and west of spine
     const scx=s.x+s.w/2;
-    for (let dx=0; dx<280; dx+=cs) {
-      const a = Math.exp(-dx*dx/(120*120)) * 0.6;
-      paintSegment(field,gw,gh,cs,MAP, scx+dx,MAP.y0, scx+dx,MAP.y1, 12, a);
-      if(dx>0) paintSegment(field,gw,gh,cs,MAP, scx-dx,MAP.y0, scx-dx,MAP.y1, 12, a);
+    // Gradient 0–950ft east/west; sigma=400ft; band width=40ft
+    for (let dx=0; dx<950; dx+=cs) {
+      const a = Math.exp(-dx*dx/(400*400)) * 0.6;
+      paintSegment(field,gw,gh,cs,MAP, scx+dx,MAP.y0, scx+dx,MAP.y1, 40, a);
+      if(dx>0) paintSegment(field,gw,gh,cs,MAP, scx-dx,MAP.y0, scx-dx,MAP.y1, 40, a);
     }
   });
 
@@ -482,18 +541,14 @@ window.EC_FieldSolver = (() => {
     const scx=s.x+s.w/2;
     const ti=site.derived.TIDE;
     // South: TIDE station — primary transit gateway
-    const southY=ti?ti.y:MAP.y1-30;
-    paintGaussian(field,gw,gh,cs,MAP, scx, southY, 70, 1.4);
-    // North: top of spine — Va Beach Blvd crossing
+    const southY=ti?ti.y:MAP.y1-100;
+    paintGaussian(field,gw,gh,cs,MAP, scx, southY, 220, 1.4);
     const b=site.derived.BAND;
-    paintGaussian(field,gw,gh,cs,MAP, scx, b?b.y+b.h:MAP.y0+60, 65, 1.2);
-    // West entry: mid-height of west EDA edge (people arriving from neighbourhood)
-    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+60, (MAP.y0+MAP.y1)*0.5, 55, 0.95);
-    // East entry: RESEARCH station side
+    paintGaussian(field,gw,gh,cs,MAP, scx, b?b.y+b.h:MAP.y0+200, 210, 1.2);
+    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+200, (MAP.y0+MAP.y1)*0.5, 180, 0.95);
     const rs=site.derived.RESEARCH;
-    paintGaussian(field,gw,gh,cs,MAP, rs?rs.x:MAP.x1-80, (MAP.y0+MAP.y1)*0.5, 55, 0.95);
-    // Spreading paths from each gateway into the site
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+60,(MAP.y0+MAP.y1)*0.5, scx,(MAP.y0+MAP.y1)*0.5, 20, 0.55);
+    paintGaussian(field,gw,gh,cs,MAP, rs?rs.x:MAP.x1-270, (MAP.y0+MAP.y1)*0.5, 180, 0.95);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+200,(MAP.y0+MAP.y1)*0.5, scx,(MAP.y0+MAP.y1)*0.5, 65, 0.55);
   });
 
   defPattern(60, 'Accessible Green', 0.9, (field,gw,gh,cs,MAP,site)=>{
@@ -504,14 +559,12 @@ window.EC_FieldSolver = (() => {
     const s=site.derived.SPINE;
     // West housing green corridors
     if(s){
-      paintEllipse(field,gw,gh,cs,MAP, s.x-60,(MAP.y0+MAP.y1)*0.35, 70,50, 0.65);
-      paintEllipse(field,gw,gh,cs,MAP, s.x-60,(MAP.y0+MAP.y1)*0.65, 70,50, 0.65);
+      paintEllipse(field,gw,gh,cs,MAP, s.x-200,(MAP.y0+MAP.y1)*0.35, 230,165, 0.65);
+      paintEllipse(field,gw,gh,cs,MAP, s.x-200,(MAP.y0+MAP.y1)*0.65, 230,165, 0.65);
     }
-    // East: green buffer between sponge and research station
     const rs=site.derived.RESEARCH;
-    if(rs) paintEllipse(field,gw,gh,cs,MAP, (sg.cx+sg.rx+rs.x)/2,(sg.cy+rs.y+rs.h/2)/2, 55,40, 0.7);
-    // Far east green edge (park boundary)
-    paintSegment(field,gw,gh,cs,MAP, MAP.x1-50,MAP.y0+60, MAP.x1-50,MAP.y1-60, 35, 0.55);
+    if(rs) paintEllipse(field,gw,gh,cs,MAP, (sg.cx+sg.rx+rs.x)/2,(sg.cy+rs.y+rs.h/2)/2, 180,130, 0.7);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x1-165,MAP.y0+200, MAP.x1-165,MAP.y1-200, 115, 0.55);
   });
 
   defPattern(67, 'Common Land', 0.8, (field,gw,gh,cs,MAP,site)=>{
@@ -520,14 +573,14 @@ window.EC_FieldSolver = (() => {
     for (let theta=0;theta<Math.PI*2;theta+=Math.PI/3) {
       const px=sg.cx+Math.cos(theta)*sg.rx*0.85;
       const py=sg.cy+Math.sin(theta)*sg.ry*0.85;
-      paintGaussian(field,gw,gh,cs,MAP, px,py, 40, 0.9);
+      paintGaussian(field,gw,gh,cs,MAP, px,py, 130, 0.9);
     }
   });
 
   defPattern(71, 'Still Water', 0.8, (field,gw,gh,cs,MAP,site)=>{
     const b=site.derived.BASIN; if(!b) return;
     // Still water at basin center — high pressure, small area
-    paintEllipse(field,gw,gh,cs,MAP, b.cx,b.cy,b.rx*1.4,b.ry*1.4, 1.2);
+    paintEllipse(field,gw,gh,cs,MAP, b.cx,b.cy,b.rx*1.5,b.ry*1.5, 1.2);
   });
 
   defPattern(37, 'House Cluster', 0.9, (field,gw,gh,cs,MAP,site)=>{
@@ -542,8 +595,8 @@ window.EC_FieldSolver = (() => {
     const clusterR=Math.min(westWidth*0.28, 75); // cluster radius
     // Six cluster centres distributed across west zone
     const b=site.derived.BAND;
-    const topY=b?b.y+b.h+20:MAP.y0+80;
-    const botY=MAP.y1-40;
+    const topY=b?b.y+b.h+65:MAP.y0+265;
+    const botY=MAP.y1-130;
     const zoneH=botY-topY;
     // Two columns × three rows
     const cols=[MAP.x0+westWidth*0.28, MAP.x0+westWidth*0.68];
@@ -552,7 +605,7 @@ window.EC_FieldSolver = (() => {
       paintGaussian(field,gw,gh,cs,MAP, cx,cy, clusterR, 1.0);
     // Background wash across full west zone — low amplitude, continuous
     // Extend to actual MAP south edge to catch SW corner voids
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,topY, MAP.x0+20,MAP.y1-10, westWidth*0.85, 0.38);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,topY, MAP.x0+65,MAP.y1-33, westWidth*0.85, 0.38);
     // From previous pass: reinforce where pressure is already forming
     if(site.combined){
       for(let i=0;i<field.length;i++){
@@ -570,10 +623,9 @@ window.EC_FieldSolver = (() => {
     const sg=site.derived.SPONGE;
     // Green street pressure: paths connecting spine to sponge and housing
     const scx=s.x+s.w/2;
-    if(sg) paintSegment(field,gw,gh,cs,MAP, scx,s.y+s.h*0.3, sg.cx,sg.cy, 22, 1.0);
-    // East-west green connectors
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,(MAP.y0+MAP.y1)*0.4, scx,(MAP.y0+MAP.y1)*0.4, 18, 0.7);
-    paintSegment(field,gw,gh,cs,MAP, scx,(MAP.y0+MAP.y1)*0.6, MAP.x1-20,(MAP.y0+MAP.y1)*0.6, 18, 0.7);
+    if(sg) paintSegment(field,gw,gh,cs,MAP, scx,s.y+s.h*0.3, sg.cx,sg.cy, 72, 1.0);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,(MAP.y0+MAP.y1)*0.4, scx,(MAP.y0+MAP.y1)*0.4, 60, 0.7);
+    paintSegment(field,gw,gh,cs,MAP, scx,(MAP.y0+MAP.y1)*0.6, MAP.x1-65,(MAP.y0+MAP.y1)*0.6, 60, 0.7);
   });
 
   defPattern(87, 'Shops', 1.0, (field,gw,gh,cs,MAP,site)=>{
@@ -584,33 +636,30 @@ window.EC_FieldSolver = (() => {
     const s=site.derived.SPINE; if(!s) return;
     const bandH=b.h; // full band depth
     // Fill the band with commercial pressure
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+bandH*0.3, MAP.x1-20,b.y+bandH*0.3, bandH*0.5, 1.1);
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+bandH*0.75, MAP.x1-20,b.y+bandH*0.75, bandH*0.4, 0.9);
-    // Spine ground floor: active frontage the full height of the site
-    paintSegment(field,gw,gh,cs,MAP, s.x,MAP.y0+40, s.x,MAP.y1-40, 18, 0.95);
-    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,MAP.y0+40, s.x+s.w,MAP.y1-40, 18, 0.95);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,b.y+bandH*0.3, MAP.x1-65,b.y+bandH*0.3, bandH*0.5, 1.1);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,b.y+bandH*0.75, MAP.x1-65,b.y+bandH*0.75, bandH*0.4, 0.9);
+    paintSegment(field,gw,gh,cs,MAP, s.x,MAP.y0+130, s.x,MAP.y1-130, 60, 0.95);
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,MAP.y0+130, s.x+s.w,MAP.y1-130, 60, 0.95);
   });
 
   defPattern(88, 'Street Cafe', 0.85, (field,gw,gh,cs,MAP,site)=>{
     // Cafe pressure overlaps shops but concentrates at nodes
     const s=site.derived.SPINE; if(!s) return;
     const scx=s.x+s.w/2;
-    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.25, 55, 1.0);
-    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.75, 55, 1.0);
-    // Along band
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.25, 180, 1.0);
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.75, 180, 1.0);
     const b=site.derived.BAND;
-    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+40,b.y+b.h*0.7, MAP.x1-40,b.y+b.h*0.7, 20, 0.7);
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+130,b.y+b.h*0.7, MAP.x1-130,b.y+b.h*0.7, 65, 0.7);
   });
 
   defPattern(100, 'Pedestrian Street', 1.1, (field,gw,gh,cs,MAP,site)=>{
     const s=site.derived.SPINE; if(!s) return;
     // Pedestrian street = full spine length, strong and narrow
     const scx=s.x+s.w/2;
-    paintSegment(field,gw,gh,cs,MAP, scx,s.y+15, scx,s.y+s.h-15, 20, 1.3);
-    // Cross-pedestrian at activity nodes
+    paintSegment(field,gw,gh,cs,MAP, scx,s.y+50, scx,s.y+s.h-50, 65, 1.3);
     const ny1=s.y+s.h*0.25, ny2=s.y+s.h*0.75;
-    paintSegment(field,gw,gh,cs,MAP, scx-80,ny1, scx+80,ny1, 16, 0.8);
-    paintSegment(field,gw,gh,cs,MAP, scx-80,ny2, scx+80,ny2, 16, 0.8);
+    paintSegment(field,gw,gh,cs,MAP, scx-260,ny1, scx+260,ny1, 52, 0.8);
+    paintSegment(field,gw,gh,cs,MAP, scx-260,ny2, scx+260,ny2, 52, 0.8);
   });
 
   defPattern(61, 'Small Public Squares', 0.75, (field,gw,gh,cs,MAP,site)=>{
@@ -618,19 +667,19 @@ window.EC_FieldSolver = (() => {
     const scx=s.x+s.w/2;
     // Small squares at node intersections — localized pressure
     const nodes=[
-      [scx-60, s.y+s.h*0.25], [scx+60, s.y+s.h*0.25],
-      [scx-60, s.y+s.h*0.75], [scx+60, s.y+s.h*0.75],
+      [scx-200, s.y+s.h*0.25], [scx+200, s.y+s.h*0.25],
+      [scx-200, s.y+s.h*0.75], [scx+200, s.y+s.h*0.75],
     ];
-    for (const [px,py] of nodes) paintGaussian(field,gw,gh,cs,MAP,px,py,35,0.85);
+    for (const [px,py] of nodes) paintGaussian(field,gw,gh,cs,MAP,px,py,115,0.85);
   });
 
   defPattern(95, 'Building Complex', 0.7, (field,gw,gh,cs,MAP,site,pass)=>{
     if(pass<1) return;
     const s=site.derived.SPINE; if(!s) return;
     const by=(MAP.y0+MAP.y1)*0.5;
-    paintGaussian(field,gw,gh,cs,MAP, s.x+s.w+20,by-80, 50, 0.8);
-    paintGaussian(field,gw,gh,cs,MAP, s.x+s.w+20,by+80, 50, 0.8);
-    paintGaussian(field,gw,gh,cs,MAP, s.x-60,by-60, 45, 0.7);
+    paintGaussian(field,gw,gh,cs,MAP, s.x+s.w+65,by-260, 165, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, s.x+s.w+65,by+260, 165, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-200,by-200, 148, 0.7);
     // In later passes: concentrate mass where combined field already has peaks
     if(site.combined&&pass>=2) {
       for(let i=0;i<field.length;i++){
@@ -647,7 +696,7 @@ window.EC_FieldSolver = (() => {
       for (let cx=0;cx<gw;cx++) {
         const px=MAP.x0+cx*cs;
         const dist=Math.abs(px-scx);
-        let a=Math.max(0, 0.9*(1-dist/220));
+        let a=Math.max(0, 0.9*(1-dist/720));
         // In subsequent passes: modulate by where buildings are forming
         if(site.combined) a*=(0.5+site.combined[cy*gw+cx]*0.8);
         field[cy*gw+cx]+=a;
@@ -662,11 +711,10 @@ window.EC_FieldSolver = (() => {
     // moment of the spine. Strong, localized pressure at spine centre.
     const s=site.derived.SPINE; if(!s) return;
     const scx=s.x+s.w/2, scy=s.y+s.h*0.5;
-    paintGaussian(field,gw,gh,cs,MAP, scx,scy, 55, 1.4);
-    // Secondary market node at TIDE gateway
+    paintGaussian(field,gw,gh,cs,MAP, scx,scy, 180, 1.4);
     if(site.derived.TIDE){
       const ti=site.derived.TIDE;
-      paintGaussian(field,gw,gh,cs,MAP, ti.x+ti.w/2, ti.y-20, 35, 0.8);
+      paintGaussian(field,gw,gh,cs,MAP, ti.x+ti.w/2, ti.y-65, 115, 0.8);
     }
   });
 
@@ -683,17 +731,16 @@ window.EC_FieldSolver = (() => {
     const s=site.derived.SPINE; if(!s) return;
     const ro=site.derived.ROSS;
     // ROSS leasehold is currently hardscape — prime repair zone
-    if(ro) paintGaussian(field,gw,gh,cs,MAP, ro.x+ro.w/2,ro.y+ro.h/2, 80, 1.1);
-    // Existing parking/hardscape west of spine: large zone, needs building repair
+    if(ro) paintGaussian(field,gw,gh,cs,MAP, ro.x+ro.w/2,ro.y+ro.h/2, 260, 1.1);
     const b=site.derived.BAND;
-    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+b.h+20, s.x-10,MAP.y1-20, 55, 0.9);
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,b.y+b.h+65, s.x-33,MAP.y1-65, 180, 0.9);
     // Subtract pressure from green zones — buildings don't go here
     if(sg){
       for(let i=0;i<field.length;i++){
         const cx_=i%gw, cy_=Math.floor(i/gw);
         const px=MAP.x0+cx_*cs, py=MAP.y0+cy_*cs;
         const nx=(px-sg.cx)/sg.rx, ny=(py-sg.cy)/sg.ry;
-        if(nx*nx+ny*ny<1.2) field[i]=Math.max(0,field[i]-0.6);
+        if(nx*nx+ny*ny<1.4) field[i]=Math.max(0,field[i]-0.6);
       }
     }
   });
@@ -706,13 +753,12 @@ window.EC_FieldSolver = (() => {
     const s=site.derived.SPINE; if(!s) return;
     // High building pressure north of sponge, low south
     const northY=sg.cy-sg.ry-20;
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+30,MAP.y0+30, MAP.x1-30,northY, 55, 0.95);
-    // Also: west zone north half has good solar access — priority for housing
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,MAP.y0+30, s.x-10,northY, 40, 0.75);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+100,MAP.y0+100, MAP.x1-100,northY, 180, 0.95);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,MAP.y0+100, s.x-33,northY, 130, 0.75);
     // High outdoor pressure south of spine nodes
     const scx=s.x+s.w/2;
-    paintGaussian(field,gw,gh,cs,MAP, scx-60, s.y+s.h*0.35+30, 40, 0.6);
-    paintGaussian(field,gw,gh,cs,MAP, scx+60, s.y+s.h*0.65+30, 40, 0.6);
+    paintGaussian(field,gw,gh,cs,MAP, scx-200, s.y+s.h*0.35+100, 130, 0.6);
+    paintGaussian(field,gw,gh,cs,MAP, scx+200, s.y+s.h*0.65+100, 130, 0.6);
   });
 
   defPattern(106, 'Positive Outdoor Space', 0.7, (field,gw,gh,cs,MAP,site)=>{
@@ -729,10 +775,9 @@ window.EC_FieldSolver = (() => {
       paintGaussian(field,gw,gh,cs,MAP, (s.x+s.w+sg.cx-sg.rx)/2, sg.cy, 45, 0.9);
     }
     // Courtyard voids within housing band (west of spine)
-    paintGaussian(field,gw,gh,cs,MAP, s.x-50, s.y+s.h*0.35, 38, 0.8);
-    paintGaussian(field,gw,gh,cs,MAP, s.x-50, s.y+s.h*0.65, 38, 0.8);
-    // Pocket space south of market
-    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.55, 32, 0.7);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-165, s.y+s.h*0.35, 125, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-165, s.y+s.h*0.65, 125, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.55, 105, 0.7);
     // From previous pass: add pressure where combined is mid-low (potential void zones)
     if(site.combined){
       for(let i=0;i<field.length;i++){
@@ -751,18 +796,17 @@ window.EC_FieldSolver = (() => {
     const sl=s.x;
     const b=site.derived.BAND;
     const topY=b?b.y+b.h+16:s.y+40;
-    const stripW=14, spacing=32;
-    // West zone: full width E-W strips
-    const westLeft=MAP.x0+16, westRight=sl-8;
+    const stripW=46, spacing=105;   // 25ft unit + ~5ft wall + 75ft shared outdoor
+    const westLeft=MAP.x0+52, westRight=sl-26;
     let y=topY;
-    while(y<s.y+s.h-30){
+    while(y<s.y+s.h-100){
       paintSegment(field,gw,gh,cs,MAP, westLeft,y, westRight,y, stripW, 1.0);
       y+=spacing;
     }
-    // East zone: shorter strips off spine (commercial depth ~70px)
-    let ey=topY+20;
-    while(ey<s.y+s.h-60){
-      paintSegment(field,gw,gh,cs,MAP, s.x+s.w+4,ey, s.x+s.w+72,ey, 10, 0.72);
+    // East: shallower commercial strips, ~230ft deep
+    let ey=topY+65;
+    while(ey<s.y+s.h-200){
+      paintSegment(field,gw,gh,cs,MAP, s.x+s.w+13,ey, s.x+s.w+236,ey, 33, 0.72);
       ey+=spacing*1.3;
     }
   });
@@ -777,15 +821,14 @@ window.EC_FieldSolver = (() => {
     // Park scale — the sponge itself
     if(sg) paintEllipse(field,gw,gh,cs,MAP, sg.cx,sg.cy,sg.rx,sg.ry, 0.5);
     // Square scale — at activity nodes
-    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.25, 60, 0.7);
-    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.75, 60, 0.7);
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.25, 200, 0.7);
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.75, 200, 0.7);
     // Courtyard scale — between strip houses
-    paintGaussian(field,gw,gh,cs,MAP, s.x-45,s.y+s.h*0.3, 28, 0.65);
-    paintGaussian(field,gw,gh,cs,MAP, s.x-45,s.y+s.h*0.5, 28, 0.65);
-    paintGaussian(field,gw,gh,cs,MAP, s.x-45,s.y+s.h*0.7, 28, 0.65);
-    // Pocket scale — alcoves off promenade
-    const pocketPts=[[scx-18,s.y+s.h*0.2],[scx+18,s.y+s.h*0.4],[scx-18,s.y+s.h*0.6],[scx+18,s.y+s.h*0.8]];
-    for(const [px,py] of pocketPts) paintGaussian(field,gw,gh,cs,MAP,px,py,14,0.55);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-148,s.y+s.h*0.3, 92, 0.65);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-148,s.y+s.h*0.5, 92, 0.65);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-148,s.y+s.h*0.7, 92, 0.65);
+    const pocketPts=[[scx-59,s.y+s.h*0.2],[scx+59,s.y+s.h*0.4],[scx-59,s.y+s.h*0.6],[scx+59,s.y+s.h*0.8]];
+    for(const [px,py] of pocketPts) paintGaussian(field,gw,gh,cs,MAP,px,py,46,0.55);
   });
 
   defPattern(115, 'Courtyards Which Live', 0.7, (field,gw,gh,cs,MAP,site)=>{
@@ -801,24 +844,23 @@ window.EC_FieldSolver = (() => {
     const zoneH=botY-topY;
     // West clusters — match P37 distribution
     const westClusters=[
-      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.18, r:28},
-      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.18, r:28},
-      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.50, r:28},
-      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.50, r:28},
-      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.82, r:28},
-      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.82, r:28},
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.18, r:92},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.18, r:92},
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.50, r:92},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.50, r:92},
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.82, r:92},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.82, r:92},
     ];
-    // East clusters
     const eastClusters=[
-      {cx:s.x+s.w+45, cy:s.y+s.h*0.28, r:32},
-      {cx:s.x+s.w+45, cy:s.y+s.h*0.60, r:32},
+      {cx:s.x+s.w+148, cy:s.y+s.h*0.28, r:105},
+      {cx:s.x+s.w+148, cy:s.y+s.h*0.60, r:105},
     ];
     for(const {cx,cy,r} of [...westClusters,...eastClusters]){
       for(let i=0;i<field.length;i++){
         const fx=i%gw, fy=Math.floor(i/gw);
         const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
         const d=Math.hypot(px-cx,py-cy);
-        field[i]+=Math.exp(-((d-r)*(d-r))/(r*0.45)**2)*0.9;
+        field[i]+=Math.exp(-((d-r)*(d-r))/(r*0.42)**2)*0.9;
       }
     }
   });
@@ -828,14 +870,11 @@ window.EC_FieldSolver = (() => {
     // Pressure concentrated in thin bands along both sides of spine —
     // exactly where building facades should land.
     const s=site.derived.SPINE; if(!s) return;
-    const edgeW=8; // thin facade pressure strip
-    // West face of spine: buildings front directly onto promenade
-    paintSegment(field,gw,gh,cs,MAP, s.x,s.y+30, s.x,s.y+s.h-30, edgeW, 1.1);
-    // East face
-    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,s.y+30, s.x+s.w,s.y+s.h-30, edgeW, 1.1);
-    // Band frontage along main street south edge
+    const edgeW=26; // ~26ft facade depth
+    paintSegment(field,gw,gh,cs,MAP, s.x,s.y+100, s.x,s.y+s.h-100, edgeW, 1.1);
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,s.y+100, s.x+s.w,s.y+s.h-100, edgeW, 1.1);
     const b=site.derived.BAND;
-    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+20,b.y+b.h, MAP.x1-20,b.y+b.h, edgeW, 0.9);
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,b.y+b.h, MAP.x1-65,b.y+b.h, edgeW, 0.9);
   });
 
   defPattern(127, 'Intimacy Gradient', 0.65, (field,gw,gh,cs,MAP,site)=>{
@@ -852,7 +891,7 @@ window.EC_FieldSolver = (() => {
       const dist=Math.abs(px-scx);
       // Four depth bands: 0-40px (public), 40-90px (semi-pub), 90-160px (semi-priv), 160+(private)
       // Pressure concentrated at the TRANSITIONS between bands — where building edges sit
-      const band=[40,90,160].map(b=>Math.exp(-((dist-b)*(dist-b))/(12*12))*0.7);
+      const band=[130,296,525].map(b=>Math.exp(-((dist-b)*(dist-b))/(40*40))*0.7);
       field[i]+=band.reduce((a,b)=>a+b,0);
     }
     // Also north-south gradient: entries (promenade ends) are most public
@@ -860,7 +899,7 @@ window.EC_FieldSolver = (() => {
       const fy=Math.floor(i/gw);
       const py=MAP.y0+fy*cs;
       const distN=Math.min(py-MAP.y0, MAP.y1-py);
-      field[i]+=Math.exp(-(distN*distN)/(60*60))*0.5;
+      field[i]+=Math.exp(-(distN*distN)/(200*200))*0.5;
     }
   });
 
@@ -975,15 +1014,16 @@ window.EC_FieldSolver = (() => {
     // Normalize proj: accept both [x,y] and {x,y} return forms
     const proj = (lon,lat) => { const r=_proj(lon,lat); return Array.isArray(r)?r:[r.x,r.y]; };
     const MAX_PASSES  = opts.passes   || 16;
-    const EPSILON     = opts.eps      || 0.008;  // convergence threshold (mean abs Δ)
-    const CELL_SIZE   = opts.cellSize || 10;
+    const EPSILON     = opts.eps      || 0.008;
+    const CELL_SIZE   = opts.cellSize || 25;  // feet per cell
+    const ftToSvg     = opts.ftToSvg  || ((fx,fy)=>[fx,fy]); // fallback: identity
     const THRESHOLD   = opts.threshold|| 0.2;
     const log = [];
 
     const gw = Math.ceil((MAP.x1-MAP.x0)/CELL_SIZE)+1;
     const gh = Math.ceil((MAP.y1-MAP.y0)/CELL_SIZE)+1;
 
-    log.push(`Grid: ${gw}×${gh} = ${gw*gh} cells @ ${CELL_SIZE}px | ε=${EPSILON}`);
+    log.push(`Grid: ${gw}×${gh} = ${gw*gh} cells @ ${CELL_SIZE}ft | ε=${EPSILON}`);
 
     buildEdaMask(parcels, proj, gw, gh, CELL_SIZE, MAP);
 
@@ -1073,7 +1113,7 @@ window.EC_FieldSolver = (() => {
 
     return {
       snapshots, fieldLines: allFieldLines, hotNodes, buildings,
-      log, gw, gh, cellSize: CELL_SIZE, MAP,
+      log, gw, gh, cellSize: CELL_SIZE, MAP, ftToSvg,
       saturatedAt,
       patternColors: Object.fromEntries(
         Object.entries(PATTERNS).map(([id,p])=>[id,p.color])
@@ -1153,12 +1193,12 @@ window.EC_FieldSolver = (() => {
 })();
 
 // ── DRAW FUNCTIONS ────────────────────────────────────────────────────────────
-function drawEDA(parcels, proj, MAP) {
+function drawEDA(parcels, proj, ftToSvg) {
   const ns='http://www.w3.org/2000/svg';
   const layer=document.getElementById('layer-eda');
   for (const p of parcels) {
     if (!p.is_eda || !p.rings?.[0]) continue;
-    const pts=p.rings[0].map(([lon,lat])=>proj(lon,lat).join(',')).join(' ');
+    const pts=p.rings[0].map(([lon,lat])=>ftToSvg(...proj(lon,lat)).join(',')).join(' ');
     const poly=document.createElementNS(ns,'polygon');
     poly.setAttribute('points',pts);
     poly.setAttribute('fill','rgba(40,120,40,0.04)');
@@ -1169,26 +1209,33 @@ function drawEDA(parcels, proj, MAP) {
   }
 }
 
-function drawSiteFacts(derived, MAP) {
+function drawSiteFacts(derived, ftToSvg) {
   const ns='http://www.w3.org/2000/svg';
   const layer=document.getElementById('layer-site-facts');
   layer.innerHTML='';
+  // ft→svg conversion helpers for site facts
+  const fs=(fx,fy)=>ftToSvg(fx,fy);  // [svgX, svgY]
+  const fsW=(fw)=>{const [x0]=ftToSvg(0,0),[x1]=ftToSvg(fw,0);return Math.abs(x1-x0);};
+  const fsH=(fh)=>{const [,y0]=ftToSvg(0,0),[,y1]=ftToSvg(0,fh);return Math.abs(y1-y0);};
   const R=(x,y,w,h,fill,stroke,sw,da)=>{
+    const [sx,sy]=fs(x,y+h); // flip: feet-y is north-up, SVG-y is south-down; bottom-left→SVG top-left
     const r=document.createElementNS(ns,'rect');
-    r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);
+    r.setAttribute('x',sx);r.setAttribute('y',sy);r.setAttribute('width',fsW(w));r.setAttribute('height',fsH(h));
     r.setAttribute('fill',fill);r.setAttribute('stroke',stroke);r.setAttribute('stroke-width',sw||'1');
     if(da)r.setAttribute('stroke-dasharray',da);r.setAttribute('pointer-events','none');return r;
   };
   const T=(x,y,txt,fill,size,anchor)=>{
+    const [sx,sy]=fs(x,y);
     const t=document.createElementNS(ns,'text');
-    t.setAttribute('x',x);t.setAttribute('y',y);t.setAttribute('text-anchor',anchor||'middle');
+    t.setAttribute('x',sx);t.setAttribute('y',sy);t.setAttribute('text-anchor',anchor||'middle');
     t.setAttribute('fill',fill);t.setAttribute('font-size',size||'6');
     t.setAttribute('font-family','monospace');t.setAttribute('letter-spacing','1');
     t.setAttribute('pointer-events','none');t.textContent=txt;return t;
   };
   const L=(x1,y1,x2,y2,stroke,sw,da)=>{
+    const [sx1,sy1]=fs(x1,y1),[sx2,sy2]=fs(x2,y2);
     const l=document.createElementNS(ns,'line');
-    l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);
+    l.setAttribute('x1',sx1);l.setAttribute('y1',sy1);l.setAttribute('x2',sx2);l.setAttribute('y2',sy2);
     l.setAttribute('stroke',stroke);l.setAttribute('stroke-width',sw||'1');
     if(da)l.setAttribute('stroke-dasharray',da);l.setAttribute('pointer-events','none');return l;
   };
@@ -1206,14 +1253,15 @@ function drawSiteFacts(derived, MAP) {
   if(derived.SPONGE){
     const sg=derived.SPONGE;
     const e=document.createElementNS(ns,'ellipse');
-    e.setAttribute('cx',sg.cx);e.setAttribute('cy',sg.cy);
-    e.setAttribute('rx',sg.rx);e.setAttribute('ry',sg.ry);
+    const [secx,secy]=fs(sg.cx,sg.cy);
+    e.setAttribute('cx',secx);e.setAttribute('cy',secy);
+    e.setAttribute('rx',fsW(sg.rx));e.setAttribute('ry',fsH(sg.ry));
     e.setAttribute('fill','rgba(40,180,80,0.08)');e.setAttribute('stroke','rgba(40,180,80,0.55)');
     e.setAttribute('stroke-width','1.2');e.setAttribute('stroke-dasharray','4,3');
     e.setAttribute('pointer-events','none');layer.appendChild(e);
     const ib=document.createElementNS(ns,'ellipse');
-    ib.setAttribute('cx',sg.cx);ib.setAttribute('cy',sg.cy);
-    ib.setAttribute('rx',sg.rx*0.38);ib.setAttribute('ry',sg.ry*0.38);
+    ib.setAttribute('cx',secx);ib.setAttribute('cy',secy);
+    ib.setAttribute('rx',fsW(sg.rx*0.38));ib.setAttribute('ry',fsH(sg.ry*0.38));
     ib.setAttribute('fill','rgba(40,180,80,0.12)');ib.setAttribute('stroke','rgba(40,180,80,0.28)');
     ib.setAttribute('stroke-width','0.5');ib.setAttribute('pointer-events','none');layer.appendChild(ib);
     layer.appendChild(T(sg.cx,sg.cy+3,'SPONGE','rgba(40,180,80,0.72)','6'));
@@ -1255,24 +1303,21 @@ function blendColors(weights, patternColors) {
   return `rgb(${r},${g},${b})`;
 }
 
-function renderFieldLines(lines, patternColors, view) {
+function renderFieldLines(lines, patternColors, view, ftToSvg) {
   const ns='http://www.w3.org/2000/svg';
   const lLayer=document.getElementById('layer-lines');
   const nLayer=document.getElementById('layer-nodes');
   lLayer.innerHTML=''; nLayer.innerHTML='';
   if(!lines||lines.length===0) return;
+  const toSvg = ftToSvg || ((x,y)=>[x,y]);
 
   for (const line of lines) {
     if(line.pts.length<2) continue;
-    // Build path with varying width by splitting into segments
-    // Use a single polyline per line, colored by dominant blend
-    // For variable width: emit small overlapping circles along path
     const midIdx=Math.floor(line.pts.length/2);
     const midPt=line.pts[midIdx];
     const dominantColor=blendColors(midPt.weights||{}, patternColors);
 
-    // SVG polyline for the line
-    const ptStr=line.pts.map(p=>`${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+    const ptStr=line.pts.map(p=>{ const[sx,sy]=toSvg(p.x,p.y); return `${sx.toFixed(1)},${sy.toFixed(1)}`; }).join(' ');
     const totalPressure=line.seedPressure||0.5;
     const sw=Math.max(0.5, Math.min(4, totalPressure*5));
 
@@ -1307,8 +1352,9 @@ function renderHotNodes(hotNodes, patternColors) {
   if(!hotNodes) return;
   for (const pt of hotNodes) {
     const r = 2.5 + (pt.nStrong||3)*0.6;
+    const [shx,shy]=(window._ftToSvg||((x,y)=>[x,y]))(pt.x,pt.y);
     const c=document.createElementNS(ns,'circle');
-    c.setAttribute('cx',pt.x.toFixed(1)); c.setAttribute('cy',pt.y.toFixed(1));
+    c.setAttribute('cx',shx.toFixed(1)); c.setAttribute('cy',shy.toFixed(1));
     c.setAttribute('r',r.toFixed(1));
     c.setAttribute('fill',blendColors(pt.weights||{},patternColors));
     c.setAttribute('stroke','rgba(255,255,255,0.25)');
@@ -1323,14 +1369,18 @@ function renderBuildings(buildings, patternColors) {
   const layer=document.getElementById('layer-buildings');
   layer.innerHTML='';
   if(!buildings||buildings.length===0) return;
+  const toSvg = window._ftToSvg || ((x,y)=>[x,y]);
+  // Width/height scaling: use ftToSvg on corners
+  const svgW_=(fw)=>{const[x0]=toSvg(0,0),[x1]=toSvg(fw,0);return Math.abs(x1-x0);};
+  const svgH_=(fh)=>{const[,y0]=toSvg(0,0),[,y1]=toSvg(0,fh);return Math.abs(y1-y0);};
   for (const b of buildings) {
     const hex=patternColors[b.domPid]||'#888888';
     const [r,g,bl]=hexToRgb(hex);
-    // Opacity scales with avg pattern count (more patterns = more saturated)
     const opacity=Math.min(0.85, 0.3+b.avgStrong*0.12);
+    const [sx,sy]=toSvg(b.x,b.y+b.h); // bottom-left in ft → top-left in svg
     const rect=document.createElementNS(ns,'rect');
-    rect.setAttribute('x',b.x.toFixed(1)); rect.setAttribute('y',b.y.toFixed(1));
-    rect.setAttribute('width',b.w.toFixed(1)); rect.setAttribute('height',b.h.toFixed(1));
+    rect.setAttribute('x',sx.toFixed(1)); rect.setAttribute('y',sy.toFixed(1));
+    rect.setAttribute('width',svgW_(b.w).toFixed(1)); rect.setAttribute('height',svgH_(b.h).toFixed(1));
     rect.setAttribute('fill',`rgba(${r},${g},${bl},${opacity.toFixed(2)})`);
     rect.setAttribute('stroke',`rgba(${r},${g},${bl},0.7)`);
     rect.setAttribute('stroke-width','1');
@@ -1348,12 +1398,16 @@ function renderHeatMap(snapshot, patternColors) {
   const cs=snapshot.cellSize||10;
   // Sample every 2 cells for performance
   const step=2;
+  const toSvg=window._ftToSvg||((...a)=>a);
+  const ftCsW=(fw)=>{const[x0]=toSvg(0,0),[x1]=toSvg(fw,0);return Math.abs(x1-x0);};
+  const ftCsH=(fh)=>{const[,y0]=toSvg(0,0),[,y1]=toSvg(0,fh);return Math.abs(y1-y0);};
+  const cellSvgW=ftCsW(cs*step), cellSvgH=ftCsH(cs*step);
   for (let cy=0;cy<gh;cy+=step) {
     for (let cx=0;cx<gw;cx+=step) {
       const v=combined[cy*gw+cx];
       if(v<0.1) continue;
-      const x=snapshot.MAP?.x0?snapshot.MAP.x0+cx*cs:cx*cs;
-      const y=snapshot.MAP?.y0?snapshot.MAP.y0+cy*cs:cy*cs;
+      const ftx=(snapshot.MAP?.x0||0)+cx*cs, fty=(snapshot.MAP?.y0||0)+cy*cs;
+      const [x,y]=toSvg(ftx,fty+cs*step); // bottom-left → svg top-left
       // Dominant pattern at this cell
       let bestPid=null, bestW=0;
       if(fieldMap) {
@@ -1366,7 +1420,7 @@ function renderHeatMap(snapshot, patternColors) {
       const [r,g,b]=hexToRgb(color);
       const rect=document.createElementNS(ns,'rect');
       rect.setAttribute('x',x); rect.setAttribute('y',y);
-      rect.setAttribute('width',cs*step+1); rect.setAttribute('height',cs*step+1);
+      rect.setAttribute('width',cellSvgW+1); rect.setAttribute('height',cellSvgH+1);
       rect.setAttribute('fill',`rgba(${r},${g},${b},${(v*0.45).toFixed(2)})`);
       rect.setAttribute('pointer-events','none');
       layer.appendChild(rect);
@@ -1411,7 +1465,7 @@ function renderSnapshot(snapshot, result) {
 
   // Field lines
   if((view==='lines'||view==='both')&&!isBuildings) {
-    renderFieldLines(snapshot.lines, result.patternColors, view);
+    renderFieldLines(snapshot.lines, result.patternColors, view, result.ftToSvg);
     renderHotNodes(result.hotNodes, result.patternColors);
   } else {
     document.getElementById('layer-lines').innerHTML='';
@@ -1436,13 +1490,14 @@ let _result=null, _currentSnap=0, _playTimer=null;
 
 document.addEventListener('DOMContentLoaded', () => {
   const parcels=PARCEL_DATA.parcels;
-  const {proj,MAP}=buildProjection(parcels);
+  const {proj,MAP,ftToSvg}=buildProjection(parcels);
+  window._ftToSvg=ftToSvg;
   const G=buildParcelGeometry(parcels,proj);
   const {derived}=solveConstraintsMin(G,MAP);
   window._derivedG=derived;
 
-  drawEDA(parcels,proj,MAP);
-  drawSiteFacts(derived,MAP);
+  drawEDA(parcels,proj,ftToSvg);
+  drawSiteFacts(derived,ftToSvg);
 
   // Controls
   function bind(id,valId,fmt) {
@@ -1451,7 +1506,7 @@ document.addEventListener('DOMContentLoaded', () => {
     vl.textContent=fmt(el.value);
   }
   bind('ctrl-passes','val-passes',v=>`${v}`);
-  bind('ctrl-res','val-res',v=>`${v}px`);
+  bind('ctrl-res','val-res',v=>`${v}ft`);
   bind('ctrl-thresh','val-thresh',v=>(+v).toFixed(2));
   bind('ctrl-eps','val-eps',v=>(+v).toFixed(3));
 
@@ -1511,7 +1566,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const thresh=+document.getElementById('ctrl-thresh').value;
       const eps=+document.getElementById('ctrl-eps').value;
       const t0=performance.now();
-      _result=window.EC_FieldSolver.solve(parcels,(lon,lat)=>{const[x,y]=proj(lon,lat);return{x,y};},MAP,derived,{passes,cellSize:res,threshold:thresh,eps});
+      _result=window.EC_FieldSolver.solve(parcels,proj,MAP,derived,{passes,cellSize:res,threshold:thresh,eps,ftToSvg});
       const ms=Math.round(performance.now()-t0);
 
       _currentSnap=_result.snapshots.length-1;
