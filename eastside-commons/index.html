@@ -6709,6 +6709,8 @@ const EC3D = {
         height = FLOOR_H * 1.6;
       } else if (use === 'RESEARCH') {
         height = FLOOR_H * 2.5;
+      } else if (use === 'MIXED_USE_5OVER1') {
+        height = FLOOR_H * 6;  // 1 commercial podium + 5 residential (Type V over Type I)
       } else {
         const far = zone.units?.realized_far || 0;
         height = far > 0
@@ -6761,17 +6763,77 @@ const EC3D = {
       }
 
       // ── Base building extrusion — inset from zone edge for visible setback ──
-      const BLDG_SETBACK = (use === 'CIVIC' || use === 'RESEARCH') ? 2.5
-        : (use === 'RETAIL_GROUND' || use === 'MARKET_HALL') ? 1.0
-        : 1.8;  // residential / live-work default
+      // Setback is the street-level gap between building face and zone boundary.
+      // Needs to be large enough to read as alley/sidewalk at scene scale.
+      // Scale: 1 world unit ≈ 2.2ft at this projection. So 4.5wu ≈ 10ft alley.
+      const BLDG_SETBACK = (use === 'CIVIC' || use === 'RESEARCH') ? 5.0
+        : (use === 'RETAIL_GROUND' || use === 'MARKET_HALL') ? 2.5
+        : (use === 'MIXED_USE_5OVER1') ? 4.0   // street-to-building gap
+        : 4.5;  // residential — wide enough to read as alley
+
       const outerW = zone.poly.outer.map(([sx, sy]) => {
         const [wx, wz] = this.svgTo3D(sx, sy);
         return [wx, -wz];
       });
       const insetW = this.insetPoly(outerW, BLDG_SETBACK);
+      if (!insetW || insetW.length < 3) continue;
+
+      // ── Courtyard holes: punch interior void into the building extrusion ──
+      // The 2D solver computes courtyard as zone.units.courtyard {x,y,w,h} in SVG px.
+      // Convert to world space and add as a Shape hole so the courtyard is literally
+      // open air — not a filled block.
       const holes = (zone.poly.holes || []).filter(h => h && h.length >= 3);
+
+      // For MIXED_USE_5OVER1: synthesize a courtyard hole from the zone's inset poly
+      // (the courtyard is the inner ~40% of the buildable area after setback)
+      let courtyard3D = null;
+      if (use === 'MIXED_USE_5OVER1' && insetW.length >= 4) {
+        const COURTYARD_INSET = 5.5;  // additional inset from building wall to courtyard void
+        const cInset = this.insetPoly(insetW, COURTYARD_INSET);
+        if (cInset && cInset.length >= 3) courtyard3D = cInset;
+      } else if (zone.units?.courtyard && zone.poly?.outer) {
+        // Convert T4 courtyard rect (SVG px) to world space
+        const cy = zone.units.courtyard;
+        if (cy.w > 8 && cy.h > 8) {
+          const cPts = [
+            [cy.x,        cy.y       ],
+            [cy.x + cy.w, cy.y       ],
+            [cy.x + cy.w, cy.y + cy.h],
+            [cy.x,        cy.y + cy.h],
+          ].map(([sx, sy]) => {
+            const [wx, wz] = this.svgTo3D(sx, sy);
+            return [wx, -wz];
+          });
+          courtyard3D = cPts;
+        }
+      }
+
       const shape = this.makeShapeFromWorld(insetW);
       if (!shape) continue;
+
+      // Punch courtyard hole
+      if (courtyard3D && courtyard3D.length >= 3) {
+        const holePath = new THREE.Path();
+        holePath.moveTo(courtyard3D[0][0], courtyard3D[0][1]);
+        for (let i = 1; i < courtyard3D.length; i++) {
+          holePath.lineTo(courtyard3D[i][0], courtyard3D[i][1]);
+        }
+        holePath.closePath();
+        shape.holes.push(holePath);
+      }
+
+      // Also add any polygon holes from the 2D pipeline
+      for (const hole of holes) {
+        const holeW = hole.map(([sx, sy]) => {
+          const [wx, wz] = this.svgTo3D(sx, sy);
+          return [wx, -wz];
+        });
+        const holePath = new THREE.Path();
+        holePath.moveTo(holeW[0][0], holeW[0][1]);
+        for (let i = 1; i < holeW.length; i++) holePath.lineTo(holeW[i][0], holeW[i][1]);
+        holePath.closePath();
+        shape.holes.push(holePath);
+      }
 
       const bevel = height > FLOOR_H;
       const geo = new THREE.ExtrudeGeometry(shape, {
@@ -6781,6 +6843,52 @@ const EC3D = {
         bevelSize:      bevel ? 0.15 : 0.03,
         bevelSegments:  1,
       });
+
+      // ── For MIXED_USE_5OVER1: add a separate lower podium slab (ground floor commercial) ──
+      // The main extrusion is the full 6-story mass with courtyard void.
+      // Add a thin podium slab at ground level to show the commercial floor plate.
+      if (use === 'MIXED_USE_5OVER1') {
+        const podiumShape = this.makeShapeFromWorld(insetW);
+        if (podiumShape && courtyard3D) {
+          // Podium has no hole — it's a solid slab at ground level
+          const podiumGeo = new THREE.ExtrudeGeometry(podiumShape, {
+            depth: FLOOR_H * 1.4,  // ~14ft ground floor commercial height
+            bevelEnabled: false,
+          });
+          const podiumTex = this.tex('concrete', 3, 2);
+          const podiumMat = new THREE.MeshPhongMaterial({
+            color: podiumTex ? 0xffffff : 0x5a4a38,
+            map: podiumTex || null,
+            specular: 0x181410,
+            shininess: 5,
+          });
+          const podiumMesh = new THREE.Mesh(podiumGeo, podiumMat);
+          podiumMesh.rotation.x = -Math.PI / 2;
+          podiumMesh.position.y = 0.1;
+          podiumMesh.castShadow = true;
+          podiumMesh.userData = { zone, height: FLOOR_H * 1.4, usedef };
+          this.scene.add(podiumMesh);
+        }
+
+        // Courtyard ground plane (grass/permeable paving in the open void)
+        if (courtyard3D && courtyard3D.length >= 3) {
+          const cyShape = new THREE.Shape();
+          cyShape.moveTo(courtyard3D[0][0], courtyard3D[0][1]);
+          for (let i = 1; i < courtyard3D.length; i++) cyShape.lineTo(courtyard3D[i][0], courtyard3D[i][1]);
+          cyShape.closePath();
+          const cyGeo = new THREE.ShapeGeometry(cyShape);
+          const cyTex = this.tex('grass', 4, 4);
+          const cyMat = new THREE.MeshLambertMaterial({
+            color: cyTex ? 0xffffff : 0x3a5a28,
+            map: cyTex || null,
+          });
+          const cyMesh = new THREE.Mesh(cyGeo, cyMat);
+          cyMesh.rotation.x = -Math.PI / 2;
+          cyMesh.position.y = 0.2;
+          cyMesh.receiveShadow = true;
+          this.scene.add(cyMesh);
+        }
+      }
 
       // Wall texture by use type
       const W3 = bds.maxX - bds.minX;
@@ -6807,6 +6915,9 @@ const EC3D = {
         wallTex = this.tex('timber', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/3)));
       } else if (use === 'RETAIL_GROUND') {
         wallTex = this.tex('concrete', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/4)));
+      } else if (use === 'MIXED_USE_5OVER1') {
+        // 5-over-1: brick upper residential, concrete podium handled separately
+        wallTex = this.tex('brick', Math.max(1, Math.round(W3/5)), Math.max(1, Math.round(height/3.5)));
       }
 
       // Material: MeshPhongMaterial for specular highlight on buildings
@@ -6880,6 +6991,8 @@ const EC3D = {
           ...this.makeWindowGrid(bds, height, use),
         ];
       } else if (use === 'RETAIL_GROUND') {
+        surfaceMeshes = this.makeWindowGrid(bds, height, use);
+      } else if (use === 'MIXED_USE_5OVER1') {
         surfaceMeshes = this.makeWindowGrid(bds, height, use);
       } else if (use.startsWith('RESIDENTIAL')) {
         surfaceMeshes = this.makeWindowGrid(bds, height, use);
