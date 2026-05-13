@@ -2757,6 +2757,10 @@ const USES = {
   INFRASTRUCTURE:     { id:'IN', label:'Infrastructure / utility',   color:'#4a4038', priority:3 },
   // ── LIVE-WORK (narrow typology variant) ──────────────────────────────────
   LIVE_WORK:          { id:'LW', label:'Live/work studio (25×50 variant)', color:'#d87828', priority:2 },
+  // ── PRODUCTION / MAKER ───────────────────────────────────────────────────
+  WORKSHOP_FABRICATION:{ id:'WF', label:'Workshop / fabrication / makerspace', color:'#8a5c28', priority:2 },
+  DEPOT_YARD:         { id:'DY', label:'Depot yard / service / storage',  color:'#5a4828', priority:3 },
+  COOP_INCUBATOR:     { id:'CI', label:'Co-op incubator / business services', color:'#a06038', priority:2 },
 };
 
 // Adjacency graph: which uses can mutate into which (T3 mutation operator)
@@ -2773,6 +2777,9 @@ const USE_ADJACENCY = {
   RESEARCH:           ['GREEN_PASSIVE','CIVIC','INFRASTRUCTURE'],
   INFRASTRUCTURE:     ['GREEN_PASSIVE','TRANSIT'],
   LIVE_WORK:          ['MIXED_USE_5OVER1','RESIDENTIAL_CLT_OWN','GREEN_ACTIVE'],
+  WORKSHOP_FABRICATION:['LIVE_WORK','DEPOT_YARD','COOP_INCUBATOR','MIXED_USE_5OVER1'],
+  DEPOT_YARD:         ['WORKSHOP_FABRICATION','INFRASTRUCTURE'],
+  COOP_INCUBATOR:     ['WORKSHOP_FABRICATION','LIVE_WORK','MIXED_USE_5OVER1','CIVIC'],
 };
 
 // Conflict matrix
@@ -2781,6 +2788,8 @@ const CONFLICT = {
   RESIDENTIAL_MARKET: { INFRASTRUCTURE:4, GREEN_PASSIVE:1 },
   RESIDENTIAL_CLT_OWN:{ INFRASTRUCTURE:3 },
   GREEN_PASSIVE:      { MIXED_USE_5OVER1:2, RESIDENTIAL_MARKET:1 },
+  DEPOT_YARD:         { RESIDENTIAL_CLT_OWN:3, RESIDENTIAL_MARKET:3, GREEN_ACTIVE:2 },
+  WORKSHOP_FABRICATION:{ RESIDENTIAL_CLT_OWN:2, RESIDENTIAL_MARKET:2 },
 };
 
 // Synergy matrix — the whole point: mixed use NEXT TO parks NEXT TO more mixed use
@@ -2795,6 +2804,9 @@ const SYNERGY = {
   MARKET_HALL:        { MIXED_USE_5OVER1:5, PLAZA:4, CIVIC:3 },
   TRANSIT:            { MIXED_USE_5OVER1:4, PLAZA:3, CIVIC:2 },
   LIVE_WORK:          { MIXED_USE_5OVER1:4, GREEN_ACTIVE:3, RESIDENTIAL_CLT_OWN:3 },
+  WORKSHOP_FABRICATION:{ LIVE_WORK:4, COOP_INCUBATOR:4, DEPOT_YARD:3, MIXED_USE_5OVER1:2 },
+  DEPOT_YARD:         { WORKSHOP_FABRICATION:4, INFRASTRUCTURE:3 },
+  COOP_INCUBATOR:     { WORKSHOP_FABRICATION:5, LIVE_WORK:4, MIXED_USE_5OVER1:3, CIVIC:3 },
   RESEARCH:           { GREEN_PASSIVE:4, CIVIC:2 },
 };
 
@@ -7484,12 +7496,14 @@ function renderPatternAnimation(snapshots) {
   // Color per pattern (use existing USE_TYPES colors where available, else derive)
   const P_COLOR = {
     29:'#4a7ac8', 30:'#c87818', 31:'#c84818', 36:'#8050c0',
-    37:'#3888a8', 46:'#b84898', 51:'#28a848', 53:'#888830',
-    60:'#28b848', 67:'#20a038', 71:'#2898c8', 79:'#e8b820',
-    87:'#e83808', 88:'#d85808', 95:'#c87818', 96:'#a86018',
-    104:'#607848', 105:'#488060', 106:'#389060', 107:'#309050',
+    37:'#3888a8', 46:'#b84898', 53:'#888830',
+    60:'#28b848', 67:'#20a038', 71:'#2898c8',
+    87:'#e83808', 88:'#d85808', 95:'#c87818',
+    104:'#607848', 105:'#488060', 106:'#389060',
     109:'#c87818', 114:'#406898', 115:'#a04898', 122:'#c84030',
-    127:'#905028', 46:'#b84898',
+    127:'#905028',
+    // Planned but not yet implemented:
+    51:'#28a848', 61:'#3aaa58', 100:'#e8b820', 116:'#806038',
   };
 
   const SCALE_LABEL = { 1:'District', 2:'Block', 3:'Group', 4:'Building', 5:'Edge' };
@@ -7593,6 +7607,7 @@ function renderPatternAnimation(snapshots) {
     // Returns array of {x,y} from any geom type
     if (!inst.geom) return [];
     if (inst.geomType === 'polygon_array') return inst.geom.flat();
+    if (inst.geomType === 'rings') return inst.geom.map(r => ({ x: r.x, y: r.y }));
     if (Array.isArray(inst.geom)) return inst.geom;
     return [];
   }
@@ -7617,6 +7632,21 @@ function renderPatternAnimation(snapshots) {
         c.setAttribute('r', isNew ? 7 : 5);
         c.setAttribute('fill', color);
         c.setAttribute('opacity', highlight);
+        if (isNew) c.setAttribute('filter', 'url(#panim-glow)');
+        g.appendChild(c);
+      }
+    } else if (inst.geomType === 'rings') {
+      // Concentric circles — P29 DensityRings
+      for (const ring of inst.geom) {
+        const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+        c.setAttribute('cx', ring.x || 0);
+        c.setAttribute('cy', ring.y || 0);
+        c.setAttribute('r', ring.r || 10);
+        c.setAttribute('fill', 'none');
+        c.setAttribute('stroke', color);
+        c.setAttribute('stroke-width', isNew ? '2' : '1.5');
+        c.setAttribute('stroke-dasharray', ring.density === 'HIGH' ? 'none' : ring.density === 'MEDIUM' ? '6,4' : '3,5');
+        c.setAttribute('opacity', isNew ? '0.85' : '0.45');
         if (isNew) c.setAttribute('filter', 'url(#panim-glow)');
         g.appendChild(c);
       }
@@ -7916,7 +7946,7 @@ window.EC_PatternSolver = (() => {
       const r_inner  = 120;  // px — high density core
       const r_mid    = 240;  // px — medium density
       const r_outer  = 400;  // px — low density edge
-      return mkInstance(29, 'spline', [
+      return mkInstance(29, 'rings', [
         { x, y, r: r_inner,  density: 'HIGH',   far_target: 1.4 },
         { x, y, r: r_mid,    density: 'MEDIUM', far_target: 1.0 },
         { x, y, r: r_outer,  density: 'LOW',    far_target: 0.6 },
@@ -8646,6 +8676,12 @@ window.EC_PatternSolver = (() => {
 
     _sg = { instances: [], buildingPoints: [], buildings: [], zones: [], pass: 0, snapshots: [] };
 
+    // Build projected EDA polygon list for accurate inEDA() tests
+    _edaPolys = (parcels || [])
+      .filter(p => p.is_eda && Array.isArray(p.rings) && p.rings[0])
+      .map(p => p.rings[0].map(pt => proj(pt[0] ?? pt.lon, pt[1] ?? pt.lat)))
+      .filter(poly => poly.length >= 3);
+
     const patternOrder = Object.values(PATTERNS).sort((a,b) => a.priority - b.priority);
 
     const totalPasses = N_SCALES + N_RECURSE;
@@ -8883,10 +8919,28 @@ window.EC_PatternSolver = (() => {
     return (sg.buildingPoints || []).filter(p => pids.includes(p.owner_pattern));
   }
 
+  // Set by solve() — projected EDA parcel rings for accurate containment test
+  let _edaPolys = [];
+
   function inEDA(x, y) {
-    // Check if point is within an EDA parcel (approximate via bounding box of known parcels)
-    const MAP = { x0:139, y0:163, x1:841, y1:653 };
-    return x > MAP.x0 && x < MAP.x1 && y > MAP.y0 && y < MAP.y1;
+    if (_edaPolys.length === 0) {
+      // Fallback: conservative bbox
+      const MAP = { x0:139, y0:163, x1:841, y1:653 };
+      return x > MAP.x0 && x < MAP.x1 && y > MAP.y0 && y < MAP.y1;
+    }
+    return _edaPolys.some(poly => pointInPolygon(x, y, poly));
+  }
+
+  function pointInPolygon(x, y, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x, yi = poly[i].y;
+      const xj = poly[j].x, yj = poly[j].y;
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    return inside;
   }
 
   function inSetback(x, y, MAP) {
