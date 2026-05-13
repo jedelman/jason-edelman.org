@@ -7811,35 +7811,6 @@ function renderPatternAnimation(snapshots) {
       </div>
     `;
   }
-      }
-    } else if (inst.geomType === 'spline') {
-      if (pts.length >= 2) {
-        const line = document.createElementNS('http://www.w3.org/2000/svg','polyline');
-        line.setAttribute('points', pts.map(p => `${p.x||0},${p.y||0}`).join(' '));
-        line.setAttribute('stroke', color);
-        line.setAttribute('stroke-width', '3');
-        line.setAttribute('fill', 'none');
-        line.setAttribute('opacity', '0.9');
-        line.setAttribute('filter', 'url(#panim-glow)');
-        g.appendChild(line);
-      }
-    } else {
-      // polygon or polygon_array
-      const allRings = inst.geomType === 'polygon_array' ? inst.geom : [inst.geom];
-      for (const ring of allRings) {
-        if (!ring || ring.length < 3) continue;
-        const poly = document.createElementNS('http://www.w3.org/2000/svg','polygon');
-        poly.setAttribute('points', ring.map(p => `${p.x||0},${p.y||0}`).join(' '));
-        poly.setAttribute('fill', color);
-        poly.setAttribute('fill-opacity', '0.18');
-        poly.setAttribute('stroke', color);
-        poly.setAttribute('stroke-width', '1.5');
-        poly.setAttribute('opacity', '0.9');
-        g.appendChild(poly);
-      }
-    }
-    return g;
-  }
 
   // Controls
   const slider = panel.querySelector('#panim-slider');
