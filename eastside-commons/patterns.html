@@ -117,9 +117,14 @@
   <h1>EC · Field Solver</h1>
 
   <div class="ctrl-group">
-    <span class="ctrl-label">Passes</span>
-    <input type="range" id="ctrl-passes" min="1" max="12" value="6" step="1">
-    <span class="ctrl-val" id="val-passes">6</span>
+    <span class="ctrl-label">Max passes</span>
+    <input type="range" id="ctrl-passes" min="2" max="24" value="16" step="1">
+    <span class="ctrl-val" id="val-passes">16</span>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Saturate ε</span>
+    <input type="range" id="ctrl-eps" min="0.001" max="0.05" value="0.008" step="0.001">
+    <span class="ctrl-val" id="val-eps">0.008</span>
   </div>
   <div class="ctrl-group">
     <span class="ctrl-label">Resolution</span>
@@ -137,6 +142,7 @@
       <option value="lines">Field lines</option>
       <option value="heat">Heat map</option>
       <option value="both">Both</option>
+      <option value="buildings">Buildings only</option>
     </select>
   </div>
 
@@ -156,6 +162,7 @@
       <g id="layer-heat"></g>
       <g id="layer-lines"></g>
       <g id="layer-nodes"></g>
+      <g id="layer-buildings"></g>
       <g id="layer-labels"></g>
     </svg>
     <div id="canvas-label">Military Circle · 73.4 ac · Norfolk VA · field model</div>
@@ -496,15 +503,16 @@ window.EC_FieldSolver = (() => {
 
   defPattern(37, 'House Cluster', 0.9, (field,gw,gh,cs,MAP,site)=>{
     const s=site.derived.SPINE, sg=site.derived.SPONGE; if(!s) return;
-    // Housing pressure west of spine and south of sponge
     const sl=s.x;
-    // West housing band
     paintSegment(field,gw,gh,cs,MAP, sl-80,MAP.y0+60, sl-80,MAP.y1-60, 60, 0.9);
-    // South of sponge
     if(sg) paintEllipse(field,gw,gh,cs,MAP, sg.cx,sg.cy+sg.ry+60,80,45, 0.8);
-    // From previous pass: reinforce where combined pressure is mid-range (not too hot, not too cold)
+    // From previous pass: amplify where combined field is mid-range (0.2–0.6) —
+    // these are the transitional zones where housing clusters want to be.
     if(site.combined) {
-      const gh_ = field.length/gw|0; // won't be used — gw/gh passed directly
+      for(let i=0;i<field.length;i++){
+        const v=site.combined[i];
+        if(v>0.2&&v<0.6) field[i]+=v*0.4;
+      }
     }
   });
 
@@ -563,29 +571,32 @@ window.EC_FieldSolver = (() => {
   });
 
   defPattern(95, 'Building Complex', 0.7, (field,gw,gh,cs,MAP,site,pass)=>{
-    // Building mass pressure in mid-field — emerges after pass 1
     if(pass<1) return;
     const s=site.derived.SPINE; if(!s) return;
-    const sg=site.derived.SPONGE;
-    // East of spine, clear of sponge
-    const bx=s.x+s.w+20, by=(MAP.y0+MAP.y1)*0.5;
-    paintGaussian(field,gw,gh,cs,MAP, bx,by-80, 50, 0.8);
-    paintGaussian(field,gw,gh,cs,MAP, bx,by+80, 50, 0.8);
-    // West of spine
+    const by=(MAP.y0+MAP.y1)*0.5;
+    paintGaussian(field,gw,gh,cs,MAP, s.x+s.w+20,by-80, 50, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, s.x+s.w+20,by+80, 50, 0.8);
     paintGaussian(field,gw,gh,cs,MAP, s.x-60,by-60, 45, 0.7);
+    // In later passes: concentrate mass where combined field already has peaks
+    if(site.combined&&pass>=2) {
+      for(let i=0;i<field.length;i++){
+        const v=site.combined[i];
+        if(v>0.55) field[i]+=v*0.5; // reinforce hot spots
+      }
+    }
   });
 
   defPattern(116, 'Cascade of Roofs', 0.6, (field,gw,gh,cs,MAP,site)=>{
     const s=site.derived.SPINE; if(!s) return;
-    // Height gradient field: strong at spine, falling off laterally
     const scx=s.x+s.w/2;
-    for (let cx=0;cx<gw;cx++) {
-      for (let cy=0;cy<gh;cy++) {
+    for (let cy=0;cy<gh;cy++) {
+      for (let cx=0;cx<gw;cx++) {
         const px=MAP.x0+cx*cs;
         const dist=Math.abs(px-scx);
-        // Pressure inversely proportional to distance from spine → roof steps
-        const a=Math.max(0, 0.9*(1-dist/220));
-        field[cy*gw+cx] += a;
+        let a=Math.max(0, 0.9*(1-dist/220));
+        // In subsequent passes: modulate by where buildings are forming
+        if(site.combined) a*=(0.5+site.combined[cy*gw+cx]*0.8);
+        field[cy*gw+cx]+=a;
       }
     }
   });
@@ -693,29 +704,33 @@ window.EC_FieldSolver = (() => {
   }
 
   // ── MAIN SOLVE ────────────────────────────────────────────────────────────
+  // Runs until the combined field saturates (Δ < ε) or max passes is hit.
+  // Saturation = patterns have squeezed as much simultaneous information
+  // into the field as they can. This is the terminal condition.
   function solve(parcels, _proj, MAP, derivedG, opts={}) {
     // Normalize proj: accept both [x,y] and {x,y} return forms
     const proj = (lon,lat) => { const r=_proj(lon,lat); return Array.isArray(r)?r:[r.x,r.y]; };
-    const N_PASSES    = opts.passes  || 6;
-    const CELL_SIZE   = opts.cellSize|| 10;
-    const THRESHOLD   = opts.threshold||0.2;
+    const MAX_PASSES  = opts.passes   || 16;
+    const EPSILON     = opts.eps      || 0.008;  // convergence threshold (mean abs Δ)
+    const CELL_SIZE   = opts.cellSize || 10;
+    const THRESHOLD   = opts.threshold|| 0.2;
     const log = [];
 
     const gw = Math.ceil((MAP.x1-MAP.x0)/CELL_SIZE)+1;
     const gh = Math.ceil((MAP.y1-MAP.y0)/CELL_SIZE)+1;
 
-    log.push(`Grid: ${gw}×${gh} = ${gw*gh} cells @ ${CELL_SIZE}px`);
+    log.push(`Grid: ${gw}×${gh} = ${gw*gh} cells @ ${CELL_SIZE}px | ε=${EPSILON}`);
 
-    // Build EDA mask
     buildEdaMask(parcels, proj, gw, gh, CELL_SIZE, MAP);
 
     const site = { derived: derivedG, fields: {}, combined: null };
-
     let allFieldLines = [];
     const snapshots = [];
+    let prevCombined = null;
+    let saturatedAt = null;
 
-    for (let pass=0; pass<N_PASSES; pass++) {
-      log.push(`Pass ${pass+1}/${N_PASSES}`);
+    for (let pass=0; pass<MAX_PASSES; pass++) {
+      log.push(`Pass ${pass+1}/${MAX_PASSES}`);
 
       // Sense: each pattern fills its field
       const fieldMap = {};
@@ -737,13 +752,27 @@ window.EC_FieldSolver = (() => {
       const combined = combineFields(fieldMap, gw, gh);
       normalizeField(combined);
 
+      // Convergence check: mean absolute change vs previous pass
+      if (prevCombined) {
+        let delta = 0;
+        for (let i=0;i<combined.length;i++) delta += Math.abs(combined[i]-prevCombined[i]);
+        delta /= combined.length;
+        log.push(`  Δ=${delta.toFixed(5)}`);
+        if (delta < EPSILON && pass >= 2) {
+          saturatedAt = pass+1;
+          log.push(`  ✓ Saturated at pass ${saturatedAt} (Δ=${delta.toFixed(5)} < ε=${EPSILON})`);
+          // Still trace lines for this final pass, then break
+        }
+      }
+      prevCombined = combined.slice();
+
       // Update site context for next pass
       site.fields = fieldMap;
       site.combined = combined;
 
       // Trace field lines
       const seeds = findSeeds(combined, gw, gh, THRESHOLD, CELL_SIZE, MAP);
-      log.push(`  ${seeds.length} seeds above threshold ${THRESHOLD}`);
+      log.push(`  ${seeds.length} seeds → tracing lines`);
 
       const lines = [];
       for (const seed of seeds) {
@@ -752,39 +781,108 @@ window.EC_FieldSolver = (() => {
         const annotated = annotateFieldLine(pts, fieldMap, gw, gh, CELL_SIZE, MAP);
         lines.push({ pts: annotated, seedPressure: seed.v });
       }
-      log.push(`  ${lines.length} field lines traced`);
+      log.push(`  ${lines.length} field lines`);
 
-      allFieldLines = lines; // latest pass is canonical
+      allFieldLines = lines;
 
       snapshots.push({
         pass, combined: combined.slice(), fieldMap, lines,
-        seeds: seeds.length,
-        gw, gh,
+        seeds: seeds.length, gw, gh,
+        delta: prevCombined ? null : null, // populated above
+        saturated: !!saturatedAt,
       });
+
+      if (saturatedAt) break;
     }
 
-    // Peak nodes: points where ≥3 patterns have weight > 0.3
-    const hotNodes = [];
-    if (snapshots.length>0) {
-      const last = snapshots[snapshots.length-1];
-      for (const line of last.lines) {
-        for (const pt of line.pts) {
-          const strong = Object.values(pt.weights).filter(w=>w>0.3).length;
-          if (strong>=3) hotNodes.push(pt);
-        }
-      }
-    }
+    if (!saturatedAt) log.push(`Max passes (${MAX_PASSES}) reached without saturation`);
 
-    log.push(`${hotNodes.length} hot nodes (≥3 patterns @ >0.3)`);
-    log.push(`Done. ${allFieldLines.length} field lines in final pass.`);
+    // Hot nodes: local maxima of pattern-count along lines
+    // Sparse — one per distinct high-pressure cluster, not every qualifying point
+    const hotNodes = buildHotNodes(allFieldLines);
+
+    // Building footprints from hot node clusters
+    const buildings = buildFootprints(hotNodes, CELL_SIZE);
+
+    log.push(`${hotNodes.length} hot nodes | ${buildings.length} building footprints`);
+    log.push(`Done in ${snapshots.length} passes.`);
 
     return {
-      snapshots, fieldLines: allFieldLines, hotNodes,
+      snapshots, fieldLines: allFieldLines, hotNodes, buildings,
       log, gw, gh, cellSize: CELL_SIZE, MAP,
+      saturatedAt,
       patternColors: Object.fromEntries(
         Object.entries(PATTERNS).map(([id,p])=>[id,p.color])
       ),
     };
+  }
+
+  // Sparse hot nodes: local maxima of simultaneous pattern count along lines.
+  // One node per high-pressure peak, not every qualifying point.
+  function buildHotNodes(lines) {
+    const candidates = [];
+    for (const line of lines) {
+      // Count strong patterns at each point
+      const scored = line.pts.map(pt => ({
+        ...pt,
+        nStrong: Object.values(pt.weights||{}).filter(w=>w>0.28).length
+      }));
+      // Find local maxima of nStrong along the line
+      for (let i=1;i<scored.length-1;i++) {
+        const p=scored[i];
+        if (p.nStrong < 3) continue;
+        if (p.nStrong >= scored[i-1].nStrong && p.nStrong >= scored[i+1].nStrong) {
+          candidates.push(p);
+        }
+      }
+    }
+    // Deduplicate: keep one per 40px neighbourhood
+    const kept = [];
+    for (const c of candidates.sort((a,b)=>b.nStrong-a.nStrong)) {
+      if (kept.some(k=>Math.hypot(k.x-c.x,k.y-c.y)<16)) continue;
+      kept.push(c);
+    }
+    return kept;
+  }
+
+  // Building footprints: cluster hot nodes spatially, fit rectangles.
+  // Each building is the bounding box of a cluster, oriented to the spine.
+  function buildFootprints(hotNodes, cellSize) {
+    if (hotNodes.length === 0) return [];
+    const minDist = Math.max(cellSize*3.5, 28);
+    // Single-linkage clustering
+    const clusters = [];
+    const assigned = new Uint8Array(hotNodes.length);
+    for (let i=0;i<hotNodes.length;i++) {
+      if (assigned[i]) continue;
+      const cluster = [hotNodes[i]];
+      assigned[i] = 1;
+      for (let j=i+1;j<hotNodes.length;j++) {
+        if (assigned[j]) continue;
+        if (cluster.some(c=>Math.hypot(c.x-hotNodes[j].x,c.y-hotNodes[j].y)<minDist)) {
+          cluster.push(hotNodes[j]);
+          assigned[j] = 1;
+        }
+      }
+      clusters.push(cluster);
+    }
+    // Fit axis-aligned rectangle to each cluster, padded slightly
+    const pad = cellSize*1.5;
+    return clusters.map(pts => {
+      const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+      const x=Math.min(...xs)-pad, y=Math.min(...ys)-pad;
+      const w=Math.max(...xs)-Math.min(...xs)+pad*2;
+      const h=Math.max(...ys)-Math.min(...ys)+pad*2;
+      // Dominant pattern = most common top pattern across cluster pts
+      const tally = {};
+      for (const pt of pts) {
+        const top=Object.entries(pt.weights||{}).sort((a,b)=>b[1]-a[1])[0];
+        if(top) tally[top[0]]=(tally[top[0]]||0)+1;
+      }
+      const domPid = Object.entries(tally).sort((a,b)=>b[1]-a[1])[0]?.[0];
+      const avgStrong = pts.reduce((s,p)=>s+p.nStrong,0)/pts.length;
+      return { x, y, w, h, pts: pts.length, domPid, avgStrong };
+    }).filter(b=>b.w>8&&b.h>8); // discard degenerate singletons
   }
 
   return { solve, PATTERNS };
@@ -934,18 +1032,46 @@ function renderFieldLines(lines, patternColors, view) {
     lLayer.appendChild(pl2);
   }
 
-  // Hot nodes: points where ≥3 patterns are strong
-  for (const line of lines) {
-    for (const pt of line.pts) {
-      const strong=Object.values(pt.weights||{}).filter(w=>w>0.35).length;
-      if(strong<3) continue;
-      const c=document.createElementNS(ns,'circle');
-      c.setAttribute('cx',pt.x.toFixed(1)); c.setAttribute('cy',pt.y.toFixed(1));
-      c.setAttribute('r', (3+strong*0.8).toFixed(1));
-      c.setAttribute('fill',blendColors(pt.weights||{},patternColors));
-      c.setAttribute('opacity','0.9');
-      nLayer.appendChild(c);
-    }
+  // Hot nodes: render the pre-computed sparse list passed in
+  // (not recomputed per-render — hotNodes come from result)
+}
+
+function renderHotNodes(hotNodes, patternColors) {
+  const ns='http://www.w3.org/2000/svg';
+  const nLayer=document.getElementById('layer-nodes');
+  nLayer.innerHTML='';
+  if(!hotNodes) return;
+  for (const pt of hotNodes) {
+    const r = 2.5 + (pt.nStrong||3)*0.6;
+    const c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',pt.x.toFixed(1)); c.setAttribute('cy',pt.y.toFixed(1));
+    c.setAttribute('r',r.toFixed(1));
+    c.setAttribute('fill',blendColors(pt.weights||{},patternColors));
+    c.setAttribute('stroke','rgba(255,255,255,0.25)');
+    c.setAttribute('stroke-width','0.5');
+    c.setAttribute('opacity','0.85');
+    nLayer.appendChild(c);
+  }
+}
+
+function renderBuildings(buildings, patternColors) {
+  const ns='http://www.w3.org/2000/svg';
+  const layer=document.getElementById('layer-buildings');
+  layer.innerHTML='';
+  if(!buildings||buildings.length===0) return;
+  for (const b of buildings) {
+    const hex=patternColors[b.domPid]||'#888888';
+    const [r,g,bl]=hexToRgb(hex);
+    // Opacity scales with avg pattern count (more patterns = more saturated)
+    const opacity=Math.min(0.85, 0.3+b.avgStrong*0.12);
+    const rect=document.createElementNS(ns,'rect');
+    rect.setAttribute('x',b.x.toFixed(1)); rect.setAttribute('y',b.y.toFixed(1));
+    rect.setAttribute('width',b.w.toFixed(1)); rect.setAttribute('height',b.h.toFixed(1));
+    rect.setAttribute('fill',`rgba(${r},${g},${bl},${opacity.toFixed(2)})`);
+    rect.setAttribute('stroke',`rgba(${r},${g},${bl},0.7)`);
+    rect.setAttribute('stroke-width','1');
+    rect.setAttribute('rx','2');
+    layer.appendChild(rect);
   }
 }
 
@@ -1012,22 +1138,33 @@ function updateFieldList(result) {
 function renderSnapshot(snapshot, result) {
   if(!snapshot||!result) return;
   const view=document.getElementById('ctrl-view').value;
+  const isBuildings = view==='buildings';
+
   // Heat map
-  const hLayer=document.getElementById('layer-heat');
-  if(view==='heat'||view==='both') {
-    // Pass MAP into snapshot for renderHeatMap
+  if((view==='heat'||view==='both')&&!isBuildings) {
     renderHeatMap({...snapshot, MAP:result.MAP, cellSize:result.cellSize}, result.patternColors);
-  } else { hLayer.innerHTML=''; }
+  } else { document.getElementById('layer-heat').innerHTML=''; }
+
   // Field lines
-  if(view==='lines'||view==='both') {
+  if((view==='lines'||view==='both')&&!isBuildings) {
     renderFieldLines(snapshot.lines, result.patternColors, view);
+    renderHotNodes(result.hotNodes, result.patternColors);
   } else {
     document.getElementById('layer-lines').innerHTML='';
     document.getElementById('layer-nodes').innerHTML='';
   }
+
+  // Buildings
+  if(isBuildings) {
+    renderBuildings(result.buildings, result.patternColors);
+  } else {
+    document.getElementById('layer-buildings').innerHTML='';
+  }
+
   // Pass label
   const lbl=document.getElementById('pass-label');
-  if(lbl) lbl.textContent=`Pass ${snapshot.pass+1}/${result.snapshots.length} — ${snapshot.seeds} seeds → ${snapshot.lines.length} lines`;
+  const satMsg = snapshot.saturated ? ' ✓ saturated' : '';
+  if(lbl) lbl.textContent=`Pass ${snapshot.pass+1}/${result.snapshots.length}${satMsg} — ${snapshot.seeds} seeds → ${snapshot.lines.length} lines`;
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
@@ -1052,6 +1189,7 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('ctrl-passes','val-passes',v=>`${v}`);
   bind('ctrl-res','val-res',v=>`${v}px`);
   bind('ctrl-thresh','val-thresh',v=>(+v).toFixed(2));
+  bind('ctrl-eps','val-eps',v=>(+v).toFixed(3));
 
   // Tabs
   document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -1107,8 +1245,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const passes=+document.getElementById('ctrl-passes').value;
       const res=+document.getElementById('ctrl-res').value;
       const thresh=+document.getElementById('ctrl-thresh').value;
+      const eps=+document.getElementById('ctrl-eps').value;
       const t0=performance.now();
-      _result=window.EC_FieldSolver.solve(parcels,(lon,lat)=>{const[x,y]=proj(lon,lat);return{x,y};},MAP,derived,{passes,cellSize:res,threshold:thresh});
+      _result=window.EC_FieldSolver.solve(parcels,(lon,lat)=>{const[x,y]=proj(lon,lat);return{x,y};},MAP,derived,{passes,cellSize:res,threshold:thresh,eps});
       const ms=Math.round(performance.now()-t0);
 
       _currentSnap=_result.snapshots.length-1;
@@ -1118,10 +1257,11 @@ document.addEventListener('DOMContentLoaded', () => {
       renderSnapshot(_result.snapshots[_currentSnap],_result);
       updateFieldList(_result);
 
+      const satMsg=_result.saturatedAt?` (sat @${_result.saturatedAt})`:'';
       document.getElementById('s-lines').textContent=_result.fieldLines.length;
-      document.getElementById('s-nodes').textContent=_result.hotNodes.length;
+      document.getElementById('s-nodes').textContent=_result.hotNodes.length+` / ${_result.buildings.length}b`;
       document.getElementById('s-patterns').textContent=Object.keys(window.EC_FieldSolver.PATTERNS).length;
-      document.getElementById('s-ms').textContent=ms;
+      document.getElementById('s-ms').textContent=ms+satMsg;
 
       const logEl=document.getElementById('log-content');
       logEl.innerHTML=_result.log.map(l=>{
