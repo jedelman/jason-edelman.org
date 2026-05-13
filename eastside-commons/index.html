@@ -794,6 +794,7 @@ details[open] summary::before { content: '▼  '; }
         <div class="result-row"><span class="result-key">Green cover</span><span class="result-val" id="res-green">—</span></div>
         <div class="result-row"><span class="result-key">Avg FAR</span><span class="result-val" id="dv-far">—</span></div>
         <div class="result-row"><span class="result-key">EA score</span><span class="result-val" id="res-score" style="font-size:0.75rem;">—</span></div>
+        <div class="result-row"><span class="result-key">Patterns</span><span class="result-val" id="res-patterns" style="font-size:0.7rem;">—</span></div>
       </div>
 
 
@@ -5807,6 +5808,26 @@ async function triggerPipeline() {
           if (progSection) progSection.style.display = 'none';
           if (statusText) statusText.textContent = '\u2713 Complete';
           if (btn) { btn.disabled=false; btn.textContent='\u21ba Re-run'; }
+
+          // ── Run Alexander pattern solver ──
+          if (window.EC_PatternSolver) {
+            try {
+              const st2 = window._getPipelineState?.() || {};
+              const psResult = window.EC_PatternSolver.solve(
+                st2.parcels, st2.proj, {x0:139,y0:163,x1:841,y1:653},
+                window._derivedG, { passes:4, cluster_k:40 }
+              );
+              window._patternSolverResult = psResult;
+              const patEl = document.getElementById('res-patterns');
+              if (patEl) patEl.textContent =
+                psResult.sceneGraph.instances.length + ' inst / ' + psResult.buildings.length + ' bldgs';
+              console.group('[PatternSolver]');
+              psResult.log.forEach(l => console.log(l));
+              console.log('counts:', psResult.counts);
+              console.groupEnd();
+            } catch(e) { console.error('[PatternSolver]', e); }
+          }
+
           // Update legend chips
           renderLegendChips();
           updateAnalysisViews();
@@ -7444,6 +7465,932 @@ function showToast(msg) {
 }
 
 window.EC_Save = { captureState, saveToHash, saveToFile, loadFromFile, loadFromHash, restoreState, showToast, newSeed, loadCanonical, updateCanonicalBadge };
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EC_PatternSolver — Alexander Pattern Language constraint solver
+//
+// Three-tier scene graph:
+//   Pattern      — singleton, no physical location, defines rule + priority
+//   Instance     — physically located polygon or spline, owned by one Pattern,
+//                  references other Instances it interacts with
+//   BuildingPoint — concrete geometry, owned by one Instance
+//
+// Each relaxation pass:
+//   1. Walk patterns in priority order → pattern-match scene graph → emit Instances
+//   2. Resolve conflicts: each point gets highest-priority owning pattern
+//   3. Each pattern translates its points per its geometric rule
+//   4. Force vectors from inter-instance interactions → softmax → apply
+//   5. Coalesce BuildingPoints into buildings via kNN clustering
+// ═══════════════════════════════════════════════════════════════════════════
+window.EC_PatternSolver = (() => {
+
+  // ── 1. PATTERN REGISTRY ──────────────────────────────────────────────────
+  // Each entry: { id, name, scale, priority, rule, detect, instantiate, forces }
+  //   priority: lower = higher priority (wins conflicts). Within scale, = pattern number.
+  //   detect(sceneGraph, proj, MAP) → [{candidateGeom, context}]  — where can this fire?
+  //   instantiate(candidate, sceneGraph) → Instance                — create the instance
+  //   forces(instance, neighbors) → [{target: Instance, vec: [dx,dy], weight}]
+
+  const PATTERNS = {};
+
+  function defPattern(id, name, scale, spec) {
+    PATTERNS[id] = { id, name, scale,
+      priority: scale * 1000 + id,   // scale-major, pattern-minor
+      ...spec };
+  }
+
+  // Scale constants
+  const S = { DISTRICT:1, BLOCK:2, GROUP:3, BUILDING:4, EDGE:5 };
+
+  // ── SCALE 1: DISTRICT ────────────────────────────────────────────────────
+
+  defPattern(29, 'Density Rings', S.DISTRICT, {
+    // Detects: site centroid. Emits concentric density zones.
+    // Rule: highest density at spine, decreasing outward.
+    detect(sg, proj, MAP) {
+      // One candidate: the whole site
+      const cx = (MAP.x0 + MAP.x1) / 2;
+      const cy = (MAP.y0 + MAP.y1) / 2;
+      return [{ geom: { type:'point', x:cx, y:cy }, context:{ MAP } }];
+    },
+    instantiate(cand, sg) {
+      const { x, y } = cand.geom;
+      const r_inner  = 120;  // px — high density core
+      const r_mid    = 240;  // px — medium density
+      const r_outer  = 400;  // px — low density edge
+      return mkInstance(29, 'spline', [
+        { x, y, r: r_inner,  density: 'HIGH',   far_target: 1.4 },
+        { x, y, r: r_mid,    density: 'MEDIUM', far_target: 1.0 },
+        { x, y, r: r_outer,  density: 'LOW',    far_target: 0.6 },
+      ], { type:'density_rings' });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(30, 'Activity Nodes', S.DISTRICT, {
+    // Detects: intersections of major paths / parcel cluster centroids.
+    // Rule: place commercial anchor at each node.
+    detect(sg, proj, MAP) {
+      // Use derived geometry: spine midpoint + two end anchors
+      const G = window._derivedG;
+      if (!G?.SPINE) return [];
+      const spine = G.SPINE;
+      const candidates = [
+        { geom:{ type:'point', x: spine.x + spine.w/2, y: spine.y + spine.h * 0.25 },
+          context:{ role:'north_node' } },
+        { geom:{ type:'point', x: spine.x + spine.w/2, y: spine.y + spine.h * 0.75 },
+          context:{ role:'south_node' } },
+      ];
+      return candidates;
+    },
+    instantiate(cand) {
+      return mkInstance(30, 'point', [cand.geom], { role: cand.context.role, radius_ft: 150 });
+    },
+    forces(inst, neighbors) {
+      // Activity nodes attract MIXED_USE instances toward them
+      return neighbors
+        .filter(n => n.patternId === 87 || n.patternId === 88 || n.patternId === 46)
+        .map(n => ({ target: n, vec: vecTo(inst, n), weight: 0.3 }));
+    },
+  });
+
+  defPattern(31, 'Promenade', S.DISTRICT, {
+    // Detects: the commons spine geometry.
+    // Rule: spine is the promenade. Every point on site within 10-min walk.
+    detect(sg, proj, MAP) {
+      const G = window._derivedG;
+      if (!G?.SPINE) return [];
+      return [{ geom:{ type:'spline',
+        pts:[{ x: G.SPINE.x + G.SPINE.w/2, y: G.SPINE.y },
+             { x: G.SPINE.x + G.SPINE.w/2, y: G.SPINE.y + G.SPINE.h }]},
+        context:{ width_ft: 30 } }];
+    },
+    instantiate(cand) {
+      return mkInstance(31, 'spline', cand.geom.pts, { width_ft: cand.context.width_ft });
+    },
+    forces(inst, neighbors) {
+      // Promenade repels car infrastructure, attracts shops and cafes
+      const attract = neighbors.filter(n => [87,88,46,32].includes(n.patternId));
+      const repel   = neighbors.filter(n => [97,103].includes(n.patternId));
+      return [
+        ...attract.map(n => ({ target:n, vec: vecTo(inst,n), weight: 0.25 })),
+        ...repel.map(n   => ({ target:n, vec: vecAway(inst,n), weight: 0.4 })),
+      ];
+    },
+  });
+
+  defPattern(36, 'Degrees of Publicness', S.DISTRICT, {
+    // Detects: every parcel. Tags exposure level based on street adjacency.
+    detect(sg, proj, MAP) {
+      return (sg.instances || [])
+        .filter(inst => inst.patternId === 29)  // needs density rings first
+        .map(rings => ({ geom: rings.geom, context: { rings } }));
+    },
+    instantiate(cand, sg) {
+      // Classify each parcel zone as PUBLIC / SEMI / QUIET based on
+      // distance to spine (P31 instance) and density ring (P29 instance)
+      const spine = sg.instances?.find(i => i.patternId === 31);
+      const pts = [];
+      for (const zone of (sg.zones || [])) {
+        if (!zone.centroid) continue;
+        const d = spine ? ptDist(zone.centroid, splineMidpoint(spine)) : 999;
+        const exposure = d < 80 ? 'PUBLIC' : d < 180 ? 'SEMI' : 'QUIET';
+        pts.push({ ...zone.centroid, exposure, zone_id: zone.id });
+      }
+      return mkInstance(36, 'point_cloud', pts, { type:'exposure_map' });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(53, 'Main Gateways', S.DISTRICT, {
+    detect(sg, proj, MAP) {
+      // Gateways at the four major site entry points
+      return [
+        { geom:{ type:'point', x: MAP.x0 + 20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'west' } },
+        { geom:{ type:'point', x: MAP.x1 - 20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'east' } },
+        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y0 + 20 }, context:{ edge:'north' } },
+        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y1 - 20 }, context:{ edge:'south' } },
+      ];
+    },
+    instantiate(cand) {
+      return mkInstance(53, 'point', [cand.geom], { edge: cand.context.edge, width_ft: 40 });
+    },
+    forces() { return []; },
+  });
+
+  // ── SCALE 2: BLOCK ───────────────────────────────────────────────────────
+
+  defPattern(60, 'Accessible Green', S.BLOCK, {
+    // Rule: every residential building point must be within 264px (~3-min walk at 8.5ft/px)
+    // of a GREEN instance. Detects gaps and emits green polygons to fill them.
+    detect(sg, proj, MAP) {
+      const WALK_PX = 264;  // 3-min walk ≈ 1320ft ÷ 8.5ft/px
+      const resPts = buildingPointsByPattern(sg, [79, 87, 37]);
+      const greenInsts = (sg.instances || []).filter(i => [60,67,71].includes(i.patternId));
+      // Find residential points more than WALK_PX from any green
+      const gaps = resPts.filter(bp => {
+        const nearest = nearestInstance(bp, greenInsts);
+        return !nearest || nearest.dist > WALK_PX;
+      });
+      if (gaps.length === 0) return [];
+      // Cluster gaps → candidate green zones
+      const clusters = knnCluster(gaps, Math.ceil(gaps.length / 8), 60);
+      return clusters.map(c => ({ geom:{ type:'polygon', pts: hullOf(c) }, context:{ gap:true } }));
+    },
+    instantiate(cand) {
+      return mkInstance(60, 'polygon', cand.geom.pts, { min_area_sqft: 5000 });
+    },
+    forces(inst, neighbors) {
+      // Green zones attract House Cluster (P37) instances toward them
+      return neighbors.filter(n => n.patternId === 37)
+        .map(n => ({ target:n, vec: vecTo(n, inst), weight: 0.2 }));
+    },
+  });
+
+  defPattern(67, 'Common Land', S.BLOCK, {
+    // Rule: each residential cluster gets a common land polygon, south-facing.
+    // Detect: find House Cluster instances, emit a polygon to their south.
+    detect(sg) {
+      return (sg.instances || [])
+        .filter(i => i.patternId === 37)
+        .map(cluster => ({
+          geom: southOf(cluster, 60),  // polygon 60px south of cluster centroid
+          context: { cluster },
+        }));
+    },
+    instantiate(cand) {
+      return mkInstance(67, 'polygon', cand.geom.pts,
+        { south_facing: true, parent_cluster: cand.context.cluster.id });
+    },
+    forces(inst, neighbors) {
+      // Common land repels parking (P97/P103), attracts outdoor room (P69)
+      return [
+        ...neighbors.filter(n => [97,103].includes(n.patternId))
+          .map(n => ({ target:n, vec: vecAway(inst,n), weight: 0.5 })),
+        ...neighbors.filter(n => n.patternId === 69)
+          .map(n => ({ target:n, vec: vecTo(inst,n), weight: 0.15 })),
+      ];
+    },
+  });
+
+  defPattern(71, 'Still Water', S.BLOCK, {
+    // Singleton: sponge park parcel. Already located in GIS data.
+    detect(sg, proj, MAP) {
+      const G = window._derivedG;
+      if (!G?.SPONGE) return [];
+      const s = G.SPONGE;
+      return [{ geom:{ type:'point', x: s.cx, y: s.cy }, context:{ rx:s.rx, ry:s.ry } }];
+    },
+    instantiate(cand) {
+      const { rx, ry } = cand.context;
+      // Ellipse approximated as polygon
+      const pts = [];
+      for (let a = 0; a < Math.PI*2; a += Math.PI/8)
+        pts.push({ x: cand.geom.x + Math.cos(a)*rx, y: cand.geom.y + Math.sin(a)*ry });
+      return mkInstance(71, 'polygon', pts, { south_facing: true, type:'bioswale' });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(37, 'House Cluster', S.BLOCK, {
+    // Rule: 8-12 units around common land. Detect open areas in density rings.
+    detect(sg, proj, MAP) {
+      const rings = sg.instances?.find(i => i.patternId === 29);
+      if (!rings) return [];
+      // Sample points in the buildable zone, away from water and setbacks
+      const candidates = [];
+      const step = 80;
+      for (let x = MAP.x0 + 40; x < MAP.x1 - 40; x += step) {
+        for (let y = MAP.y0 + 40; y < MAP.y1 - 40; y += step) {
+          if (!inEDA(x, y)) continue;
+          if (inSetback(x, y, MAP)) continue;
+          // Avoid water
+          const G = window._derivedG;
+          if (G?.SPONGE && ptDist({x,y}, {x:G.SPONGE.cx,y:G.SPONGE.cy}) < G.SPONGE.rx * 1.2) continue;
+          candidates.push({ geom:{ type:'point', x, y }, context:{} });
+        }
+      }
+      // Cluster candidates into groups of ~10 units each
+      const n_clusters = Math.max(1, Math.round(candidates.length / 10));
+      return knnCluster(candidates.map(c => c.geom), n_clusters, 37)
+        .map(cluster => ({ geom:{ type:'point', ...centroidOf(cluster) }, context:{ pts: cluster } }));
+    },
+    instantiate(cand) {
+      return mkInstance(37, 'polygon', rectAround(cand.geom, 60, 60),
+        { unit_count: 10, radius_ft: 100 });
+    },
+    forces(inst, neighbors) {
+      // Clusters pull toward accessible green (P60), push away from each other
+      return [
+        ...neighbors.filter(n => n.patternId === 60)
+          .map(n => ({ target:inst, vec: vecTo(inst,n), weight: 0.2 })),
+        ...neighbors.filter(n => n.patternId === 37 && n.id !== inst.id)
+          .map(n => ({ target:inst, vec: vecAway(inst,n), weight: 0.15 })),
+      ];
+    },
+  });
+
+  // ── SCALE 3: BUILDING GROUP ──────────────────────────────────────────────
+
+  defPattern(95, 'Building Complex', S.GROUP, {
+    // Rule: break each cluster into 25ft-wide parcel strips.
+    // Each House Cluster instance → array of long-thin parcel polygons.
+    detect(sg) {
+      return (sg.instances || []).filter(i => i.patternId === 37)
+        .map(cluster => ({ geom: instanceBounds(cluster), context:{ cluster } }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      const PARCEL_W_PX = 25 / 8.5;   // 25ft at 8.5ft/px ≈ 2.9px — use world ft directly
+      const FT_PER_PX = 8.5;
+      const parcel_w_px = 25 / FT_PER_PX;
+      const parcel_d_px = 125 / FT_PER_PX;
+      const parcels = [];
+      for (let px = x; px + parcel_w_px <= x + w; px += parcel_w_px) {
+        parcels.push(rectPts(px, y, parcel_w_px, Math.min(parcel_d_px, h)));
+      }
+      return mkInstance(95, 'polygon_array', parcels,
+        { parcel_w_ft: 25, parcel_d_ft: 125, parent_cluster: cand.context.cluster.id });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(104, 'Site Repair', S.GROUP, {
+    // Rule: place building parcels on worst land (parking, hardscape).
+    // Preserve best land (green, water). Implemented as repulsion from P60/P71.
+    detect(sg) {
+      // Detects every P95 parcel that overlaps a green/water instance — flag for relocation
+      const green = (sg.instances||[]).filter(i => [60,67,71].includes(i.patternId));
+      return (sg.instances||[]).filter(i => i.patternId === 95)
+        .flatMap(bldg => bldg.data.parcels || [bldg])
+        .filter(parcel => green.some(g => instancesOverlap(parcel, g)))
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel } }));
+    },
+    instantiate(cand) {
+      // Don't create a new instance — just tag the existing parcel for force application
+      return mkInstance(104, 'point', [centroidOf(cand.geom)],
+        { repair: true, target_parcel: cand.context.parcel.id });
+    },
+    forces(inst, neighbors) {
+      // Strong repulsion from green/water
+      return neighbors.filter(n => [60,67,71].includes(n.patternId))
+        .map(n => ({ target:inst, vec: vecAway(inst,n), weight: 0.8 }));
+    },
+  });
+
+  defPattern(105, 'South Facing Outdoors', S.GROUP, {
+    // Rule: buildings must be north of their outdoor/green space.
+    // Detects pairs (building, green) and applies northward force on buildings.
+    detect(sg) {
+      const bldgs  = (sg.instances||[]).filter(i => i.patternId === 95);
+      const greens = (sg.instances||[]).filter(i => [60,67,71].includes(i.patternId));
+      return bldgs.map(b => ({ geom: instanceBounds(b), context:{ bldg:b, greens } }));
+    },
+    instantiate(cand) {
+      return mkInstance(105, 'point', [centroidOf(cand.geom)], { type:'orientation_constraint' });
+    },
+    forces(inst, neighbors) {
+      // Each building → force northward if it's south of its nearest green
+      const green = neighbors.find(n => [60,67,71].includes(n.patternId));
+      if (!green) return [];
+      const bldgCy = centroidOf(instanceBounds(inst)).y;
+      const greenCy = centroidOf(instanceBounds(green)).y;
+      if (bldgCy > greenCy) return [];  // already north (lower y = north in SVG)
+      return [{ target:inst, vec:[0, -(bldgCy - greenCy) * 0.3], weight:0.5 }];
+    },
+  });
+
+  defPattern(106, 'Positive Outdoor Space', S.GROUP, {
+    // Rule: outdoor space between buildings must have definite shape (convex hull ≥ 0.6).
+    // Detects: gaps between P95 building parcels. Emits shaped outdoor polygons.
+    detect(sg) {
+      const bldgs = (sg.instances||[]).filter(i => i.patternId === 95);
+      const gaps  = [];
+      for (let i = 0; i < bldgs.length; i++) {
+        for (let j = i+1; j < bldgs.length; j++) {
+          const gap = gapPolygon(bldgs[i], bldgs[j]);
+          if (gap && polygonArea(gap) > 400) gaps.push({ geom:{ type:'polygon', pts:gap }, context:{} });
+        }
+      }
+      return gaps;
+    },
+    instantiate(cand) {
+      // Regularize gap into a definite shape
+      const hull = hullOf(cand.geom.pts);
+      return mkInstance(106, 'polygon', hull, { shaped: true });
+    },
+    forces(inst, neighbors) {
+      // Building edges should align with this outdoor space
+      return neighbors.filter(n => n.patternId === 95)
+        .map(n => ({ target:n, vec: vecTo(n, inst), weight: 0.1 }));
+    },
+  });
+
+  defPattern(109, 'Long Thin House', S.GROUP, {
+    // The 25×125 parcel IS this pattern. Detects oversized parcels → splits them.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 95)
+        .filter(i => {
+          const b = instanceBounds(i);
+          return b.w / (25/8.5) > 1.5;  // wider than 1.5 parcel widths
+        })
+        .map(i => ({ geom: instanceBounds(i), context:{ inst:i } }));
+    },
+    instantiate(cand) {
+      // Split wide parcels into 25ft strips
+      const { x, y, w, h } = cand.geom;
+      const pw = 25 / 8.5;
+      const strips = [];
+      for (let px = x; px + pw <= x + w + 1; px += pw)
+        strips.push(rectPts(px, y, Math.min(pw, x+w-px), h));
+      return mkInstance(109, 'polygon_array', strips, { parcel_w_ft:25 });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(114, 'Hierarchy of Open Space', S.GROUP, {
+    // Rule: every outdoor space must look into a smaller AND a larger space.
+    // Detects: P106 instances. Checks hierarchy. Emits corrective instances.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 106)
+        .map(os => ({ geom: instanceBounds(os), context:{ os } }));
+    },
+    instantiate(cand) {
+      // Tag the outdoor space with its hierarchy level (pocket→courtyard→square→park)
+      const area = polygonArea(rectToPts(cand.geom));
+      const level = area < 800 ? 'pocket' : area < 4000 ? 'courtyard' : area < 16000 ? 'square' : 'park';
+      return mkInstance(114, 'polygon', rectToPts(cand.geom), { level, area });
+    },
+    forces(inst, neighbors) {
+      // Each space should have at least one smaller and one larger neighbor
+      const level = inst.data.level;
+      const levels = ['pocket','courtyard','square','park'];
+      const myIdx  = levels.indexOf(level);
+      const smaller = neighbors.filter(n => n.patternId===114 && levels.indexOf(n.data?.level) < myIdx);
+      const larger  = neighbors.filter(n => n.patternId===114 && levels.indexOf(n.data?.level) > myIdx);
+      // Pull toward smaller nested space
+      return [
+        ...smaller.map(n => ({ target:n, vec: vecTo(inst,n), weight:0.1 })),
+        ...larger.map(n  => ({ target:inst, vec: vecTo(inst,n), weight:0.05 })),
+      ];
+    },
+  });
+
+  // ── SCALE 4: BUILDING FORM ───────────────────────────────────────────────
+
+  defPattern(115, 'Courtyards Which Live', S.BUILDING, {
+    // Rule: every building parcel gets a courtyard void with view out + 2 crossing paths.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel } }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      const inset = Math.min(w, h) * 0.25;
+      const cy_pts = rectPts(x+inset, y+inset, w-2*inset, h-2*inset);
+      // Two crossing paths: horizontal and vertical through courtyard centroid
+      const cx = x + w/2, cy = y + h/2;
+      return mkInstance(115, 'polygon', cy_pts, {
+        type: 'courtyard_void',
+        paths: [
+          [{ x: x, y: cy }, { x: x+w, y: cy }],   // E-W crossing
+          [{ x: cx, y: y }, { x: cx, y: y+h }],   // N-S crossing
+        ],
+        parent_parcel: cand.context.parcel.id,
+      });
+    },
+    forces(inst, neighbors) {
+      // Courtyard needs view out — pull toward nearest larger open space
+      const larger = neighbors.filter(n => [60,67,114].includes(n.patternId));
+      return larger.map(n => ({ target:inst, vec: vecTo(inst,n), weight:0.15 }));
+    },
+  });
+
+  defPattern(122, 'Building Fronts', S.BUILDING, {
+    // Rule: no setbacks from paths. Building face aligns to path edge.
+    detect(sg) {
+      const promenades = (sg.instances||[]).filter(i => i.patternId === 31 || i.patternId === 100);
+      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel, promenades } }));
+    },
+    instantiate(cand) {
+      // Snap the building's nearest edge to the promenade centerline
+      const promenade = cand.context.promenades[0];
+      if (!promenade) return mkInstance(122, 'point', [], {});
+      const spinePts = promenade.geom;
+      const spineX   = spinePts[0]?.x || 490;  // SVG midpoint default
+      const { x, y, w, h } = cand.geom;
+      // If building is left of spine, align right edge to spine. Vice versa.
+      const bldgCx = x + w/2;
+      const snapX  = bldgCx < spineX ? spineX - w/2 : spineX + w/2;
+      return mkInstance(122, 'point', [{ x: snapX, y: y+h/2 }],
+        { snap_to_spine: true, original_cx: bldgCx });
+    },
+    forces(inst, neighbors) {
+      const promenade = neighbors.find(n => n.patternId === 31);
+      if (!promenade || !inst.data.original_cx) return [];
+      // Force building face toward spine
+      const spineX = promenade.geom[0]?.x || 490;
+      const dx = (spineX - inst.data.original_cx) * 0.4;
+      return [{ target:inst, vec:[dx, 0], weight:0.6 }];
+    },
+  });
+
+  defPattern(127, 'Intimacy Gradient', S.BUILDING, {
+    // Rule: public → private sequence from entrance inward.
+    // Generates a depth ordering of building zones.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{} }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      // Three depth bands: public front (street), semi-private middle, private rear
+      return mkInstance(127, 'polygon_array', [
+        rectPts(x, y, w, h*0.25),            // public: ground floor, street face
+        rectPts(x, y+h*0.25, w, h*0.5),      // semi-private: middle floors
+        rectPts(x, y+h*0.75, w, h*0.25),     // private: rear / upper
+      ], { bands: ['PUBLIC','SEMI','PRIVATE'] });
+    },
+    forces() { return []; },
+  });
+
+  // ── SCALE 5: STREET EDGE ─────────────────────────────────────────────────
+
+  defPattern(87, 'Individually Owned Shops', S.EDGE, {
+    // Rule: ground floor of every building on promenade = shop. Each is identifiable.
+    detect(sg) {
+      const promenade = (sg.instances||[]).find(i => i.patternId === 31);
+      if (!promenade) return [];
+      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
+        .filter(i => instanceNearSpline(i, promenade, 40))
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel } }));
+    },
+    instantiate(cand) {
+      // Ground floor bay: full width of parcel, 1-floor height
+      const { x, y, w } = cand.geom;
+      const floor_h = 14 / 8.5;  // 14ft commercial floor at 8.5ft/px
+      return mkInstance(87, 'polygon', rectPts(x, y, w, floor_h),
+        { use:'shop', bay_width_ft:25, floor_height_ft:14, opens_to_street:true });
+    },
+    forces(inst, neighbors) {
+      // Shops attract cafes (P88) as immediate neighbors
+      return neighbors.filter(n => n.patternId === 88)
+        .map(n => ({ target:n, vec: vecTo(inst,n), weight:0.2 }));
+    },
+  });
+
+  defPattern(88, 'Street Cafe', S.EDGE, {
+    // Rule: tables extend into path. Detects shop instances on promenade.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 87)
+        .filter((_, idx) => idx % 3 === 0)   // every 3rd shop becomes a cafe
+        .map(shop => ({ geom: instanceBounds(shop), context:{ shop } }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      // Cafe extends 8ft into path (north of building face)
+      const ext = 8 / 8.5;
+      return mkInstance(88, 'polygon', rectPts(x, y - ext, w, h + ext),
+        { use:'cafe', extends_into_path_ft:8, table_zone: rectPts(x, y-ext, w, ext) });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(46, 'Market of Many Shops', S.EDGE, {
+    // Singleton: Eastside Market at south activity node.
+    detect(sg) {
+      const southNode = (sg.instances||[]).find(i => i.patternId === 30 && i.data?.role === 'south_node');
+      if (!southNode) return [];
+      return [{ geom: instanceBounds(southNode), context: { node: southNode } }];
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      const mw = 80, mh = 80;  // market hall footprint in px
+      return mkInstance(46, 'polygon', rectPts(x - mw/2, y - mh/2, mw, mh),
+        { use:'market_hall', aisle_width_ft:9, stall_size_ft:'6x9', roof:true, open_sides:true });
+    },
+    forces(inst, neighbors) {
+      return neighbors.filter(n => n.patternId === 88 || n.patternId === 87)
+        .map(n => ({ target:n, vec: vecTo(inst,n), weight:0.15 }));
+    },
+  });
+
+  // ── 2. SCENE GRAPH ──────────────────────────────────────────────────────
+  let _sg = null;  // { instances:[], buildingPoints:[], zones:[], pass:0 }
+
+  function mkInstance(patternId, geomType, geom, data) {
+    return {
+      id: `inst_${patternId}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+      patternId,
+      geomType,   // 'point' | 'spline' | 'polygon' | 'polygon_array' | 'point_cloud'
+      geom,       // array of {x,y} or nested arrays
+      data,       // pattern-specific metadata
+      force_accum: [0, 0],
+      pass_created: _sg?.pass || 0,
+      refs: [],   // ids of other instances this one interacts with
+    };
+  }
+
+  // ── 3. BUILDING POINTS ──────────────────────────────────────────────────
+  // Each Pattern instance → one or more BuildingPoints
+  function emitBuildingPoints(inst) {
+    const pts = [];
+    const pid = inst.patternId;
+
+    if (pid === 95 || pid === 109) {
+      // Building parcel → emit a grid of building points on the footprint
+      const geoms = inst.geomType === 'polygon_array' ? inst.geom : [inst.geom];
+      for (const poly of geoms) {
+        const b = boundsOf(poly);
+        pts.push({
+          x: b.x + b.w/2, y: b.y + b.h/2,
+          type: 'MIXED_USE_5OVER1',
+          floors: 4,
+          parcel_w_ft: 25, parcel_d_ft: 125,
+          instance_id: inst.id,
+          owner_pattern: pid,
+          patterns: [pid],
+        });
+      }
+    } else if (pid === 87) {
+      // Shop → ground-floor point
+      const b = boundsOf(inst.geom);
+      pts.push({ x:b.x+b.w/2, y:b.y, type:'RETAIL', floors:1, instance_id:inst.id, owner_pattern:pid, patterns:[pid] });
+    } else if (pid === 46) {
+      const b = boundsOf(inst.geom);
+      pts.push({ x:b.x+b.w/2, y:b.y+b.h/2, type:'MARKET_HALL', floors:1, instance_id:inst.id, owner_pattern:pid, patterns:[pid] });
+    } else if ([60,67,71].includes(pid)) {
+      const b = boundsOf(inst.geom);
+      pts.push({ x:b.x+b.w/2, y:b.y+b.h/2, type:'GREEN_ACTIVE', floors:0, instance_id:inst.id, owner_pattern:pid, patterns:[pid] });
+    } else if (pid === 115) {
+      // Courtyard void → green ground point
+      const b = boundsOf(inst.geom);
+      pts.push({ x:b.x+b.w/2, y:b.y+b.h/2, type:'COURTYARD', floors:0, instance_id:inst.id, owner_pattern:pid, patterns:[pid] });
+    }
+
+    return pts;
+  }
+
+  // ── 4. kNN CLUSTERING → BUILDINGS ───────────────────────────────────────
+  function coalesceToBuildings(buildingPoints, k) {
+    const bPts = buildingPoints.filter(p => p.type === 'MIXED_USE_5OVER1');
+    if (bPts.length === 0) return [];
+    const clusters = knnCluster(bPts, k, 95);
+    return clusters.map((cluster, idx) => {
+      const cx = centroidOf(cluster).x;
+      const cy = centroidOf(cluster).y;
+      const patterns_present = [...new Set(cluster.flatMap(p => p.patterns))];
+      return {
+        id: `bldg_${idx}`,
+        centroid: { x:cx, y:cy },
+        footprint: hullOf(cluster.map(p => ({x:p.x,y:p.y}))),
+        type: 'MIXED_USE_5OVER1',
+        floors: 4,
+        units: Math.round(cluster.length * 9 / Math.max(1, cluster.length / 5)),
+        patterns: patterns_present,
+        instances: [...new Set(cluster.map(p => p.instance_id))],
+      };
+    });
+  }
+
+  // ── 5. FORCE APPLICATION (softmax relaxation) ────────────────────────────
+  function applyForces(instances) {
+    // Collect all force vectors on each instance
+    for (const inst of instances) {
+      inst.force_accum = [0, 0];
+    }
+
+    for (const inst of instances) {
+      const pattern = PATTERNS[inst.patternId];
+      if (!pattern?.forces) continue;
+      const neighbors = instances.filter(n => n.id !== inst.id &&
+        instanceDist(inst, n) < 300);
+      const forces = pattern.forces(inst, neighbors);
+      for (const { target, vec, weight } of forces) {
+        if (!target) continue;
+        target.force_accum[0] += vec[0] * weight;
+        target.force_accum[1] += vec[1] * weight;
+      }
+    }
+
+    // Softmax-normalize weights, then apply translations
+    const maxMag = Math.max(1, ...instances.map(i =>
+      Math.hypot(i.force_accum[0], i.force_accum[1])));
+    const DAMPING = 0.4;
+
+    for (const inst of instances) {
+      const [dx, dy] = inst.force_accum;
+      const mag = Math.hypot(dx, dy);
+      if (mag < 0.5) continue;
+      const norm = Math.min(mag / maxMag, 1);  // softmax normalization
+      const scale = norm * DAMPING;
+      translateInstance(inst, dx * scale, dy * scale);
+    }
+  }
+
+  // ── 6. MAIN SOLVER LOOP ──────────────────────────────────────────────────
+  function solve(parcels, proj, MAP, derivedG, opts = {}) {
+    const MAX_PASSES  = opts.passes || 4;
+    const CLUSTER_K   = opts.cluster_k || 40;
+    const log = [];
+
+    _sg = { instances: [], buildingPoints: [], buildings: [], zones: [], pass: 0 };
+
+    const patternOrder = Object.values(PATTERNS)
+      .sort((a, b) => a.priority - b.priority);
+
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      _sg.pass = pass;
+      const passScale = Math.min(S.EDGE, S.DISTRICT + pass);  // introduce one scale per pass
+      log.push(`Pass ${pass} — scale ≤ ${passScale}`);
+
+      // Step 1: detect + instantiate patterns at this scale
+      let newInsts = 0;
+      for (const pattern of patternOrder) {
+        if (pattern.scale > passScale) continue;
+        let candidates = [];
+        try { candidates = pattern.detect(_sg, proj, MAP) || []; }
+        catch(e) { log.push(`  P${pattern.id} detect error: ${e.message}`); continue; }
+
+        for (const cand of candidates) {
+          let inst;
+          try { inst = pattern.instantiate(cand, _sg); }
+          catch(e) { log.push(`  P${pattern.id} instantiate error: ${e.message}`); continue; }
+          if (!inst) continue;
+
+          // Conflict resolution: check if this location is already owned by higher-priority pattern
+          const existing = _sg.instances.find(i =>
+            i.id !== inst.id && i.patternId !== inst.patternId &&
+            instanceDist(i, inst) < 20 &&
+            PATTERNS[i.patternId]?.priority < pattern.priority);
+
+          if (!existing) {
+            _sg.instances.push(inst);
+            newInsts++;
+          }
+        }
+      }
+      log.push(`  +${newInsts} instances (total: ${_sg.instances.length})`);
+
+      // Step 2: emit building points for all instances
+      _sg.buildingPoints = _sg.instances.flatMap(emitBuildingPoints);
+      log.push(`  Building points: ${_sg.buildingPoints.length}`);
+
+      // Step 3: apply force relaxation
+      if (pass > 0) applyForces(_sg.instances);
+
+      // Step 4: coalesce to buildings
+      _sg.buildings = coalesceToBuildings(_sg.buildingPoints, CLUSTER_K);
+      log.push(`  Buildings coalesced: ${_sg.buildings.length}`);
+    }
+
+    // Final: count pattern instances
+    const counts = {};
+    for (const inst of _sg.instances) {
+      counts[inst.patternId] = (counts[inst.patternId] || 0) + 1;
+    }
+    log.push(`Pattern instance counts: ${JSON.stringify(counts)}`);
+
+    return { sceneGraph: _sg, log, buildings: _sg.buildings, counts };
+  }
+
+  // ── 7. GEOMETRY HELPERS ──────────────────────────────────────────────────
+
+  function rectPts(x, y, w, h) {
+    return [{ x, y }, { x:x+w, y }, { x:x+w, y:y+h }, { x, y:y+h }];
+  }
+  function rectAround(c, w, h) { return rectPts(c.x - w/2, c.y - h/2, w, h); }
+  function rectToPts(b) { return rectPts(b.x, b.y, b.w, b.h); }
+
+  function boundsOf(pts) {
+    if (!pts || pts.length === 0) return { x:0, y:0, w:0, h:0 };
+    const arr = Array.isArray(pts[0]) ? pts : pts.map(p => [p.x, p.y]);
+    const xs = arr.map(p => p[0] ?? p.x ?? 0);
+    const ys = arr.map(p => p[1] ?? p.y ?? 0);
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs)-x, h: Math.max(...ys)-y };
+  }
+
+  function instanceBounds(inst) {
+    const pts = inst.geomType === 'polygon_array'
+      ? inst.geom.flat()
+      : inst.geom;
+    return boundsOf(pts);
+  }
+
+  function centroidOf(pts) {
+    if (!pts || pts.length === 0) return { x:0, y:0 };
+    const arr = Array.isArray(pts[0]) ? pts.map(p => ({x:p[0],y:p[1]})) : pts;
+    return {
+      x: arr.reduce((s,p) => s+(p.x||0), 0) / arr.length,
+      y: arr.reduce((s,p) => s+(p.y||0), 0) / arr.length,
+    };
+  }
+
+  function hullOf(pts) {
+    // Simple convex hull (gift wrapping) — enough for our purposes
+    if (!pts || pts.length < 3) return pts || [];
+    const arr = pts.map(p => ({ x: p.x||0, y: p.y||0 }));
+    arr.sort((a,b) => a.x - b.x || a.y - b.y);
+    const cross = (O,A,B) => (A.x-O.x)*(B.y-O.y) - (A.y-O.y)*(B.x-O.x);
+    const lower = [], upper = [];
+    for (const p of arr) {
+      while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+      lower.push(p);
+    }
+    for (let i = arr.length-1; i >= 0; i--) {
+      const p = arr[i];
+      while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+      upper.push(p);
+    }
+    upper.pop(); lower.pop();
+    return lower.concat(upper);
+  }
+
+  function polygonArea(pts) {
+    if (!pts || pts.length < 3) return 0;
+    let a = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const j = (i+1) % pts.length;
+      a += (pts[i].x||0) * (pts[j].y||0);
+      a -= (pts[j].x||0) * (pts[i].y||0);
+    }
+    return Math.abs(a) / 2;
+  }
+
+  function ptDist(a, b) { return Math.hypot((a.x||0)-(b.x||0),(a.y||0)-(b.y||0)); }
+
+  function instanceDist(a, b) {
+    return ptDist(centroidOf(a.geomType==='polygon_array'?a.geom.flat():a.geom),
+                  centroidOf(b.geomType==='polygon_array'?b.geom.flat():b.geom));
+  }
+
+  function vecTo(from, to) {
+    const fc = centroidOf((from.geomType==='polygon_array'?from.geom.flat():from.geom) || [{x:0,y:0}]);
+    const tc = centroidOf((to.geomType==='polygon_array'?to.geom.flat():to.geom)   || [{x:0,y:0}]);
+    return [tc.x-fc.x, tc.y-fc.y];
+  }
+  function vecAway(from, to) { const v = vecTo(from,to); return [-v[0],-v[1]]; }
+
+  function translateInstance(inst, dx, dy) {
+    const translate = p => ({ ...p, x:(p.x||0)+dx, y:(p.y||0)+dy });
+    if (inst.geomType === 'polygon_array') {
+      inst.geom = inst.geom.map(poly => poly.map(translate));
+    } else if (Array.isArray(inst.geom)) {
+      inst.geom = inst.geom.map(translate);
+    }
+  }
+
+  function splineMidpoint(inst) {
+    const pts = inst.geom;
+    if (!pts || pts.length === 0) return { x:490, y:400 };
+    return centroidOf(pts);
+  }
+
+  function nearestInstance(pt, instances) {
+    let best = null, bestD = Infinity;
+    for (const inst of instances) {
+      const c = centroidOf(inst.geomType==='polygon_array'?inst.geom.flat():inst.geom);
+      const d = ptDist(pt, c);
+      if (d < bestD) { best = inst; bestD = d; }
+    }
+    return best ? { inst: best, dist: bestD } : null;
+  }
+
+  function instanceNearSpline(inst, spline, threshold) {
+    const ic = centroidOf(inst.geomType==='polygon_array'?inst.geom.flat():inst.geom);
+    for (const pt of (spline.geom || [])) {
+      if (ptDist(ic, pt) < threshold) return true;
+    }
+    return false;
+  }
+
+  function instancesOverlap(a, b) {
+    const ba = instanceBounds(a), bb = instanceBounds(b);
+    return ba.x < bb.x+bb.w && ba.x+ba.w > bb.x && ba.y < bb.y+bb.h && ba.y+ba.h > bb.y;
+  }
+
+  function gapPolygon(a, b) {
+    const ba = instanceBounds(a), bb = instanceBounds(b);
+    const x1 = Math.max(ba.x, bb.x), x2 = Math.min(ba.x+ba.w, bb.x+bb.w);
+    const y1 = Math.max(ba.y, bb.y), y2 = Math.min(ba.y+ba.h, bb.y+bb.h);
+    if (x2 <= x1 || y2 <= y1) return null;
+    return rectPts(x1, y1, x2-x1, y2-y1);
+  }
+
+  function southOf(inst, dist) {
+    const b = instanceBounds(inst);
+    return { pts: rectPts(b.x, b.y+b.h+dist, b.w, b.h * 0.5) };
+  }
+
+  function buildingPointsByPattern(sg, pids) {
+    return (sg.buildingPoints || []).filter(p => pids.includes(p.owner_pattern));
+  }
+
+  function inEDA(x, y) {
+    // Check if point is within an EDA parcel (approximate via bounding box of known parcels)
+    const MAP = { x0:139, y0:163, x1:841, y1:653 };
+    return x > MAP.x0 && x < MAP.x1 && y > MAP.y0 && y < MAP.y1;
+  }
+
+  function inSetback(x, y, MAP) {
+    const S = { HIGHWAY:50/8.5, ARTERIAL:20/8.5, COLLECTOR:15/8.5 };
+    return y > MAP.y1 - S.HIGHWAY ||   // I-264 south
+           y < MAP.y0 + S.ARTERIAL ||  // Va Beach Blvd north
+           x < MAP.x0 + S.ARTERIAL ||  // N Military Hwy west
+           x > MAP.x1 - S.COLLECTOR;   // Tidewater Dr east
+  }
+
+  // Simple k-means clustering
+  function knnCluster(pts, k, seed) {
+    if (!pts || pts.length === 0) return [];
+    k = Math.min(k, pts.length);
+    // Initialize centroids by spacing evenly
+    let centroids = [];
+    for (let i = 0; i < k; i++) {
+      centroids.push({ x: pts[Math.floor(i * pts.length / k)].x || 0,
+                       y: pts[Math.floor(i * pts.length / k)].y || 0 });
+    }
+    let assignments = new Array(pts.length).fill(0);
+    for (let iter = 0; iter < 10; iter++) {
+      // Assign
+      for (let i = 0; i < pts.length; i++) {
+        let best = 0, bestD = Infinity;
+        for (let j = 0; j < k; j++) {
+          const d = ptDist(pts[i], centroids[j]);
+          if (d < bestD) { best = j; bestD = d; }
+        }
+        assignments[i] = best;
+      }
+      // Update centroids
+      for (let j = 0; j < k; j++) {
+        const members = pts.filter((_,i) => assignments[i] === j);
+        if (members.length > 0) centroids[j] = centroidOf(members);
+      }
+    }
+    const clusters = Array.from({length:k}, () => []);
+    pts.forEach((p,i) => clusters[assignments[i]].push(p));
+    return clusters.filter(c => c.length > 0);
+  }
+
+  // ── 8. EXPORT ────────────────────────────────────────────────────────────
+  return {
+    solve,
+    getSceneGraph: () => _sg,
+    PATTERNS,
+    SCALES: S,
+    // Debug: count instances per pattern
+    counts: () => {
+      if (!_sg) return {};
+      const c = {};
+      for (const i of _sg.instances) c[i.patternId] = (c[i.patternId]||0)+1;
+      return c;
+    },
+  };
+
+})();
+
 
 // ── ANALYSIS VIEWS ───────────────────────────────────────────────────────────
 
