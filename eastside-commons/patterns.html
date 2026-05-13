@@ -1,0 +1,1945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EC Pattern Solver — Eastside Commons</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0b0f08; --surface: #131a0f; --border: #22301a;
+    --text: #e0d8c0; --muted: #6a6050; --accent: #c87818;
+    --amber: #c87818; --teal: #28a888; --green: #28b848;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --font: system-ui, -apple-system, sans-serif;
+  }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ── HEADER ── */
+  #header {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 0.5rem 1rem; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  #header h1 { font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .ctrl-group { display: flex; align-items: center; gap: 0.4rem; }
+  .ctrl-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.1em; white-space: nowrap; }
+  .ctrl-val { font-size: 0.65rem; font-family: var(--font-mono); color: var(--amber);
+    min-width: 2rem; text-align: right; }
+  input[type=range] { accent-color: var(--amber); width: 80px; cursor: pointer; }
+  select { background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); font-size: 0.65rem; padding: 0.2rem 0.4rem;
+    font-family: var(--font-mono); cursor: pointer; border-radius: 2px; }
+  #btn-run {
+    background: var(--amber); color: #0b0f08; border: none;
+    padding: 0.3rem 0.8rem; font-size: 0.65rem; font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+    border-radius: 2px; flex-shrink: 0;
+  }
+  #btn-run:disabled { opacity: 0.4; cursor: default; }
+  #btn-run:hover:not(:disabled) { background: #e8a030; }
+  #status { font-size: 0.62rem; color: var(--muted); font-family: var(--font-mono); white-space: nowrap; }
+
+  /* ── BODY ── */
+  #body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+
+  /* ── CANVAS AREA ── */
+  #canvas-wrap { position: relative; flex: 1; overflow: hidden; background: #090d06; }
+  #main-svg { width: 100%; height: 100%; display: block; }
+  #canvas-label {
+    position: absolute; bottom: 0.6rem; left: 0.6rem;
+    font-size: 0.55rem; color: var(--muted); font-family: var(--font-mono);
+    pointer-events: none;
+  }
+
+  /* ── PASS CONTROLS (bottom bar) ── */
+  #pass-bar {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 0.8rem; background: rgba(11,15,8,0.92);
+    border-top: 1px solid var(--border);
+  }
+  #pass-bar button {
+    background: none; border: 1px solid var(--border); color: var(--text);
+    padding: 0.15rem 0.5rem; font-size: 0.6rem; cursor: pointer;
+    font-family: var(--font-mono); border-radius: 2px;
+  }
+  #pass-bar button:hover { border-color: var(--amber); color: var(--amber); }
+  #pass-bar button.on { border-color: var(--amber); color: var(--amber); background: rgba(200,120,24,0.1); }
+  #pass-slider { flex: 1; accent-color: var(--amber); cursor: pointer; }
+  #pass-label { font-size: 0.6rem; color: var(--text); font-family: var(--font-mono);
+    white-space: nowrap; min-width: 16rem; }
+  .phase-intro { color: var(--text); }
+  .phase-recurse { color: var(--teal); }
+
+  /* ── RIGHT PANEL ── */
+  #right-panel {
+    width: 280px; flex-shrink: 0; display: flex; flex-direction: column;
+    border-left: 1px solid var(--border); background: var(--surface); overflow: hidden;
+  }
+  #panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .tab-btn {
+    flex: 1; padding: 0.35rem; font-size: 0.58rem; letter-spacing: 0.08em;
+    text-transform: uppercase; border: none; background: none;
+    color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { flex: 1; overflow-y: auto; padding: 0.6rem; display: none; min-height: 0; }
+  .tab-panel.active { display: block; }
+
+  /* Pattern list */
+  .pat-row {
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.25rem 0; border-bottom: 1px solid rgba(34,48,26,0.5);
+    font-size: 0.6rem;
+  }
+  .pat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .pat-id { font-family: var(--font-mono); color: var(--muted); min-width: 2.2rem; }
+  .pat-name { flex: 1; color: var(--text); }
+  .pat-count { font-family: var(--font-mono); color: var(--amber); min-width: 2rem; text-align: right; }
+  .pat-scale { font-size: 0.52rem; color: var(--muted); }
+
+  /* Log */
+  #log-content {
+    font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted);
+    white-space: pre-wrap; line-height: 1.6;
+  }
+  #log-content .log-pass { color: var(--text); }
+  #log-content .log-new { color: var(--green); }
+  #log-content .log-err { color: #e84828; }
+  #log-content .log-final { color: var(--amber); }
+
+  /* Info */
+  #info-content { font-size: 0.6rem; color: var(--muted); line-height: 1.7; }
+  #info-content strong { color: var(--text); }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin: 0.5rem 0; }
+  .stat-box {
+    background: rgba(34,48,26,0.4); border: 1px solid var(--border);
+    padding: 0.4rem; border-radius: 2px;
+  }
+  .stat-box .sv { font-family: var(--font-mono); font-size: 0.9rem;
+    color: var(--amber); display: block; }
+  .stat-box .sk { font-size: 0.52rem; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.08em; }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed; display: none; z-index: 999;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 0.5rem 0.7rem; font-size: 0.6rem; font-family: var(--font-mono);
+    pointer-events: none; max-width: 220px; line-height: 1.6;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>Pattern Solver — Eastside Commons</h1>
+
+  <div class="ctrl-group">
+    <span class="ctrl-label">Recurse</span>
+    <input type="range" id="ctrl-recurse" min="1" max="8" value="3" step="1">
+    <span class="ctrl-val" id="val-recurse">3</span>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Cluster K</span>
+    <input type="range" id="ctrl-cluster" min="10" max="80" value="40" step="5">
+    <span class="ctrl-val" id="val-cluster">40</span>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Damping</span>
+    <input type="range" id="ctrl-damping" min="0.1" max="1.0" value="0.4" step="0.05">
+    <span class="ctrl-val" id="val-damping">0.40</span>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Dedup scale</span>
+    <input type="range" id="ctrl-dedup" min="0.25" max="3.0" value="1.0" step="0.25">
+    <span class="ctrl-val" id="val-dedup">1.00×</span>
+  </div>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Show</span>
+    <select id="ctrl-show">
+      <option value="all">All passes</option>
+      <option value="new">New only</option>
+      <option value="eda">EDA parcels</option>
+    </select>
+  </div>
+
+  <button id="btn-run">▶ Run Solver</button>
+  <span id="status">Ready</span>
+</div>
+
+<div id="body">
+  <div id="canvas-wrap">
+    <svg id="main-svg" viewBox="89 113 802 590" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L6,3 z" fill="#444" opacity="0.6"/>
+        </marker>
+      </defs>
+      <!-- EDA parcel outlines (base layer) -->
+      <g id="layer-eda"></g>
+      <!-- Pattern instances -->
+      <g id="layer-edges"></g>
+      <g id="layer-instances"></g>
+      <!-- Building points -->
+      <g id="layer-buildings"></g>
+    </svg>
+    <div id="canvas-label">Military Circle · 73.4 ac · Norfolk VA</div>
+    <div id="pass-bar" style="display:none;">
+      <button id="pb-prev">◀</button>
+      <button id="pb-play" class="on">▶</button>
+      <button id="pb-next">▶▶</button>
+      <input type="range" id="pass-slider" min="0" max="0" value="0">
+      <span id="pass-label">—</span>
+      <button id="pb-close">✕</button>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div id="panel-tabs">
+      <button class="tab-btn active" data-tab="patterns">Patterns</button>
+      <button class="tab-btn" data-tab="log">Log</button>
+      <button class="tab-btn" data-tab="info">Info</button>
+    </div>
+    <div id="tab-patterns" class="tab-panel active">
+      <div id="pattern-list" style="color:var(--muted);font-size:0.6rem;">Run solver to see pattern counts.</div>
+    </div>
+    <div id="tab-log" class="tab-panel">
+      <div id="log-content">—</div>
+    </div>
+    <div id="tab-info" class="tab-panel">
+      <div id="info-content">
+        <p>Alexander Pattern Language constraint solver for the Military Circle site.</p>
+        <br>
+        <div class="stat-grid" id="stat-grid">
+          <div class="stat-box"><span class="sv" id="s-instances">—</span><span class="sk">Instances</span></div>
+          <div class="stat-box"><span class="sv" id="s-buildings">—</span><span class="sk">Buildings</span></div>
+          <div class="stat-box"><span class="sv" id="s-passes">—</span><span class="sk">Passes</span></div>
+          <div class="stat-box"><span class="sv" id="s-time">—</span><span class="sk">ms</span></div>
+        </div>
+        <br>
+        <strong>Scale hierarchy:</strong>
+        <p>1 District → 2 Block → 3 Group → 4 Building → 5 Edge</p>
+        <br>
+        <strong>Tuning guide:</strong><br>
+        <p><em>Recurse</em>: refinement passes after intro. More = tighter convergence, slower.<br>
+        <em>Damping</em>: force relaxation strength. Too high = chaos. &lt;0.3 = sluggish.<br>
+        <em>Dedup scale</em>: multiplier on proximity radii. &lt;1 = denser, &gt;1 = sparser.<br>
+        <em>Cluster K</em>: k-means clusters for building coalescing.</p>
+        <br>
+        <strong>Patterns (27 total):</strong>
+        <p>P29 DensityRings, P30 ActivityNodes, P31 Promenade, P36 Degrees, P37 HouseCluster,
+        P46 Market, P51 GreenStreets, P53 Gateways, P60 AccessibleGreen, P61 SmallSquares,
+        P67 CommonLand, P71 StillWater, P87 Shops, P88 Cafe, P95 BuildingComplex,
+        P100 PedestrianStreet, P104 SiteRepair, P105 SouthFacing, P106 PositiveOutdoor,
+        P109 LongThinHouse, P114 HierarchyOpenSpace, P115 CourtyardsWhichLive,
+        P116 CascadeOfRoofs, P122 BuildingFronts, P127 IntimacyGradient</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+// ── PROJECTION ───────────────────────────────────────────────────────────────
+function buildProjection(parcels) {
+  const edaParcels = parcels.filter(p => p.is_eda);
+  let minLon=Infinity, maxLon=-Infinity, minLat=Infinity, maxLat=-Infinity;
+  for (const p of edaParcels) {
+    for (const ring of p.rings) {
+      for (const [lon,lat] of ring) {
+        if (lon<minLon) minLon=lon; if (lon>maxLon) maxLon=lon;
+        if (lat<minLat) minLat=lat; if (lat>maxLat) maxLat=lat;
+      }
+    }
+  }
+  const padLon=(maxLon-minLon)*0.18, padLat=(maxLat-minLat)*0.20;
+  minLon-=padLon; maxLon+=padLon; minLat-=padLat; maxLat+=padLat;
+  const MAP={x0:139,y0:163,x1:841,y1:653};
+  const mapW=MAP.x1-MAP.x0, mapH=MAP.y1-MAP.y0;
+  function proj(lon,lat) {
+    return [MAP.x0+(lon-minLon)/(maxLon-minLon)*mapW,
+            MAP.y1-(lat-minLat)/(maxLat-minLat)*mapH];
+  }
+  proj._bounds={minLon,maxLon,minLat,maxLat};
+  return {proj,MAP,minLon,maxLon,minLat,maxLat};
+}
+
+function buildParcelGeometry(parcels,proj) {
+  const geom={};
+  for (const p of parcels) {
+    if (!p.spec) continue;
+    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity,cx=0,cy=0,n=0;
+    for (const ring of p.rings) {
+      for (const [lon,lat] of ring) {
+        const [x,y]=proj(lon,lat);
+        if(x<minX)minX=x;if(x>maxX)maxX=x;if(y<minY)minY=y;if(y>maxY)maxY=y;
+        cx+=x;cy+=y;n++;
+      }
+    }
+    let pcx=cx/n,pcy=cy/n;
+    if (p.centroid) { [pcx,pcy]=proj(p.centroid.lon,p.centroid.lat); }
+    geom[p.spec]={acct:p.acct,gpin:p.gpin,area_ac:p.area_ac,
+      centroid_x:pcx,centroid_y:pcy,
+      bbox:{left:minX,right:maxX,top:minY,bottom:maxY,width:maxX-minX,height:maxY-minY}};
+  }
+  return geom;
+}
+
+function solveConstraintsMin(G, MAP) {
+  const derived={};
+  const MALL=G['MALL_CORE'], SP_PAR=G['SPONGE_PARCEL'], HB_PAR=G['HOUSING_B_S'];
+  if (!MALL) return {derived};
+  const spine_w=Math.max(MALL.bbox.width*0.18,38), spine_x=MALL.centroid_x-spine_w/2;
+  derived.SPINE={x:spine_x, y:MAP.y0, w:spine_w, h:MAP.y1-MAP.y0};
+  const sr=spine_x+spine_w;
+  const compactMS=['MAIN_ST_LARGE','MAIN_ST_MID','MAIN_ST_5773','MAIN_ST_5825'];
+  const msBotRaw=Math.max(...compactMS.filter(n=>G[n]).map(n=>G[n].bbox.bottom));
+  const bandBot=Math.min(msBotRaw+6, MALL.bbox.top-4);
+  derived.BAND={x:MAP.x0, y:MAP.y0, w:MAP.x1-MAP.x0, h:bandBot-MAP.y0};
+  const bby=MAP.y0+derived.BAND.h;
+  const sg_al=sr+10, sg_ar=MAP.x1-100, sg_at=bby+8;
+  const sg_ab=HB_PAR ? HB_PAR.bbox.top-6 : MAP.y1-100;
+  const sg_rx=Math.min((sg_ar-sg_al)/2,90), sg_ry=Math.min((sg_ab-sg_at)/2,70);
+  let sg_cx=sg_al+sg_rx, sg_cy=(sg_at+sg_ab)/2;
+  if (SP_PAR) {
+    const d=Math.abs(SP_PAR.centroid_x-sg_cx);
+    if (d<sg_rx*1.5) sg_cx=(sg_cx+SP_PAR.centroid_x)/2;
+    sg_cy=(sg_cy+SP_PAR.centroid_y)/2;
+  }
+  derived.SPONGE={cx:sg_cx,cy:sg_cy,rx:sg_rx,ry:sg_ry};
+  return {derived};
+}
+
+// ── P_COLOR ───────────────────────────────────────────────────────────────────
+const P_COLOR = {
+  29:'#4a7ac8', 30:'#c87818', 31:'#c84818', 36:'#8050c0',
+  37:'#3888a8', 46:'#b84898', 51:'#28a848', 53:'#888830',
+  60:'#28b848', 61:'#3aaa58', 67:'#20a038', 71:'#2898c8',
+  87:'#e83808', 88:'#d85808', 95:'#c87818',
+  100:'#e8b820', 104:'#607848', 105:'#488060', 106:'#389060',
+  109:'#c87818', 114:'#406898', 115:'#a04898', 116:'#806038',
+  122:'#c84030', 127:'#905028',
+};
+
+const SCALE_NAMES = {1:'District',2:'Block',3:'Group',4:'Building',5:'Edge'};
+
+// ── UI STATE ─────────────────────────────────────────────────────────────────
+let _snapshots = null;
+let _currentPass = 0;
+let _playing = false;
+let _playTimer = null;
+let _proj = null;
+let _parcels = null;
+let _derivedG = null;
+let _MAP = null;
+let _dedupScale = 1.0;
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const parcels = PARCEL_DATA.parcels;
+  const {proj, MAP} = buildProjection(parcels);
+  _proj = proj; _parcels = parcels; _MAP = MAP;
+  const G = buildParcelGeometry(parcels, proj);
+  const {derived} = solveConstraintsMin(G, MAP);
+  _derivedG = derived;
+  window._derivedG = derived;
+
+  // Wrap proj for solver compatibility: solver expects proj(lon,lat) → {x,y}
+  const projObj = (lon, lat) => { const [x,y]=proj(lon,lat); return {x,y}; };
+
+  drawEDA(parcels, proj, MAP);
+
+  // Controls
+  const cr=document.getElementById('ctrl-recurse'), vr=document.getElementById('val-recurse');
+  const cc=document.getElementById('ctrl-cluster'), vc=document.getElementById('val-cluster');
+  const cd=document.getElementById('ctrl-damping'), vd=document.getElementById('val-damping');
+  const cdd=document.getElementById('ctrl-dedup'), vdd=document.getElementById('val-dedup');
+  cr.addEventListener('input',()=>vr.textContent=cr.value);
+  cc.addEventListener('input',()=>vc.textContent=cc.value);
+  cd.addEventListener('input',()=>vd.textContent=parseFloat(cd.value).toFixed(2));
+  cdd.addEventListener('input',()=>{
+    _dedupScale=parseFloat(cdd.value);
+    vdd.textContent=_dedupScale.toFixed(2)+'×';
+  });
+
+  // Tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  // Run button
+  document.getElementById('btn-run').addEventListener('click', () => runSolver(projObj, MAP));
+
+  // Pass bar controls
+  document.getElementById('pb-prev').addEventListener('click', () => {
+    _currentPass=Math.max(0,_currentPass-1);
+    renderPass(_currentPass);
+    document.getElementById('pass-slider').value=_currentPass;
+  });
+  document.getElementById('pb-next').addEventListener('click', () => {
+    _currentPass=Math.min(_snapshots.length-1,_currentPass+1);
+    renderPass(_currentPass);
+    document.getElementById('pass-slider').value=_currentPass;
+  });
+  document.getElementById('pb-play').addEventListener('click', () => togglePlay());
+  document.getElementById('pb-close').addEventListener('click', () => {
+    document.getElementById('pass-bar').style.display='none';
+    stopPlay();
+  });
+  document.getElementById('pass-slider').addEventListener('input', (e) => {
+    _currentPass=+e.target.value;
+    renderPass(_currentPass);
+  });
+});
+
+function drawEDA(parcels, proj, MAP) {
+  const ns='http://www.w3.org/2000/svg';
+  const layer=document.getElementById('layer-eda');
+  for (const p of parcels) {
+    if (!p.is_eda || !p.rings?.[0]) continue;
+    const pts=p.rings[0].map(([lon,lat])=>proj(lon,lat).join(',')).join(' ');
+    const poly=document.createElementNS(ns,'polygon');
+    poly.setAttribute('points',pts);
+    poly.setAttribute('fill','rgba(40,120,40,0.06)');
+    poly.setAttribute('stroke','rgba(80,160,60,0.35)');
+    poly.setAttribute('stroke-width','0.8');
+    poly.setAttribute('stroke-dasharray','2,3');
+    layer.appendChild(poly);
+  }
+}
+
+async function runSolver(projObj, MAP) {
+  const btn=document.getElementById('btn-run');
+  const status=document.getElementById('status');
+  btn.disabled=true; btn.textContent='Running…'; status.textContent='Solving…';
+
+  // Give browser a frame to paint
+  await new Promise(r=>setTimeout(r,10));
+
+  try {
+    // Apply dedup scale to solver DEDUP_R
+    const PS = window.EC_PatternSolver;
+    if (!PS) { status.textContent='Error: EC_PatternSolver not loaded'; btn.disabled=false; btn.textContent='▶ Run Solver'; return; }
+
+    // Temporarily patch DEDUP_R with scale factor
+    const origDR = {...PS.REQUIRES}; // REQUIRES not DEDUP_R — access via internal query
+    // We can't directly patch DEDUP_R from outside the IIFE, so pass as opts
+    const opts = {
+      recurse: +document.getElementById('ctrl-recurse').value,
+      cluster_k: +document.getElementById('ctrl-cluster').value,
+      damping: parseFloat(document.getElementById('ctrl-damping').value),
+      dedup_scale: _dedupScale,
+    };
+
+    const t0=performance.now();
+    const result = PS.solve(_parcels, projObj, MAP, _derivedG, opts);
+    const ms = Math.round(performance.now()-t0);
+
+    _snapshots = result.sceneGraph.snapshots;
+
+    // Update stats
+    document.getElementById('s-instances').textContent = result.sceneGraph.instances.length;
+    document.getElementById('s-buildings').textContent = result.buildings.length;
+    document.getElementById('s-passes').textContent = _snapshots.length;
+    document.getElementById('s-time').textContent = ms;
+
+    // Update log
+    const logEl=document.getElementById('log-content');
+    logEl.innerHTML = result.log.map(l => {
+      if (l.startsWith('Pass') || l.startsWith('Final')) return `<span class="log-pass">${l}</span>`;
+      if (l.includes('+') && l.includes('new')) return `<span class="log-new">${l}</span>`;
+      if (l.includes('error')) return `<span class="log-err">${l}</span>`;
+      if (l.startsWith('Final')) return `<span class="log-final">${l}</span>`;
+      return l;
+    }).join('\n');
+
+    // Update pattern list
+    updatePatternList(result.sceneGraph.instances, PS.PATTERNS);
+
+    // Setup pass bar
+    const slider=document.getElementById('pass-slider');
+    slider.max=_snapshots.length-1;
+    slider.value=0;
+    _currentPass=0;
+    document.getElementById('pass-bar').style.display='flex';
+
+    // Render final pass by default
+    _currentPass=_snapshots.length-1;
+    slider.value=_currentPass;
+    renderPass(_currentPass);
+
+    status.textContent=`✓ ${result.sceneGraph.instances.length} inst · ${result.buildings.length} bldgs · ${ms}ms`;
+  } catch(e) {
+    status.textContent='Error: '+e.message;
+    console.error(e);
+  }
+  btn.disabled=false; btn.textContent='↺ Re-run';
+}
+
+function updatePatternList(instances, PATTERNS) {
+  const counts={};
+  for (const i of instances) counts[i.patternId]=(counts[i.patternId]||0)+1;
+  const sorted=Object.entries(counts).sort(([a],[b])=>+a-+b);
+  const html=sorted.map(([pid,cnt])=>{
+    const pat=PATTERNS[+pid]||{name:'?',scale:'?'};
+    const color=P_COLOR[+pid]||'#666';
+    const sn=SCALE_NAMES[pat.scale]||'?';
+    return `<div class="pat-row">
+      <div class="pat-dot" style="background:${color}"></div>
+      <span class="pat-id">P${pid}</span>
+      <span class="pat-name">${pat.name||'?'}</span>
+      <span class="pat-scale">${sn[0]}</span>
+      <span class="pat-count">${cnt}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('pattern-list').innerHTML=html||'No instances.';
+}
+
+function renderPass(idx) {
+  if (!_snapshots || !_snapshots[idx]) return;
+  const snap=_snapshots[idx];
+  const ns='http://www.w3.org/2000/svg';
+
+  // Update pass label
+  const phase=snap.isRecurse
+    ? `♻ Recurse ${snap.recurseIdx} — all scales · ${snap.instances.length} inst`
+    : `▶ Pass ${snap.pass} — Scale ${snap.scale} ${SCALE_NAMES[snap.scale]||''} · ${snap.instances.length} inst`;
+  const lbl=document.getElementById('pass-label');
+  lbl.textContent=phase;
+  lbl.className=snap.isRecurse ? 'phase-recurse' : 'phase-intro';
+
+  const showMode=document.getElementById('ctrl-show').value;
+  const newIds=new Set(snap.instances.filter(i=>i.pass_created===snap.pass).map(i=>i.id));
+  const byId={};
+  for (const i of snap.instances) byId[i.id]=i;
+
+  // Clear layers
+  const eLayer=document.getElementById('layer-edges');
+  const iLayer=document.getElementById('layer-instances');
+  const bLayer=document.getElementById('layer-buildings');
+  eLayer.innerHTML=''; iLayer.innerHTML=''; bLayer.innerHTML='';
+
+  // Hierarchy edges
+  for (const inst of snap.instances) {
+    if (!inst.parent_id || !byId[inst.parent_id]) continue;
+    const pc=instCentroid(byId[inst.parent_id]);
+    const cc=instCentroid(inst);
+    if (!pc||!cc) continue;
+    const line=document.createElementNS(ns,'line');
+    line.setAttribute('x1',pc.x); line.setAttribute('y1',pc.y);
+    line.setAttribute('x2',cc.x); line.setAttribute('y2',cc.y);
+    line.setAttribute('stroke',P_COLOR[byId[inst.parent_id].patternId]||'#444');
+    line.setAttribute('stroke-width','0.8');
+    line.setAttribute('stroke-dasharray','2,3');
+    line.setAttribute('opacity','0.35');
+    line.setAttribute('marker-end','url(#arrow)');
+    eLayer.appendChild(line);
+  }
+
+  // Instances
+  for (const inst of snap.instances) {
+    if (showMode==='new' && !newIds.has(inst.id)) continue;
+    const el=instToSVG(inst, newIds.has(inst.id));
+    if (el) iLayer.appendChild(el);
+  }
+
+  // Building centroids
+  for (const b of snap.buildings) {
+    const c=document.createElementNS(ns,'circle');
+    c.setAttribute('cx',b.centroid.x); c.setAttribute('cy',b.centroid.y);
+    c.setAttribute('r','3'); c.setAttribute('fill','rgba(200,120,24,0.6)');
+    c.setAttribute('stroke','#c87818'); c.setAttribute('stroke-width','0.5');
+    bLayer.appendChild(c);
+  }
+}
+
+function instToSVG(inst, isNew) {
+  const ns='http://www.w3.org/2000/svg';
+  const color=P_COLOR[inst.patternId]||'#888';
+  const g=document.createElementNS(ns,'g');
+  g.style.cursor='pointer';
+
+  g.addEventListener('mouseenter',(e)=>{
+    const tt=document.getElementById('tooltip');
+    tt.style.display='block';
+    tt.style.left=(e.clientX+12)+'px';
+    tt.style.top=(e.clientY-8)+'px';
+    tt.innerHTML=`<span style="color:${color};font-weight:700">P${inst.patternId}</span> ${instName(inst)}<br>
+      Scale ${inst.geomType} · Pass ${inst.pass_created}<br>
+      Mutations: ${inst.mutation_count}`;
+  });
+  g.addEventListener('mouseleave',()=>{
+    document.getElementById('tooltip').style.display='none';
+  });
+  g.addEventListener('mousemove',(e)=>{
+    const tt=document.getElementById('tooltip');
+    tt.style.left=(e.clientX+12)+'px';
+    tt.style.top=(e.clientY-8)+'px';
+  });
+
+  const h=isNew?'1':'0.65';
+
+  if (inst.geomType==='rings') {
+    for (const ring of inst.geom) {
+      const c=document.createElementNS(ns,'circle');
+      c.setAttribute('cx',ring.x||0); c.setAttribute('cy',ring.y||0);
+      c.setAttribute('r',ring.r||10);
+      c.setAttribute('fill','none'); c.setAttribute('stroke',color);
+      c.setAttribute('stroke-width',isNew?'1.5':'1');
+      c.setAttribute('stroke-dasharray',ring.density==='HIGH'?'none':ring.density==='MEDIUM'?'5,4':'2,5');
+      c.setAttribute('opacity',isNew?'0.75':'0.35');
+      if(isNew) c.setAttribute('filter','url(#glow)');
+      g.appendChild(c);
+    }
+  } else if (inst.geomType==='point'||inst.geomType==='point_cloud') {
+    const pts=Array.isArray(inst.geom)?inst.geom:[inst.geom];
+    for (const p of pts) {
+      const c=document.createElementNS(ns,'circle');
+      c.setAttribute('cx',p.x||0); c.setAttribute('cy',p.y||0);
+      c.setAttribute('r',isNew?6:4); c.setAttribute('fill',color);
+      c.setAttribute('opacity',h);
+      if(isNew) c.setAttribute('filter','url(#glow)');
+      g.appendChild(c);
+    }
+  } else if (inst.geomType==='spline') {
+    if (inst.geom && inst.geom.length>=2) {
+      const line=document.createElementNS(ns,'polyline');
+      line.setAttribute('points',inst.geom.map(p=>`${p.x||0},${p.y||0}`).join(' '));
+      line.setAttribute('stroke',color); line.setAttribute('stroke-width',isNew?'3':'2');
+      line.setAttribute('fill','none'); line.setAttribute('opacity',h);
+      if(isNew) line.setAttribute('filter','url(#glow)');
+      g.appendChild(line);
+    }
+  } else {
+    const rings=inst.geomType==='polygon_array'?inst.geom:[inst.geom];
+    for (const ring of rings) {
+      if (!ring||ring.length<3) continue;
+      const poly=document.createElementNS(ns,'polygon');
+      poly.setAttribute('points',ring.map(p=>`${p.x||0},${p.y||0}`).join(' '));
+      poly.setAttribute('fill',color);
+      poly.setAttribute('fill-opacity',isNew?'0.2':'0.08');
+      poly.setAttribute('stroke',color);
+      poly.setAttribute('stroke-width',isNew?'1.5':'0.8');
+      poly.setAttribute('opacity',h);
+      g.appendChild(poly);
+    }
+  }
+  return g;
+}
+
+function instCentroid(inst) {
+  if (!inst||!inst.geom) return null;
+  let pts;
+  if (inst.geomType==='rings') pts=inst.geom.map(r=>({x:r.x,y:r.y}));
+  else if (inst.geomType==='polygon_array') pts=inst.geom.flat();
+  else if (Array.isArray(inst.geom)) pts=inst.geom;
+  else return null;
+  if (!pts.length) return null;
+  return {x:pts.reduce((s,p)=>s+(p.x||0),0)/pts.length,
+          y:pts.reduce((s,p)=>s+(p.y||0),0)/pts.length};
+}
+
+function instName(inst) {
+  if (!window.EC_PatternSolver) return '';
+  return window.EC_PatternSolver.PATTERNS[inst.patternId]?.name||'';
+}
+
+function togglePlay() {
+  _playing=!_playing;
+  const btn=document.getElementById('pb-play');
+  btn.textContent=_playing?'⏸':'▶';
+  btn.classList.toggle('on',_playing);
+  if (_playing) {
+    function step() {
+      if (!_playing) return;
+      _currentPass=(_currentPass+1)%_snapshots.length;
+      document.getElementById('pass-slider').value=_currentPass;
+      renderPass(_currentPass);
+      _playTimer=setTimeout(step, 900);
+    }
+    step();
+  } else {
+    clearTimeout(_playTimer);
+  }
+}
+
+function stopPlay() {
+  _playing=false;
+  clearTimeout(_playTimer);
+  document.getElementById('pb-play').textContent='▶';
+  document.getElementById('pb-play').classList.remove('on');
+}
+</script>
+<script>
+// ── EC_PatternSolver — embedded with new patterns ────────────────────────────
+// Includes P51 GreenStreets, P61 SmallPublicSquares, P100 PedestrianStreet, P116 CascadeOfRoofs
+window.EC_PatternSolver = (() => {
+  let _activeDamping = 0.4;  // overridden by solve() opts
+
+  // ── 1. PATTERN REGISTRY ──────────────────────────────────────────────────
+  // Each entry: { id, name, scale, priority, rule, detect, instantiate, forces }
+  //   priority: lower = higher priority (wins conflicts). Within scale, = pattern number.
+  //   detect(sceneGraph, proj, MAP) → [{candidateGeom, context}]  — where can this fire?
+  //   instantiate(candidate, sceneGraph) → Instance                — create the instance
+  //   forces(instance, neighbors) → [{target: Instance, vec: [dx,dy], weight}]
+
+  const PATTERNS = {};
+
+  function defPattern(id, name, scale, spec) {
+    PATTERNS[id] = { id, name, scale,
+      priority: scale * 1000 + id,   // scale-major, pattern-minor
+      ...spec };
+  }
+
+  // Scale constants
+  const S = { DISTRICT:1, BLOCK:2, GROUP:3, BUILDING:4, EDGE:5 };
+
+  // ── SCALE 1: DISTRICT ────────────────────────────────────────────────────
+
+  defPattern(29, 'Density Rings', S.DISTRICT, {
+    // Detects: site centroid. Emits concentric density zones.
+    // Rule: highest density at spine, decreasing outward.
+    detect(sg, proj, MAP) {
+      // One candidate: the whole site
+      const cx = (MAP.x0 + MAP.x1) / 2;
+      const cy = (MAP.y0 + MAP.y1) / 2;
+      return [{ geom: { type:'point', x:cx, y:cy }, context:{ MAP } }];
+    },
+    instantiate(cand, sg) {
+      const { x, y } = cand.geom;
+      const r_inner  = 120;  // px — high density core
+      const r_mid    = 240;  // px — medium density
+      const r_outer  = 400;  // px — low density edge
+      return mkInstance(29, 'rings', [
+        { x, y, r: r_inner,  density: 'HIGH',   far_target: 1.4 },
+        { x, y, r: r_mid,    density: 'MEDIUM', far_target: 1.0 },
+        { x, y, r: r_outer,  density: 'LOW',    far_target: 0.6 },
+      ], { type:'density_rings' });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(30, 'Activity Nodes', S.DISTRICT, {
+    // Detects: intersections of major paths / parcel cluster centroids.
+    // Rule: place commercial anchor at each node.
+    detect(sg, proj, MAP) {
+      // Use derived geometry: spine midpoint + two end anchors
+      const G = window._derivedG;
+      if (!G?.SPINE) return [];
+      const spine = G.SPINE;
+      const candidates = [
+        { geom:{ type:'point', x: spine.x + spine.w/2, y: spine.y + spine.h * 0.25 },
+          context:{ role:'north_node' } },
+        { geom:{ type:'point', x: spine.x + spine.w/2, y: spine.y + spine.h * 0.75 },
+          context:{ role:'south_node' } },
+      ];
+      return candidates;
+    },
+    instantiate(cand) {
+      return mkInstance(30, 'point', [cand.geom], { role: cand.context.role, radius_ft: 150 });
+    },
+    forces(inst, neighbors) {
+      // Activity nodes attract MIXED_USE instances toward them
+      return neighbors
+        .filter(n => n.patternId === 87 || n.patternId === 88 || n.patternId === 46)
+        .map(n => ({ target: n, vec: vecTo(inst, n), weight: 0.3 }));
+    },
+  });
+
+  defPattern(31, 'Promenade', S.DISTRICT, {
+    // Detects: the commons spine geometry.
+    // Rule: spine is the promenade. Every point on site within 10-min walk.
+    detect(sg, proj, MAP) {
+      const G = window._derivedG;
+      if (!G?.SPINE) return [];
+      return [{ geom:{ type:'spline',
+        pts:[{ x: G.SPINE.x + G.SPINE.w/2, y: G.SPINE.y },
+             { x: G.SPINE.x + G.SPINE.w/2, y: G.SPINE.y + G.SPINE.h }]},
+        context:{ width_ft: 30 } }];
+    },
+    instantiate(cand) {
+      return mkInstance(31, 'spline', cand.geom.pts, { width_ft: cand.context.width_ft });
+    },
+    forces(inst, neighbors) {
+      // Promenade repels car infrastructure, attracts shops and cafes
+      const attract = neighbors.filter(n => [87,88,46,32].includes(n.patternId));
+      const repel   = neighbors.filter(n => [97,103].includes(n.patternId));
+      return [
+        ...attract.map(n => ({ target:n, vec: vecTo(inst,n), weight: 0.25 })),
+        ...repel.map(n   => ({ target:n, vec: vecAway(inst,n), weight: 0.4 })),
+      ];
+    },
+  });
+
+  defPattern(36, 'Degrees of Publicness', S.DISTRICT, {
+    // Detects: every parcel. Tags exposure level based on street adjacency.
+    detect(sg, proj, MAP) {
+      return (sg.instances || [])
+        .filter(inst => inst.patternId === 29)  // needs density rings first
+        .map(rings => ({ geom: rings.geom, context: { rings } }));
+    },
+    instantiate(cand, sg) {
+      // Classify each parcel zone as PUBLIC / SEMI / QUIET based on
+      // distance to spine (P31 instance) and density ring (P29 instance)
+      const spine = sg.instances?.find(i => i.patternId === 31);
+      const pts = [];
+      for (const zone of (sg.zones || [])) {
+        if (!zone.centroid) continue;
+        const d = spine ? ptDist(zone.centroid, splineMidpoint(spine)) : 999;
+        const exposure = d < 80 ? 'PUBLIC' : d < 180 ? 'SEMI' : 'QUIET';
+        pts.push({ ...zone.centroid, exposure, zone_id: zone.id });
+      }
+      return mkInstance(36, 'point_cloud', pts, { type:'exposure_map' });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(53, 'Main Gateways', S.DISTRICT, {
+    // One gateway per Activity Node (P30) that doesn't yet have one.
+    // Also one per site boundary entry point (4 cardinal entries, singletons).
+    detect(sg, proj, MAP) {
+      const fromNodes = sg_query.missingChild(30, 53).map(node => ({
+        geom: { type:'point', x: node.geom[0]?.x || 490, y: node.geom[0]?.y || 400 },
+        context: { edge: 'node', parent: node },
+      }));
+      // Site boundary entries — only if none exist yet
+      const existing = sg_query.ofPattern(53);
+      const boundaryEntries = existing.length === 0 ? [
+        { geom:{ type:'point', x: MAP.x0+20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'west',  parent:null } },
+        { geom:{ type:'point', x: MAP.x1-20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'east',  parent:null } },
+        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y0+20 }, context:{ edge:'north', parent:null } },
+        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y1-20 }, context:{ edge:'south', parent:null } },
+      ] : [];
+      return [...fromNodes, ...boundaryEntries];
+    },
+    instantiate(cand) {
+      const inst = mkInstance(53, 'point', [cand.geom],
+        { edge: cand.context.edge, width_ft: 40 });
+      if (cand.context.parent) adoptInstance(cand.context.parent, inst);
+      return inst;
+    },
+    forces() { return []; },
+  });
+
+  // ── SCALE 2: BLOCK ───────────────────────────────────────────────────────
+
+  defPattern(60, 'Accessible Green', S.BLOCK, {
+    // Two detection modes:
+    // A) P37 clusters missing a P60 child → emit green adjacent to cluster
+    // B) Gap scan: residential building points too far from any green
+    detect(sg, proj, MAP) {
+      // Mode A: hierarchy-driven
+      const fromClusters = sg_query.missingChild(37, 60).map(cluster => {
+        const b = instanceBounds(cluster);
+        return {
+          geom: { type:'polygon', pts: rectPts(b.x - 20, b.y + b.h + 10, b.w + 40, 45) },
+          context: { parent: cluster, gap: false },
+        };
+      });
+      // Mode B: gap scan (only if building points exist)
+      const WALK_PX = 264;
+      const resPts = buildingPointsByPattern(sg, [79, 87, 37, 95]);
+      const greenInsts = sg_query.ofPattern(60).concat(sg_query.ofPattern(67)).concat(sg_query.ofPattern(71));
+      const gaps = resPts.filter(bp => {
+        const nearest = nearestInstance(bp, greenInsts);
+        return !nearest || nearest.dist > WALK_PX;
+      });
+      const gapCandidates = gaps.length > 0
+        ? knnCluster(gaps, Math.ceil(gaps.length / 8), 60)
+            .map(c => ({ geom:{ type:'polygon', pts: hullOf(c) }, context:{ gap:true, parent:null } }))
+        : [];
+      return [...fromClusters, ...gapCandidates];
+    },
+    instantiate(cand) {
+      const inst = mkInstance(60, 'polygon', cand.geom.pts, { min_area_sqft: 5000 });
+      if (cand.context.parent) adoptInstance(cand.context.parent, inst);
+      return inst;
+    },
+    forces(inst, neighbors) {
+      // Green zones attract House Cluster (P37) instances toward them
+      return neighbors.filter(n => n.patternId === 37)
+        .map(n => ({ target:n, vec: vecTo(n, inst), weight: 0.2 }));
+    },
+  });
+
+  defPattern(67, 'Common Land', S.BLOCK, {
+    // Rule: each House Cluster gets exactly one Common Land, to its south.
+    // Detect: P37 instances that don't yet have a P67 child.
+    detect(sg) {
+      return sg_query.missingChild(37, 67).map(cluster => ({
+        geom: southOf(cluster, 40),
+        context: { cluster },
+      }));
+    },
+    instantiate(cand) {
+      const inst = mkInstance(67, 'polygon', cand.geom.pts,
+        { south_facing: true, parent_cluster: cand.context.cluster.id });
+      adoptInstance(cand.context.cluster, inst);
+      return inst;
+    },
+    forces(inst, neighbors) {
+      // Common land repels parking (P97/P103), attracts outdoor room (P69)
+      return [
+        ...neighbors.filter(n => [97,103].includes(n.patternId))
+          .map(n => ({ target:n, vec: vecAway(inst,n), weight: 0.5 })),
+        ...neighbors.filter(n => n.patternId === 69)
+          .map(n => ({ target:n, vec: vecTo(inst,n), weight: 0.15 })),
+      ];
+    },
+  });
+
+  defPattern(71, 'Still Water', S.BLOCK, {
+    // Singleton: sponge park parcel. Already located in GIS data.
+    detect(sg, proj, MAP) {
+      const G = window._derivedG;
+      if (!G?.SPONGE) return [];
+      const s = G.SPONGE;
+      return [{ geom:{ type:'point', x: s.cx, y: s.cy }, context:{ rx:s.rx, ry:s.ry } }];
+    },
+    instantiate(cand) {
+      const { rx, ry } = cand.context;
+      // Ellipse approximated as polygon
+      const pts = [];
+      for (let a = 0; a < Math.PI*2; a += Math.PI/8)
+        pts.push({ x: cand.geom.x + Math.cos(a)*rx, y: cand.geom.y + Math.sin(a)*ry });
+      return mkInstance(71, 'polygon', pts, { south_facing: true, type:'bioswale' });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(37, 'House Cluster', S.BLOCK, {
+    // Rule: 8-12 units around common land. Detect open areas in density rings.
+    detect(sg, proj, MAP) {
+      const rings = sg.instances?.find(i => i.patternId === 29);
+      if (!rings) return [];
+      // Sample points in the buildable zone, away from water and setbacks
+      const candidates = [];
+      const step = 80;
+      for (let x = MAP.x0 + 40; x < MAP.x1 - 40; x += step) {
+        for (let y = MAP.y0 + 40; y < MAP.y1 - 40; y += step) {
+          if (!inEDA(x, y)) continue;
+          if (inSetback(x, y, MAP)) continue;
+          // Avoid water
+          const G = window._derivedG;
+          if (G?.SPONGE && ptDist({x,y}, {x:G.SPONGE.cx,y:G.SPONGE.cy}) < G.SPONGE.rx * 1.2) continue;
+          candidates.push({ geom:{ type:'point', x, y }, context:{} });
+        }
+      }
+      // Cluster candidates into groups of ~10 units each
+      const n_clusters = Math.max(1, Math.round(candidates.length / 10));
+      return knnCluster(candidates.map(c => c.geom), n_clusters, 37)
+        .map(cluster => ({ geom:{ type:'point', ...centroidOf(cluster) }, context:{ pts: cluster } }));
+    },
+    instantiate(cand) {
+      return mkInstance(37, 'polygon', rectAround(cand.geom, 60, 60),
+        { unit_count: 10, radius_ft: 100 });
+    },
+    forces(inst, neighbors) {
+      // Clusters pull toward accessible green (P60), push away from each other
+      return [
+        ...neighbors.filter(n => n.patternId === 60)
+          .map(n => ({ target:inst, vec: vecTo(inst,n), weight: 0.2 })),
+        ...neighbors.filter(n => n.patternId === 37 && n.id !== inst.id)
+          .map(n => ({ target:inst, vec: vecAway(inst,n), weight: 0.15 })),
+      ];
+    },
+  });
+
+  // ── SCALE 3: BUILDING GROUP ──────────────────────────────────────────────
+
+  defPattern(95, 'Building Complex', S.GROUP, {
+    // Rule: break each cluster into 25ft-wide parcel strips.
+    // Each House Cluster instance → array of long-thin parcel polygons.
+    detect(sg) {
+      return (sg.instances || []).filter(i => i.patternId === 37)
+        .map(cluster => ({ geom: instanceBounds(cluster), context:{ cluster } }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      const PARCEL_W_PX = 25 / 8.5;   // 25ft at 8.5ft/px ≈ 2.9px — use world ft directly
+      const FT_PER_PX = 8.5;
+      const parcel_w_px = 25 / FT_PER_PX;
+      const parcel_d_px = 125 / FT_PER_PX;
+      const parcels = [];
+      for (let px = x; px + parcel_w_px <= x + w; px += parcel_w_px) {
+        parcels.push(rectPts(px, y, parcel_w_px, Math.min(parcel_d_px, h)));
+      }
+      return mkInstance(95, 'polygon_array', parcels,
+        { parcel_w_ft: 25, parcel_d_ft: 125, parent_cluster: cand.context.cluster.id });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(104, 'Site Repair', S.GROUP, {
+    // Rule: place building parcels on worst land (parking, hardscape).
+    // Preserve best land (green, water). Implemented as repulsion from P60/P71.
+    detect(sg) {
+      // Detects every P95 parcel that overlaps a green/water instance — flag for relocation
+      const green = (sg.instances||[]).filter(i => [60,67,71].includes(i.patternId));
+      return (sg.instances||[]).filter(i => i.patternId === 95)
+        .flatMap(bldg => bldg.data.parcels || [bldg])
+        .filter(parcel => green.some(g => instancesOverlap(parcel, g)))
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel } }));
+    },
+    instantiate(cand) {
+      // Don't create a new instance — just tag the existing parcel for force application
+      return mkInstance(104, 'point', [{ x: cand.geom.x + cand.geom.w/2, y: cand.geom.y + cand.geom.h/2 }],
+        { repair: true, target_parcel: cand.context.parcel.id });
+    },
+    forces(inst, neighbors) {
+      // Strong repulsion from green/water
+      return neighbors.filter(n => [60,67,71].includes(n.patternId))
+        .map(n => ({ target:inst, vec: vecAway(inst,n), weight: 0.8 }));
+    },
+  });
+
+  defPattern(105, 'South Facing Outdoors', S.GROUP, {
+    // Rule: buildings must be north of their outdoor/green space.
+    // Detects pairs (building, green) and applies northward force on buildings.
+    detect(sg) {
+      const bldgs  = (sg.instances||[]).filter(i => i.patternId === 95);
+      const greens = (sg.instances||[]).filter(i => [60,67,71].includes(i.patternId));
+      return bldgs.map(b => ({ geom: instanceBounds(b), context:{ bldg:b, greens } }));
+    },
+    instantiate(cand) {
+      return mkInstance(105, 'point', [{ x: cand.geom.x + cand.geom.w/2, y: cand.geom.y + cand.geom.h/2 }], { type:'orientation_constraint' });
+    },
+    forces(inst, neighbors) {
+      // Each building → force northward if it's south of its nearest green
+      const green = neighbors.find(n => [60,67,71].includes(n.patternId));
+      if (!green) return [];
+      const bldgCy = centroidOf(instanceBounds(inst)).y;
+      const greenCy = centroidOf(instanceBounds(green)).y;
+      if (bldgCy > greenCy) return [];  // already north (lower y = north in SVG)
+      return [{ target:inst, vec:[0, -(bldgCy - greenCy) * 0.3], weight:0.5 }];
+    },
+  });
+
+  defPattern(106, 'Positive Outdoor Space', S.GROUP, {
+    // Rule: outdoor space between buildings must have definite shape (convex hull ≥ 0.6).
+    // Detects: gaps between P95 building parcels. Emits shaped outdoor polygons.
+    detect(sg) {
+      const bldgs = (sg.instances||[]).filter(i => i.patternId === 95);
+      const gaps  = [];
+      for (let i = 0; i < bldgs.length; i++) {
+        for (let j = i+1; j < bldgs.length; j++) {
+          const gap = gapPolygon(bldgs[i], bldgs[j]);
+          if (gap && polygonArea(gap) > 400) gaps.push({ geom:{ type:'polygon', pts:gap }, context:{} });
+        }
+      }
+      return gaps;
+    },
+    instantiate(cand) {
+      // Regularize gap into a definite shape
+      const hull = hullOf(cand.geom.pts);
+      return mkInstance(106, 'polygon', hull, { shaped: true });
+    },
+    forces(inst, neighbors) {
+      // Building edges should align with this outdoor space
+      return neighbors.filter(n => n.patternId === 95)
+        .map(n => ({ target:n, vec: vecTo(n, inst), weight: 0.1 }));
+    },
+  });
+
+  defPattern(109, 'Long Thin House', S.GROUP, {
+    // The 25×125 parcel IS this pattern. Detects oversized parcels → splits them.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 95)
+        .filter(i => {
+          const b = instanceBounds(i);
+          return b.w / (25/8.5) > 1.5;  // wider than 1.5 parcel widths
+        })
+        .map(i => ({ geom: instanceBounds(i), context:{ inst:i } }));
+    },
+    instantiate(cand) {
+      // Split wide parcels into 25ft strips
+      const { x, y, w, h } = cand.geom;
+      const pw = 25 / 8.5;
+      const strips = [];
+      for (let px = x; px + pw <= x + w + 1; px += pw)
+        strips.push(rectPts(px, y, Math.min(pw, x+w-px), h));
+      return mkInstance(109, 'polygon_array', strips, { parcel_w_ft:25 });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(114, 'Hierarchy of Open Space', S.GROUP, {
+    // Rule: every outdoor space must look into a smaller AND a larger space.
+    // Detects: P106 instances. Checks hierarchy. Emits corrective instances.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 106)
+        .map(os => ({ geom: instanceBounds(os), context:{ os } }));
+    },
+    instantiate(cand) {
+      // Tag the outdoor space with its hierarchy level (pocket→courtyard→square→park)
+      const area = polygonArea(rectToPts(cand.geom));
+      const level = area < 800 ? 'pocket' : area < 4000 ? 'courtyard' : area < 16000 ? 'square' : 'park';
+      return mkInstance(114, 'polygon', rectToPts(cand.geom), { level, area });
+    },
+    forces(inst, neighbors) {
+      // Each space should have at least one smaller and one larger neighbor
+      const level = inst.data.level;
+      const levels = ['pocket','courtyard','square','park'];
+      const myIdx  = levels.indexOf(level);
+      const smaller = neighbors.filter(n => n.patternId===114 && levels.indexOf(n.data?.level) < myIdx);
+      const larger  = neighbors.filter(n => n.patternId===114 && levels.indexOf(n.data?.level) > myIdx);
+      // Pull toward smaller nested space
+      return [
+        ...smaller.map(n => ({ target:n, vec: vecTo(inst,n), weight:0.1 })),
+        ...larger.map(n  => ({ target:inst, vec: vecTo(inst,n), weight:0.05 })),
+      ];
+    },
+  });
+
+  // ── SCALE 4: BUILDING FORM ───────────────────────────────────────────────
+
+  defPattern(115, 'Courtyards Which Live', S.BUILDING, {
+    // Every P95/P109 building parcel missing a P115 child gets a courtyard.
+    detect(sg) {
+      const missing95  = sg_query.missingChild(95, 115);
+      const missing109 = sg_query.missingChild(109, 115);
+      return [...missing95, ...missing109].map(parcel => ({
+        geom: instanceBounds(parcel), context: { parcel },
+      }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      const inset = Math.min(w, h) * 0.25;
+      const cy_pts = rectPts(x+inset, y+inset, w-2*inset, h-2*inset);
+      const cx = x + w/2, cy_c = y + h/2;
+      const inst = mkInstance(115, 'polygon', cy_pts, {
+        type: 'courtyard_void',
+        paths: [
+          [{ x, y: cy_c }, { x: x+w, y: cy_c }],
+          [{ x: cx, y }, { x: cx, y: y+h }],
+        ],
+        parent_parcel: cand.context.parcel.id,
+      });
+      adoptInstance(cand.context.parcel, inst);
+      return inst;
+    },
+    forces(inst, neighbors) {
+      // Courtyard needs view out — pull toward nearest larger open space
+      const larger = neighbors.filter(n => [60,67,114].includes(n.patternId));
+      return larger.map(n => ({ target:inst, vec: vecTo(inst,n), weight:0.15 }));
+    },
+  });
+
+  defPattern(122, 'Building Fronts', S.BUILDING, {
+    // Rule: no setbacks from paths. Building face aligns to path edge.
+    detect(sg) {
+      const promenades = (sg.instances||[]).filter(i => i.patternId === 31 || i.patternId === 100);
+      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel, promenades } }));
+    },
+    instantiate(cand) {
+      // Snap the building's nearest edge to the promenade centerline
+      const promenade = cand.context.promenades[0];
+      if (!promenade) return mkInstance(122, 'point', [], {});
+      const spinePts = promenade.geom;
+      const spineX   = spinePts[0]?.x || 490;  // SVG midpoint default
+      const { x, y, w, h } = cand.geom;
+      // If building is left of spine, align right edge to spine. Vice versa.
+      const bldgCx = x + w/2;
+      const snapX  = bldgCx < spineX ? spineX - w/2 : spineX + w/2;
+      return mkInstance(122, 'point', [{ x: snapX, y: y+h/2 }],
+        { snap_to_spine: true, original_cx: bldgCx });
+    },
+    forces(inst, neighbors) {
+      const promenade = neighbors.find(n => n.patternId === 31);
+      if (!promenade || !inst.data.original_cx) return [];
+      // Force building face toward spine
+      const spineX = promenade.geom[0]?.x || 490;
+      const dx = (spineX - inst.data.original_cx) * 0.4;
+      return [{ target:inst, vec:[dx, 0], weight:0.6 }];
+    },
+  });
+
+  defPattern(127, 'Intimacy Gradient', S.BUILDING, {
+    // Rule: public → private sequence from entrance inward.
+    // Generates a depth ordering of building zones.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{} }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      // Three depth bands: public front (street), semi-private middle, private rear
+      return mkInstance(127, 'polygon_array', [
+        rectPts(x, y, w, h*0.25),            // public: ground floor, street face
+        rectPts(x, y+h*0.25, w, h*0.5),      // semi-private: middle floors
+        rectPts(x, y+h*0.75, w, h*0.25),     // private: rear / upper
+      ], { bands: ['PUBLIC','SEMI','PRIVATE'] });
+    },
+    forces() { return []; },
+  });
+
+  // ── SCALE 5: STREET EDGE ─────────────────────────────────────────────────
+
+  defPattern(87, 'Individually Owned Shops', S.EDGE, {
+    // Rule: ground floor of every building on promenade = shop. Each is identifiable.
+    detect(sg) {
+      const promenade = (sg.instances||[]).find(i => i.patternId === 31);
+      if (!promenade) return [];
+      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
+        .filter(i => instanceNearSpline(i, promenade, 40))
+        .map(parcel => ({ geom: instanceBounds(parcel), context:{ parcel } }));
+    },
+    instantiate(cand) {
+      // Ground floor bay: full width of parcel, 1-floor height
+      const { x, y, w } = cand.geom;
+      const floor_h = 14 / 8.5;  // 14ft commercial floor at 8.5ft/px
+      return mkInstance(87, 'polygon', rectPts(x, y, w, floor_h),
+        { use:'shop', bay_width_ft:25, floor_height_ft:14, opens_to_street:true });
+    },
+    forces(inst, neighbors) {
+      // Shops attract cafes (P88) as immediate neighbors
+      return neighbors.filter(n => n.patternId === 88)
+        .map(n => ({ target:n, vec: vecTo(inst,n), weight:0.2 }));
+    },
+  });
+
+  defPattern(88, 'Street Cafe', S.EDGE, {
+    // Rule: tables extend into path. Detects shop instances on promenade.
+    detect(sg) {
+      return (sg.instances||[]).filter(i => i.patternId === 87)
+        .filter((_, idx) => idx % 3 === 0)   // every 3rd shop becomes a cafe
+        .map(shop => ({ geom: instanceBounds(shop), context:{ shop } }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      // Cafe extends 8ft into path (north of building face)
+      const ext = 8 / 8.5;
+      return mkInstance(88, 'polygon', rectPts(x, y - ext, w, h + ext),
+        { use:'cafe', extends_into_path_ft:8, table_zone: rectPts(x, y-ext, w, ext) });
+    },
+    forces() { return []; },
+  });
+
+  defPattern(46, 'Market of Many Shops', S.EDGE, {
+    // Singleton: Eastside Market at south activity node.
+    detect(sg) {
+      const southNode = (sg.instances||[]).find(i => i.patternId === 30 && i.data?.role === 'south_node');
+      if (!southNode) return [];
+      return [{ geom: instanceBounds(southNode), context: { node: southNode } }];
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      const mw = 80, mh = 80;  // market hall footprint in px
+      return mkInstance(46, 'polygon', rectPts(x - mw/2, y - mh/2, mw, mh),
+        { use:'market_hall', aisle_width_ft:9, stall_size_ft:'6x9', roof:true, open_sides:true });
+    },
+    forces(inst, neighbors) {
+      return neighbors.filter(n => n.patternId === 88 || n.patternId === 87)
+        .map(n => ({ target:n, vec: vecTo(inst,n), weight:0.15 }));
+    },
+  });
+
+  // ── SCALE 5 (NEW): ADDITIONAL PATTERNS ────────────────────────────────────
+
+  defPattern(51, 'Green Streets', S.EDGE, {
+    // Rule: streets near green zones become green corridors — bike/ped lanes,
+    // trees in roadway, slowed cars. Detect spine adjacency to GREEN_ACTIVE.
+    detect(sg, proj, MAP) {
+      const G = _derivedG;
+      if (!G?.SPINE) return [];
+      const green = (sg.instances||[]).filter(i => [60,67,71].includes(i.patternId));
+      // Sample points along spine and find those near green instances
+      const candidates = [];
+      const spine = G.SPINE;
+      const steps = 6;
+      for (let i=0; i<=steps; i++) {
+        const y = spine.y + (spine.h * i / steps);
+        const spx = spine.x + spine.w/2;
+        const nearGreen = green.some(g => {
+          const gc = centroidOf(g.geomType==='polygon_array'?g.geom.flat():g.geom);
+          return Math.hypot(spx-gc.x, y-gc.y) < 120;
+        });
+        if (nearGreen) {
+          candidates.push({ geom:{ type:'point', x:spx, y }, context:{ role:'green_street' } });
+        }
+      }
+      return candidates;
+    },
+    instantiate(cand) {
+      const { x, y } = cand.geom;
+      // Emit a short N-S green street corridor segment
+      return mkInstance(51, 'polygon', rectPts(x-18, y-40, 36, 80),
+        { type:'green_street', tree_spacing_ft:20, bike_lane:true, speed_limit_mph:10 });
+    },
+    forces(inst, neighbors) {
+      // Pull toward green spaces
+      return neighbors.filter(n => [60,67,71].includes(n.patternId))
+        .map(n => ({ target:inst, vec:vecTo(inst,n), weight:0.1 }));
+    },
+  });
+
+  defPattern(61, 'Small Public Squares', S.EDGE, {
+    // Rule: every cluster of housing needs a small public square within walking
+    // distance. Detect HouseCluster instances missing a nearby plaza.
+    detect(sg) {
+      const clusters = sg_query.ofPattern(37);
+      const plazas = sg_query.ofPattern(61).concat(sg_query.ofPattern(36));
+      return clusters.filter(cluster => {
+        const cc = centroidOf(cluster.geom);
+        return !plazas.some(p => {
+          const pc = centroidOf(p.geomType==='polygon_array'?p.geom.flat():p.geom);
+          return Math.hypot(cc.x-pc.x, cc.y-pc.y) < 90;
+        });
+      }).map(cluster => ({
+        geom: instanceBounds(cluster),
+        context: { cluster }
+      }));
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      const sw=30, sh=30;
+      // Place square adjacent to cluster centroid, slightly offset
+      return mkInstance(61, 'polygon',
+        rectPts(x + w*0.3, y + h*0.3, sw, sh),
+        { use:'plaza', capacity_people:80, hardscape_pct:0.6, trees:4 });
+    },
+    forces(inst, neighbors) {
+      return [
+        ...neighbors.filter(n => n.patternId===37)
+          .map(n => ({ target:inst, vec:vecTo(inst,n), weight:0.2 })),
+        ...neighbors.filter(n => n.patternId===88)
+          .map(n => ({ target:inst, vec:vecTo(inst,n), weight:0.15 })),
+      ];
+    },
+  });
+
+  defPattern(100, 'Pedestrian Street', S.EDGE, {
+    // Rule: at least one street fully pedestrianized, connecting major nodes.
+    // Detect: path between Activity Nodes where retail lines both sides.
+    detect(sg) {
+      const nodes = sg_query.ofPattern(30);
+      if (nodes.length < 2) return [];
+      const shops = sg_query.ofPattern(87).concat(sg_query.ofPattern(88));
+      if (shops.length < 4) return [];
+      // One pedestrian street between the two activity nodes
+      const n1=nodes[0], n2=nodes[nodes.length-1];
+      if (sg_query.ofPattern(100).length > 0) return []; // singleton
+      return [{ geom:{x:0,y:0,type:'point'}, context:{n1,n2} }];
+    },
+    instantiate(cand) {
+      const { n1, n2 } = cand.context;
+      const c1=centroidOf(n1.geom), c2=centroidOf(n2.geom);
+      const dx=c2.x-c1.x, dy=c2.y-c1.y;
+      const len=Math.hypot(dx,dy);
+      const steps=Math.max(2,Math.round(len/40));
+      const pts=[];
+      for (let i=0;i<=steps;i++) pts.push({x:c1.x+dx*i/steps, y:c1.y+dy*i/steps});
+      return mkInstance(100, 'spline', pts,
+        { type:'pedestrian_street', width_ft:24, trees_each_side:true, car_free:true });
+    },
+    forces(inst, neighbors) {
+      // Pedestrian street attracts cafes and shops
+      return neighbors.filter(n=>[87,88,46].includes(n.patternId))
+        .map(n=>({ target:n, vec:vecTo(inst,n), weight:0.25 }));
+    },
+  });
+
+  defPattern(116, 'Cascade of Roofs', S.BUILDING, {
+    // Rule: buildings step down in height as they move away from the spine.
+    // Detect BuildingComplex instances and tag them with height-from-spine gradient.
+    detect(sg, proj, MAP) {
+      const G = _derivedG;
+      if (!G?.SPINE) return [];
+      const spineX = G.SPINE.x + G.SPINE.w/2;
+      return (sg.instances||[]).filter(i => i.patternId === 95 || i.patternId === 109)
+        .map(inst => {
+          const c = centroidOf(inst.geomType==='polygon_array'?inst.geom.flat():inst.geom);
+          const dist = Math.abs(c.x - spineX);
+          const maxFloors = dist < 60 ? 7 : dist < 130 ? 5 : dist < 220 ? 4 : 3;
+          return { geom: instanceBounds(inst), context: { inst, maxFloors, dist } };
+        });
+    },
+    instantiate(cand) {
+      const { x, y, w, h } = cand.geom;
+      const { maxFloors } = cand.context;
+      return mkInstance(116, 'point', [{ x:x+w/2, y:y+h/2 }],
+        { tag:'cascade_of_roofs', max_floors:maxFloors, parent_inst:cand.context.inst?.id });
+    },
+    forces() { return []; },  // informational only — no spatial forces
+  });
+
+  // ── 2. SCENE GRAPH ──────────────────────────────────────────────────────
+  let _sg = null;
+
+  // Parent → required children mapping.
+  // When a parent instance exists, these child patterns MUST fire against it.
+  // Children query sg.childrenOf(parentId) to find siblings.
+  const REQUIRES = {
+    37:  [67, 60],       // HouseCluster requires CommonLand, AccessibleGreen
+    95:  [115, 122],     // BuildingComplex requires CourtyardsWhichLive, BuildingFronts
+    109: [115, 127],     // LongThinHouse requires Courtyard, IntimacyGradient
+    31:  [87, 88, 46],   // Promenade requires Shops, Cafe, Market
+    30:  [53],           // ActivityNode requires Gateway
+    37:  [67, 60, 61],   // HouseCluster also requires SmallSquare nearby
+    100: [87, 88],       // PedestrianStreet requires Shops and Cafe
+  };
+
+  // Dedup radius per pattern (px): how close must an existing same-type instance
+  // be before we treat it as "already handled" and skip/mutate instead of creating new
+  const DEDUP_R = {
+    29: 9999,  // DensityRings: singleton
+    31: 9999,  // Promenade: singleton
+    53:  80,   // Gateways: one per entry point (~80px apart)
+    30:  60,   // ActivityNodes: one per node
+    37: 100,   // HouseCluster: one per cluster location
+    67:  80,   // CommonLand: one per cluster
+    71: 9999,  // StillWater: singleton
+    46: 9999,  // Market: singleton
+    95:  30,   // BuildingComplex: per parcel strip
+    104: 40,
+    105: 40,
+    106: 40,
+    109: 30,   // LongThinHouse: per parcel
+    115: 30,   // Courtyard: per building
+    122: 30,
+    127: 30,
+    87:  25,   // Shop: per bay
+    88:  50,   // Cafe: every ~3rd shop
+    51:  80,   // GreenStreet: one per spine segment
+    61:  70,   // SmallSquare: one per cluster zone
+    100: 9999, // PedestrianStreet: singleton
+    116: 30,   // CascadeOfRoofs: per building
+  };
+
+  function mkInstance(patternId, geomType, geom, data) {
+    return {
+      id: `inst_${patternId}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+      patternId,
+      geomType,
+      geom,
+      data,
+      force_accum: [0, 0],
+      pass_created: _sg?.pass || 0,
+      parent_id: null,    // set when instantiated as child of a parent
+      children: [],       // child instance ids
+      refs: [],
+      mutation_count: 0,  // how many times forces have moved this instance
+    };
+  }
+
+  // Scene graph query helpers
+  const sg_query = {
+    // All instances of a given pattern
+    ofPattern: (pid) => (_sg?.instances || []).filter(i => i.patternId === pid),
+
+    // Children of a given parent instance
+    childrenOf: (parentId) => (_sg?.instances || []).filter(i => i.parent_id === parentId),
+
+    // Parents of a given pattern type
+    parentsRequiring: (childPid) =>
+      Object.entries(REQUIRES)
+        .filter(([,children]) => children.includes(childPid))
+        .map(([parentPid]) => sg_query.ofPattern(+parentPid))
+        .flat(),
+
+    // Parent instances that are MISSING a required child of type childPid
+    missingChild: (parentPid, childPid) =>
+      sg_query.ofPattern(parentPid).filter(parent =>
+        !parent.children.some(cid => {
+          const c = (_sg?.instances || []).find(i => i.id === cid);
+          return c && c.patternId === childPid;
+        })
+      ),
+
+    // Nearest existing instance of same pattern within dedup radius
+    nearDuplicate: (inst) => {
+      const r = DEDUP_R[inst.patternId] ?? 50;
+      return (_sg?.instances || []).find(i =>
+        i.id !== inst.id &&
+        i.patternId === inst.patternId &&
+        instanceDist(i, inst) < r
+      );
+    },
+  };
+
+  // Register child under parent in the scene graph
+  function adoptInstance(parent, child) {
+    child.parent_id = parent.id;
+    if (!parent.children.includes(child.id)) parent.children.push(child.id);
+  }
+
+  // ── 3. BUILDING POINTS ──────────────────────────────────────────────────
+  // Each Pattern instance → one or more BuildingPoints
+  function emitBuildingPoints(inst) {
+    const pts = [];
+    const pid = inst.patternId;
+
+    if (pid === 95 || pid === 109) {
+      // Building parcel → emit a grid of building points on the footprint
+      const geoms = inst.geomType === 'polygon_array' ? inst.geom : [inst.geom];
+      for (const poly of geoms) {
+        const b = boundsOf(poly);
+        pts.push({
+          x: b.x + b.w/2, y: b.y + b.h/2,
+          type: 'MIXED_USE_5OVER1',
+          floors: 4,
+          parcel_w_ft: 25, parcel_d_ft: 125,
+          instance_id: inst.id,
+          owner_pattern: pid,
+          patterns: [pid],
+        });
+      }
+    } else if (pid === 87) {
+      // Shop → ground-floor point
+      const b = boundsOf(inst.geom);
+      pts.push({ x:b.x+b.w/2, y:b.y, type:'RETAIL', floors:1, instance_id:inst.id, owner_pattern:pid, patterns:[pid] });
+    } else if (pid === 46) {
+      const b = boundsOf(inst.geom);
+      pts.push({ x:b.x+b.w/2, y:b.y+b.h/2, type:'MARKET_HALL', floors:1, instance_id:inst.id, owner_pattern:pid, patterns:[pid] });
+    } else if ([60,67,71].includes(pid)) {
+      const b = boundsOf(inst.geom);
+      pts.push({ x:b.x+b.w/2, y:b.y+b.h/2, type:'GREEN_ACTIVE', floors:0, instance_id:inst.id, owner_pattern:pid, patterns:[pid] });
+    } else if (pid === 115) {
+      // Courtyard void → green ground point
+      const b = boundsOf(inst.geom);
+      pts.push({ x:b.x+b.w/2, y:b.y+b.h/2, type:'COURTYARD', floors:0, instance_id:inst.id, owner_pattern:pid, patterns:[pid] });
+    }
+
+    return pts;
+  }
+
+  // ── 4. kNN CLUSTERING → BUILDINGS ───────────────────────────────────────
+  function coalesceToBuildings(buildingPoints, k) {
+    const bPts = buildingPoints.filter(p => p.type === 'MIXED_USE_5OVER1');
+    if (bPts.length === 0) return [];
+    const clusters = knnCluster(bPts, k, 95);
+    return clusters.map((cluster, idx) => {
+      const cx = centroidOf(cluster).x;
+      const cy = centroidOf(cluster).y;
+      const patterns_present = [...new Set(cluster.flatMap(p => p.patterns))];
+      return {
+        id: `bldg_${idx}`,
+        centroid: { x:cx, y:cy },
+        footprint: hullOf(cluster.map(p => ({x:p.x,y:p.y}))),
+        type: 'MIXED_USE_5OVER1',
+        floors: 4,
+        units: Math.round(cluster.length * 9 / Math.max(1, cluster.length / 5)),
+        patterns: patterns_present,
+        instances: [...new Set(cluster.map(p => p.instance_id))],
+      };
+    });
+  }
+
+  // ── 5. FORCE APPLICATION (softmax relaxation) ────────────────────────────
+  function applyForces(instances) {
+    // Collect all force vectors on each instance
+    for (const inst of instances) {
+      inst.force_accum = [0, 0];
+    }
+
+    for (const inst of instances) {
+      const pattern = PATTERNS[inst.patternId];
+      if (!pattern?.forces) continue;
+      const neighbors = instances.filter(n => n.id !== inst.id &&
+        instanceDist(inst, n) < 300);
+      const forces = pattern.forces(inst, neighbors);
+      for (const { target, vec, weight } of forces) {
+        if (!target) continue;
+        target.force_accum[0] += vec[0] * weight;
+        target.force_accum[1] += vec[1] * weight;
+      }
+    }
+
+    // Softmax-normalize weights, then apply translations
+    const maxMag = Math.max(1, ...instances.map(i =>
+      Math.hypot(i.force_accum[0], i.force_accum[1])));
+    const DAMPING = _activeDamping;
+
+    for (const inst of instances) {
+      const [dx, dy] = inst.force_accum;
+      const mag = Math.hypot(dx, dy);
+      if (mag < 0.5) continue;
+      const norm = Math.min(mag / maxMag, 1);  // softmax normalization
+      const scale = norm * DAMPING;
+      translateInstance(inst, dx * scale, dy * scale);
+    }
+  }
+
+  // ── 6. MAIN SOLVER LOOP ──────────────────────────────────────────────────
+  // Phase A: N_SCALES intro passes — one new scale introduced per pass
+  //          (district → block → group → building → edge)
+  // Phase B: N_RECURSE recursive passes — all scales fire simultaneously,
+  //          re-detecting from the geometry already placed, refining positions
+  //          via force relaxation. This is the recursive refinement.
+  function solve(parcels, proj, MAP, derivedG, opts = {}) {
+    const N_SCALES   = Object.keys(S).length;   // 5 intro passes
+    const N_RECURSE  = opts.recurse || 3;        // recursive refinement passes
+    const CLUSTER_K  = opts.cluster_k || 40;
+    const DAMPING_OVERRIDE = opts.damping || null;
+    const DEDUP_SCALE = opts.dedup_scale || 1.0;
+
+    // Apply opts
+    _activeDamping = DAMPING_OVERRIDE || 0.4;
+
+    // Scale DEDUP_R if requested
+    const _origDedupR = {};
+    if (DEDUP_SCALE !== 1.0) {
+      for (const [k,v] of Object.entries(DEDUP_R)) {
+        _origDedupR[k] = v;
+        DEDUP_R[k] = v * DEDUP_SCALE;
+      }
+    }
+    const log = [];
+
+    _sg = { instances: [], buildingPoints: [], buildings: [], zones: [], pass: 0, snapshots: [] };
+
+    // Build projected EDA polygon list for accurate inEDA() tests
+    _edaPolys = (parcels || [])
+      .filter(p => p.is_eda && Array.isArray(p.rings) && p.rings[0])
+      .map(p => p.rings[0].map(pt => proj(pt[0] ?? pt.lon, pt[1] ?? pt.lat)))
+      .filter(poly => poly.length >= 3);
+
+    const patternOrder = Object.values(PATTERNS).sort((a,b) => a.priority - b.priority);
+
+    const totalPasses = N_SCALES + N_RECURSE;
+
+    for (let pass = 0; pass < totalPasses; pass++) {
+      _sg.pass = pass;
+
+      // Intro phase: open one scale per pass (1→2→3→4→5)
+      // Recurse phase: all scales open, re-derive from geometry
+      const isRecurse  = pass >= N_SCALES;
+      const passScale  = isRecurse ? S.EDGE : Math.min(S.EDGE, S.DISTRICT + pass);
+      const recurseIdx = isRecurse ? (pass - N_SCALES + 1) : 0;
+      const label = isRecurse
+        ? `Pass ${pass} — Recurse ${recurseIdx}/${N_RECURSE} (all scales)`
+        : `Pass ${pass} — Scale ≤ ${passScale}: ${['','District','Block','Group','Building','Edge'][passScale]}`;
+      log.push(label);
+
+      let newInsts = 0, mutated = 0;
+
+      for (const pattern of patternOrder) {
+        if (pattern.scale > passScale) continue;
+
+        // On recursive passes, patterns re-detect from existing geometry.
+        // They can update/reposition instances and add missing children.
+        let candidates = [];
+        try { candidates = pattern.detect(_sg, proj, MAP) || []; }
+        catch(e) { log.push(`  P${pattern.id} detect error: ${e.message}`); continue; }
+
+        for (const cand of candidates) {
+          let inst;
+          try { inst = pattern.instantiate(cand, _sg); }
+          catch(e) { log.push(`  P${pattern.id} instantiate error: ${e.message}`); continue; }
+          if (!inst) continue;
+
+          // Dedup: same pattern near this location already?
+          const dup = sg_query.nearDuplicate(inst);
+          if (dup) {
+            dup.mutation_count++;
+            mutated++;
+            if (cand.context?.parent && !dup.parent_id) adoptInstance(cand.context.parent, dup);
+            continue;
+          }
+
+          // Priority conflict: different pattern owns this location at higher priority
+          const conflict = _sg.instances.find(i =>
+            i.id !== inst.id && i.patternId !== inst.patternId &&
+            instanceDist(i, inst) < 20 &&
+            PATTERNS[i.patternId]?.priority < pattern.priority);
+          if (conflict) continue;
+
+          _sg.instances.push(inst);
+          newInsts++;
+        }
+      }
+
+      log.push(`  +${newInsts} new, ${mutated} mutated (total: ${_sg.instances.length})`);
+
+      // Emit building points
+      _sg.buildingPoints = _sg.instances.flatMap(emitBuildingPoints);
+
+      // Force relaxation — runs every pass after the first intro pass
+      // Recursive passes get stronger relaxation (more iterations)
+      if (pass > 0) {
+        const relaxIter = isRecurse ? 2 : 1;
+        for (let r = 0; r < relaxIter; r++) applyForces(_sg.instances);
+      }
+
+      // Coalesce buildings
+      _sg.buildings = coalesceToBuildings(_sg.buildingPoints, CLUSTER_K);
+      log.push(`  ${_sg.buildingPoints.length} pts → ${_sg.buildings.length} buildings`);
+
+      // Snapshot
+      _sg.snapshots.push({
+        pass,
+        scale: passScale,
+        isRecurse,
+        recurseIdx,
+        label,
+        instances: _sg.instances.map(i => ({ ...i, geom: JSON.parse(JSON.stringify(i.geom)) })),
+        buildingPoints: [..._sg.buildingPoints],
+        buildings: [..._sg.buildings],
+        counts: Object.fromEntries(
+          Object.entries(PATTERNS)
+            .map(([id]) => [id, _sg.instances.filter(i => i.patternId === +id).length])
+            .filter(([,v]) => v > 0)
+        ),
+        hierarchy: _sg.instances.reduce((h, i) => {
+          if (i.parent_id) {
+            h[i.parent_id] = h[i.parent_id] || [];
+            h[i.parent_id].push(i.id);
+          }
+          return h;
+        }, {}),
+      });
+    }
+
+    const counts = {};
+    for (const inst of _sg.instances) counts[inst.patternId] = (counts[inst.patternId]||0)+1;
+    log.push(`Final counts: ${JSON.stringify(counts)}`);
+
+    // Restore DEDUP_R if we scaled it
+    if (DEDUP_SCALE !== 1.0) {
+      for (const [k,v] of Object.entries(_origDedupR)) DEDUP_R[k] = v;
+    }
+
+    return { sceneGraph: _sg, log, buildings: _sg.buildings, counts };
+  }
+
+
+  // ── 7. GEOMETRY HELPERS ──────────────────────────────────────────────────
+
+  function rectPts(x, y, w, h) {
+    return [{ x, y }, { x:x+w, y }, { x:x+w, y:y+h }, { x, y:y+h }];
+  }
+  function rectAround(c, w, h) { return rectPts(c.x - w/2, c.y - h/2, w, h); }
+  function rectToPts(b) { return rectPts(b.x, b.y, b.w, b.h); }
+
+  function boundsOf(pts) {
+    if (!pts || pts.length === 0) return { x:0, y:0, w:0, h:0 };
+    const arr = Array.isArray(pts[0]) ? pts : pts.map(p => [p.x, p.y]);
+    const xs = arr.map(p => p[0] ?? p.x ?? 0);
+    const ys = arr.map(p => p[1] ?? p.y ?? 0);
+    const x = Math.min(...xs), y = Math.min(...ys);
+    return { x, y, w: Math.max(...xs)-x, h: Math.max(...ys)-y };
+  }
+
+  function instanceBounds(inst) {
+    const pts = inst.geomType === 'polygon_array'
+      ? inst.geom.flat()
+      : inst.geom;
+    return boundsOf(pts);
+  }
+
+  function centroidOf(pts) {
+    if (!pts || pts.length === 0) return { x:0, y:0 };
+    const arr = Array.isArray(pts[0]) ? pts.map(p => ({x:p[0],y:p[1]})) : pts;
+    return {
+      x: arr.reduce((s,p) => s+(p.x||0), 0) / arr.length,
+      y: arr.reduce((s,p) => s+(p.y||0), 0) / arr.length,
+    };
+  }
+
+  function hullOf(pts) {
+    // Simple convex hull (gift wrapping) — enough for our purposes
+    if (!pts || pts.length < 3) return pts || [];
+    const arr = pts.map(p => ({ x: p.x||0, y: p.y||0 }));
+    arr.sort((a,b) => a.x - b.x || a.y - b.y);
+    const cross = (O,A,B) => (A.x-O.x)*(B.y-O.y) - (A.y-O.y)*(B.x-O.x);
+    const lower = [], upper = [];
+    for (const p of arr) {
+      while (lower.length >= 2 && cross(lower[lower.length-2], lower[lower.length-1], p) <= 0) lower.pop();
+      lower.push(p);
+    }
+    for (let i = arr.length-1; i >= 0; i--) {
+      const p = arr[i];
+      while (upper.length >= 2 && cross(upper[upper.length-2], upper[upper.length-1], p) <= 0) upper.pop();
+      upper.push(p);
+    }
+    upper.pop(); lower.pop();
+    return lower.concat(upper);
+  }
+
+  function polygonArea(pts) {
+    if (!pts || pts.length < 3) return 0;
+    let a = 0;
+    for (let i = 0; i < pts.length; i++) {
+      const j = (i+1) % pts.length;
+      a += (pts[i].x||0) * (pts[j].y||0);
+      a -= (pts[j].x||0) * (pts[i].y||0);
+    }
+    return Math.abs(a) / 2;
+  }
+
+  function ptDist(a, b) { return Math.hypot((a.x||0)-(b.x||0),(a.y||0)-(b.y||0)); }
+
+  function instanceDist(a, b) {
+    return ptDist(centroidOf(a.geomType==='polygon_array'?a.geom.flat():a.geom),
+                  centroidOf(b.geomType==='polygon_array'?b.geom.flat():b.geom));
+  }
+
+  function vecTo(from, to) {
+    const fc = centroidOf((from.geomType==='polygon_array'?from.geom.flat():from.geom) || [{x:0,y:0}]);
+    const tc = centroidOf((to.geomType==='polygon_array'?to.geom.flat():to.geom)   || [{x:0,y:0}]);
+    return [tc.x-fc.x, tc.y-fc.y];
+  }
+  function vecAway(from, to) { const v = vecTo(from,to); return [-v[0],-v[1]]; }
+
+  function translateInstance(inst, dx, dy) {
+    const translate = p => ({ ...p, x:(p.x||0)+dx, y:(p.y||0)+dy });
+    if (inst.geomType === 'polygon_array') {
+      inst.geom = inst.geom.map(poly => poly.map(translate));
+    } else if (Array.isArray(inst.geom)) {
+      inst.geom = inst.geom.map(translate);
+    }
+  }
+
+  function splineMidpoint(inst) {
+    const pts = inst.geom;
+    if (!pts || pts.length === 0) return { x:490, y:400 };
+    return centroidOf(pts);
+  }
+
+  function nearestInstance(pt, instances) {
+    let best = null, bestD = Infinity;
+    for (const inst of instances) {
+      const c = centroidOf(inst.geomType==='polygon_array'?inst.geom.flat():inst.geom);
+      const d = ptDist(pt, c);
+      if (d < bestD) { best = inst; bestD = d; }
+    }
+    return best ? { inst: best, dist: bestD } : null;
+  }
+
+  function instanceNearSpline(inst, spline, threshold) {
+    const ic = centroidOf(inst.geomType==='polygon_array'?inst.geom.flat():inst.geom);
+    for (const pt of (spline.geom || [])) {
+      if (ptDist(ic, pt) < threshold) return true;
+    }
+    return false;
+  }
+
+  function instancesOverlap(a, b) {
+    const ba = instanceBounds(a), bb = instanceBounds(b);
+    return ba.x < bb.x+bb.w && ba.x+ba.w > bb.x && ba.y < bb.y+bb.h && ba.y+ba.h > bb.y;
+  }
+
+  function gapPolygon(a, b) {
+    const ba = instanceBounds(a), bb = instanceBounds(b);
+    const x1 = Math.max(ba.x, bb.x), x2 = Math.min(ba.x+ba.w, bb.x+bb.w);
+    const y1 = Math.max(ba.y, bb.y), y2 = Math.min(ba.y+ba.h, bb.y+bb.h);
+    if (x2 <= x1 || y2 <= y1) return null;
+    return rectPts(x1, y1, x2-x1, y2-y1);
+  }
+
+  function southOf(inst, dist) {
+    const b = instanceBounds(inst);
+    return { pts: rectPts(b.x, b.y+b.h+dist, b.w, b.h * 0.5) };
+  }
+
+  function buildingPointsByPattern(sg, pids) {
+    return (sg.buildingPoints || []).filter(p => pids.includes(p.owner_pattern));
+  }
+
+  // Set by solve() — projected EDA parcel rings for accurate containment test
+  let _edaPolys = [];
+
+  function inEDA(x, y) {
+    if (_edaPolys.length === 0) {
+      // Fallback: conservative bbox
+      const MAP = { x0:139, y0:163, x1:841, y1:653 };
+      return x > MAP.x0 && x < MAP.x1 && y > MAP.y0 && y < MAP.y1;
+    }
+    return _edaPolys.some(poly => pointInPolygon(x, y, poly));
+  }
+
+  function pointInPolygon(x, y, poly) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const xi = poly[i].x, yi = poly[i].y;
+      const xj = poly[j].x, yj = poly[j].y;
+      if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  function inSetback(x, y, MAP) {
+    const S = { HIGHWAY:50/8.5, ARTERIAL:20/8.5, COLLECTOR:15/8.5 };
+    return y > MAP.y1 - S.HIGHWAY ||   // I-264 south
+           y < MAP.y0 + S.ARTERIAL ||  // Va Beach Blvd north
+           x < MAP.x0 + S.ARTERIAL ||  // N Military Hwy west
+           x > MAP.x1 - S.COLLECTOR;   // Tidewater Dr east
+  }
+
+  // Simple k-means clustering
+  function knnCluster(pts, k, seed) {
+    if (!pts || pts.length === 0) return [];
+    k = Math.min(k, pts.length);
+    // Initialize centroids by spacing evenly
+    let centroids = [];
+    for (let i = 0; i < k; i++) {
+      centroids.push({ x: pts[Math.floor(i * pts.length / k)].x || 0,
+                       y: pts[Math.floor(i * pts.length / k)].y || 0 });
+    }
+    let assignments = new Array(pts.length).fill(0);
+    for (let iter = 0; iter < 10; iter++) {
+      // Assign
+      for (let i = 0; i < pts.length; i++) {
+        let best = 0, bestD = Infinity;
+        for (let j = 0; j < k; j++) {
+          const d = ptDist(pts[i], centroids[j]);
+          if (d < bestD) { best = j; bestD = d; }
+        }
+        assignments[i] = best;
+      }
+      // Update centroids
+      for (let j = 0; j < k; j++) {
+        const members = pts.filter((_,i) => assignments[i] === j);
+        if (members.length > 0) centroids[j] = centroidOf(members);
+      }
+    }
+    const clusters = Array.from({length:k}, () => []);
+    pts.forEach((p,i) => clusters[assignments[i]].push(p));
+    return clusters.filter(c => c.length > 0);
+  }
+
+  // ── 8. EXPORT ────────────────────────────────────────────────────────────
+  return {
+    solve,
+    getSceneGraph: () => _sg,
+    PATTERNS,
+    REQUIRES,
+    SCALES: S,
+    query: () => sg_query,
+    counts: () => {
+      if (!_sg) return {};
+      const c = {};
+      for (const i of _sg.instances) c[i.patternId] = (c[i.patternId]||0)+1;
+      return c;
+    },
+  };
+
+})();
+</script>
+</body>
+</html>
