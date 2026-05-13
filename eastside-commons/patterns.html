@@ -148,8 +148,8 @@
 
   <div class="ctrl-group">
     <span class="ctrl-label">Recurse</span>
-    <input type="range" id="ctrl-recurse" min="3" max="30" value="12" step="1">
-    <span class="ctrl-val" id="val-recurse">12</span>
+    <input type="range" id="ctrl-recurse" min="3" max="60" value="20" step="1">
+    <span class="ctrl-val" id="val-recurse">20</span>
   </div>
   <div class="ctrl-group">
     <span class="ctrl-label">Cluster K</span>
@@ -193,6 +193,8 @@
       </defs>
       <!-- EDA parcel outlines (base layer) -->
       <g id="layer-eda"></g>
+      <!-- Site facts: SPINE, BAND, SPONGE, ROSS(2036), TIDE — real GIS geometry -->
+      <g id="layer-site-facts"></g>
       <!-- Pattern instances -->
       <g id="layer-edges"></g>
       <g id="layer-instances"></g>
@@ -469,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const projObj = (lon, lat) => { const [x,y]=proj(lon,lat); return {x,y}; };
 
   drawEDA(parcels, proj, MAP);
+  drawSiteFacts(derived, MAP);
 
   // Controls
   const cr=document.getElementById('ctrl-recurse'), vr=document.getElementById('val-recurse');
@@ -521,109 +524,134 @@ document.addEventListener('DOMContentLoaded', () => {
 function drawEDA(parcels, proj, MAP) {
   const ns='http://www.w3.org/2000/svg';
   const layer=document.getElementById('layer-eda');
-
-  // EDA parcel outlines
   for (const p of parcels) {
     if (!p.is_eda || !p.rings?.[0]) continue;
     const pts=p.rings[0].map(([lon,lat])=>proj(lon,lat).join(',')).join(' ');
     const poly=document.createElementNS(ns,'polygon');
     poly.setAttribute('points',pts);
-    poly.setAttribute('fill','rgba(40,120,40,0.06)');
-    poly.setAttribute('stroke','rgba(80,160,60,0.3)');
-    poly.setAttribute('stroke-width','0.8');
-    poly.setAttribute('stroke-dasharray','2,3');
+    poly.setAttribute('fill','rgba(40,120,40,0.05)');
+    poly.setAttribute('stroke','rgba(80,160,60,0.18)');
+    poly.setAttribute('stroke-width','0.6');
+    poly.setAttribute('stroke-dasharray','2,5');
     layer.appendChild(poly);
   }
+}
 
-  // Site facts from derived geometry — drawn after parcels so they're visible
-  const G = buildParcelGeometry(parcels, proj);
-  const {derived} = solveConstraintsMin(G, MAP);
+// Draw the definite site geometry — facts on the ground before any pattern fires.
+// SPINE, SPONGE, ROSS(2036), TIDE, BAND — derived from actual GIS parcel data.
+// These are the irreducible context. Every pattern holds simultaneously with these.
+function drawSiteFacts(derived, MAP) {
+  const ns='http://www.w3.org/2000/svg';
+  const layer=document.getElementById('layer-site-facts');
+  layer.innerHTML='';
 
-  // Commons Spine axis
-  if (derived.SPINE) {
-    const s = derived.SPINE;
-    const r = document.createElementNS(ns,'rect');
-    r.setAttribute('x',s.x); r.setAttribute('y',s.y);
-    r.setAttribute('width',s.w); r.setAttribute('height',s.h);
-    r.setAttribute('fill','rgba(200,120,24,0.08)');
-    r.setAttribute('stroke','rgba(200,120,24,0.5)');
-    r.setAttribute('stroke-width','1');
-    layer.appendChild(r);
-    // Label
+  const svgRect = (x,y,w,h,fill,stroke,sw,da) => {
+    const r=document.createElementNS(ns,'rect');
+    r.setAttribute('x',x); r.setAttribute('y',y);
+    r.setAttribute('width',w); r.setAttribute('height',h);
+    r.setAttribute('fill',fill); r.setAttribute('stroke',stroke);
+    r.setAttribute('stroke-width',sw||'1.2');
+    if(da) r.setAttribute('stroke-dasharray',da);
+    r.setAttribute('pointer-events','none');
+    return r;
+  };
+  const svgLabel = (x,y,txt,fill,size,anchor) => {
     const t=document.createElementNS(ns,'text');
-    t.setAttribute('x',s.x+s.w/2); t.setAttribute('y',s.y+16);
-    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(200,120,24,0.7)');
-    t.setAttribute('font-size','7'); t.setAttribute('letter-spacing','2');
-    t.textContent='SPINE';
-    layer.appendChild(t);
+    t.setAttribute('x',x); t.setAttribute('y',y);
+    t.setAttribute('text-anchor',anchor||'middle');
+    t.setAttribute('fill',fill);
+    t.setAttribute('font-size',size||'6');
+    t.setAttribute('font-family','monospace');
+    t.setAttribute('letter-spacing','1.2');
+    t.setAttribute('pointer-events','none');
+    t.textContent=txt;
+    return t;
+  };
+  const svgLine = (x1,y1,x2,y2,stroke,sw,da) => {
+    const l=document.createElementNS(ns,'line');
+    l.setAttribute('x1',x1); l.setAttribute('y1',y1);
+    l.setAttribute('x2',x2); l.setAttribute('y2',y2);
+    l.setAttribute('stroke',stroke); l.setAttribute('stroke-width',sw||'1');
+    if(da) l.setAttribute('stroke-dasharray',da);
+    l.setAttribute('pointer-events','none');
+    return l;
+  };
+
+  // ── COMMONS SPINE ── the N-S axis everything is organised around
+  if (derived.SPINE) {
+    const s=derived.SPINE;
+    layer.appendChild(svgRect(s.x, s.y, s.w, s.h,
+      'rgba(200,120,24,0.08)', 'rgba(200,120,24,0.7)', '1.5'));
+    layer.appendChild(svgLine(s.x+s.w/2, s.y, s.x+s.w/2, s.y+s.h,
+      'rgba(200,120,24,0.22)', '0.5', '5,5'));
+    layer.appendChild(svgLabel(s.x+s.w/2, s.y+13, 'SPINE', 'rgba(200,120,24,0.85)', '5.5'));
   }
 
-  // Sponge park ellipse
+  // ── MAIN ST BAND south edge ──
+  if (derived.BAND) {
+    const b=derived.BAND;
+    layer.appendChild(svgLine(MAP.x0, b.y+b.h, MAP.x1, b.y+b.h,
+      'rgba(200,120,24,0.4)', '1.2', '8,5'));
+    layer.appendChild(svgLabel(MAP.x0+22, b.y+b.h-5,
+      'VA BEACH BLVD', 'rgba(200,120,24,0.55)', '5', 'start'));
+  }
+
+  // ── SPONGE PARK ── stormwater · ecological · public
   if (derived.SPONGE) {
-    const sg = derived.SPONGE;
-    const e = document.createElementNS(ns,'ellipse');
+    const sg=derived.SPONGE;
+    const e=document.createElementNS(ns,'ellipse');
     e.setAttribute('cx',sg.cx); e.setAttribute('cy',sg.cy);
     e.setAttribute('rx',sg.rx); e.setAttribute('ry',sg.ry);
-    e.setAttribute('fill','rgba(40,180,80,0.1)');
-    e.setAttribute('stroke','rgba(40,180,80,0.5)');
-    e.setAttribute('stroke-width','1');
-    e.setAttribute('stroke-dasharray','3,3');
+    e.setAttribute('fill','rgba(40,180,80,0.09)');
+    e.setAttribute('stroke','rgba(40,180,80,0.65)');
+    e.setAttribute('stroke-width','1.5');
+    e.setAttribute('stroke-dasharray','5,3');
+    e.setAttribute('pointer-events','none');
     layer.appendChild(e);
-    const t=document.createElementNS(ns,'text');
-    t.setAttribute('x',sg.cx); t.setAttribute('y',sg.cy+3);
-    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(40,180,80,0.7)');
-    t.setAttribute('font-size','6.5');
-    t.textContent='SPONGE';
-    layer.appendChild(t);
+    // Inner basin
+    const ib=document.createElementNS(ns,'ellipse');
+    ib.setAttribute('cx',sg.cx); ib.setAttribute('cy',sg.cy);
+    ib.setAttribute('rx',sg.rx*0.38); ib.setAttribute('ry',sg.ry*0.38);
+    ib.setAttribute('fill','rgba(40,180,80,0.14)');
+    ib.setAttribute('stroke','rgba(40,180,80,0.3)');
+    ib.setAttribute('stroke-width','0.6');
+    ib.setAttribute('pointer-events','none');
+    layer.appendChild(ib);
+    layer.appendChild(svgLabel(sg.cx, sg.cy+2, 'SPONGE', 'rgba(40,180,80,0.8)', '6'));
+    layer.appendChild(svgLabel(sg.cx, sg.cy+11, 'STORMWATER', 'rgba(40,180,80,0.4)', '4.5'));
   }
 
-  // Ross Stores footprint (existing MPB anchor — lease expires 2036)
+  // ── ROSS LEASEHOLD ── MPB parcel, lease expires 2036 — the strategic constraint
   if (derived.ROSS) {
-    const ro = derived.ROSS;
-    const r = document.createElementNS(ns,'rect');
-    r.setAttribute('x',ro.x); r.setAttribute('y',ro.y);
-    r.setAttribute('width',ro.w); r.setAttribute('height',ro.h);
-    r.setAttribute('fill','rgba(100,60,180,0.08)');
-    r.setAttribute('stroke','rgba(100,60,180,0.4)');
-    r.setAttribute('stroke-width','1');
-    r.setAttribute('stroke-dasharray','4,2');
-    layer.appendChild(r);
-    const t=document.createElementNS(ns,'text');
-    t.setAttribute('x',ro.x+ro.w/2); t.setAttribute('y',ro.y+ro.h/2+3);
-    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(100,60,180,0.6)');
-    t.setAttribute('font-size','6');
-    t.textContent='ROSS 2036';
-    layer.appendChild(t);
+    const ro=derived.ROSS;
+    layer.appendChild(svgRect(ro.x, ro.y, ro.w, ro.h,
+      'rgba(120,60,200,0.07)', 'rgba(120,60,200,0.6)', '1.2', '5,3'));
+    layer.appendChild(svgLabel(ro.x+ro.w/2, ro.y+ro.h/2-3, 'ROSS', 'rgba(120,60,200,0.75)', '6'));
+    layer.appendChild(svgLabel(ro.x+ro.w/2, ro.y+ro.h/2+8, '→ 2036', 'rgba(120,60,200,0.5)', '5.5'));
   }
 
-  // Tide station site
+  // ── TIDE STATION ── south entry · transit gateway · the bottom of the spine
   if (derived.TIDE) {
-    const ti = derived.TIDE;
-    const r = document.createElementNS(ns,'rect');
-    r.setAttribute('x',ti.x); r.setAttribute('y',ti.y);
-    r.setAttribute('width',ti.w); r.setAttribute('height',ti.h);
-    r.setAttribute('fill','rgba(8,88,184,0.12)');
-    r.setAttribute('stroke','rgba(8,88,184,0.5)');
-    r.setAttribute('stroke-width','1');
-    layer.appendChild(r);
-    const t=document.createElementNS(ns,'text');
-    t.setAttribute('x',ti.x+ti.w/2); t.setAttribute('y',ti.y+ti.h/2+3);
-    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(8,88,184,0.7)');
-    t.setAttribute('font-size','6.5');
-    t.textContent='TIDE';
-    layer.appendChild(t);
+    const ti=derived.TIDE;
+    layer.appendChild(svgRect(ti.x, ti.y, ti.w, ti.h,
+      'rgba(8,88,184,0.12)', 'rgba(8,88,184,0.65)', '1.5'));
+    layer.appendChild(svgLabel(ti.x+ti.w/2, ti.y+ti.h/2-3, 'TIDE', 'rgba(8,88,184,0.85)', '6.5'));
+    layer.appendChild(svgLabel(ti.x+ti.w/2, ti.y+ti.h/2+8, 'TRANSIT', 'rgba(8,88,184,0.5)', '5'));
+    // Entry arrow — the approach from I-264
+    const arr=document.createElementNS(ns,'text');
+    arr.setAttribute('x',ti.x+ti.w/2); arr.setAttribute('y',ti.y+ti.h+10);
+    arr.setAttribute('text-anchor','middle'); arr.setAttribute('fill','rgba(8,88,184,0.35)');
+    arr.setAttribute('font-size','9'); arr.setAttribute('pointer-events','none');
+    arr.textContent='↑ I-264';
+    layer.appendChild(arr);
   }
 
-  // Main Street band top edge
-  if (derived.BAND) {
-    const b = derived.BAND;
-    const line = document.createElementNS(ns,'line');
-    line.setAttribute('x1',MAP.x0); line.setAttribute('y1',b.y+b.h);
-    line.setAttribute('x2',MAP.x1); line.setAttribute('y2',b.y+b.h);
-    line.setAttribute('stroke','rgba(200,120,24,0.25)');
-    line.setAttribute('stroke-width','1');
-    line.setAttribute('stroke-dasharray','4,4');
-    layer.appendChild(line);
+  // ── RESEARCH STATION ──
+  if (derived.RESEARCH) {
+    const rs=derived.RESEARCH;
+    layer.appendChild(svgRect(rs.x, rs.y, rs.w, rs.h,
+      'rgba(24,160,200,0.07)', 'rgba(24,160,200,0.4)', '0.8', '3,4'));
+    layer.appendChild(svgLabel(rs.x+rs.w/2, rs.y+rs.h/2+3, 'RESEARCH', 'rgba(24,160,200,0.5)', '4.5'));
   }
 }
 
@@ -874,7 +902,7 @@ function togglePlay() {
       _currentPass=(_currentPass+1)%_snapshots.length;
       document.getElementById('pass-slider').value=_currentPass;
       renderPass(_currentPass);
-      _playTimer=setTimeout(step, 300);
+      _playTimer=setTimeout(step, 150);
     }
     step();
   } else {
