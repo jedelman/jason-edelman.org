@@ -274,6 +274,26 @@ function solveConstraintsMin(G, MAP) {
   derived.TIDE={x:sl, y:MAP.y0, w:spine_w, h:tide_h};
   derived.BIKE={y:bby+15, x0:MAP.x0, x0end:sl-8, x1start:sr+8, x1end:MAP.x1};
 
+  // ── Named parcel zones: expose bbox rects for building generator ────────
+  // CLT_NORTH: 9.2ac residential cluster north of MALL
+  const CLT_N = G['CLT_NORTH'];
+  if (CLT_N) derived.CLT_NORTH = {x:CLT_N.bbox.left, y:CLT_N.bbox.bottom, w:CLT_N.bbox.width, h:CLT_N.bbox.height};
+
+  // HOUSING_B_S: 9.7ac housing south band
+  if (HB_PAR) derived.HOUSING_B = {x:HB_PAR.bbox.left, y:HB_PAR.bbox.bottom, w:HB_PAR.bbox.width, h:HB_PAR.bbox.height};
+
+  // HOUSING_A_530
+  const HA = G['HOUSING_A_530'];
+  if (HA) derived.HOUSING_A = {x:HA.bbox.left, y:HA.bbox.bottom, w:HA.bbox.width, h:HA.bbox.height};
+
+  // Civic parcels
+  ['CIVIC_700','CIVIC_854','CIVIC_862','CIVIC_920','CIVIC_SPINE_S','CIVIC_STRIP','CIVIC_ROW'].forEach(k=>{
+    const p=G[k]; if(p) derived[k]={x:p.bbox.left, y:p.bbox.bottom, w:p.bbox.width, h:p.bbox.height};
+  });
+
+  // Walk-mode entrance: south entrance of spine (BAND/SPINE intersection)
+  derived.ENTRANCE_POS = { x: spine_x + spine_w/2, y: MAP.y0 + derived.BAND.h + 20 };
+
   return {derived};
 }
 
@@ -1423,8 +1443,8 @@ const gBuildings = new THREE.Group();
 const gLines = new THREE.Group();
 const gNodes = new THREE.Group();
 const gGround = new THREE.Group();
-const gDetail = new THREE.Group(); // LOD: facade detail, hidden at city scale
-scene.add(gBuildings, gLines, gNodes, gGround, gDetail);
+const gDetail = gBuildings; // LOD removed — always full detail; alias for compat
+scene.add(gBuildings, gLines, gNodes, gGround);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // GREENERY — P171 Tree Places + P51 Green Streets
@@ -2140,82 +2160,171 @@ function buildExclusionVoid(group, blk, exclusionType, derived) {
 
 // ── CLUSTER + ASSIGN TYPOLOGIES ───────────────────────────────────────────────
 
+// ── COLLISION REGISTRY ───────────────────────────────────────────────────────
+// AABBs in 3D world space. Populated by buildBuildings, used by _applyWASD.
+const _collisionBoxes = []; // {minX,maxX,minY,maxY,minZ,maxZ}
+
 function clusterUrbanBlocks(hotNodes, derived) {
-  if (!hotNodes || !hotNodes.length) return [];
-
-  const R = 150; // ft cluster radius — one city block
-  const used = new Uint8Array(hotNodes.length);
+  // Strategy: seed blocks from zone geometry directly, not from sparse hotNodes.
+  // This guarantees coverage. hotNodes are used to nudge positions and assign
+  // dominant patterns, but are not required for a block to exist.
   const blocks = [];
-  const sorted = hotNodes.map((n,i) => ({...n, _i: i})).sort((a,b) => b.nStrong - a.nStrong);
+  const SPINE = derived.SPINE;
+  if (!SPINE) return blocks;
 
-  for (const seed of sorted) {
-    if (used[seed._i]) continue;
-    const members = [seed];
-    used[seed._i] = 1;
-    for (const n of sorted) {
-      if (used[n._i]) continue;
-      if (Math.hypot(n.x - seed.x, n.y - seed.y) < R) {
-        members.push(n);
-        used[n._i] = 1;
+  // --- Helper: place a grid of blocks inside a bbox, avoiding exclusions ---
+  function gridZone(zone, params) {
+    if (!zone) return;
+    const { fw, fh, stepX, stepY, floorsFn, typFn } = params;
+    const margin = Math.max(fw, fh) * 0.6;
+    const x0 = zone.x + margin, x1 = zone.x + zone.w - margin;
+    const y0 = zone.y + margin, y1 = zone.y + zone.h - margin;
+    if (x1 < x0 || y1 < y0) return;
+
+    for (let gx = x0; gx <= x1; gx += stepX) {
+      for (let gy = y0; gy <= y1; gy += stepY) {
+        // Nudge by nearest hot node (up to 20ft)
+        let cx = gx, cy = gy;
+        if (hotNodes && hotNodes.length) {
+          let best = null, bestD = 80;
+          for (const n of hotNodes) {
+            const d = Math.hypot(n.x - gx, n.y - gy);
+            if (d < bestD) { bestD = d; best = n; }
+          }
+          if (best) { cx += (best.x - gx) * 0.25; cy += (best.y - gy) * 0.25; }
+        }
+
+        const blockW = fw + (Math.random() * fw * 0.2 - fw * 0.1);
+        const blockH = fh + (Math.random() * fh * 0.2 - fh * 0.1);
+        const floors = floorsFn(cx, cy);
+        if (floors < 1) continue;
+
+        const excl = isExclusion({ cx, cy, fw: blockW, fh: blockH }, derived);
+        const typology = excl ? 'exclusion' : (typFn ? typFn(cx, cy, blockW, blockH) : 'solid');
+
+        // Dominant pattern from nearest hot node
+        let domPid = null;
+        if (hotNodes && hotNodes.length) {
+          let best2 = null, bestD2 = 300;
+          for (const n of hotNodes) {
+            const d = Math.hypot(n.x - cx, n.y - cy);
+            if (d < bestD2) { bestD2 = d; best2 = n; }
+          }
+          if (best2 && best2.weights) {
+            let domW = 0;
+            for (const [pid, w] of Object.entries(best2.weights)) {
+              if (w > domW) { domW = w; domPid = pid; }
+            }
+          }
+        }
+
+        let openDir = 'S';
+        if (typology === 'courtyard' && derived.SPONGE) {
+          const dx = derived.SPONGE.cx - cx, dy = derived.SPONGE.cy - cy;
+          openDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'N' : 'S');
+        }
+
+        blocks.push({ cx, cy, fw: blockW, fh: blockH, floors, domPid,
+                      avgStrong: 3, count: 4, typology, openDir, exclusion: excl ? excl : null });
       }
     }
-
-    const xs = members.map(n => n.x), ys = members.map(n => n.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    const fw = Math.max(40, Math.min(180, maxX - minX + 40));
-    const fh = Math.max(40, Math.min(180, maxY - minY + 40));
-
-    // P116: spine distance → floors
-    const spineX = derived.SPINE ? derived.SPINE.x + derived.SPINE.w/2 : 0;
-    const distFromSpine = Math.abs(cx - spineX);
-    const t = Math.min(distFromSpine / 550, 1);
-    const floors = 7 - Math.round(t * 4);
-
-    // Dominant pattern
-    const tally = {};
-    for (const m of members) {
-      const top = Object.entries(m.weights || {}).sort((a,b) => b[1]-a[1])[0];
-      if (top) tally[top[0]] = (tally[top[0]] || 0) + 1;
-    }
-    const domPid = Object.entries(tally).sort((a,b) => b[1]-a[1])[0]?.[0];
-    const avgStrong = members.reduce((s,m) => s + m.nStrong, 0) / members.length;
-
-    // P106 exclusion check
-    const excl = isExclusion({ cx, cy, fw, fh }, derived);
-
-    // Typology assignment
-    let typology = 'solid'; // default
-    if (!excl) {
-      if (isCourtyardTypology({ cx, cy, fw, fh, count: members.length }, derived)) {
-        typology = 'courtyard';
-      } else if (isArcadeTypology({ cx, cy }, derived)) {
-        typology = 'arcade';
-      } else if (floors >= 5) {
-        typology = 'p105'; // south notch on taller buildings
-      }
-    } else {
-      typology = 'exclusion';
-    }
-
-    // Courtyard open direction: face toward sponge park
-    let openDir = 'S';
-    if (typology === 'courtyard' && derived.SPONGE) {
-      const dx = derived.SPONGE.cx - cx, dy = derived.SPONGE.cy - cy;
-      if (Math.abs(dx) > Math.abs(dy)) openDir = dx > 0 ? 'E' : 'W';
-      else openDir = dy > 0 ? 'N' : 'S';
-    }
-
-    blocks.push({ cx, cy, fw, fh, floors, domPid, avgStrong, count: members.length,
-                  typology, openDir, exclusion: excl });
   }
+
+  const spineX = SPINE.x + SPINE.w / 2;
+
+  // --- SPINE ZONE: dense mixed-use, 4-8 floors ---
+  const spineFloors = (cx, cy) => {
+    const t = Math.min(Math.abs(cx - spineX) / (SPINE.w * 0.5), 1);
+    return Math.max(2, Math.round(7 - t * 3));
+  };
+  const spineTyp = (cx, cy, fw, fh) => {
+    if (isExclusion({cx, cy, fw, fh}, derived)) return 'exclusion';
+    if (isCourtyardTypology({cx, cy, fw, fh, count:4}, derived)) return 'courtyard';
+    if (isArcadeTypology({cx, cy}, derived)) return 'arcade';
+    const floors = spineFloors(cx, cy);
+    return floors >= 5 ? 'p105' : 'solid';
+  };
+  gridZone(SPINE, { fw: 80, fh: 60, stepX: 110, stepY: 90, floorsFn: spineFloors, typFn: spineTyp });
+
+  // --- MAIN STREET BAND: 2-4 floors, arcade fronts ---
+  if (derived.BAND) {
+    const bandFloors = () => Math.round(2 + Math.random() * 2);
+    const bandTyp = () => 'arcade';
+    const bandZone = {
+      x: derived.BAND.x + SPINE.w * 0.5,
+      y: derived.BAND.y,
+      w: derived.BAND.w - SPINE.w,
+      h: derived.BAND.h,
+    };
+    gridZone(bandZone, { fw: 60, fh: 45, stepX: 90, stepY: 70, floorsFn: bandFloors, typFn: bandTyp });
+  }
+
+  // --- CLT NORTH: 3-6 floors, courtyard / solid residential ---
+  if (derived.CLT_NORTH) {
+    const cltFloors = (cx, cy) => {
+      const d = Math.abs(cx - spineX);
+      return Math.max(2, Math.round(5 - d / 400));
+    };
+    const cltTyp = (cx, cy, fw, fh) => {
+      if (isExclusion({cx, cy, fw, fh}, derived)) return 'exclusion';
+      return isCourtyardTypology({cx, cy, fw, fh, count:4}, derived) ? 'courtyard' : 'solid';
+    };
+    gridZone(derived.CLT_NORTH, { fw: 70, fh: 55, stepX: 105, stepY: 85, floorsFn: cltFloors, typFn: cltTyp });
+  }
+
+  // --- HOUSING_B_S: 3-5 floors, mostly solid ---
+  if (derived.HOUSING_B) {
+    const hbFloors = (cx, cy) => Math.max(2, Math.round(4 - Math.abs(cx - spineX) / 500));
+    const hbTyp = (cx, cy, fw, fh) => {
+      if (isExclusion({cx, cy, fw, fh}, derived)) return 'exclusion';
+      return 'solid';
+    };
+    gridZone(derived.HOUSING_B, { fw: 65, fh: 55, stepX: 100, stepY: 85, floorsFn: hbFloors, typFn: hbTyp });
+  }
+
+  // --- CIVIC zones: 1-3 floors, solid ---
+  const civicZones = ['CIVIC', 'CIVIC_700', 'CIVIC_854', 'CIVIC_862', 'CIVIC_920',
+                      'CIVIC_SPINE_S', 'CIVIC_STRIP', 'HOUSING_A'].filter(k => derived[k]);
+  for (const k of civicZones) {
+    const z = derived[k];
+    if (!z || z.w < 80 || z.h < 60) continue;
+    gridZone(z, {
+      fw: 55, fh: 45, stepX: 85, stepY: 75,
+      floorsFn: () => Math.round(1 + Math.random() * 2),
+      typFn: () => 'solid',
+    });
+  }
+
+  // --- Supplement with hotNode clusters for field-line-driven detail ---
+  const usedPos = blocks.map(b => ({x: b.cx, y: b.cy}));
+  const MIN_SEP = 70;
+  if (hotNodes) {
+    for (const n of hotNodes.sort((a,b) => b.nStrong - a.nStrong)) {
+      if (usedPos.some(p => Math.hypot(p.x - n.x, p.y - n.y) < MIN_SEP)) continue;
+      const t = Math.min(Math.abs(n.x - spineX) / 550, 1);
+      const floors = Math.max(2, 7 - Math.round(t * 4));
+      const excl = isExclusion({ cx: n.x, cy: n.y, fw: 70, fh: 55 }, derived);
+      let domPid = null;
+      if (n.weights) {
+        let domW = 0;
+        for (const [pid, w] of Object.entries(n.weights)) { if (w > domW) { domW = w; domPid = pid; } }
+      }
+      const typology = excl ? 'exclusion' :
+        isCourtyardTypology({cx:n.x, cy:n.y, fw:70, fh:55, count:4}, derived) ? 'courtyard' :
+        isArcadeTypology({cx:n.x, cy:n.y}, derived) ? 'arcade' :
+        floors >= 5 ? 'p105' : 'solid';
+      blocks.push({ cx: n.x, cy: n.y, fw: 70, fh: 55, floors, domPid,
+                    avgStrong: n.nStrong, count: 4, typology, openDir: 'S', exclusion: excl || null });
+      usedPos.push({x: n.x, y: n.y});
+    }
+  }
+
   return blocks;
 }
 
 function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
   while(gBuildings.children.length) gBuildings.remove(gBuildings.children[0]);
-  while(gDetail.children.length) gDetail.remove(gDetail.children[0]);
+  _collisionBoxes.length = 0;
 
   const blocks = clusterUrbanBlocks(hotNodes, derived);
   if (!blocks.length) return;
@@ -2322,6 +2431,18 @@ function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
     } else {
       // Solid — P122/P127/P164/P166 facade detail
       addDetailedBuilding(bg, blk, heightFt, col, derived);
+    }
+
+    // Register AABB for collision detection (skip open exclusion zones)
+    if (blk.typology !== 'exclusion') {
+      const p3 = ftTo3(blk.cx, blk.cy, 0);
+      const halfW = (blk.fw / 2) * HT_SCALE;
+      const halfD = (blk.fh / 2) * HT_SCALE;
+      _collisionBoxes.push({
+        minX: p3.x - halfW - 2, maxX: p3.x + halfW + 2,
+        minY: 0,                 maxY: heightFt + 10,
+        minZ: p3.z - halfD - 2, maxZ: p3.z + halfD + 2,
+      });
     }
   }
 }
@@ -2503,14 +2624,25 @@ function buildSiteFacts3D(derived) {
 }
 
 // ── POSITION CAMERA ───────────────────────────────────────────────────────────
-function positionCamera(MAP) {
+const EYE_HEIGHT = 5.5; // ft, average eye height
+function positionCamera(MAP, derived) {
   const siteW = MAP.x1 - MAP.x0, siteH_ft = MAP.y1 - MAP.y0;
   const camDist = Math.max(siteW, siteH_ft) * 1.4;
-  camera.position.set(0, camDist * 0.6, camDist * 0.8);
   camera.near = 1; camera.far = camDist * 5;
-  controls.target.set(0, 0, 0);
-  controls.minDistance = camDist * 0.05;
+  controls.minDistance = 5;
   controls.maxDistance = camDist * 3;
+
+  if (derived && derived.ENTRANCE_POS) {
+    // Walk mode: spawn at south entrance, eye height, looking north into the spine
+    const ep = derived.ENTRANCE_POS;
+    const p3 = ftTo3(ep.x, ep.y, EYE_HEIGHT);
+    const look3 = ftTo3(ep.x, ep.y + 200, EYE_HEIGHT);
+    camera.position.copy(p3);
+    controls.target.copy(look3);
+  } else {
+    camera.position.set(0, camDist * 0.6, camDist * 0.8);
+    controls.target.set(0, 0, 0);
+  }
   controls.update();
 }
 
@@ -2589,7 +2721,7 @@ document.getElementById('btn-run').addEventListener('click', async () => {
     solveResult.proj = proj;
 
     lastResult = solveResult;
-    positionCamera(MAP);
+    positionCamera(MAP, derived);
     render3D(solveResult);
     // Persist run so next page load restores without re-solving
     try {
@@ -2647,7 +2779,7 @@ camera.lookAt(0, 0, 0);
       proj,
     };
     lastResult = result;
-    positionCamera(result.MAP);
+    positionCamera(result.MAP, result.derived);
     render3D(result);
     const mins = Math.round((Date.now() - saved.ts) / 60000);
     const ageStr = mins < 1 ? 'just now' : mins < 60 ? mins + 'm ago' : Math.round(mins/60) + 'h ago';
@@ -2797,7 +2929,10 @@ document.addEventListener('keyup', e => { _keys[e.code] = false; });
 
 function _applyWASD() {
   if (_flyActive) return;
-  const speed = camera.position.distanceTo(controls.target) * 0.012;
+  // Fixed walk speed: ~8ft per frame at 60fps ≈ comfortable walk pace
+  // Scale up if camera is high (orbit mode) so it doesn't feel glacial
+  const camY = camera.position.y;
+  const speed = camY < 50 ? 8 : camY * 0.012;
   const left  = _keys['KeyA'] || _keys['ArrowLeft'];
   const right = _keys['KeyD'] || _keys['ArrowRight'];
   const fwd   = _keys['KeyW'] || _keys['ArrowUp'];
@@ -2807,10 +2942,10 @@ function _applyWASD() {
   // Pan in camera-local XZ plane (no vertical drift)
   const panVec = new THREE.Vector3();
   const camRight = new THREE.Vector3();
-  camRight.setFromMatrixColumn(camera.matrix, 0); // camera's local X axis
+  camRight.setFromMatrixColumn(camera.matrix, 0);
   camRight.y = 0; camRight.normalize();
   const camFwd = new THREE.Vector3();
-  camFwd.setFromMatrixColumn(camera.matrix, 2); // camera's local -Z axis
+  camFwd.setFromMatrixColumn(camera.matrix, 2);
   camFwd.y = 0; camFwd.normalize();
 
   if (left)  panVec.addScaledVector(camRight, -speed);
@@ -2818,8 +2953,25 @@ function _applyWASD() {
   if (fwd)   panVec.addScaledVector(camFwd,   -speed);
   if (back)  panVec.addScaledVector(camFwd,    speed);
 
-  camera.position.add(panVec);
-  controls.target.add(panVec);
+  const nextPos = camera.position.clone().add(panVec);
+
+  // Collision: AABB test against registered building boxes
+  // Use a capsule radius of 4ft
+  const RADIUS = 4;
+  let blocked = false;
+  for (const box of _collisionBoxes) {
+    if (nextPos.x + RADIUS > box.minX && nextPos.x - RADIUS < box.maxX &&
+        nextPos.y        > box.minY && nextPos.y        < box.maxY &&
+        nextPos.z + RADIUS > box.minZ && nextPos.z - RADIUS < box.maxZ) {
+      blocked = true;
+      break;
+    }
+  }
+
+  if (!blocked) {
+    camera.position.copy(nextPos);
+    controls.target.add(panVec);
+  }
 }
 
 // ── RENDER LOOP ───────────────────────────────────────────────────────────────
@@ -2827,9 +2979,6 @@ function animate() {
   requestAnimationFrame(animate);
   _applyWASD();
   controls.update();
-  // LOD: show facade detail only when camera is close enough to read it
-  const camDist = camera.position.length();
-  gDetail.visible = camDist < 800;
   renderer.render(scene, camera);
 }
 animate();
