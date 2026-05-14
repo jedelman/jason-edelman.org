@@ -97,6 +97,7 @@
   <button class="toggle-btn on" id="tog-ground">Ground</button>
   <button class="toggle-btn on" id="tog-detail">Detail</button>
   <button class="toggle-btn on" id="tog-trees">Trees</button>
+  <button class="toggle-btn" id="btn-plan">⊞ Plan</button>
   <button class="toggle-btn" id="btn-fly" onclick="if(_flyActive) stopFlythrough(); else startFlythrough();">▶ Fly</button>
 
   <div class="ctrl-group">
@@ -960,6 +961,91 @@ window.EC_FieldSolver = (() => {
       const dists=zoneCenters.map(c=>Math.sqrt((px-c.x)**2+(py-c.y)**2)).sort((a,b)=>a-b);
       const boundary=dists[1]>0 ? (dists[0]/dists[1]) : 0;
       field[i]+=Math.pow(boundary,4)*0.7;
+    }
+  });
+
+  // ── WINGS OF LIGHT CLUSTER ────────────────────────────────────────────────
+  // P107 Wings of Light: long thin wings perpendicular to sun axis (E-W),
+  //   so every room gets light from two sides. Max wing depth 25ft.
+  //   Pressure wherever light can enter from two sides — strip along spine,
+  //   near park, and at residential perimeters.
+  defPattern(107, 'Wings of Light', 0.85, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE, sp=site.derived.SPONGE;
+    // High pressure along the east and west edges of the spine — where wing
+    // orientation maximises bilateral light access (N and S exposure).
+    if(s){
+      const edges=[s.x, s.x+s.w]; // spine flanks
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        for(const ex of edges){
+          const d=Math.abs(px-ex);
+          field[i]+=Math.exp(-(d*d)/(80*80))*1.0;
+        }
+      }
+    }
+    // Park rim: bilateral light from park-side + street-side
+    if(sp){
+      const rimR=Math.max(sp.rx,sp.ry)+40;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-sp.cx)**2+(py-sp.cy)**2);
+        field[i]+=Math.exp(-((d-rimR)*(d-rimR))/(50*50))*0.85;
+      }
+    }
+  });
+
+  // P108 Connected Buildings: covered link passages between separate wings.
+  // Pressure at mid-points between pairs of high-pressure wing locations.
+  defPattern(108, 'Connected Buildings', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    // Mid-spine horizontal links — where connectors bridge the gap between wings
+    const linkX=s.x+s.w/2; // spine centerline
+    const fracs=[0.3, 0.5, 0.7];
+    for(const f of fracs){
+      const linkY=MAP.y0+(MAP.y1-MAP.y0)*f;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        // Pressure in a short E-W band crossing the spine — connector corridor
+        const dx=Math.abs(px-linkX)/s.w, dy=Math.abs(py-linkY)/40;
+        if(dx<0.6) field[i]+=Math.exp(-(dy*dy))*0.8;
+      }
+    }
+  });
+
+  // P110 Main Building: one dominant building mass per cluster that anchors
+  // subsidiary wings. Pressure at each zone centroid — one clear center per zone.
+  defPattern(110, 'Main Building', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    const zones=[
+      site.derived.CLT_NORTH, site.derived.SPINE,
+      site.derived.HOUSING_B, site.derived.CIVIC
+    ].filter(Boolean);
+    for(const z of zones){
+      const cx=z.x+z.w/2, cy=z.y+z.h/2;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-cx)**2+(py-cy)**2);
+        // Sharp gaussian — one anchor point per zone, not a blob
+        field[i]+=Math.exp(-(d*d)/(80*80))*0.9;
+      }
+    }
+  });
+
+  // P128 Indoor Sunlight: every room gets direct sun at some point in the day.
+  // Pressure along the south face of every EDA parcel — south-facing rooms
+  // get winter sun. Pairs with P107.
+  defPattern(128, 'Indoor Sunlight', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // South-face strip = low-y edge of each EDA parcel (small y = south in ft coords)
+    for(const p of (site.edaParcels||[])){
+      const {x,y,w,h}=p.bbox;
+      // Strip along south edge (y=bottom) ±30ft
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        if(px<x||px>x+w) continue;
+        const dy=Math.abs(py-y);
+        field[i]+=Math.exp(-(dy*dy)/(35*35))*0.8;
+      }
     }
   });
 
@@ -2120,6 +2206,40 @@ function buildP119Arcade(group, blk, heightFt, col) {
   addTopRect(group, cx, cy, towerW, towerD, arcadeH * HT_SCALE + towerH, edgeMat.clone());
 }
 
+// P107/108/110 Wings of Light: main body + thin E-W wings + glazed connectors.
+// Each room gets light from two sides (N and S). Max wing depth 25ft.
+function buildWingsOfLight(group, blk, heightFt, col) {
+  const { cx, cy, fw, fh, floors } = blk;
+  const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.9, transparent: true });
+  const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.7), opacity: 0.6, transparent: true });
+  // Glazed connector: slightly tinted glass
+  const glassMat = new THREE.MeshLambertMaterial({ color: 0xc8e8f8, opacity: 0.35, transparent: true });
+  const glassEdgeMat = new THREE.LineBasicMaterial({ color: 0x90c8e0, opacity: 0.7, transparent: true });
+
+  // Main body: compact square-ish hub, 60% of full width
+  const hubW = fw * 0.55, hubD = fh * 0.55;
+  addBox(group, cx, cy, hubW, hubD, heightFt, mat.clone());
+  addTopRect(group, cx, cy, hubW, hubD, heightFt, edgeMat.clone());
+
+  // Two wings: long and thin (≤25ft deep), extending E and W from hub
+  const wingL = (fw - hubW) / 2 + fw * 0.15; // wing length beyond hub
+  const wingD = Math.min(fh * 0.35, 25);      // max 25ft deep — bilateral light
+  const wingH = heightFt * 0.75;              // wings 1 floor shorter than hub
+  const wingOffsets = [-(hubW/2 + wingL/2), (hubW/2 + wingL/2)];
+  for (const xOff of wingOffsets) {
+    addBox(group, cx + xOff, cy, wingL, wingD, wingH, mat.clone());
+    addTopRect(group, cx + xOff, cy, wingL, wingD, wingH, edgeMat.clone());
+  }
+
+  // Glazed connectors: thin glazed link between hub and each wing
+  const connW = 12, connD = wingD * 0.6, connH = wingH * 0.55;
+  for (const xOff of wingOffsets) {
+    const connCX = cx + xOff * 0.5; // midpoint between hub edge and wing
+    addBox(group, connCX, cy, connW, connD, connH, glassMat.clone());
+    addTopRect(group, connCX, cy, connW, connD, connH, glassEdgeMat.clone());
+  }
+}
+
 // P106 exclusion zone: render as a glowing park void, not a building
 function buildExclusionVoid(group, blk, exclusionType, derived) {
   const { cx, cy, fw, fh } = blk;
@@ -2190,6 +2310,9 @@ function clusterUrbanBlocks(hotNodes, derived) {
         if (isCourtyardTypology({cx,cy,fw,fh,count:4},derived)) return 'courtyard';
         if (isArcadeTypology({cx,cy},derived)) return 'arcade';
         const f = Math.max(3, Math.round(7 - Math.abs(cx-spineX)/180));
+        // Wings of Light on the flanks of the spine (P107 zone)
+        const distFromSpine = Math.abs(cx - spineX);
+        if (distFromSpine > 120 && distFromSpine < 280 && f >= 3) return 'wings';
         return f >= 5 ? 'p105' : 'solid';
       }
     };
@@ -2197,8 +2320,12 @@ function clusterUrbanBlocks(hotNodes, derived) {
       fw:60, fh:50, stepX:105, stepY:95,    // 45ft gap
       func: 'residential',
       floorsFn: () => Math.round(3 + Math.random() * 2),
-      typFn: (cx,cy,fw,fh) => isExclusion({cx,cy,fw,fh},derived) ? 'exclusion' :
-        isCourtyardTypology({cx,cy,fw,fh,count:4},derived) ? 'courtyard' : 'solid'
+      typFn: (cx,cy,fw,fh) => {
+        if (isExclusion({cx,cy,fw,fh},derived)) return 'exclusion';
+        if (isCourtyardTypology({cx,cy,fw,fh,count:4},derived)) return 'courtyard';
+        // Wings on perimeter rows — where bilateral light is achievable
+        return Math.random() < 0.3 ? 'wings' : 'solid';
+      }
     };
     if (spec.startsWith('HOUSING')) return {
       fw:58, fh:48, stepX:100, stepY:90,    // 42ft gap
@@ -2368,6 +2495,8 @@ function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
       buildP106Courtyard(bg, blk, heightFt, col, blk.openDir);
     } else if (blk.typology === 'arcade') {
       buildP119Arcade(bg, blk, heightFt, col);
+    } else if (blk.typology === 'wings') {
+      buildWingsOfLight(bg, blk, heightFt, col);
     } else if (blk.typology === 'p105') {
       // Give p105 helper access to derived via closure
       const savedDerived = derived;
@@ -2977,6 +3106,76 @@ function animate() {
   renderer.render(scene, camera);
 }
 animate();
+
+// ── PLAN VIEW TOGGLE ──────────────────────────────────────────────────────────
+let _planActive = false;
+let _savedCamState = null; // {pos, target, fov, near, far}
+
+function enterPlanView(MAP) {
+  if (_planActive) return;
+  _planActive = true;
+  if (_flyActive) stopFlythrough();
+
+  // Save current camera state
+  _savedCamState = {
+    pos: camera.position.clone(),
+    target: controls.target.clone(),
+    fov: camera.fov, near: camera.near, far: camera.far,
+  };
+
+  // Position camera directly overhead, centered on site
+  const siteW = MAP ? MAP.x1 - MAP.x0 : 3000;
+  const siteH = MAP ? MAP.y1 - MAP.y0 : 3000;
+  const cx = 0, cz = 0; // scene is centered at 0,0
+  const altitude = Math.max(siteW, siteH) * 0.75;
+
+  camera.fov = 50; // tighter FOV for plan
+  camera.near = 1; camera.far = altitude * 3;
+  camera.updateProjectionMatrix();
+  camera.position.set(cx, altitude, cz);
+  camera.up.set(0, 0, -1); // north up
+  camera.lookAt(cx, 0, cz);
+
+  controls.target.set(cx, 0, cz);
+  controls.enableRotate = false;
+  controls.update();
+
+  // Plan: hide field lines and nodes (noise), show buildings + ground
+  gLines.visible = false;
+  gNodes.visible = false;
+  document.getElementById('tog-lines').classList.remove('on');
+  document.getElementById('tog-nodes').classList.remove('on');
+  document.getElementById('btn-plan').classList.add('on');
+  document.getElementById('canvas-label').textContent = 'PLAN VIEW — scroll to zoom · drag to pan · click Plan to exit';
+}
+
+function exitPlanView() {
+  if (!_planActive) return;
+  _planActive = false;
+
+  if (_savedCamState) {
+    camera.fov = _savedCamState.fov;
+    camera.near = _savedCamState.near;
+    camera.far = _savedCamState.far;
+    camera.up.set(0, 1, 0);
+    camera.updateProjectionMatrix();
+    camera.position.copy(_savedCamState.pos);
+    controls.target.copy(_savedCamState.target);
+  }
+  controls.enableRotate = true;
+  controls.update();
+  gLines.visible = true;
+  gNodes.visible = true;
+  document.getElementById('tog-lines').classList.add('on');
+  document.getElementById('tog-nodes').classList.add('on');
+  document.getElementById('btn-plan').classList.remove('on');
+  document.getElementById('canvas-label').textContent = 'Military Circle · 73.4 ac · Norfolk VA · 3D field model · ft';
+}
+
+document.getElementById('btn-plan').addEventListener('click', () => {
+  if (_planActive) exitPlanView();
+  else enterPlanView(lastResult?.MAP);
+});
 
 // ── TOOLTIP ───────────────────────────────────────────────────────────────────
 const _raycaster = new THREE.Raycaster();
