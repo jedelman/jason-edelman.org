@@ -218,6 +218,7 @@ These must hold after any refactor:
 - Never multiply proj output by a px/ft conversion factor — it's already in feet
 - Never hardcode `960`, `760`, `841`, `653` (old px canvas) anywhere
 - Never reference `window.*` inside `ec-solver-worker.js` (use `self.*`)
+- Never call `localStorage` inside `ec-solver-worker.js` — workers have no localStorage; post data to main thread which writes it
 - Never allocate large typed arrays on the main thread during solve — that's the worker's job
 
 ---
