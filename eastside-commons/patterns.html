@@ -167,7 +167,26 @@
       <g id="layer-labels"></g>
     </svg>
     <div id="canvas-label">Military Circle · 73.4 ac · Norfolk VA · field model · ft</div>
-    <div id="pass-bar">
+
+    <!-- ── Touch-friendly sticky tooltip panel ─────────────────────────────── -->
+    <div id="tip-panel" style="
+      display:none; position:absolute; bottom:3.6rem; left:0.6rem; right:0.6rem;
+      background:rgba(8,12,6,0.94); border:1px solid rgba(80,160,60,0.35);
+      border-radius:6px; padding:0.7rem 0.85rem 0.6rem; z-index:50;
+      font-family:monospace; font-size:0.62rem; color:#c8d8b8;
+      box-shadow:0 4px 18px rgba(0,0,0,0.55); max-height:42vh; overflow-y:auto;
+      backdrop-filter:blur(4px);
+    ">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:0.45rem;">
+        <span id="tip-title" style="font-size:0.68rem;font-weight:700;color:#e8f0d8;letter-spacing:0.06em;text-transform:uppercase;"></span>
+        <button id="tip-close" style="
+          background:none;border:none;color:rgba(200,220,160,0.5);font-size:0.9rem;
+          cursor:pointer;padding:0 0.2rem;line-height:1;
+        " aria-label="close">✕</button>
+      </div>
+      <div id="tip-body" style="line-height:1.55;color:#a8c0a0;"></div>
+      <div id="tip-patterns" style="margin-top:0.5rem;display:flex;flex-wrap:wrap;gap:0.3rem;"></div>
+    </div>
       <button id="btn-prev">◀</button>
       <input type="range" id="pass-slider" min="0" value="0">
       <button id="btn-next">▶</button>
@@ -1528,6 +1547,9 @@ function renderHotNodes(hotNodes, patternColors) {
     c.setAttribute('stroke','rgba(255,255,255,0.25)');
     c.setAttribute('stroke-width','0.5');
     c.setAttribute('opacity','0.85');
+    // Tooltip data
+    c.setAttribute('data-tip', JSON.stringify({v:pt.v||0, nStrong:pt.nStrong||0, weights:pt.weights||{}}));
+    c.style.cursor='pointer';
     nLayer.appendChild(c);
   }
 }
@@ -1558,6 +1580,8 @@ function renderBuildings(buildings, patternColors, patternNames) {
     rect.setAttribute('stroke',`rgba(${r},${g},${bl},0.85)`);
     rect.setAttribute('stroke-width','1');
     rect.setAttribute('rx','2');
+    rect.setAttribute('data-tip', JSON.stringify({domPid:b.domPid, w:b.w, h:b.h, pts:b.pts, avgStrong:b.avgStrong}));
+    rect.style.cursor='pointer';
     layer.appendChild(rect);
 
     // Label — only if footprint is large enough to hold text
@@ -1787,6 +1811,81 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-close').addEventListener('click',()=>{
     document.getElementById('pass-bar').style.display='none';
+  });
+
+  // ── Tooltip panel ──────────────────────────────────────────────────────────
+  const tipPanel = document.getElementById('tip-panel');
+  const tipTitle = document.getElementById('tip-title');
+  const tipBody  = document.getElementById('tip-body');
+  const tipPats  = document.getElementById('tip-patterns');
+  document.getElementById('tip-close').addEventListener('click', () => {
+    tipPanel.style.display = 'none';
+  });
+
+  function showTip(title, body, patternWeights, patternColors, patternNames) {
+    tipTitle.textContent = title;
+    tipBody.innerHTML = body;
+    tipPats.innerHTML = '';
+    if (patternWeights) {
+      const sorted = Object.entries(patternWeights).sort((a,b)=>b[1]-a[1]).slice(0,6);
+      for (const [pid, w] of sorted) {
+        const name = (patternNames && patternNames[pid]) || `P${pid}`;
+        const color = (patternColors && patternColors[pid]) || '#888';
+        const chip = document.createElement('span');
+        chip.style.cssText = `display:inline-flex;align-items:center;gap:0.25rem;background:rgba(255,255,255,0.06);border:1px solid ${color}55;border-radius:3px;padding:0.15rem 0.4rem;font-size:0.55rem;color:${color};white-space:nowrap;`;
+        chip.innerHTML = `<span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0;"></span>P${pid} ${name}`;
+        tipPats.appendChild(chip);
+      }
+    }
+    tipPanel.style.display = 'block';
+  }
+
+  // Event delegation — hot nodes
+  document.getElementById('layer-nodes').addEventListener('click', e => {
+    const c = e.target.closest('circle[data-tip]');
+    if (!c) return;
+    e.stopPropagation();
+    try {
+      const d = JSON.parse(c.dataset.tip);
+      showTip(
+        `Hot Node · ${d.nStrong} patterns`,
+        `Field pressure: <strong>${(d.v*100).toFixed(0)}%</strong><br>Pattern co-occurrence peak — multiple design forces converging.`,
+        d.weights, _result?.patternColors, _result?.patternNames
+      );
+    } catch(_) {}
+  });
+  document.getElementById('layer-nodes').addEventListener('touchstart', e => {
+    const c = e.target.closest('circle[data-tip]');
+    if (!c) return;
+    e.preventDefault(); e.stopPropagation();
+    c.dispatchEvent(new MouseEvent('click', {bubbles:true}));
+  }, {passive:false});
+
+  // Event delegation — buildings
+  document.getElementById('layer-buildings').addEventListener('click', e => {
+    const r = e.target.closest('rect[data-tip]');
+    if (!r) return;
+    e.stopPropagation();
+    try {
+      const d = JSON.parse(r.dataset.tip);
+      const name = (_result?.patternNames?.[d.domPid]) || `P${d.domPid}`;
+      showTip(
+        `Building · ${name}`,
+        `Footprint <strong>${Math.round(d.w)}×${Math.round(d.h)} ft</strong> · ${d.pts} nodes · avg <strong>${d.avgStrong?.toFixed(1)}</strong> simultaneous patterns`,
+        null, _result?.patternColors, _result?.patternNames
+      );
+    } catch(_) {}
+  });
+  document.getElementById('layer-buildings').addEventListener('touchstart', e => {
+    const r = e.target.closest('rect[data-tip]');
+    if (!r) return;
+    e.preventDefault(); e.stopPropagation();
+    r.dispatchEvent(new MouseEvent('click', {bubbles:true}));
+  }, {passive:false});
+
+  // Tap empty SVG → dismiss
+  document.getElementById('main-svg').addEventListener('click', e => {
+    if (!e.target.closest('[data-tip]')) tipPanel.style.display = 'none';
   });
 
   // Run
