@@ -440,21 +440,26 @@ details[open] summary::before { content: '▼  '; }
 .map-tool-fullscreen {
   display: flex;
   flex-direction: column;
-  margin: 0 calc(-1 * var(--content-pad, 1.5rem));  /* bleed to viewport edges */
+  /* Full-bleed: escape body padding (1.5rem each side) AND page centering */
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  width: 100vw;
   gap: 0;
 }
 
 .map-fullscreen-wrap {
   position: relative;
   width: 100%;
-  height: 80vh;
-  min-height: 480px;
-  max-height: 900px;
+  height: 85vh;
+  min-height: 500px;
   background: #040402;
   overflow: hidden;
 }
 @media (max-width: 600px) {
-  .map-fullscreen-wrap { height: 72vh; min-height: 360px; }
+  .map-fullscreen-wrap { height: 78vh; min-height: 420px; }
 }
 
 #site-plan {
@@ -808,18 +813,18 @@ details[open] summary::before { content: '▼  '; }
 
     <!-- Map canvas — fills the section -->
     <div class="map-fullscreen-wrap" id="map-fullscreen-wrap">
-      <svg id="site-plan" viewBox="0 0 4200 3700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg id="site-plan" viewBox="0 0 4200 3700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice"></svg>
 
       <!-- Floating toolbar — top bar -->
       <div class="map-topbar" id="map-topbar">
         <div class="map-topbar-left">
           <span class="map-title-chip">Eastside Commons · 73ac · Norfolk VA</span>
-          <span class="map-status" id="map-status">Run solver to generate plan</span>
+          <span class="map-status" id="map-status">Initializing…</span>
         </div>
         <div class="map-topbar-right">
-          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.reset()">⊡ Reset</button>
-          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('block')">⊟ Block</button>
-          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('parcel')">⊞ Parcel</button>
+          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.reset()" title="Fit site">⊡</button>
+          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('block')" title="Block scale">⊟</button>
+          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('parcel')" title="Parcel scale">⊞</button>
           <button class="map-btn map-btn-primary" id="run-btn" onclick="triggerPipeline()">▶ SOLVE</button>
         </div>
       </div>
@@ -5989,6 +5994,10 @@ function initPipeline(parcels, proj, MAP, derivedG) {
   _pipelineParcels = parcels; _pipelineProj = proj; _pipelineMAP = MAP;
   window._derivedG = derivedG;
   window._pipelineReady = true;
+  // Auto-run field solver on first load
+  setTimeout(() => {
+    if (typeof triggerPipeline === 'function') triggerPipeline();
+  }, 300);
 }
 
 // Debounced wrapper — sliders call this so rapid drags don't spam the EA
@@ -6079,6 +6088,16 @@ async function triggerPipeline() {
       svg.querySelectorAll('[data-t7],[data-plan-layer]').forEach(e => e.remove());
       svg.querySelector('#pattern-overlay')?.remove();
       renderPlanBuildings(psResult.sceneGraph);
+      // Auto-fit to EDA parcel extent after first render
+      if (window.EC_PanZoom && _pipelineParcels) {
+        const edaPts = _pipelineParcels
+          .filter(p => p.is_eda && p.rings?.[0])
+          .flatMap(p => p.rings[0].map(([lon,lat]) => _pipelineProj(lon,lat)));
+        if (edaPts.length) {
+          const xs = edaPts.map(([x]) => x), ys = edaPts.map(([,y]) => y);
+          window.EC_PanZoom.fitBBox(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
+        }
+      }
     }
 
     // ── Summary ───────────────────────────────────────────────────────────
@@ -8847,6 +8866,25 @@ function renderPatternOverlay2D(sg) {
       vpH = rect.height || 600;
       zoom = MIN_ZOOM;
       tx = 0; ty = 0;
+      applyTransform();
+    },
+
+    // Fit zoom/pan to show a specific ft bbox
+    fitBBox(x0, y0, x1, y1, padFrac = 0.08) {
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      vpW = rect.width || 800; vpH = rect.height || 600;
+      const svgScale = rect.width / CANVAS_W;  // css px per SVG ft
+      const bw = x1 - x0, bh = y1 - y0;
+      if (bw < 1 || bh < 1) return;
+      const pad = Math.max(bw, bh) * padFrac;
+      const zx = vpW / svgScale / (bw + pad * 2);
+      const zy = vpH / svgScale / (bh + pad * 2);
+      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(zx, zy)));
+      // Center the bbox
+      tx = -(x0 - pad) + (vpW / svgScale / zoom - bw - pad * 2) / 2;
+      ty = -(y0 - pad) + (vpH / svgScale / zoom - bh - pad * 2) / 2;
+      clampTranslate();
       applyTransform();
     },
 
