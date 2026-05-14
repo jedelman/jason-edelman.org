@@ -2185,35 +2185,99 @@ function addDetailedBuilding(group, blk, heightFt, col, derived) {
     (((seed * 1664525) & 0xff) / 255 - 0.5) * 0.08
   );
 
-  // Main shaft material
-  const shaftMat = new THREE.MeshLambertMaterial({
-    color: pertCol, opacity: 0.88, transparent: true
-  });
-  const edgeMat = new THREE.LineBasicMaterial({
-    color: pertCol.clone().multiplyScalar(1.1), opacity: 0.18, transparent: true
-  });
+  const shaftMat = new THREE.MeshLambertMaterial({ color: pertCol, opacity: 0.88, transparent: true });
+  const edgeMat = new THREE.LineBasicMaterial({ color: pertCol.clone().multiplyScalar(1.1), opacity: 0.18, transparent: true });
 
-  // P122: Base — always applied (ground floor is always active)
+  // P122: Base
   const baseH = addBase122(group, cx, cy, fw, fh, heightFt, floors, pertCol);
-
-  // Shaft above base
   const shaftH = heightFt - baseH;
-  if (shaftH > 4) {
-    const shaftGeo = new THREE.BoxGeometry(fw, shaftH, fh);
-    shaftGeo.translate(0, shaftH / 2, 0);
-    const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat.clone());
-    const pos = ftTo3(cx, cy, 0);
-    shaftMesh.position.set(pos.x, baseH, pos.z);
-    group.add(shaftMesh);
-  }
 
-  // Top edge
-  addTopRect(group, cx, cy, fw, fh, heightFt, edgeMat.clone());
+  if (func === 'residential' && floors >= 3) {
+    // Residential: stepped massing — lower floors full footprint, upper floors setback
+    // Creates the characteristic residential silhouette visible from the street
+    const lowerFloors = Math.ceil(floors * 0.6);
+    const upperFloors = floors - lowerFloors;
+    const lowerH = (heightFt / floors) * lowerFloors;
+    const upperH = heightFt - lowerH;
+    const setback = Math.min(fw * 0.15, 8); // ft per side
+
+    // Lower volume: full width
+    if (lowerH - baseH > 2) {
+      const lGeo = new THREE.BoxGeometry(fw, lowerH - baseH, fh);
+      lGeo.translate(0, (lowerH - baseH) / 2, 0);
+      const lMesh = new THREE.Mesh(lGeo, shaftMat.clone());
+      const lp = ftTo3(cx, cy, 0);
+      lMesh.position.set(lp.x, baseH, lp.z);
+      group.add(lMesh);
+      addTopRect(group, cx, cy, fw, fh, lowerH, edgeMat.clone());
+    }
+    // Upper volume: setback on all sides
+    if (upperH > 2 && upperFloors > 0) {
+      const uw = fw - setback * 2, ud = fh - setback * 2;
+      const uGeo = new THREE.BoxGeometry(uw, upperH, ud);
+      uGeo.translate(0, upperH / 2, 0);
+      const uMesh = new THREE.Mesh(uGeo, shaftMat.clone());
+      const up = ftTo3(cx, cy, 0);
+      uMesh.position.set(up.x, lowerH, up.z);
+      group.add(uMesh);
+      addTopRect(group, cx, cy, uw, ud, heightFt, edgeMat.clone());
+    }
+
+  } else if (func === 'civic' && floors >= 2) {
+    // Civic: full-width shaft + a shallow portico on public face
+    if (shaftH > 4) {
+      const sGeo = new THREE.BoxGeometry(fw, shaftH, fh);
+      sGeo.translate(0, shaftH / 2, 0);
+      const sMesh = new THREE.Mesh(sGeo, shaftMat.clone());
+      const sp = ftTo3(cx, cy, 0);
+      sMesh.position.set(sp.x, baseH, sp.z);
+      group.add(sMesh);
+    }
+    addTopRect(group, cx, cy, fw, fh, heightFt, edgeMat.clone());
+    // Portico: a row of columns + shallow porch on the public face
+    const porticoD = 8, porticoH = heightFt * 0.55;
+    const porticoMat = new THREE.MeshLambertMaterial({ color: pertCol.clone().lerp(new THREE.Color(1,1,1), 0.18) });
+    const nCols = Math.max(3, Math.floor(fw / 16));
+    const hw = fw / 2, hd = fh / 2;
+    for (let i = 0; i < nCols; i++) {
+      const t = (i + 0.5) / nCols;
+      const colX = cx - hw + t * fw;
+      const colY = face === 'S' ? cy - hd - porticoD/2
+                 : face === 'N' ? cy + hd + porticoD/2
+                 : cy;
+      const cGeo = new THREE.BoxGeometry(2.5, porticoH, 2.5);
+      cGeo.translate(0, porticoH/2, 0);
+      const cMesh = new THREE.Mesh(cGeo, porticoMat.clone());
+      const cp = ftTo3(colX, colY, 0);
+      cMesh.position.set(cp.x, 0, cp.z);
+      group.add(cMesh);
+    }
+    // Portico entablature (beam across columns)
+    const entH = 2 * HT_SCALE;
+    const entGeo = new THREE.BoxGeometry(fw, entH, porticoD);
+    entGeo.translate(0, entH/2, 0);
+    const entMesh = new THREE.Mesh(entGeo, porticoMat.clone());
+    const ep = ftTo3(cx, face === 'S' ? cy - hd - porticoD/2 : cy + hd + porticoD/2, porticoH);
+    entMesh.position.set(ep.x, porticoH, ep.z);
+    group.add(entMesh);
+
+  } else {
+    // Default: plain shaft (mixed-use, solid residential short)
+    if (shaftH > 4) {
+      const sGeo = new THREE.BoxGeometry(fw, shaftH, fh);
+      sGeo.translate(0, shaftH / 2, 0);
+      const sMesh = new THREE.Mesh(sGeo, shaftMat.clone());
+      const sp = ftTo3(cx, cy, 0);
+      sMesh.position.set(sp.x, baseH, sp.z);
+      group.add(sMesh);
+    }
+    addTopRect(group, cx, cy, fw, fh, heightFt, edgeMat.clone());
+  }
 
   // Roof (always)
   addRoof(group, cx, cy, fw, fh, heightFt, pertCol, func || 'mixed', seed);
 
-  // Exterior texture (always — stochastic pilasters + reveals + panels)
+  // Exterior texture
   addExteriorTexture(group, cx, cy, fw, fh, heightFt, floors, pertCol, seed);
 
   // P166/P164/P121/P127 detail
@@ -2369,31 +2433,63 @@ function buildP106Courtyard(group, blk, heightFt, col, openDir) {
   }
   // P166/P164 detail on courtyard arms — LOD group
   const floors = blk.floors;
+  const seed = Math.round(Math.abs(blk.cx * 7 + blk.cy * 13)) | 0;
   if (floors >= 2) addFloorBands(gDetail, cx, cy, fw, fh, heightFt, floors, col);
   if (floors >= 3) addWindowBands(gDetail, cx, cy, fw, fh, 0, heightFt, floors, col, openDir === 'S' ? 'N' : openDir === 'N' ? 'S' : openDir === 'E' ? 'W' : 'E');
   addEntryRecess(gDetail, cx, cy, fw, fh, heightFt/floors, col, openDir);
+  // Roof and texture on each arm
+  addRoof(group, cx, cy, fw, fh * 0.35, heightFt, col, blk.func || 'residential', seed);
+  addExteriorTexture(group, cx, cy, fw, fh, heightFt, floors, col, seed);
 }
 
-// P119 Arcade: two-part section — wide low base + narrower tower
+// P119 Arcade: pure 1-story colonnade — no tower.
+// Wide canopy overhang on street face, column rhythm, flat parapet.
 function buildP119Arcade(group, blk, heightFt, col) {
   const { cx, cy, fw, fh } = blk;
-  const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
-  const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
+  const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.92, transparent: true });
+  const darkMat = new THREE.MeshLambertMaterial({ color: col.clone().multiplyScalar(0.55), opacity: 0.9, transparent: true });
+  const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.8), opacity: 0.7, transparent: true });
 
-  const arcadeH = 14; // ~1 floor in ft (actual, unscaled)
-  const arcadeExt = 12; // ft overhang on street edge
-  const towerW = fw * 0.72;
-  const towerD = fh * 0.72;
+  const storyH = Math.max(heightFt, 14 * HT_SCALE); // 1 story, min 14ft
+  const canopyD = 10; // ft overhang depth
+  const canopyH = 1.5 * HT_SCALE;
 
-  // Full-footprint arcade base (1 floor, wider)
-  addBox(group, cx, cy, fw + arcadeExt, fh, arcadeH * HT_SCALE, mat.clone());
-  addTopRect(group, cx, cy, fw + arcadeExt, fh, arcadeH * HT_SCALE, edgeMat.clone());
+  // Main slab (full footprint)
+  addBox(group, cx, cy, fw, fh, storyH, mat.clone());
+  addTopRect(group, cx, cy, fw, fh, storyH, edgeMat.clone());
 
-  // Tower above arcade
-  const towerH = Math.max(heightFt - arcadeH * HT_SCALE, 20);
-  addBox(group, cx, cy, towerW, towerD, towerH, mat.clone());
-  // top rect at full tower height
-  addTopRect(group, cx, cy, towerW, towerD, arcadeH * HT_SCALE + towerH, edgeMat.clone());
+  // Parapet cap (low wall above roofline)
+  const parapetH = 3 * HT_SCALE;
+  const parapetMat = new THREE.MeshLambertMaterial({ color: col.clone().lerp(new THREE.Color(0.2,0.18,0.14), 0.4), opacity: 0.95 });
+  const pGeo = new THREE.BoxGeometry(fw + 2, parapetH, fh + 2);
+  pGeo.translate(0, parapetH/2, 0);
+  const pMesh = new THREE.Mesh(pGeo, parapetMat);
+  const pp = ftTo3(cx, cy, storyH);
+  pMesh.position.set(pp.x, storyH, pp.z);
+  group.add(pMesh);
+
+  // Canopy on south face (street-facing)
+  const canopyGeo = new THREE.BoxGeometry(fw + 4, canopyH, canopyD);
+  canopyGeo.translate(0, canopyH/2, 0);
+  const canopyMesh = new THREE.Mesh(canopyGeo, darkMat.clone());
+  const canopyPos = ftTo3(cx, cy - fh/2 - canopyD/2, storyH * 0.82);
+  canopyMesh.position.set(canopyPos.x, storyH * 0.82, canopyPos.z);
+  group.add(canopyMesh);
+
+  // Column rhythm under canopy: one column every ~12ft
+  const nCols = Math.max(2, Math.floor(fw / 12));
+  const colW = 2, colD = 2, colH = storyH * 0.82;
+  const colMat = new THREE.MeshLambertMaterial({ color: col.clone().multiplyScalar(0.75), opacity: 0.95 });
+  for (let i = 0; i < nCols; i++) {
+    const t = (i + 0.5) / nCols;
+    const colX = cx - fw/2 + t * fw;
+    const cGeo = new THREE.BoxGeometry(colW, colH, colD);
+    cGeo.translate(0, colH/2, 0);
+    const cMesh = new THREE.Mesh(cGeo, colMat.clone());
+    const cp = ftTo3(colX, cy - fh/2 - canopyD + colD/2, 0);
+    cMesh.position.set(cp.x, 0, cp.z);
+    group.add(cMesh);
+  }
 }
 
 // P107/108/110 Wings of Light: main body + thin E-W wings + glazed connectors.
@@ -2695,21 +2791,17 @@ function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
       buildP119Arcade(bg, blk, heightFt, col);
     } else if (blk.typology === 'wings') {
       buildWingsOfLight(bg, blk, heightFt, col);
+      // Wings get roofs and texture too
+      const seed = Math.round(Math.abs(blk.cx * 7 + blk.cy * 13)) | 0;
+      addRoof(bg, blk.cx, blk.cy, blk.fw * 0.55, blk.fh * 0.55, heightFt, col, blk.func || 'mixed', seed);
+      addExteriorTexture(bg, blk.cx, blk.cy, blk.fw, blk.fh, heightFt, blk.floors, col, seed);
     } else if (blk.typology === 'p105') {
-      // Give p105 helper access to derived via closure
-      const savedDerived = derived;
-      const blkWithDerived = { ...blk };
-      // Inline south notch depth (no closure trick needed — just pass derived)
       const notchD = blk.fh * (0.15 + Math.min(Math.abs(blk.cx - (derived.SPINE?.x + derived.SPINE?.w/2 || 0)) / 500, 1) * 0.2);
       const notchW = blk.fw * 0.45;
-      const mat = new THREE.MeshLambertMaterial({ color: col, opacity: 0.88, transparent: true });
-      const edgeMat = new THREE.LineBasicMaterial({ color: col.clone().multiplyScalar(1.6), opacity: 0.55, transparent: true });
-      // North slab — detailed
       const northD = blk.fh - notchD;
       const northCY = blk.cy + notchD / 2;
       const northBlk = {...blk, cy: northCY, fh: northD};
       addDetailedBuilding(bg, northBlk, heightFt, col, derived);
-      // Wings — detailed (shorter)
       const wingW = (blk.fw - notchW) / 2;
       if (wingW > 8) {
         [-1, 1].forEach(side => {
