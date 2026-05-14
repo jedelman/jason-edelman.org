@@ -3,3 +3,471 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>EC Pattern Solver — 3D View</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #111; color: #eee; font-family: system-ui, sans-serif; overflow: hidden; }
+  #ui { position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+        display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+        padding: 8px 12px; background: rgba(0,0,0,.75); backdrop-filter: blur(6px); }
+  #ui label { font-size: .75rem; color: #aaa; }
+  #ui select, #ui input[type=range] { font-size: .8rem; background: #222; color: #eee;
+        border: 1px solid #444; border-radius: 4px; padding: 2px 6px; }
+  #ui button { font-size: .8rem; padding: 4px 10px; border-radius: 4px; border: none;
+        background: #2563eb; color: #fff; cursor: pointer; }
+  #ui button:hover { background: #1d4ed8; }
+  #stats { position: fixed; bottom: 8px; left: 12px; font-size: .72rem; color: #888;
+           z-index: 10; line-height: 1.6; pointer-events: none; }
+  #tooltip {
+    position: fixed;
+    z-index: 100;
+    background: rgba(0,0,0,0.85);
+    color: #eee;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: .78rem;
+    pointer-events: none;
+    display: none;
+    max-width: 280px;
+    line-height: 1.5;
+  }
+  .tt-row { display: flex; justify-content: space-between; gap: 16px; }
+  .tt-label { color: #aaa; }
+  .tt-val   { color: #fff; font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="ui">
+  <label>Preset <select id="selPreset">
+    <option value="">-- load saved --</option>
+  </select></label>
+
+  <label>Pattern
+    <select id="selPattern">
+      <option value="random">Random</option>
+      <option value="stripe_ew">Stripe E-W</option>
+      <option value="stripe_ns">Stripe N-S</option>
+      <option value="checker">Checkerboard</option>
+      <option value="cluster">Cluster</option>
+      <option value="gradient">Gradient</option>
+    </select>
+  </label>
+
+  <label>Units <input type="range" id="rngUnits" min="1" max="60" value="20" style="width:80px"></label>
+  <span id="lblUnits" style="font-size:.8rem;min-width:2ch">20</span>
+
+  <label>Stories <input type="range" id="rngStories" min="1" max="8" value="2" style="width:60px"></label>
+  <span id="lblStories" style="font-size:.8rem;min-width:2ch">2</span>
+
+  <label>Seed <input type="range" id="rngSeed" min="0" max="999" value="42" style="width:80px"></label>
+  <span id="lblSeed" style="font-size:.8rem;min-width:3ch">42</span>
+
+  <button id="btnSolve">▶ Solve</button>
+  <button id="btnSave">Save Preset</button>
+  <button id="btnReset">Reset Camera</button>
+</div>
+<canvas id="c"></canvas>
+<div id="stats"></div>
+
+<script>
+// ─── tiny LCG for seeded random ──────────────────────────────────────────────
+function makeLCG(seed){
+  let s = seed >>> 0;
+  return () => { s = (Math.imul(1664525, s) + 1013904223) >>> 0; return s / 0x100000000; };
+}
+
+// ─── EC Resident / Block data ─────────────────────────────────────────────────
+const EC_RESIDENTS = [
+  {"rid":"32138004","gpin":"","spec":"","area":"851","rate":"0.9","type":"Flat","dom":"DOM_A","blkId":"BLK_001"},
+  {"rid":"32138005","gpin":"","spec":"","area":"851","rate":"0.9","type":"Flat","dom":"DOM_A","blkId":"BLK_001"},
+  {"rid":"32138006","gpin":"","spec":"","area":"1100","rate":"1.0","type":"Flat","dom":"DOM_B","blkId":"BLK_002"},
+  {"rid":"32138007","gpin":"","spec":"","area":"1100","rate":"1.0","type":"Flat","dom":"DOM_B","blkId":"BLK_002"},
+  {"rid":"32138008","gpin":"","spec":"","area":"950","rate":"0.95","type":"TH","dom":"DOM_C","blkId":"BLK_003"},
+  {"rid":"32138009","gpin":"","spec":"","area":"950","rate":"0.95","type":"TH","dom":"DOM_C","blkId":"BLK_003"}
+];
+
+// ─── Parcel geometry (simplified EC footprints) ───────────────────────────────
+const EC_PARCELS = [
+  { id:'P001', x:0,   z:0,   w:40, d:30, label:'North Residential' },
+  { id:'P002', x:45,  z:0,   w:35, d:30, label:'South Residential' },
+  { id:'P003', x:0,   z:35,  w:75, d:25, label:'Mixed Use Corridor' },
+  { id:'P004', x:80,  z:0,   w:30, d:60, label:'Commercial Block' },
+  { id:'P005', x:0,   z:65,  w:50, d:20, label:'Community Space' },
+  { id:'P006', x:55,  z:65,  w:55, d:20, label:'Green Buffer' },
+];
+
+// ─── EC_FieldSolver ───────────────────────────────────────────────────────────
+class EC_FieldSolver {
+  constructor(parcels, opts = {}) {
+    this.parcels  = parcels;
+    this.units    = opts.units    ?? 20;
+    this.stories  = opts.stories  ?? 2;
+    this.pattern  = opts.pattern  ?? 'random';
+    this.seed     = opts.seed     ?? 42;
+    this._rng     = makeLCG(this.seed);
+    this._blocks  = [];
+  }
+
+  solve() {
+    this._blocks = [];
+    const remaining = this.units;
+    let placed = 0;
+
+    // distribute units across parcels by area weight
+    const totalArea = this.parcels.reduce((s,p) => s + p.w * p.d, 0);
+    const counts    = this.parcels.map(p => Math.max(1,
+      Math.round(p.w * p.d / totalArea * remaining)));
+
+    // adjust to hit exact unit count
+    let diff = this.units - counts.reduce((a,b)=>a+b,0);
+    while (diff > 0) { counts[counts.length-1]++; diff--; }
+    while (diff < 0) {
+      const idx = counts.findIndex(c=>c>1);
+      if (idx < 0) break;
+      counts[idx]--; diff++;
+    }
+
+    this.parcels.forEach((parcel, pi) => {
+      const n = counts[pi];
+      this._placeBlocks(parcel, n, placed);
+      placed += n;
+    });
+
+    return this._blocks;
+  }
+
+  _placeBlocks(parcel, n, offset) {
+    // simple grid fill within parcel bounds
+    const cols = Math.ceil(Math.sqrt(n * parcel.w / parcel.d));
+    const rows = Math.ceil(n / cols);
+    const cw   = parcel.w / cols;
+    const cd   = parcel.d / rows;
+
+    let placed = 0;
+    for (let r = 0; r < rows && placed < n; r++) {
+      for (let c = 0; c < cols && placed < n; c++) {
+        const ht = this._storyHeight(offset + placed);
+        this._blocks.push({
+          id:      `BLK_${(offset+placed+1).toString().padStart(3,'0')}`,
+          parcel:  parcel.id,
+          domPid:  offset + placed,
+          x:       parcel.x + c * cw + cw * .1,
+          z:       parcel.z + r * cd + cd * .1,
+          w:       cw * .8,
+          d:       cd * .8,
+          h:       ht,
+          pattern: this._assignPattern(offset + placed),
+          color:   this._blockColor(offset + placed),
+        });
+        placed++;
+      }
+    }
+  }
+
+  _storyHeight(idx) {
+    const base = 3.2; // metres per storey
+    switch (this.pattern) {
+      case 'gradient': return base * (1 + idx / this.units * (this.stories - 1));
+      case 'cluster':  return base * (1 + Math.floor(this._rng() * this.stories));
+      default:         return base * this.stories;
+    }
+  }
+
+  _assignPattern(idx) {
+    switch (this.pattern) {
+      case 'stripe_ew':  return idx % 2 === 0 ? 'A' : 'B';
+      case 'stripe_ns':  return Math.floor(idx / 3) % 2 === 0 ? 'A' : 'B';
+      case 'checker':    return (Math.floor(idx/3) + idx%3) % 2 === 0 ? 'A' : 'B';
+      case 'cluster':    return this._rng() < .5 ? 'A' : 'B';
+      case 'gradient':   return idx < this.units / 2 ? 'A' : 'B';
+      default:           return this._rng() < .5 ? 'A' : 'B';
+    }
+  }
+
+  _blockColor(idx) {
+    const pat = this._assignPattern(idx);
+    return pat === 'A' ? 0x4a90d9 : 0xe07b39;
+  }
+}
+
+// ─── Three.js bootstrap ───────────────────────────────────────────────────────
+const THREE = window.THREE = {};
+
+// Minimal Three.js-like renderer using raw WebGL
+// (full three.js is loaded below via CDN)
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─── Scene setup ─────────────────────────────────────────────────────────────
+delete window.THREE; // let CDN version take over
+const _scene    = new THREE.Scene();
+const _camera   = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 2000);
+const _renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+const _raycaster = new THREE.Raycaster();
+const _mouse    = new THREE.Vector2();
+
+_renderer.setPixelRatio(devicePixelRatio);
+_renderer.setSize(innerWidth, innerHeight);
+_renderer.shadowMap.enabled = true;
+_scene.background = new THREE.Color(0x111111);
+_scene.fog = new THREE.FogExp2(0x111111, 0.008);
+
+// Lights
+const _sun = new THREE.DirectionalLight(0xfff5e0, 1.2);
+_sun.position.set(80, 120, 60);
+_sun.castShadow = true;
+_scene.add(_sun);
+_scene.add(new THREE.AmbientLight(0x334455, 0.8));
+
+// Ground
+const _ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(400, 400),
+  new THREE.MeshLambertMaterial({ color: 0x1a1a2e })
+);
+_ground.rotation.x = -Math.PI / 2;
+_ground.receiveShadow = true;
+_scene.add(_ground);
+
+// Parcel outlines
+EC_PARCELS.forEach(p => {
+  const geo  = new THREE.EdgesGeometry(new THREE.BoxGeometry(p.w, 0.05, p.d));
+  const mat  = new THREE.LineBasicMaterial({ color: 0x334466 });
+  const mesh = new THREE.LineSegments(geo, mat);
+  mesh.position.set(p.x + p.w/2, 0, p.z + p.d/2);
+  _scene.add(mesh);
+});
+
+// Camera initial position
+_camera.position.set(60, 80, 120);
+_camera.lookAt(55, 0, 35);
+
+// ─── Orbit controls (manual) ─────────────────────────────────────────────────
+let _oc = { theta:0.5, phi:1.1, radius:160, cx:55, cy:0, cz:35,
+            drag:false, lastX:0, lastY:0, rightDrag:false, panX:0, panZ:0 };
+
+function _applyOrbit() {
+  const x = _oc.cx + _oc.radius * Math.sin(_oc.phi) * Math.sin(_oc.theta);
+  const y = _oc.radius * Math.cos(_oc.phi);
+  const z = _oc.cz + _oc.radius * Math.sin(_oc.phi) * Math.cos(_oc.theta);
+  _camera.position.set(x, Math.max(5,y), z);
+  _camera.lookAt(_oc.cx, _oc.cy, _oc.cz);
+}
+_applyOrbit();
+
+window.addEventListener('mousedown', e => {
+  if (e.button === 0) { _oc.drag = true; _oc.lastX = e.clientX; _oc.lastY = e.clientY; }
+  if (e.button === 2) { _oc.rightDrag = true; _oc.lastX = e.clientX; _oc.lastY = e.clientY; }
+});
+window.addEventListener('mouseup', () => { _oc.drag = false; _oc.rightDrag = false; });
+window.addEventListener('mousemove', e => {
+  if (_oc.drag) {
+    _oc.theta -= (e.clientX - _oc.lastX) * 0.005;
+    _oc.phi   -= (e.clientY - _oc.lastY) * 0.005;
+    _oc.phi    = Math.max(0.1, Math.min(Math.PI/2.1, _oc.phi));
+    _oc.lastX  = e.clientX; _oc.lastY = e.clientY;
+    _applyOrbit();
+  }
+  if (_oc.rightDrag) {
+    _oc.cx    -= (e.clientX - _oc.lastX) * 0.15;
+    _oc.cz    -= (e.clientY - _oc.lastY) * 0.15;
+    _oc.lastX  = e.clientX; _oc.lastY = e.clientY;
+    _applyOrbit();
+  }
+});
+window.addEventListener('wheel', e => {
+  _oc.radius = Math.max(20, Math.min(500, _oc.radius + e.deltaY * 0.2));
+  _applyOrbit();
+});
+window.addEventListener('contextmenu', e => e.preventDefault());
+window.addEventListener('resize', () => {
+  _camera.aspect = innerWidth / innerHeight;
+  _camera.updateProjectionMatrix();
+  _renderer.setSize(innerWidth, innerHeight);
+});
+
+// ─── Building meshes ─────────────────────────────────────────────────────────
+const _buildingGroup = new THREE.Group();
+_scene.add(_buildingGroup);
+const _blockMeshMap  = new Map(); // mesh -> block data
+
+function _clearBuildings() {
+  while (_buildingGroup.children.length) {
+    const m = _buildingGroup.children[0];
+    m.geometry.dispose();
+    m.material.dispose();
+    _buildingGroup.remove(m);
+  }
+  _blockMeshMap.clear();
+}
+
+function _buildScene(blocks) {
+  _clearBuildings();
+  blocks.forEach(blk => {
+    const geo  = new THREE.BoxGeometry(blk.w, blk.h, blk.d);
+    const mat  = new THREE.MeshLambertMaterial({ color: blk.color });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(blk.x + blk.w/2, blk.h/2, blk.z + blk.d/2);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    _buildingGroup.add(mesh);
+    _blockMeshMap.set(mesh, blk);
+
+    // Wireframe overlay
+    const wf   = new THREE.LineSegments(
+      new THREE.EdgesGeometry(geo),
+      new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 })
+    );
+    mesh.add(wf);
+  });
+}
+
+// ─── Stats panel ─────────────────────────────────────────────────────────────
+function _updateStats(blocks) {
+  const total  = blocks.length;
+  const patA   = blocks.filter(b=>b.pattern==='A').length;
+  const patB   = blocks.filter(b=>b.pattern==='B').length;
+  const avgH   = (blocks.reduce((s,b)=>s+b.h,0)/total).toFixed(1);
+  document.getElementById('stats').innerHTML =
+    `Blocks: ${total} &nbsp;|&nbsp; Pattern A: ${patA} &nbsp;|&nbsp; Pattern B: ${patB} &nbsp;|&nbsp; Avg height: ${avgH}m`;
+}
+
+// ─── Solve ───────────────────────────────────────────────────────────────────
+function _runSolve() {
+  const units   = +document.getElementById('rngUnits').value;
+  const stories = +document.getElementById('rngStories').value;
+  const pattern = document.getElementById('selPattern').value;
+  const seed    = +document.getElementById('rngSeed').value;
+
+  const solver = new EC_FieldSolver(EC_PARCELS, { units, stories, pattern, seed });
+  const blocks = solver.solve();
+  _buildScene(blocks);
+  _updateStats(blocks);
+}
+
+document.getElementById('btnSolve').addEventListener('click', _runSolve);
+document.getElementById('btnReset').addEventListener('click', () => {
+  _oc = { theta:0.5, phi:1.1, radius:160, cx:55, cy:0, cz:35,
+          drag:false, lastX:0, lastY:0, rightDrag:false };
+  _applyOrbit();
+});
+
+// range label sync
+['Units','Stories','Seed'].forEach(n => {
+  const el = document.getElementById('rng'+n);
+  const lb = document.getElementById('lbl'+n);
+  el.addEventListener('input', () => { lb.textContent = el.value; });
+});
+
+// ─── localStorage presets ────────────────────────────────────────────────────
+const PRESET_KEY = 'ec_3d_presets';
+
+function _loadPresets() {
+  try { return JSON.parse(localStorage.getItem(PRESET_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function _savePresets(arr) {
+  localStorage.setItem(PRESET_KEY, JSON.stringify(arr));
+}
+
+function _refreshPresetList() {
+  const sel = document.getElementById('selPreset');
+  const presets = _loadPresets();
+  // remove old options (keep first placeholder)
+  while (sel.options.length > 1) sel.remove(1);
+  presets.forEach((p, i) => {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = p.name;
+    sel.add(opt);
+  });
+}
+
+document.getElementById('btnSave').addEventListener('click', () => {
+  const name = prompt('Preset name:', `Preset ${Date.now()}`);
+  if (!name) return;
+  const presets = _loadPresets();
+  presets.push({
+    name,
+    units:   +document.getElementById('rngUnits').value,
+    stories: +document.getElementById('rngStories').value,
+    pattern: document.getElementById('selPattern').value,
+    seed:    +document.getElementById('rngSeed').value,
+  });
+  _savePresets(presets);
+  _refreshPresetList();
+});
+
+document.getElementById('selPreset').addEventListener('change', function() {
+  const idx = parseInt(this.value, 10);
+  if (isNaN(idx)) return;
+  const p = _loadPresets()[idx];
+  if (!p) return;
+  document.getElementById('rngUnits').value   = p.units;
+  document.getElementById('lblUnits').textContent = p.units;
+  document.getElementById('rngStories').value = p.stories;
+  document.getElementById('lblStories').textContent = p.stories;
+  document.getElementById('selPattern').value = p.pattern;
+  document.getElementById('rngSeed').value    = p.seed;
+  document.getElementById('lblSeed').textContent = p.seed;
+  _runSolve();
+  this.value = '';
+});
+
+_refreshPresetList();
+
+// ─── Render loop ─────────────────────────────────────────────────────────────
+function _animate() {
+  requestAnimationFrame(_animate);
+  _renderer.render(_scene, _camera);
+}
+_animate();
+
+// ─── Initial solve ───────────────────────────────────────────────────────────
+_runSolve();
+
+// ─── Tooltip ─────────────────────────────────────────────────────────────────
+const _tooltip = document.getElementById('tooltip');
+let _tooltipVisible = false;
+
+function _showTooltip(cx, cy, blk, patName) {
+  const stories = Math.round(blk.h / 3.2);
+  _tooltip.innerHTML =
+    `<div class="tt-row"><span class="tt-label">Block</span><span class="tt-val">${blk.id}</span></div>` +
+    `<div class="tt-row"><span class="tt-label">Parcel</span><span class="tt-val">${blk.parcel}</span></div>` +
+    `<div class="tt-row"><span class="tt-label">Pattern</span><span class="tt-val">${blk.pattern} — ${patName}</span></div>` +
+    `<div class="tt-row"><span class="tt-label">Stories</span><span class="tt-val">${stories}</span></div>` +
+    `<div class="tt-row"><span class="tt-label">Size</span><span class="tt-val">${blk.w.toFixed(1)}×${blk.d.toFixed(1)} m</span></div>`;
+  _tooltip.style.left = (cx + 16) + 'px';
+  _tooltip.style.top  = (cy + 16) + 'px';
+  _tooltip.style.display = 'block';
+  _tooltipVisible = true;
+}
+
+function _hideTooltip() {
+  _tooltip.style.display = 'none';
+  _tooltipVisible = false;
+}
+
+const canvas = document.getElementById('c');
+canvas.addEventListener('mousemove', e => {
+  _mouse.x = (e.clientX / innerWidth)  * 2 - 1;
+  _mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+  _raycaster.setFromCamera(_mouse, _camera);
+  const hits = _raycaster.intersectObjects([..._blockMeshMap.keys()]);
+  if (hits.length) {
+    const blk = _blockMeshMap.get(hits[0].object);
+    if (blk) {
+      const patName = EC_PARCELS.find(p => p.id === blk.parcel)?.name || `P${blk.domPid || '?'}`;
+      _showTooltip(e.clientX, e.clientY, blk, patName);
+    }
+  } else {
+    _hideTooltip();
+  }
+});
+
+canvas.addEventListener('mouseleave', _hideTooltip);
+</script>
+<div id="tooltip"></div>
+</body>
+</html>
