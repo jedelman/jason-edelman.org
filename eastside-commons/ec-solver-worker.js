@@ -47,6 +47,9 @@ function buildProjection(parcels) {
 self.EC_FieldSolver = (function() {
   const PATTERNS = {};
 
+  // Colors only used for rendering (index.html). Stub here so defPattern doesn't throw.
+  const PATTERN_COLORS = {};
+
   function defPattern(id, name, weight, senseFn) {
     PATTERNS[id] = { id, name, weight, sense: senseFn,
       color: PATTERN_COLORS[id] || '#888888' };
