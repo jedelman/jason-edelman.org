@@ -1328,6 +1328,135 @@ function blendColors(weights, patternColors) {
   return `rgb(${r},${g},${b})`;
 }
 
+// ── PAN / ZOOM + VIEWPORT CULLING ────────────────────────────────────────────
+// Implemented as a CSS transform on a wrapper <g> inside the SVG.
+// Culling: before adding any SVG element we check whether its bounding box
+// intersects the current viewport (in SVG user-space coordinates).
+(function initPanZoom() {
+  function _init() {
+  const svg = document.getElementById('main-svg');
+  if (!svg) return;
+
+  // Wrap all content layers in a single pan/zoom group
+  const wrap = document.createElementNS('http://www.w3.org/2000/svg','g');
+  wrap.id = 'pz-wrap';
+  // Move existing layers into wrapper
+  while (svg.firstChild) {
+    const child = svg.firstChild;
+    if (child.tagName === 'defs') { svg.appendChild(child); continue; } // keep defs on svg
+    wrap.appendChild(child);
+  }
+  svg.appendChild(wrap);
+
+  let tx=0, ty=0, scale=1;
+  const MIN_SCALE=0.4, MAX_SCALE=12;
+
+  function applyTransform() {
+    wrap.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`);
+    // Expose viewport for culling (in SVG user-space, before our transform)
+    const vb = svg.viewBox.baseVal;
+    // Viewport corners in user-space:
+    // screen top-left = (0,0) → user-space = (-tx/scale, -ty/scale)
+    window._vpLeft   = -tx / scale;
+    window._vpTop    = -ty / scale;
+    window._vpRight  = window._vpLeft  + vb.width  / scale;
+    window._vpBottom = window._vpTop   + vb.height / scale;
+  }
+  applyTransform();
+
+  // Expose helper for renderers: is this SVG point visible?
+  window._inViewport = function(x, y, pad=20) {
+    return x >= window._vpLeft - pad && x <= window._vpRight  + pad &&
+           y >= window._vpTop  - pad && y <= window._vpBottom + pad;
+  };
+  // Is any part of a rect visible?
+  window._rectVisible = function(x, y, w, h, pad=20) {
+    return x+w >= window._vpLeft - pad && x <= window._vpRight  + pad &&
+           y+h >= window._vpTop  - pad && y <= window._vpBottom + pad;
+  };
+
+  // ── Mouse wheel zoom ──────────────────────────────────────────────────────
+  svg.addEventListener('wheel', e => {
+    e.preventDefault();
+    const rect = svg.getBoundingClientRect();
+    const vb   = svg.viewBox.baseVal;
+    // Mouse in SVG user-space (before our transform)
+    const mx = (e.clientX - rect.left) / rect.width  * vb.width;
+    const my = (e.clientY - rect.top)  / rect.height * vb.height;
+    const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
+    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+    // Zoom toward mouse: keep mx,my fixed in wrapped space
+    tx = mx - (mx - tx) * (newScale / scale);
+    ty = my - (my - ty) * (newScale / scale);
+    scale = newScale;
+    applyTransform();
+  }, { passive: false });
+
+  // ── Mouse drag pan ────────────────────────────────────────────────────────
+  let dragging=false, dragX=0, dragY=0;
+  svg.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    dragging=true; dragX=e.clientX; dragY=e.clientY;
+    svg.style.cursor='grabbing';
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    const rect=svg.getBoundingClientRect();
+    const vb=svg.viewBox.baseVal;
+    const scaleX=vb.width/rect.width, scaleY=vb.height/rect.height;
+    tx += (e.clientX-dragX)*scaleX;
+    ty += (e.clientY-dragY)*scaleY;
+    dragX=e.clientX; dragY=e.clientY;
+    applyTransform();
+  });
+  window.addEventListener('mouseup', () => { dragging=false; svg.style.cursor=''; });
+
+  // ── Touch pan/pinch ───────────────────────────────────────────────────────
+  let lastTouches=null;
+  svg.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    lastTouches=e.touches;
+  },{ passive:false });
+  svg.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    const rect=svg.getBoundingClientRect();
+    const vb=svg.viewBox.baseVal;
+    const scaleX=vb.width/rect.width, scaleY=vb.height/rect.height;
+    const cur=e.touches;
+    if(cur.length===1&&lastTouches.length===1){
+      tx+=(cur[0].clientX-lastTouches[0].clientX)*scaleX;
+      ty+=(cur[0].clientY-lastTouches[0].clientY)*scaleY;
+    } else if(cur.length===2&&lastTouches.length===2){
+      const prevD=Math.hypot(lastTouches[1].clientX-lastTouches[0].clientX, lastTouches[1].clientY-lastTouches[0].clientY);
+      const curD =Math.hypot(cur[1].clientX-cur[0].clientX, cur[1].clientY-cur[0].clientY);
+      if(prevD>0){
+        const factor=curD/prevD;
+        const mx=((cur[0].clientX+cur[1].clientX)/2-rect.left)*scaleX;
+        const my=((cur[0].clientY+cur[1].clientY)/2-rect.top)*scaleY;
+        const newScale=Math.min(MAX_SCALE,Math.max(MIN_SCALE,scale*factor));
+        tx=mx-(mx-tx)*(newScale/scale);
+        ty=my-(my-ty)*(newScale/scale);
+        scale=newScale;
+      }
+      tx+=(( (cur[0].clientX+cur[1].clientX)-(lastTouches[0].clientX+lastTouches[1].clientX))/2)*scaleX;
+      ty+=(( (cur[0].clientY+cur[1].clientY)-(lastTouches[0].clientY+lastTouches[1].clientY))/2)*scaleY;
+    }
+    lastTouches=cur;
+    applyTransform();
+  },{ passive:false });
+
+  // Double-tap / double-click to reset
+  svg.addEventListener('dblclick', ()=>{
+    tx=0; ty=0; scale=1; applyTransform();
+  });
+
+  // Expose reset for external use
+  window._pzReset = ()=>{ tx=0;ty=0;scale=1;applyTransform(); };
+  } // end _init
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',_init);
+  else _init();
+})();
+
 function renderFieldLines(lines, patternColors, view, ftToSvg) {
   const ns='http://www.w3.org/2000/svg';
   const lLayer=document.getElementById('layer-lines');
@@ -1338,13 +1467,24 @@ function renderFieldLines(lines, patternColors, view, ftToSvg) {
 
   for (const line of lines) {
     if(line.pts.length<2) continue;
+
+    // Viewport cull: skip if bounding box of line is entirely outside viewport
+    if(window._inViewport) {
+      let lx0=Infinity,ly0=Infinity,lx1=-Infinity,ly1=-Infinity;
+      for(const p of line.pts){
+        const[sx,sy]=toSvg(p.x,p.y);
+        if(sx<lx0)lx0=sx; if(sx>lx1)lx1=sx;
+        if(sy<ly0)ly0=sy; if(sy>ly1)ly1=sy;
+      }
+      if(!window._rectVisible(lx0,ly0,lx1-lx0,ly1-ly0,30)) continue;
+    }
     const midIdx=Math.floor(line.pts.length/2);
     const midPt=line.pts[midIdx];
     const dominantColor=blendColors(midPt.weights||{}, patternColors);
 
     const ptStr=line.pts.map(p=>{ const[sx,sy]=toSvg(p.x,p.y); return `${sx.toFixed(1)},${sy.toFixed(1)}`; }).join(' ');
     const totalPressure=line.seedPressure||0.5;
-    const sw=Math.max(0.5, Math.min(4, totalPressure*5));
+    const sw=Math.max(0.3, Math.min(1.4, totalPressure*1.8));
 
     const pl=document.createElementNS(ns,'polyline');
     pl.setAttribute('points',ptStr);
@@ -1361,7 +1501,8 @@ function renderFieldLines(lines, patternColors, view, ftToSvg) {
     pl2.setAttribute('points',ptStr);
     pl2.setAttribute('fill','none');
     pl2.setAttribute('stroke','rgba(255,255,255,0.12)');
-    pl2.setAttribute('stroke-width',(sw*0.4).toFixed(2));
+    pl2.setAttribute('stroke-width',(sw*0.35).toFixed(2));
+    pl2.setAttribute('opacity','0.55');
     pl2.setAttribute('stroke-linecap','round');
     lLayer.appendChild(pl2);
   }
@@ -1376,8 +1517,10 @@ function renderHotNodes(hotNodes, patternColors) {
   nLayer.innerHTML='';
   if(!hotNodes) return;
   for (const pt of hotNodes) {
-    const r = 2.5 + (pt.nStrong||3)*0.6;
+    const r = 1.2 + (pt.nStrong||3)*0.25;
     const [shx,shy]=(window._ftToSvg||((x,y)=>[x,y]))(pt.x,pt.y);
+    // Cull nodes outside viewport
+    if(window._inViewport && !window._inViewport(shx, shy, r+4)) continue;
     const c=document.createElementNS(ns,'circle');
     c.setAttribute('cx',shx.toFixed(1)); c.setAttribute('cy',shy.toFixed(1));
     c.setAttribute('r',r.toFixed(1));
@@ -1406,6 +1549,8 @@ function renderBuildings(buildings, patternColors, patternNames) {
     // Footprint rect
     const [sx,sy]=toSvg(b.x, b.y+b.h);
     const sw=svgW_(b.w), sh=svgH_(b.h);
+    // Cull buildings outside viewport
+    if(window._rectVisible && !window._rectVisible(sx,sy,sw,sh,10)) continue;
     const rect=document.createElementNS(ns,'rect');
     rect.setAttribute('x',sx.toFixed(1)); rect.setAttribute('y',sy.toFixed(1));
     rect.setAttribute('width',sw.toFixed(1)); rect.setAttribute('height',sh.toFixed(1));
