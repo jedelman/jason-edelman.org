@@ -1149,20 +1149,44 @@ self.onmessage = function(e) {
 
   let result;
   try {
-    // Try GPU path first (WebGL2 via OffscreenCanvas)
-    const gpuAvailable = typeof OffscreenCanvas !== 'undefined'
-      && typeof ECGpuFields !== 'undefined'
-      && typeof EC_GPU_SHADERS !== 'undefined';
+    // Diagnostics — surface exactly what's available in this worker context
+    const hasOffscreen  = typeof OffscreenCanvas !== 'undefined';
+    const hasGpuFields  = typeof ECGpuFields !== 'undefined';
+    const hasGpuShaders = typeof EC_GPU_SHADERS !== 'undefined';
+
+    self.postMessage({ type: 'status', msg:
+      `Worker env: OffscreenCanvas=${hasOffscreen} ECGpuFields=${hasGpuFields} EC_GPU_SHADERS=${hasGpuShaders}` });
+
+    const gpuAvailable = hasOffscreen && hasGpuFields && hasGpuShaders;
 
     if (gpuAvailable && opts.useGPU !== false) {
-      self.postMessage({ type: 'status', msg: 'GPU path: WebGL2 OffscreenCanvas' });
-      result = solveGPU(parcels, proj, MAP, derivedG, opts,
-        (pass, delta, saturated, lines, log) => {
-          self.postMessage({ type: 'progress', pass, delta: delta?.toFixed(5), saturated, path: 'gpu' });
-        }
-      );
+      self.postMessage({ type: 'status', msg: 'GPU path: initialising WebGL2…' });
+      try {
+        result = solveGPU(parcels, proj, MAP, derivedG, opts,
+          (pass, delta, saturated, lines, log) => {
+            self.postMessage({ type: 'progress', pass, delta: delta?.toFixed(5), saturated, path: 'gpu' });
+          }
+        );
+        self.postMessage({ type: 'status', msg: `GPU solve: ${result.buildings.length} buildings` });
+      } catch (gpuErr) {
+        // GPU failed — log it prominently and fall through to JS
+        const gpuMsg = (gpuErr.message || String(gpuErr)) +
+          (gpuErr.stack ? '\n' + gpuErr.stack.split('\n').slice(1, 5).join('\n') : '');
+        self.postMessage({ type: 'status',    msg: '⚠ GPU failed → JS fallback: ' + gpuErr.message });
+        self.postMessage({ type: 'gpu_error', msg: gpuMsg });
+        result = null;
+      }
     } else {
-      self.postMessage({ type: 'status', msg: 'JS fallback path' });
+      const why = !hasOffscreen  ? 'no OffscreenCanvas'
+                : !hasGpuFields  ? 'ECGpuFields not loaded'
+                : !hasGpuShaders ? 'EC_GPU_SHADERS not loaded'
+                : 'useGPU=false';
+      self.postMessage({ type: 'status', msg: `JS path (${why})` });
+    }
+
+    // JS solve — runs if GPU unavailable or GPU threw
+    if (!result) {
+      self.postMessage({ type: 'status', msg: 'JS solver running…' });
       result = EC_FieldSolver.solve(parcels, proj, MAP, derivedG, {
         ...opts,
         onPass: (pass, delta, saturated, lines, log) => {
@@ -1171,11 +1195,11 @@ self.onmessage = function(e) {
         },
       });
     }
-  } catch(err) {
-    self.postMessage({ type: 'error', msg: (err.message || String(err)) + (err.stack ? '\n' + err.stack.split('\n').slice(1,3).join('\n') : '') });
+  } catch (err) {
+    self.postMessage({ type: 'error', msg: (err.message || String(err)) +
+      (err.stack ? '\n' + err.stack.split('\n').slice(1,3).join('\n') : '') });
     return;
   }
-
   // Serialise result — strip Float32Arrays (not structured-clone-able to localStorage)
   const payload = {
     buildings:  result.buildings,

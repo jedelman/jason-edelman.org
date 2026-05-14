@@ -1927,7 +1927,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     worker.onmessage = ev => {
       const { type, msg, pass, payload, path } = ev.data;
-      if (type === 'status')   { status.textContent = msg; return; }
+      if (type === 'status')   {
+        status.textContent = msg;
+        // Accumulate status messages in log for diagnosis
+        const logEl = document.getElementById('log-content');
+        if (logEl && msg.includes('Worker env:')) {
+          logEl.innerHTML += `\n<span style="color:#888">${msg}</span>`;
+        }
+        return;
+      }
+      if (type === 'gpu_error') {
+        // GPU failed — show in log but continue (JS fallback running)
+        const logEl = document.getElementById('log-content');
+        if (logEl) logEl.innerHTML += `\n<span class="log-err">GPU error: ${msg}</span>`;
+        // Switch to log tab so error is visible
+        document.querySelector('.tab-btn[data-tab="log"]')?.click();
+        return;
+      }
       if (type === 'progress') { status.textContent = `Pass ${pass+1} (${path||'js'})…`; return; }
       if (type === 'error')    {
         status.textContent = '⚠ ' + msg;
