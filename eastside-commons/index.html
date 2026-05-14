@@ -868,9 +868,9 @@ details[open] summary::before { content: '▼  '; }
           </div>
           <div class="param-row">
             <label class="param-key">Res ft</label>
-            <input type="range" id="p-res" min="5" max="30" step="5" value="10"
+            <input type="range" id="p-res" min="1" max="30" step="1" value="3"
               oninput="document.getElementById('p-res-val').textContent=this.value+'ft'">
-            <span class="param-val" id="p-res-val">10ft</span>
+            <span class="param-val" id="p-res-val">3ft</span>
           </div>
           <div class="param-row">
             <label class="param-key">Thresh</label>
@@ -6052,7 +6052,7 @@ async function triggerPipeline() {
       parcels, proj, MAP, window._derivedG, {
         passes:    params.ps_recurse || 16,
         eps:       params.ps_eps     || 0.008,
-        cellSize:  params.ps_res     || 10,
+        cellSize:  params.ps_res     || 3,
         threshold: params.ps_thresh  || 0.2,
       }
     );
