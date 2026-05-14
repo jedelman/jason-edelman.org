@@ -8886,16 +8886,15 @@ function renderPatternOverlay2D(sg) {
     ty = Math.min(margin, Math.max(-(CANVAS_H - visH + margin), ty));
   }
 
-  // Zoom around a point (svgX, svgY) in ft
-  function zoomAround(svgX, svgY, factor) {
+  // Zoom around canvasPt (ft) keeping it fixed on screen.
+  // Transform: screen_px = (canvas_ft + tx) * zoom * svgScale
+  // To keep canvas_ft fixed: tx_new = canvas_ft * (zoom/newZoom - 1) + tx * (zoom/newZoom)
+  function zoomAround(canvasX, canvasY, factor) {
     const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
     if (newZoom === zoom) return;
-    // Keep svgX,svgY fixed on screen:
-    // screen_x = (svgX + tx) * zoom  →  tx_new = screen_x/newZoom - svgX
-    const screenX = (svgX + tx) * zoom;
-    const screenY = (svgY + ty) * zoom;
-    tx = screenX / newZoom - svgX;
-    ty = screenY / newZoom - svgY;
+    const ratio = zoom / newZoom;
+    tx = canvasX * (ratio - 1) + tx * ratio;
+    ty = canvasY * (ratio - 1) + ty * ratio;
     zoom = newZoom;
     clampTranslate();
     scheduleApply();
@@ -8942,12 +8941,12 @@ function renderPatternOverlay2D(sg) {
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
     const pt = screenToSVG(e.clientX, e.clientY);
-    zoomAround(pt.x - tx, pt.y - ty, factor);  // pivot in local space
+    zoomAround(pt.x, pt.y, factor);
   }
 
   function onDblClick(e) {
     const pt = screenToSVG(e.clientX, e.clientY);
-    zoomAround(pt.x - tx, pt.y - ty, 2.5);
+    zoomAround(pt.x, pt.y, 2.5);
   }
 
   // ── Touch events ──────────────────────────────────────────────────────────
@@ -8986,7 +8985,7 @@ function renderPatternOverlay2D(sg) {
       const factor = dist / Math.max(1, lastPinchDist);
       const mid = touchMid(t[0], t[1]);
       const pt = screenToSVG(mid.x, mid.y);
-      zoomAround(pt.x - tx, pt.y - ty, factor);
+      zoomAround(pt.x, pt.y, factor);
       lastPinchDist = dist;
       touches = t;
     }
@@ -9062,12 +9061,17 @@ function renderPatternOverlay2D(sg) {
       const bw = x1 - x0, bh = y1 - y0;
       if (bw < 1 || bh < 1) return;
       const pad = Math.max(bw, bh) * padFrac;
-      const zx = vpW / svgScale / (bw + pad * 2);
-      const zy = vpH / svgScale / (bh + pad * 2);
-      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(zx, zy)));
-      // Center the bbox
-      tx = -(x0 - pad) + (vpW / svgScale / zoom - bw - pad * 2) / 2;
-      ty = -(y0 - pad) + (vpH / svgScale / zoom - bh - pad * 2) / 2;
+      const pw = bw + pad * 2, ph = bh + pad * 2;
+      // zoom so bbox fills viewport: visible_ft = viewport_px / (svgScale * zoom)
+      zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.min(
+        vpW / (svgScale * pw),
+        vpH / (svgScale * ph)
+      )));
+      // center: tx = visibleWidth/2 - bboxCenterX
+      const visW = vpW / (svgScale * zoom);
+      const visH = vpH / (svgScale * zoom);
+      tx = visW / 2 - (x0 + x1) / 2;
+      ty = visH / 2 - (y0 + y1) / 2;
       clampTranslate();
       applyTransform();
     },
