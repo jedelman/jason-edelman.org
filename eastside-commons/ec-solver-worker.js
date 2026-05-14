@@ -890,8 +890,20 @@ self.EC_FieldSolver = (function() {
 
     const gw = Math.ceil((MAP.x1-MAP.x0)/CELL_SIZE)+1;
     const gh = Math.ceil((MAP.y1-MAP.y0)/CELL_SIZE)+1;
+    const totalCells = gw * gh;
 
+    // Memory guard: ~55 Float32Arrays at peak (52 patterns + combined + prev + mask)
+    const peakMB = Math.round(totalCells * 4 * 55 / (1024 * 1024));
+    log.push(`Grid: ${gw}×${gh} = ${totalCells.toLocaleString()} cells @ ${CELL_SIZE}ft | ~${peakMB}MB peak`);
     log.push(`Grid: ${gw}×${gh} = ${gw*gh} cells @ ${CELL_SIZE}ft | ε=${EPSILON}`);
+
+    // Hard limit: bail before allocating if grid would OOM mobile browser
+    if (peakMB > 150) {
+      const safeRes = Math.ceil(Math.sqrt((MAP.x1-MAP.x0)*(MAP.y1-MAP.y0)*4*55/(150*1024*1024)));
+      const msg = `Grid too large: ${CELL_SIZE}ft = ${peakMB}MB peak (limit 150MB). Use ≥${safeRes}ft.`;
+      self.postMessage({ type: 'error', msg });
+      return { buildings:[], hotNodes:[], fieldLines:[], log, saturatedAt:null };
+    }
 
     buildEdaMask(parcels, proj, gw, gh, CELL_SIZE, MAP);
 
@@ -1083,6 +1095,13 @@ self.onmessage = function(e) {
   
 
   self.postMessage({ type: 'status', msg: 'Building EDA mask…' });
+
+  // Estimate grid size before starting so user sees it immediately
+  const _cs = opts.cellSize || 10;
+  const _gw = Math.ceil((MAP.x1-MAP.x0)/_cs)+1;
+  const _gh = Math.ceil((MAP.y1-MAP.y0)/_cs)+1;
+  const _mb = Math.round(_gw*_gh*4*55/1024/1024);
+  self.postMessage({ type: 'status', msg: `Grid ${_gw}×${_gh} · ${(_gw*_gh).toLocaleString()} cells · ~${_mb}MB` });
 
   // Per-pass checkpoint: extract buildings from current field lines and persist
   function checkpoint(pass, lines, log, saturated, opts) {
