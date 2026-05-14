@@ -1095,6 +1095,126 @@ self.EC_FieldSolver = (function() {
     if(sg) paintGaussian(field,gw,gh,cs,MAP, MAP.x0+westWidth*0.5, sg.cy, 180, 0.6);
   });
 
+  // ── TIER 1 PATTERNS: P9, P32, P40, P44 (added 2026-05-14) ───────────────
+
+  // P9 — Scattered Work
+  // Workplaces distributed through housing at ~1 per 8-10 houses.
+  // Prevents residential monoculture. Solidarity economy: maker spaces,
+  // cooperative offices, and live-work units scattered through the CLT zone.
+  // Emits small commercial gaussian blobs in a loose grid across the west zone,
+  // biased toward the sponge edge (CLT perimeter = productive commons edge).
+  defPattern(9, 'Scattered Work', 0.85, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sg=site.derived.SPONGE;
+    const sl=s.x;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+40:MAP.y0+220;
+    const westW=sl-MAP.x0;
+    // 3×4 grid of small work nodes through the residential zone
+    const cols=3, rows=4;
+    for(let c=0;c<cols;c++){
+      for(let r=0;r<rows;r++){
+        const wx=MAP.x0+westW*(c+0.5)/cols + (Math.sin(c*r*7)*60);
+        const wy=topY+(MAP.y1-topY)*(r+0.5)/rows;
+        paintGaussian(field,gw,gh,cs,MAP, wx,wy, 80, 0.65);
+      }
+    }
+    // Extra cluster near sponge — the cooperative commons edge
+    if(sg){
+      paintGaussian(field,gw,gh,cs,MAP, sg.cx-sg.rx-60, sg.cy-sg.ry*0.3, 90, 0.75);
+      paintGaussian(field,gw,gh,cs,MAP, sg.cx-sg.rx-60, sg.cy+sg.ry*0.4, 85, 0.7);
+    }
+  });
+
+  // P32 — Shopping Street
+  // A single continuous street of ground-floor shops — not nodes, not a market,
+  // but an unbroken commercial frontage. Distinct from P87 (individual Shops)
+  // and P46 (covered Market). Emits a continuous linear strip along the main
+  // street band at maximum pressure, enforcing no residential breaks.
+  defPattern(32, 'Shopping Street', 1.0, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const b=site.derived.BAND;
+    if(!b) return;
+    const stripY=b.y+b.h*0.5;
+    const stripW=55; // 55ft wide commercial strip — ground-floor depth
+    // Paint full-length strip along the promenade band
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+30,stripY, s.x,stripY, stripW, 1.1);
+    paintSegment(field,gw,gh,cs,MAP, s.x,stripY, MAP.x1-30,stripY, stripW, 1.1);
+    // Secondary: north-south arcade at spine mid-point (covered walk connecting
+    // main street to civic buildings)
+    const scx=s.x+s.w/2;
+    paintSegment(field,gw,gh,cs,MAP, scx,b.y, scx,b.y+b.h*2.5, 35, 0.8);
+  });
+
+  // P40 — Old Buildings
+  // Every healthy neighborhood has buildings of different ages. The two existing
+  // structures on the Eastside site must be preserved and woven into the new
+  // fabric. High pressure AT existing building centroids (build around and with
+  // them), tight repulsion in their footprint (don't build through them).
+  // HOUSING_A_530 centroid: lat 36.84997786, lon -76.2093096
+  // CIVIC_700 centroid:     lat 36.85048749, lon -76.2092737
+  defPattern(40, 'Old Buildings', 0.9, (field,gw,gh,cs,MAP,site)=>{
+    // Find existing building parcels from the parcels array
+    const specMap={};
+    for(const p of (site.parcels||[])){
+      if(p.spec) specMap[p.spec]=p;
+    }
+    // Fallback: use proj to convert centroids directly
+    const existingBuildings=[
+      {spec:'HOUSING_A_530', lat:36.84997786, lon:-76.2093096},
+      {spec:'CIVIC_700',     lat:36.85048749, lon:-76.2092737},
+    ];
+    for(const eb of existingBuildings){
+      const p=specMap[eb.spec];
+      let bx,by;
+      if(p?.centroid){
+        [bx,by]=site.proj(p.centroid.lon, p.centroid.lat);
+      } else {
+        [bx,by]=site.proj(eb.lon, eb.lat);
+      }
+      if(isNaN(bx)||isNaN(by)) continue;
+      // Strong positive pressure around the existing building — build WITH it
+      paintGaussian(field,gw,gh,cs,MAP, bx,by, 200, 0.9);
+      // Inner repulsion — don't build ON it (tight Gaussian subtract)
+      paintGaussian(field,gw,gh,cs,MAP, bx,by, 60, -1.2);
+    }
+  });
+
+  // P44 — Local Town Hall
+  // One building where the community governs itself — identifiable, accessible,
+  // central. Single dominant civic spike at CIVIC_700 (existing 2.2ac EDA parcel,
+  // centroid near spine mid-point). Higher pressure than P30 (Activity Nodes)
+  // which is about pedestrian peaks; this is specifically democratic assembly.
+  defPattern(44, 'Local Town Hall', 1.1, (field,gw,gh,cs,MAP,site)=>{
+    const specMap={};
+    for(const p of (site.parcels||[])){
+      if(p.spec) specMap[p.spec]=p;
+    }
+    const p=specMap['CIVIC_700'];
+    let tx,ty;
+    if(p?.centroid){
+      [tx,ty]=site.proj(p.centroid.lon, p.centroid.lat);
+    } else {
+      // Hard fallback: CIVIC_700 centroid: lat 36.85048749, lon -76.2092737
+      [tx,ty]=site.proj(-76.2092737, 36.85048749);
+    }
+    if(isNaN(tx)||isNaN(ty)) return;
+    // Sharp dominant spike — THE civic anchor. Should dominate all other
+    // civic pressures at this location.
+    paintGaussian(field,gw,gh,cs,MAP, tx,ty, 250, 1.3);
+    // Wide civic halo — the civic building casts an organizational influence
+    // over the surrounding blocks
+    paintGaussian(field,gw,gh,cs,MAP, tx,ty, 500, 0.65);
+    // Suppress elsewhere: civic pressure should not leak into residential zone
+    const s=site.derived.SPINE;
+    if(s){
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs;
+        if(px<s.x-100) field[i]=Math.max(0, field[i]-0.3);
+      }
+    }
+  });
+
 
   // ── FIELD LINE TRACER ─────────────────────────────────────────────────────
   // Trace splines along ridges of the combined field.
@@ -1231,7 +1351,7 @@ self.EC_FieldSolver = (function() {
 
     buildEdaMask(parcels, proj, gw, gh, CELL_SIZE, MAP);
 
-    const site = { derived: derivedG, fields: {}, combined: null };
+    const site = { derived: derivedG, fields: {}, combined: null, parcels, proj };
     let allFieldLines = [];
     const snapshots = [];
     let prevCombined = null;

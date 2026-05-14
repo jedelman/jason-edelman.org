@@ -4293,6 +4293,11 @@ const PATTERN_USE_MAP = {
   21:  'RESIDENTIAL_CLT_OWN', // Four-Story Limit — residential datum
   25:  'GREEN_PASSIVE',  // Access to Water — water corridor
   35:  'RESIDENTIAL_CLT_OWN', // Household Mix — residential spread
+  // Tier 1 patterns added 2026-05-14
+  9:   'LIVE_WORK',      // Scattered Work — productive commons
+  32:  'MIXED_USE_5OVER1', // Shopping Street — continuous commercial
+  40:  'CIVIC',          // Old Buildings — preservation anchor
+  44:  'CIVIC',          // Local Town Hall — democratic assembly
 };
 
 // FAR by use for constraints
@@ -6120,7 +6125,9 @@ function applyFieldResult(psResult, params, t1) {
     127:'RESIDENTIAL', 35:'RESIDENTIAL', 21:'RESIDENTIAL',
     87:'COMMERCIAL', 88:'COMMERCIAL', 46:'COMMERCIAL', 95:'COMMERCIAL',
     122:'COMMERCIAL', 100:'COMMERCIAL', 123:'COMMERCIAL',
+    9:'COMMERCIAL', 32:'COMMERCIAL',
     30:'CIVIC', 36:'CIVIC', 53:'CIVIC', 31:'CIVIC', 110:'CIVIC', 14:'CIVIC',
+    40:'CIVIC', 44:'CIVIC',
     60:'GREEN', 67:'GREEN', 71:'GREEN', 51:'GREEN', 106:'GREEN',
     114:'GREEN', 172:'GREEN', 174:'GREEN', 56:'GREEN', 25:'GREEN', 3:'GREEN',
   };
@@ -8617,6 +8624,7 @@ function renderPlanBuildings(sg) {
     108:'#a03020', 110:'#c84818', 128:'#806018',
     120:'#22a838', 172:'#0e7828', 174:'#48a860', 176:'#806018', 56:'#3888a8',
     3:'#0e7828', 21:'#e8b820', 25:'#1868b8', 35:'#c87818',
+    9:'#b84898', 32:'#ff6030', 40:'#60a0c0', 44:'#2070a0',
   };
 
   const PID_USE = {
@@ -8629,6 +8637,11 @@ function renderPlanBuildings(sg) {
     114:'GREEN', 172:'GREEN', 174:'GREEN', 56:'GREEN', 25:'GREEN', 3:'GREEN',
     29:'MIXED', 116:'MIXED', 104:'MIXED', 105:'MIXED', 108:'MIXED',
     119:'MIXED', 121:'MIXED', 160:'MIXED', 128:'MIXED', 61:'MIXED', 8:'MIXED',
+    // Tier 1 additions
+    9:'COMMERCIAL',   // Scattered Work → commercial use class
+    32:'COMMERCIAL',  // Shopping Street → commercial
+    40:'CIVIC',       // Old Buildings → civic
+    44:'CIVIC',       // Local Town Hall → civic
   };
 
   const USE_HATCH = {
