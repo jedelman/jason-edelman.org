@@ -1423,6 +1423,60 @@ function buildSVG(parcels, P, G, derived, MAP, proj) {
     defs.appendChild(p);
   })();
 
+  // ── Architectural hatch patterns (A&P illustration style) ─────────────
+
+  // Residential hatch: 45° diagonal lines, fine pitch — like the A&P drawings
+  (function() {
+    const p = el('pattern',{id:'pat-hatch-res',patternUnits:'userSpaceOnUse',
+      width:'8',height:'8',patternTransform:'rotate(45)'});
+    p.appendChild(el('rect',{width:'8',height:'8',fill:'#c87818','fill-opacity':'0.9'}));
+    p.appendChild(el('line',{x1:'0',y1:'0',x2:'0',y2:'8',
+      stroke:'#040402','stroke-width':'2.2','stroke-opacity':'0.5'}));
+    defs.appendChild(p);
+  })();
+
+  // Commercial hatch: steeper 60° lines, bolder — spine/market character
+  (function() {
+    const p = el('pattern',{id:'pat-hatch-com',patternUnits:'userSpaceOnUse',
+      width:'7',height:'7',patternTransform:'rotate(60)'});
+    p.appendChild(el('rect',{width:'7',height:'7',fill:'#c84818','fill-opacity':'0.9'}));
+    p.appendChild(el('line',{x1:'0',y1:'0',x2:'0',y2:'7',
+      stroke:'#040402','stroke-width':'2.8','stroke-opacity':'0.55'}));
+    defs.appendChild(p);
+  })();
+
+  // Civic hatch: horizontal lines — public institution character
+  (function() {
+    const p = el('pattern',{id:'pat-hatch-civ',patternUnits:'userSpaceOnUse',
+      width:'6',height:'6'});
+    p.appendChild(el('rect',{width:'6',height:'6',fill:'#2878b8','fill-opacity':'0.88'}));
+    p.appendChild(el('line',{x1:'0',y1:'3',x2:'6',y2:'3',
+      stroke:'#040402','stroke-width':'1.8','stroke-opacity':'0.45'}));
+    defs.appendChild(p);
+  })();
+
+  // Mixed/spine hatch: cross-hatch — complex programmatic overlap
+  (function() {
+    const p = el('pattern',{id:'pat-hatch-mix',patternUnits:'userSpaceOnUse',
+      width:'8',height:'8'});
+    p.appendChild(el('rect',{width:'8',height:'8',fill:'#6848b8','fill-opacity':'0.82'}));
+    p.appendChild(el('line',{x1:'0',y1:'0',x2:'8',y2:'8',
+      stroke:'#040402','stroke-width':'1.5','stroke-opacity':'0.4'}));
+    p.appendChild(el('line',{x1:'8',y1:'0',x2:'0',y2:'8',
+      stroke:'#040402','stroke-width':'1.5','stroke-opacity':'0.4'}));
+    defs.appendChild(p);
+  })();
+
+  // Outdoor void hatch: very sparse dots — figured space, not building
+  (function() {
+    const p = el('pattern',{id:'pat-void',patternUnits:'userSpaceOnUse',
+      width:'12',height:'12'});
+    p.appendChild(el('rect',{width:'12',height:'12',fill:'#060804'}));
+    p.appendChild(el('circle',{cx:'6',cy:'6',r:'0.9',
+      fill:'#2a3020','fill-opacity':'0.7'}));
+    defs.appendChild(p);
+  })();
+
   svg.appendChild(defs);
 
   // Background
@@ -8545,12 +8599,269 @@ function renderPlanBuildings(sg) {
   }
   svg.appendChild(gLines);
 
-  // ── Buildings — field solver shape: {x,y,w,h,domPid,avgStrong,pts} ────
+  // ── Buildings — field solver output, architectural plan style ────────
   const g = document.createElementNS(ns, 'g');
   g.setAttribute('data-plan-layer', 'buildings');
   g.setAttribute('pointer-events', 'none');
+  g.setAttribute('clip-path', 'url(#mc)');  // ← was missing; clips to EDA map area
 
-  // Pattern ID → USES color mapping (field solver uses domPid)
+  // Use classification by domPid
+  const PID_COLOR = {
+    29:'#c85018', 30:'#1868b8', 31:'#2878a0', 36:'#8050c0', 53:'#c88020',
+    37:'#c87818', 60:'#22a838', 67:'#22a838', 71:'#0e7828', 87:'#c84818',
+    88:'#6888a8', 46:'#b84898', 95:'#c84818', 109:'#e8b820', 116:'#c87818',
+    104:'#a03020', 105:'#806018', 106:'#486050', 115:'#48a860',
+    122:'#c84818', 127:'#e8b820', 119:'#6888a8', 121:'#2878a0',
+    100:'#2070a0', 61:'#22a838', 51:'#0e7828', 160:'#c84818',
+    123:'#2070a0', 14:'#8050c0', 8:'#8050c0', 107:'#c87818',
+    108:'#a03020', 110:'#c84818', 128:'#806018',
+    120:'#22a838', 172:'#0e7828', 174:'#48a860', 176:'#806018', 56:'#3888a8',
+    3:'#0e7828', 21:'#e8b820', 25:'#1868b8', 35:'#c87818',
+  };
+
+  const PID_USE = {
+    37:'RESIDENTIAL', 109:'RESIDENTIAL', 115:'RESIDENTIAL', 107:'RESIDENTIAL',
+    127:'RESIDENTIAL', 35:'RESIDENTIAL', 21:'RESIDENTIAL',
+    87:'COMMERCIAL', 88:'COMMERCIAL', 46:'COMMERCIAL', 95:'COMMERCIAL',
+    122:'COMMERCIAL', 100:'COMMERCIAL', 123:'COMMERCIAL',
+    30:'CIVIC', 36:'CIVIC', 53:'CIVIC', 31:'CIVIC', 110:'CIVIC', 14:'CIVIC',
+    60:'GREEN', 67:'GREEN', 71:'GREEN', 51:'GREEN', 106:'GREEN',
+    114:'GREEN', 172:'GREEN', 174:'GREEN', 56:'GREEN', 25:'GREEN', 3:'GREEN',
+    29:'MIXED', 116:'MIXED', 104:'MIXED', 105:'MIXED', 108:'MIXED',
+    119:'MIXED', 121:'MIXED', 160:'MIXED', 128:'MIXED', 61:'MIXED', 8:'MIXED',
+  };
+
+  const USE_HATCH = {
+    RESIDENTIAL: 'url(#pat-hatch-res)',
+    COMMERCIAL:  'url(#pat-hatch-com)',
+    CIVIC:       'url(#pat-hatch-civ)',
+    GREEN:       'url(#pat-green-active)',
+    MIXED:       'url(#pat-hatch-mix)',
+  };
+  const USE_STROKE = {
+    RESIDENTIAL: '#e8c060', COMMERCIAL: '#ff6030', CIVIC: '#60a8e0',
+    GREEN: '#40c060', MIXED: '#a080e0',
+  };
+  const GREEN_PIDS = new Set([60,67,71,51,106,114,172,174,56,25,3]);
+
+  // ── EDA outline: bold perimeter so the buildable zone reads clearly ──
+  // Draw FIRST (under buildings)
+  if (_pipelineParcels && _pipelineProj) {
+    const edaOutline = document.createElementNS(ns, 'g');
+    edaOutline.setAttribute('data-plan-sub', 'eda-outline');
+    for (const p of _pipelineParcels.filter(q => q.is_eda && q.rings?.[0])) {
+      const pts = p.rings[0].map(([lon,lat]) => {
+        const [x,y] = _pipelineProj(lon,lat);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      });
+      const poly = document.createElementNS(ns, 'polygon');
+      poly.setAttribute('points', pts.join(' '));
+      poly.setAttribute('fill', 'none');
+      poly.setAttribute('stroke', '#304828');
+      poly.setAttribute('stroke-width', '2.5');
+      poly.setAttribute('stroke-dasharray', '8,4');
+      edaOutline.appendChild(poly);
+    }
+    g.appendChild(edaOutline);
+  }
+
+  // ── Building footprints ───────────────────────────────────────────────
+  const buildings = sg.buildings || [];
+
+  // Sort: green first (underneath), then solid mass on top
+  const sorted = [...buildings].sort((a,b) => {
+    const au = PID_USE[a.domPid] || 'MIXED';
+    const bu = PID_USE[b.domPid] || 'MIXED';
+    if (au === 'GREEN' && bu !== 'GREEN') return -1;
+    if (bu === 'GREEN' && au !== 'GREEN') return 1;
+    return 0;
+  });
+
+  for (const bldg of sorted) {
+    const pid = Number(bldg.domPid);
+    const use = PID_USE[pid] || 'MIXED';
+    const stroke = USE_STROKE[use] || '#888';
+    const isGreen = GREEN_PIDS.has(pid);
+    const isResidential = use === 'RESIDENTIAL';
+    const isCommercial  = use === 'COMMERCIAL';
+
+    if (isGreen) {
+      // Green space: elliptical hatched area, soft edge, no hard rect
+      const ecx = bldg.x + bldg.w/2, ecy = bldg.y + bldg.h/2;
+      const erx = bldg.w * 0.58, ery = bldg.h * 0.58;
+      // Soft base
+      const eBase = document.createElementNS(ns, 'ellipse');
+      eBase.setAttribute('cx', ecx.toFixed(1)); eBase.setAttribute('cy', ecy.toFixed(1));
+      eBase.setAttribute('rx', (erx*1.15).toFixed(1)); eBase.setAttribute('ry', (ery*1.15).toFixed(1));
+      eBase.setAttribute('fill', '#0e2210'); eBase.setAttribute('fill-opacity', '0.7');
+      eBase.setAttribute('stroke', 'none');
+      g.appendChild(eBase);
+      // Textured surface
+      const e = document.createElementNS(ns, 'ellipse');
+      e.setAttribute('cx', ecx.toFixed(1)); e.setAttribute('cy', ecy.toFixed(1));
+      e.setAttribute('rx', erx.toFixed(1)); e.setAttribute('ry', ery.toFixed(1));
+      e.setAttribute('fill', 'url(#pat-green-active)');
+      e.setAttribute('fill-opacity', '0.9');
+      e.setAttribute('stroke', stroke);
+      e.setAttribute('stroke-width', '1.5');
+      e.setAttribute('stroke-opacity', '0.6');
+      g.appendChild(e);
+      continue;
+    }
+
+    // ── Solid building mass: hatched rect with architectural weight ──
+    // Outer mass (slightly inset from footprint edge — shadow/depth)
+    const shadow = document.createElementNS(ns, 'rect');
+    shadow.setAttribute('x', (bldg.x+3).toFixed(1));
+    shadow.setAttribute('y', (bldg.y+3).toFixed(1));
+    shadow.setAttribute('width', bldg.w.toFixed(1));
+    shadow.setAttribute('height', bldg.h.toFixed(1));
+    shadow.setAttribute('fill', '#000');
+    shadow.setAttribute('fill-opacity', '0.35');
+    shadow.setAttribute('rx', '1');
+    g.appendChild(shadow);
+
+    // Building mass — hatched fill
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', bldg.x.toFixed(1));
+    rect.setAttribute('y', bldg.y.toFixed(1));
+    rect.setAttribute('width', bldg.w.toFixed(1));
+    rect.setAttribute('height', bldg.h.toFixed(1));
+    rect.setAttribute('fill', USE_HATCH[use] || 'url(#pat-hatch-mix)');
+    rect.setAttribute('stroke', stroke);
+    rect.setAttribute('stroke-width', isResidential ? '2.2' : '2.0');
+    rect.setAttribute('stroke-opacity', '0.95');
+    rect.setAttribute('rx', '1');
+    rect.setAttribute('data-use', use);
+    g.appendChild(rect);
+
+    // ── Courtyard void — A&P P115 style ──
+    // Only for buildings large enough to wrap a court (>70ft wide, >60ft deep)
+    if (bldg.w > 70 && bldg.h > 60) {
+      const inset = Math.min(bldg.w, bldg.h) * 0.22;
+      const vx = bldg.x + inset, vy = bldg.y + inset;
+      const vw = bldg.w - inset*2, vh = bldg.h - inset*2;
+      if (vw > 20 && vh > 20) {
+        // Void as dark dotted area (figured space)
+        const void_rect = document.createElementNS(ns, 'rect');
+        void_rect.setAttribute('x', vx.toFixed(1)); void_rect.setAttribute('y', vy.toFixed(1));
+        void_rect.setAttribute('width', vw.toFixed(1)); void_rect.setAttribute('height', vh.toFixed(1));
+        void_rect.setAttribute('fill', 'url(#pat-void)');
+        void_rect.setAttribute('stroke', stroke);
+        void_rect.setAttribute('stroke-width', '0.8');
+        void_rect.setAttribute('stroke-opacity', '0.4');
+        g.appendChild(void_rect);
+      }
+    }
+
+    // ── 25ft lot lines — residential only ──
+    if (isResidential) {
+      const lots = Math.max(1, Math.round(bldg.w / 25));
+      for (let i = 1; i < lots; i++) {
+        const lx = bldg.x + i * 25;
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', lx.toFixed(1)); line.setAttribute('y1', bldg.y.toFixed(1));
+        line.setAttribute('x2', lx.toFixed(1)); line.setAttribute('y2', (bldg.y+bldg.h).toFixed(1));
+        line.setAttribute('stroke', '#040402'); line.setAttribute('stroke-width', '1.0');
+        line.setAttribute('stroke-opacity', '0.5');
+        g.appendChild(line);
+      }
+    }
+
+    // ── Ground-floor commercial stripe ──
+    if (isCommercial && bldg.h > 35) {
+      const gh = Math.min(bldg.h * 0.26, 28);
+      const gRect = document.createElementNS(ns, 'rect');
+      gRect.setAttribute('x', bldg.x.toFixed(1));
+      gRect.setAttribute('y', (bldg.y + bldg.h - gh).toFixed(1));
+      gRect.setAttribute('width', bldg.w.toFixed(1));
+      gRect.setAttribute('height', gh.toFixed(1));
+      gRect.setAttribute('fill', '#ff6820');
+      gRect.setAttribute('fill-opacity', '0.4');
+      gRect.setAttribute('stroke', 'none');
+      g.appendChild(gRect);
+    }
+
+    // ── Unit label — residential, if large enough ──
+    if (isResidential && bldg.w > 40) {
+      const lots = Math.max(1, Math.round(bldg.w / 25));
+      const units = lots * 15;
+      if (units >= 10) {
+        const lbl = document.createElementNS(ns, 'text');
+        lbl.setAttribute('x', (bldg.x + bldg.w/2).toFixed(1));
+        lbl.setAttribute('y', (bldg.y + bldg.h/2 + 4).toFixed(1));
+        lbl.setAttribute('text-anchor', 'middle');
+        lbl.setAttribute('dominant-baseline', 'middle');
+        lbl.setAttribute('font-family', 'monospace');
+        lbl.setAttribute('font-size', '7');
+        lbl.setAttribute('font-weight', '600');
+        lbl.setAttribute('fill', '#fff');
+        lbl.setAttribute('fill-opacity', '0.8');
+        lbl.textContent = units;
+        g.appendChild(lbl);
+      }
+    }
+  }
+
+  // ── Inter-building connections (P108 — Connected Buildings) ──────────
+  // Draw thin links between buildings that share a pattern and are close
+  const CONN_MAX_GAP = 40; // ft — maximum gap to draw a connection
+  const connG = document.createElementNS(ns, 'g');
+  connG.setAttribute('data-plan-sub', 'connections');
+  for (let i = 0; i < buildings.length; i++) {
+    const a = buildings[i];
+    const aUse = PID_USE[Number(a.domPid)] || 'MIXED';
+    if (aUse === 'GREEN') continue;
+    const aCx = a.x+a.w/2, aCy = a.y+a.h/2;
+    for (let j = i+1; j < buildings.length; j++) {
+      const b = buildings[j];
+      const bUse = PID_USE[Number(b.domPid)] || 'MIXED';
+      if (bUse !== aUse) continue;
+      // Nearest edge-to-edge distance (approximate)
+      const gapX = Math.max(0, Math.max(a.x, b.x) - Math.min(a.x+a.w, b.x+b.w));
+      const gapY = Math.max(0, Math.max(a.y, b.y) - Math.min(a.y+a.h, b.y+b.h));
+      const gap = Math.sqrt(gapX*gapX + gapY*gapY);
+      if (gap > CONN_MAX_GAP || gap < 2) continue;
+      // Midpoint connection line
+      const bCx = b.x+b.w/2, bCy = b.y+b.h/2;
+      const conn = document.createElementNS(ns, 'line');
+      conn.setAttribute('x1', aCx.toFixed(1)); conn.setAttribute('y1', aCy.toFixed(1));
+      conn.setAttribute('x2', bCx.toFixed(1)); conn.setAttribute('y2', bCy.toFixed(1));
+      conn.setAttribute('stroke', USE_STROKE[aUse] || '#888');
+      conn.setAttribute('stroke-width', '1.5');
+      conn.setAttribute('stroke-opacity', '0.3');
+      conn.setAttribute('stroke-dasharray', '3,4');
+      connG.appendChild(conn);
+    }
+  }
+  g.appendChild(connG);
+
+  // ── Suppressed hot nodes ──────────────────────────────────────────────
+  const gNodes = document.createElementNS(ns, 'g');
+  gNodes.setAttribute('data-plan-layer', 'hotnodes');
+  gNodes.setAttribute('pointer-events', 'none');
+  for (const n of (_psResult?.hotNodes || [])) {
+    if ((n.nStrong||0) < 5) continue; // only strongest nodes
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', n.x.toFixed(1)); c.setAttribute('cy', n.y.toFixed(1));
+    c.setAttribute('r', '3');
+    c.setAttribute('fill', '#e8b820'); c.setAttribute('fill-opacity', '0.18');
+    c.setAttribute('stroke', '#e8b820'); c.setAttribute('stroke-width', '0.5');
+    gNodes.appendChild(c);
+  }
+  g.appendChild(gNodes);
+
+  svg.appendChild(g);
+  if (window.EC_PanZoom) window.EC_PanZoom.reinit();
+}
+
+// Node overlay toggle ─────────────────────────────────────────────────────
+let _nodesOn = false;
+function toggleNodes(btn) {
+  _nodesOn = !_nodesOn;
+  btn.classList.toggle('on', _nodesOn);
+  const svg = document.getElementById('site-plan');
+  svg?.querySelector('[data-plan-layer="nodes"]')?.remove();
   const PID_COLOR = {
     29:'#c85018', 30:'#1868b8', 31:'#2878a0', 36:'#8050c0', 53:'#c88020',
     37:'#c87818', 60:'#22a838', 67:'#22a838', 71:'#0e7828', 87:'#c84818',
