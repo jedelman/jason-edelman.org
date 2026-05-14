@@ -5768,6 +5768,13 @@ function initPipeline(parcels, proj, MAP, derivedG) {
   window._pipelineReady = true;
 }
 
+// Debounced wrapper — sliders call this so rapid drags don't spam the EA
+let _pipelineRegenTimer = null;
+function schedulePipelineRegen(delayMs = 600) {
+  clearTimeout(_pipelineRegenTimer);
+  _pipelineRegenTimer = setTimeout(() => triggerPipeline(), delayMs);
+}
+
 async function triggerPipeline() {
   if (!_pipelineParcels) { alert('Constraint solver must run first.'); return; }
   const btn = document.getElementById('run-pipeline-btn');
