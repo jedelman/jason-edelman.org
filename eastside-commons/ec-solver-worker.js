@@ -772,6 +772,194 @@ self.EC_FieldSolver = (function() {
   });
 
 
+  // ── GREEN SPACE / WALKWAY / OUTDOOR PATTERNS (added 2026-05-14) ─────────
+
+  // P120 — Paths and Goals (A&P #120)
+  // Every path must terminate at a visible destination. Pressure concentrated
+  // at path endpoints (gateways, nodes, sponge edge, market) AND along the
+  // connecting corridors between them. Enforces legibility: you can always
+  // see where you're going from where you are.
+  defPattern(120, 'Paths and Goals', 0.9, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sg=site.derived.SPONGE;
+    const ti=site.derived.TIDE;
+    const scx=s.x+s.w/2;
+
+    // Goal points: sponge centre, transit node, north CLT plaza, south gateway
+    const goals=[];
+    if(sg) goals.push([sg.cx, sg.cy]);
+    if(ti) goals.push([ti.x+ti.w/2, ti.y]);
+    goals.push([scx, s.y+s.h*0.25]); // north node
+    goals.push([scx, s.y+s.h*0.75]); // south node
+    goals.push([MAP.x0+120, (MAP.y0+MAP.y1)*0.5]); // west entry
+    goals.push([MAP.x1-120, (MAP.y0+MAP.y1)*0.5]); // east entry
+
+    // Strong pressure at each goal point
+    for(const [gx,gy] of goals)
+      paintGaussian(field,gw,gh,cs,MAP, gx,gy, 140, 1.2);
+
+    // Path corridors: connect each goal to its two nearest neighbours
+    for(let i=0;i<goals.length;i++){
+      const [ax,ay]=goals[i];
+      // find nearest other goal
+      let minD=Infinity, nearest=null;
+      for(let j=0;j<goals.length;j++){
+        if(j===i) continue;
+        const d=Math.hypot(goals[j][0]-ax, goals[j][1]-ay);
+        if(d<minD){minD=d; nearest=goals[j];}
+      }
+      if(nearest) paintSegment(field,gw,gh,cs,MAP, ax,ay, nearest[0],nearest[1], 38, 0.7);
+    }
+  });
+
+  // P174 — Trellised Walk
+  // Shaded pergola walks between buildings — essential for Norfolk's hot/humid
+  // summers. A covered but outdoor path, planted with climbing vines, running
+  // between housing clusters and from clusters to the promenade. The trellis
+  // IS the transition between public street and semi-private courtyard.
+  defPattern(174, 'Trellised Walk', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sg=site.derived.SPONGE;
+    const sl=s.x, sr=s.x+s.w;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+30:MAP.y0+200;
+    const westWidth=sl-MAP.x0;
+
+    // Spine-parallel trellis walks flanking the promenade (10-20ft offset each side)
+    const trellisW=18;
+    paintSegment(field,gw,gh,cs,MAP, sl-20,topY, sl-20,s.y+s.h-50, trellisW, 1.0);
+    paintSegment(field,gw,gh,cs,MAP, sr+20,topY, sr+20,s.y+s.h-50, trellisW, 1.0);
+
+    // East-west cross-walks at node heights — link housing clusters to promenade
+    const crossYs=[s.y+s.h*0.25, s.y+s.h*0.5, s.y+s.h*0.75];
+    for(const cy of crossYs){
+      // West side: trellis from housing cluster edge to spine
+      paintSegment(field,gw,gh,cs,MAP, MAP.x0+westWidth*0.28,cy, sl,cy, trellisW, 0.85);
+      // East side: trellis from spine to sponge or east edge
+      const eastEnd=sg?sg.cx-sg.rx:MAP.x1-100;
+      paintSegment(field,gw,gh,cs,MAP, sr,cy, eastEnd,cy, trellisW, 0.75);
+    }
+  });
+
+  // P172 — Garden Growing Wild
+  // Semi-managed productive edges: food forest margins, rain garden borders,
+  // community orchard under-stories. Not lawn, not wilderness. The "growing
+  // wild" edge is where CLT garden plots meet common land — partially tended,
+  // ecologically active. Pressure rings the sponge and traces housing edges.
+  defPattern(172, 'Garden Growing Wild', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    const sg=site.derived.SPONGE; if(!sg) return;
+    const s=site.derived.SPINE; if(!s) return;
+
+    // Productive edge ring around sponge perimeter (20-50ft out from edge)
+    const innerR=Math.max(sg.rx,sg.ry)+15;
+    const outerR=innerR+55;
+    for(let i=0;i<field.length;i++){
+      const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+      const d=Math.sqrt((px-sg.cx)**2+(py-sg.cy)**2);
+      if(d>=innerR&&d<=outerR) field[i]+=Math.exp(-((d-(innerR+outerR)*0.5)**2)/((outerR-innerR)*0.6)**2)*0.9;
+    }
+
+    // Housing cluster garden edges — west of spine, in the inter-cluster gaps
+    const sl=s.x;
+    const westWidth=sl-MAP.x0;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+20:MAP.y0+200;
+    const botY=MAP.y1-60;
+    const zoneH=botY-topY;
+    // Garden strips between the three row bands (inter-cluster gap zones)
+    const gapYs=[topY+zoneH*0.33, topY+zoneH*0.66];
+    for(const gy of gapYs){
+      paintSegment(field,gw,gh,cs,MAP,
+        MAP.x0+40, gy, sl-20, gy, 70, 0.8);
+    }
+
+    // CLT north perimeter — wild edge along district boundary
+    const clt=site.derived.CLT_NORTH;
+    if(clt) paintSegment(field,gw,gh,cs,MAP,
+      clt.x,clt.y, clt.x+clt.w,clt.y, 50, 0.7);
+  });
+
+  // P176 — Garden Wall
+  // Hard enclosure between public path and private/semi-private outdoor space.
+  // Without walls, "positive outdoor space" is just a gap — the wall makes
+  // the courtyard. Pressure in thin strips at the boundary of each housing
+  // cluster, and along the spine-facing edge of west-zone courtyards.
+  // Pairs tightly with P115 (Courtyards Which Live) and P106 (Positive Outdoor Space).
+  defPattern(176, 'Garden Wall', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sl=s.x;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+20:MAP.y0+200;
+    const botY=MAP.y1-60;
+    const zoneH=botY-topY;
+    const westWidth=sl-MAP.x0;
+    const wallW=12; // ~12ft wall/hedge strip
+
+    // Spine-side walls of west housing clusters — defines public/private threshold
+    // These run E-W, parallel to housing rows, at the spine-facing edge of each cluster
+    const wallYs=[topY+zoneH*0.18, topY+zoneH*0.50, topY+zoneH*0.82];
+    for(const wy of wallYs){
+      // Wall on promenade side of each cluster
+      paintSegment(field,gw,gh,cs,MAP, MAP.x0+30,wy-55, sl-10,wy-55, wallW, 0.85);
+      paintSegment(field,gw,gh,cs,MAP, MAP.x0+30,wy+55, sl-10,wy+55, wallW, 0.85);
+    }
+
+    // East side: walls separating sponge common from research/mixed-use
+    const sg=site.derived.SPONGE;
+    if(sg){
+      // West edge of research zone = east wall of sponge commons
+      paintSegment(field,gw,gh,cs,MAP,
+        sg.cx+sg.rx+10, sg.cy-sg.ry, sg.cx+sg.rx+10, sg.cy+sg.ry, wallW, 0.75);
+    }
+
+    // Band northern wall: street-edge definition at main commercial zone
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+60,b.y, MAP.x1-60,b.y, wallW, 0.8);
+  });
+
+  // P56 — Bike Paths and Racks
+  // Norfolk is flat — bikes and e-bikes are real mobility here. A parallel
+  // active-mobility network running alongside (but separated from) the
+  // pedestrian promenade and green streets. Connects to transit node and
+  // external street network at gateways. Pressure in a ~10ft strip offset
+  // from P100 (Pedestrian Street) and P51 (Green Streets), plus at rack
+  // clusters near all activity nodes.
+  defPattern(56, 'Bike Paths and Racks', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sg=site.derived.SPONGE;
+    const ti=site.derived.TIDE;
+    const scx=s.x+s.w/2;
+    const bikeW=14; // ~14ft bike lane
+
+    // N-S bike spine: runs parallel to promenade, 35ft west offset (separated)
+    paintSegment(field,gw,gh,cs,MAP, scx-35,s.y+30, scx-35,s.y+s.h-30, bikeW, 1.0);
+
+    // E-W cross connections at nodes — link to external streets at MAP edges
+    const nodeYs=[s.y+s.h*0.25, s.y+s.h*0.75];
+    for(const ny of nodeYs){
+      paintSegment(field,gw,gh,cs,MAP, MAP.x0,ny, MAP.x1,ny, bikeW, 0.75);
+    }
+
+    // Sponge loop: bike path circling the park perimeter
+    if(sg){
+      const loopR=Math.max(sg.rx,sg.ry)+30;
+      for(let theta=0;theta<Math.PI*2;theta+=0.08){
+        const px=sg.cx+Math.cos(theta)*loopR;
+        const py=sg.cy+Math.sin(theta)*loopR;
+        if(px>=MAP.x0&&px<=MAP.x1&&py>=MAP.y0&&py<=MAP.y1)
+          paintGaussian(field,gw,gh,cs,MAP, px,py, bikeW*0.8, 0.12);
+      }
+    }
+
+    // Transit node connection — bike share/rack cluster
+    if(ti) paintGaussian(field,gw,gh,cs,MAP, ti.x+ti.w/2, ti.y+ti.h/2, 80, 1.0);
+
+    // Rack nodes at activity intersections (high pressure small blobs)
+    const rackPts=[[scx,s.y+s.h*0.25],[scx,s.y+s.h*0.75],[scx,s.y+s.h*0.5]];
+    for(const [rx,ry] of rackPts)
+      paintGaussian(field,gw,gh,cs,MAP, rx,ry, 45, 0.85);
+  });
+
+
   // ── FIELD LINE TRACER ─────────────────────────────────────────────────────
   // Trace splines along ridges of the combined field.
   // A field line follows the path where combined pressure stays above threshold.
