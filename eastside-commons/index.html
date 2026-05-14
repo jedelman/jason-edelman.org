@@ -802,7 +802,8 @@ details[open] summary::before { content: '▼  '; }
         <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
         <button class="overlay-btn on" data-overlay="streets" onclick="toggleOverlay(this)">Streets</button>
         <button class="overlay-btn on" data-overlay="edges" onclick="toggleEdges(this)">Edges</button>
-        <button class="overlay-btn" id="btn-patterns" onclick="togglePatternOverlay(this)">Patterns</button>
+        <button class="overlay-btn" id="btn-patterns" onclick="togglePatternOverlay(this)">Zones</button>
+        <button class="overlay-btn" id="btn-nodes" onclick="toggleNodes(this)">Nodes</button>
       </div>
 
       <!-- SVG map + 3D canvas (toggled) -->
@@ -5953,7 +5954,7 @@ async function triggerPipeline() {
 
     const psResult = window.EC_PatternSolver.solve(
       parcels, proj, MAP, window._derivedG,
-      { recurse: params.ps_recurse || 5, cluster_k: 40 }
+      { recurse: params.ps_recurse || 8, cluster_k: 40, max_ms: 10000 }
     );
     window._patternSolverResult = psResult;
     window._lastPatternResult   = psResult;
@@ -5965,69 +5966,26 @@ async function triggerPipeline() {
     if (statusText) statusText.textContent =
       `Pattern solver: ${psResult.sceneGraph.instances.length} instances`;
 
-    // ── Pattern → Zones ───────────────────────────────────────────────────
-    if (statusText) statusText.textContent = 'Translating pattern instances to zones…';
-    const t2Zones = patternInstancesToZones(psResult.sceneGraph, t1);
-
-    if (t2Zones.length === 0)
-      throw new Error('Pattern solver produced no renderable zones — check EDA parcel coverage');
-
-    if (statusText) statusText.textContent = `Zones: ${t2Zones.length} from patterns`;
-
-    // ── T4: Unit placement ────────────────────────────────────────────────
-    if (statusText) statusText.textContent = 'T4: Placing unit modules…';
-    const t4Zones = (window.EC_T4 && t2Zones[0]?.poly?.outer)
-      ? window.EC_T4.buildUnits(t2Zones, t1)
-      : window.EC_Pipeline.buildT4Units(t2Zones, t1);
-
-    // ── T5: Interaction constraints ───────────────────────────────────────
-    if (statusText) statusText.textContent = 'T5: Applying interaction constraints…';
-    const t5Zones = window.EC_Pipeline.applyT5Interactions(t4Zones);
-
-    // ── T6: Cleanup ───────────────────────────────────────────────────────
-    if (statusText) statusText.textContent = 'T6: Cleanup pass…';
-    const t6Zones = window.EC_Pipeline.applyT6Cleanup(t5Zones);
-
-    // ── T7: Render ────────────────────────────────────────────────────────
-    if (statusText) statusText.textContent = 'T7: Rendering…';
+    // ── Pattern → Plan render ─────────────────────────────────────────────
+    if (statusText) statusText.textContent = 'Rendering plan…';
     if (svg) {
-      // Clear previous T7 layers
-      svg.querySelectorAll('[data-t7]').forEach(e => e.remove());
+      svg.querySelectorAll('[data-t7],[data-plan-layer]').forEach(e => e.remove());
       svg.querySelector('#pattern-overlay')?.remove();
-
-      if (window.EC_Decomp && t6Zones[0]?.poly?.svgPath) {
-        window.EC_Decomp.renderT7Polygons(t6Zones, svg, params);
-      } else {
-        window.EC_Pipeline.renderT7(t6Zones, svg, params);
-      }
-
-      // Unit layer
-      if (params.show_units !== false && typeof renderUnits === 'function') {
-        renderUnits(t6Zones, svg, params);
-      }
-
-      // Edge overlay
-      if (window.EC_Edges) {
-        const edges = window.EC_Edges.buildEdges(t6Zones, { bufferPx: 5 });
-        window.EC_Edges.renderEdges(edges, svg, { opacity: '0.8' });
-      }
-
-      if (window.EC_PanZoom) window.EC_PanZoom.reinit();
+      renderPlanBuildings(psResult.sceneGraph);
     }
 
-    // ── onComplete ────────────────────────────────────────────────────────
-    const zones = t6Zones;
+    // ── Summary ───────────────────────────────────────────────────────────
+    const zones = patternInstancesToZones(psResult.sceneGraph, t1);
     window._lastPipelineZones = zones;
     window._lastSeed   = getCurrentSeed();
     window._lastParams = params;
 
-    // Summarise
-    let total_units=0, affordable=0, green_ac=0;
+    let total_units = 0, affordable = 0, green_ac = 0;
+    for (const b of (psResult.sceneGraph.buildings || [])) {
+      total_units += b.units || 0;
+      affordable  += Math.round((b.units || 0) * 0.96);
+    }
     for (const z of zones) {
-      if (z.units && z.use.startsWith('RESIDENTIAL') && !z.district?.includes('COURTYARD')) {
-        total_units += z.units.unit_count || 0;
-        affordable  += z.units.affordable_units || 0;
-      }
       if (z.use.startsWith('GREEN')) green_ac += z.area_ac;
     }
     document.getElementById('res-units').textContent = total_units.toLocaleString();
@@ -6036,7 +5994,8 @@ async function triggerPipeline() {
     document.getElementById('res-green').textContent = (green_ac/73.4*100).toFixed(1)+'%';
     const patEl = document.getElementById('res-patterns');
     if (patEl) patEl.textContent =
-      `${psResult.sceneGraph.instances.length} inst / ${zones.length} zones`;
+      `${psResult.sceneGraph.instances.length} inst · ${psResult.sceneGraph.buildings.length} bldgs`;
+
 
     if (progSection) progSection.style.display = 'none';
     if (statusText) statusText.textContent = '✓ Complete';
@@ -7019,9 +6978,11 @@ window.EC_PatternSolver = (() => {
   //          via force relaxation. This is the recursive refinement.
   function solve(parcels, proj, MAP, derivedG, opts = {}) {
     const N_SCALES   = Object.keys(S).length;   // 5 intro passes
-    const N_RECURSE  = opts.recurse || 3;        // recursive refinement passes
+    const N_RECURSE  = opts.recurse || 8;        // max recursive refinement passes
     const CLUSTER_K  = opts.cluster_k || 40;
+    const MAX_MS     = opts.max_ms || 10000;     // temporal saturation: 10s wall limit
     const log = [];
+    const t0 = Date.now();
 
     _sg = { instances: [], buildingPoints: [], buildings: [], zones: [], pass: 0, snapshots: [] };
 
@@ -7031,12 +6992,39 @@ window.EC_PatternSolver = (() => {
       .map(p => p.rings[0].map(pt => proj(pt[0] ?? pt.lon, pt[1] ?? pt.lat)))
       .filter(poly => poly.length >= 3);
 
+    // Seed sg.zones from EDA parcels so pattern detect() fns that iterate
+    // sg.zones (P36 Degrees of Publicness, P60 Accessible Green, etc.) have
+    // something to work with before any building-scale instances exist.
+    _sg.zones = (parcels || [])
+      .filter(p => p.is_eda && p._bbox)
+      .map((p, i) => ({
+        id: `eda_${i}`,
+        centroid: p.centroid
+          ? { x: proj(p.centroid.lon, p.centroid.lat)[0], y: proj(p.centroid.lon, p.centroid.lat)[1] }
+          : (() => {
+              const [x, y] = proj(
+                p.rings[0].reduce((s, pt) => s + (pt[0] ?? pt.lon), 0) / p.rings[0].length,
+                p.rings[0].reduce((s, pt) => s + (pt[1] ?? pt.lat), 0) / p.rings[0].length
+              );
+              return { x, y };
+            })(),
+        spec: p.spec,
+        area_ac: p.area_ac,
+      }));
+
     const patternOrder = Object.values(PATTERNS).sort((a,b) => a.priority - b.priority);
 
     const totalPasses = N_SCALES + N_RECURSE;
+    let staleCount = 0;  // spatial saturation: consecutive passes with 0 new instances
 
     for (let pass = 0; pass < totalPasses; pass++) {
-      _sg.pass = pass;
+      // ── Temporal saturation ───────────────────────────────────────────────
+      const elapsed = Date.now() - t0;
+      if (elapsed > MAX_MS) {
+        log.push(`Temporal saturation at pass ${pass} (${elapsed}ms > ${MAX_MS}ms)`);
+        break;
+      }
+
 
       // Intro phase: open one scale per pass (1→2→3→4→5)
       // Recurse phase: all scales open, re-derive from geometry
@@ -7087,6 +7075,17 @@ window.EC_PatternSolver = (() => {
       }
 
       log.push(`  +${newInsts} new, ${mutated} mutated (total: ${_sg.instances.length})`);
+
+      // ── Spatial saturation ────────────────────────────────────────────────
+      if (newInsts === 0 && pass >= N_SCALES) {
+        staleCount++;
+        if (staleCount >= 2) {
+          log.push(`Spatial saturation at pass ${pass} (2 consecutive stale passes)`);
+          break;
+        }
+      } else {
+        staleCount = 0;
+      }
 
       // Emit building points
       _sg.buildingPoints = _sg.instances.flatMap(emitBuildingPoints);
@@ -8133,15 +8132,143 @@ function ptsToSvgD(pts) {
   return `M${first.x},${first.y}` + rest.map(p => `L${p.x},${p.y}`).join('') + 'Z';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  PLAN RENDERER — Buildings primary, nodes + zones optional
+//
+//  Primary layer: sg.buildings — kNN-coalesced convex hulls, filled by use type
+//  Node layer:    sg.instances (points/centroids) — toggle via btn-nodes
+//  Zone layer:    patternInstancesToZones() polygons — toggle via btn-zones
+// ═══════════════════════════════════════════════════════════════════════════
+
+const BLDG_COLORS = {
+  MIXED_USE_5OVER1:    '#c84818',
+  RESIDENTIAL_CLT_OWN:'#e8b820',
+  RESIDENTIAL_MARKET:  '#c87818',
+  RETAIL:              '#e87038',
+  MARKET_HALL:         '#b84898',
+  CIVIC:               '#1868b8',
+  GREEN_ACTIVE:        '#22a838',
+  GREEN_PASSIVE:       '#0e7828',
+  COURTYARD:           '#48a860',
+};
+
+function renderPlanBuildings(sg) {
+  const svg = document.getElementById('site-plan');
+  if (!svg) return;
+
+  // Remove previous plan layer
+  svg.querySelectorAll('[data-plan-layer]').forEach(e => e.remove());
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('data-plan-layer', 'buildings');
+  g.setAttribute('pointer-events', 'none');
+
+  // ── Building hulls ──────────────────────────────────────────────────────
+  for (const bldg of (sg.buildings || [])) {
+    const hull = bldg.footprint;
+    const col  = BLDG_COLORS[bldg.type] || '#888';
+
+    if (hull && hull.length >= 3) {
+      const path = document.createElementNS(ns, 'path');
+      const d = 'M ' + hull.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ') + ' Z';
+      path.setAttribute('d', d);
+      path.setAttribute('fill', col);
+      path.setAttribute('fill-opacity', '0.72');
+      path.setAttribute('stroke', col);
+      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('stroke-opacity', '0.9');
+      path.setAttribute('stroke-linejoin', 'round');
+      g.appendChild(path);
+
+      // Floor count label for clusters with 5+ units
+      if (bldg.units >= 5) {
+        const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
+        const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
+        const lbl = document.createElementNS(ns, 'text');
+        lbl.setAttribute('x', cx);
+        lbl.setAttribute('y', cy + 3);
+        lbl.setAttribute('text-anchor', 'middle');
+        lbl.setAttribute('font-family', 'monospace');
+        lbl.setAttribute('font-size', '7');
+        lbl.setAttribute('fill', '#fff');
+        lbl.setAttribute('fill-opacity', '0.88');
+        lbl.textContent = bldg.units;
+        g.appendChild(lbl);
+      }
+    } else {
+      // Fallback: circle at centroid
+      const c = document.createElementNS(ns, 'circle');
+      c.setAttribute('cx', bldg.centroid.x);
+      c.setAttribute('cy', bldg.centroid.y);
+      c.setAttribute('r', Math.max(8, Math.sqrt((bldg.units || 1) * 12)));
+      c.setAttribute('fill', col);
+      c.setAttribute('fill-opacity', '0.65');
+      c.setAttribute('stroke', col);
+      c.setAttribute('stroke-width', '1.2');
+      g.appendChild(c);
+    }
+  }
+
+  // ── Building points (individual parcels) ────────────────────────────────
+  for (const bp of (sg.buildingPoints || [])) {
+    const col = BLDG_COLORS[bp.type] || '#888';
+    const dot = document.createElementNS(ns, 'circle');
+    dot.setAttribute('cx', bp.x);
+    dot.setAttribute('cy', bp.y);
+    dot.setAttribute('r', 3);
+    dot.setAttribute('fill', col);
+    dot.setAttribute('fill-opacity', '0.5');
+    g.appendChild(dot);
+  }
+
+  svg.appendChild(g);
+  if (window.EC_PanZoom) window.EC_PanZoom.reinit();
+}
+
+// Node overlay (pattern instance centroids) ──────────────────────────────
+let _nodesOn = false;
+function toggleNodes(btn) {
+  _nodesOn = !_nodesOn;
+  btn.classList.toggle('on', _nodesOn);
+  const svg = document.getElementById('site-plan');
+  svg?.querySelector('[data-plan-layer="nodes"]')?.remove();
+  if (!_nodesOn) return;
+  const sg = window._lastPatternResult?.sceneGraph;
+  if (!sg || !svg) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('data-plan-layer', 'nodes');
+  g.setAttribute('pointer-events', 'none');
+  for (const inst of sg.instances) {
+    const pts = Array.isArray(inst.geom) ? inst.geom : (inst.geom ? [inst.geom] : []);
+    const flat = pts.flat ? pts.flat() : pts;
+    const xs = flat.map(p => p.x ?? 0), ys = flat.map(p => p.y ?? 0);
+    if (!xs.length) continue;
+    const cx = xs.reduce((a,b)=>a+b,0)/xs.length;
+    const cy = ys.reduce((a,b)=>a+b,0)/ys.length;
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', cx); c.setAttribute('cy', cy); c.setAttribute('r', 4);
+    c.setAttribute('fill', 'none'); c.setAttribute('stroke', '#e8b820');
+    c.setAttribute('stroke-width', '1'); c.setAttribute('stroke-opacity', '0.7');
+    g.appendChild(c);
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', cx+5); t.setAttribute('y', cy+3);
+    t.setAttribute('font-family', 'monospace'); t.setAttribute('font-size', '5.5');
+    t.setAttribute('fill', '#e8b820'); t.setAttribute('fill-opacity', '0.8');
+    t.textContent = `P${inst.patternId}`;
+    g.appendChild(t);
+  }
+  svg.appendChild(g);
+}
+
+// Zone overlay (pattern polygon footprints) ──────────────────────────────
 let _patternOverlayOn = false;
 function togglePatternOverlay(btn) {
   _patternOverlayOn = !_patternOverlayOn;
   btn.classList.toggle('on', _patternOverlayOn);
-  const existing = document.getElementById('pattern-overlay');
-  if (!_patternOverlayOn) {
-    if (existing) existing.remove();
-    return;
-  }
+  document.getElementById('site-plan')?.querySelector('#pattern-overlay')?.remove();
+  if (!_patternOverlayOn) return;
   const sg = window._lastPatternResult?.sceneGraph;
   if (sg) renderPatternOverlay2D(sg);
 }
