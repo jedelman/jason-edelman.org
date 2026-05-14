@@ -1097,10 +1097,15 @@ self.onmessage = function(e) {
         opts,
         partial: !saturated,
       };
-      // Write crash-safe checkpoint — overwrites previous partial
-      try { localStorage.setItem('ec-solver-result', JSON.stringify(payload)); } catch(_) {}
-      // Post partial result so UI can show buildings as they accumulate
-      self.postMessage({ type: 'checkpoint', pass, buildings: buildings.length, hotNodes: hotNodes.length });
+      // Write crash-safe checkpoint — main thread does the actual localStorage write
+      // (workers have no localStorage access)
+      self.postMessage({ type: 'checkpoint', pass, buildings: buildings.length, hotNodes: hotNodes.length, payload: {
+        buildings, hotNodes,
+        fieldLines: lines.map(l => ({ pts: l.pts, seedPressure: l.seedPressure })),
+        log: log.slice(-20),  // last 20 log lines only — keep message small
+        saturatedAt: saturated ? pass + 1 : null,
+        ts: Date.now(), opts, partial: !saturated,
+      }});
     } catch(_) {}
   }
 
@@ -1129,10 +1134,6 @@ self.onmessage = function(e) {
     opts,
   };
 
-  // Write to localStorage BEFORE posting — crash-safe
-  try {
-    self.localStorage?.setItem('ec-solver-result', JSON.stringify(payload));
-  } catch(_) {}
-  // Workers don't have localStorage — we post to main thread which writes it
+  // Workers don't have localStorage — main thread writes it on receipt
   self.postMessage({ type: 'result', payload });
 };

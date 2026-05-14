@@ -6216,17 +6216,18 @@ async function triggerPipeline() {
       } else if (type === 'checkpoint') {
         if (btn) btn.textContent = `⟳ ${pass + 1}p · ${buildings}b`;
         mapLog(`pass ${pass + 1} → ${buildings} bldgs · ${hotNodes} nodes`, 'ok');
+        // Main thread owns localStorage — write checkpoint here
+        if (e.data.payload) {
+          try { localStorage.setItem('ec-solver-result', JSON.stringify(e.data.payload)); } catch(_) {}
+        }
+        // Render partial result
         try {
           const raw = localStorage.getItem('ec-solver-result');
           if (raw) {
             const p = JSON.parse(raw);
             if (p.partial && p.buildings?.length) {
-              const partial = {
-                buildings: p.buildings, hotNodes: p.hotNodes || [],
-                fieldLines: p.fieldLines || [],
-                sceneGraph: { instances: p.hotNodes||[], buildings: p.buildings, buildingPoints: p.hotNodes||[] },
-              };
-              renderPlanBuildings(partial.sceneGraph);
+              const sg = { instances: p.hotNodes||[], buildings: p.buildings, buildingPoints: p.hotNodes||[] };
+              renderPlanBuildings(sg);
             }
           }
         } catch(_) {}
