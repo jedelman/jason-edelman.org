@@ -436,7 +436,137 @@ details[open] summary::before { content: '▼  '; }
 }
 
 /* ── TWO-COLUMN PLAN TOOL ── */
-.plan-tool {
+/* ── FULL-SCREEN MAP TOOL ── */
+.map-tool-fullscreen {
+  display: flex;
+  flex-direction: column;
+  margin: 0 calc(-1 * var(--content-pad, 1.5rem));  /* bleed to viewport edges */
+  gap: 0;
+}
+
+.map-fullscreen-wrap {
+  position: relative;
+  width: 100%;
+  height: 80vh;
+  min-height: 480px;
+  max-height: 900px;
+  background: #040402;
+  overflow: hidden;
+}
+@media (max-width: 600px) {
+  .map-fullscreen-wrap { height: 72vh; min-height: 360px; }
+}
+
+#site-plan {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+#site-plan:active { cursor: grabbing; }
+
+/* Floating bars */
+.map-topbar {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.5rem 0.7rem; gap: 0.5rem;
+  background: linear-gradient(to bottom, rgba(4,4,2,0.92) 0%, transparent 100%);
+  z-index: 10; pointer-events: none;
+}
+.map-topbar > * { pointer-events: auto; }
+.map-topbar-left { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+.map-topbar-right { display: flex; align-items: center; gap: 0.4rem; flex-shrink: 0; }
+
+.map-title-chip {
+  font-family: var(--font-mono); font-size: 0.58rem; color: var(--accent);
+  letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+}
+.map-status {
+  font-family: var(--font-mono); font-size: 0.58rem; color: var(--muted);
+  letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.map-bottombar {
+  position: absolute; bottom: 2.8rem; left: 0.7rem;
+  display: flex; flex-wrap: wrap; gap: 0.3rem;
+  z-index: 10;
+}
+
+.map-btn {
+  border: none; padding: 0.32rem 0.7rem; font-size: 0.62rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer;
+  border-radius: 3px; font-family: var(--font-mono); white-space: nowrap;
+  transition: background 0.15s;
+}
+.map-btn-primary {
+  background: var(--accent); color: #0b0f08;
+  font-size: 0.65rem; padding: 0.35rem 1rem;
+}
+.map-btn-primary:hover { background: #e8a030; }
+.map-btn-secondary {
+  background: rgba(10,14,8,0.82); color: var(--muted);
+  border: 1px solid var(--border);
+}
+.map-btn-secondary:hover { color: var(--text); border-color: var(--muted); }
+
+/* Results chip panel */
+.map-results-panel {
+  position: absolute; bottom: 2.8rem; right: 0.7rem;
+  background: rgba(10,14,8,0.88); border: 1px solid var(--border);
+  padding: 0.5rem 0.7rem; z-index: 10; min-width: 120px;
+}
+.res-row { display: flex; justify-content: space-between; gap: 1rem;
+  font-family: var(--font-mono); font-size: 0.6rem; line-height: 1.9; }
+.res-k { color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.res-v { color: var(--accent); }
+
+/* Export strip */
+.map-export-panel {
+  position: absolute; bottom: 0.5rem; left: 0.7rem;
+  display: flex; gap: 0.3rem; z-index: 10;
+}
+
+/* Solver settings */
+.map-settings-panel {
+  position: absolute; top: 3.2rem; right: 0.7rem;
+  background: rgba(10,14,8,0.92); border: 1px solid var(--border);
+  z-index: 10; min-width: 220px;
+}
+.map-settings-title {
+  font-family: var(--font-mono); font-size: 0.6rem; color: var(--muted);
+  letter-spacing: 0.1em; text-transform: uppercase; padding: 0.4rem 0.7rem;
+  cursor: pointer; list-style: none; user-select: none;
+}
+.map-settings-title::-webkit-details-marker { display: none; }
+.map-settings-title::marker { display: none; }
+.map-settings-panel[open] .map-settings-title { color: var(--text); border-bottom: 1px solid var(--border); }
+.map-settings-body { padding: 0.5rem 0.7rem; display: flex; flex-direction: column; gap: 0.4rem; }
+
+/* Analysis panels — scrollable row below map */
+.map-analysis-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0;
+  border-top: 1px solid var(--border);
+  max-height: 200px; overflow-y: auto;
+}
+.analysis-panel {
+  padding: 0.6rem 0.8rem;
+  border-right: 1px solid var(--border);
+  font-family: var(--font-mono);
+}
+.analysis-panel:last-child { border-right: none; }
+.analysis-title {
+  font-size: 0.58rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 0.4rem;
+}
+.analysis-content { font-size: 0.6rem; color: var(--muted); }
+
+
+/* old plan-tool — kept for reference */
+.plan-tool-legacy {
   display: grid;
   grid-template-columns: 280px 1fr;
   gap: 0;
@@ -673,160 +803,117 @@ details[open] summary::before { content: '▼  '; }
     </p>
   </div>
 
-  <!-- TWO-COLUMN PLAN TOOL -->
-  <div class="plan-tool">
+  <!-- FULL-SCREEN MAP TOOL -->
+  <div class="map-tool-fullscreen" id="map-tool">
 
-    <!-- LEFT: CONTROLS -->
-    <div class="ctrl-col">
+    <!-- Map canvas — fills the section -->
+    <div class="map-fullscreen-wrap" id="map-fullscreen-wrap">
+      <svg id="site-plan" viewBox="0 0 4200 3700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
 
-      <!-- Header -->
-      <div class="ctrl-section" style="padding:0.5rem 0.65rem 0.4rem;">
-        <div style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);">Pattern solver</div>
-        <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--muted);margin-top:0.15rem;">Alexander pattern language → site geometry</div>
-      </div>
-
-      <!-- Pattern solver params -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-title">Solver passes</div>
-        <div class="param-row">
-          <label class="param-key">Recurse passes</label>
-          <div class="param-control">
-            <input type="range" id="p-rounds" min="3" max="12" step="1" value="5"
-              oninput="document.getElementById('p-rounds-val').textContent=this.value"
-              onchange="schedulePipelineRegen()">
-            <span class="param-val" id="p-rounds-val">5</span>
-          </div>
+      <!-- Floating toolbar — top bar -->
+      <div class="map-topbar" id="map-topbar">
+        <div class="map-topbar-left">
+          <span class="map-title-chip">Eastside Commons · 73ac · Norfolk VA</span>
+          <span class="map-status" id="map-status">Run solver to generate plan</span>
         </div>
-        <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--muted);padding:0.3rem 0 0.1rem;line-height:1.6;">
-          More passes = more pattern interactions, slower.
-          5 passes (~2s) is a good default.
+        <div class="map-topbar-right">
+          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.reset()">⊡ Reset</button>
+          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('block')">⊟ Block</button>
+          <button class="map-btn map-btn-secondary" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('parcel')">⊞ Parcel</button>
+          <button class="map-btn map-btn-primary" id="run-btn" onclick="triggerPipeline()">▶ SOLVE</button>
         </div>
       </div>
 
-      <!-- Status / progress -->
-      <div class="ctrl-section" id="ea-progress-section" style="display:none;">
-        <div class="ctrl-section-title">Running…</div>
-        <div class="ea-status" id="pipeline-status-text">Initializing…</div>
-      </div>
-
-      <!-- Results -->
-      <div class="ctrl-section" id="pipeline-results">
-        <div class="ctrl-section-title">Output</div>
-        <div class="result-row"><span class="result-key">Units placed</span><span class="result-val" id="res-units">—</span></div>
-        <div class="result-row"><span class="result-key">Affordable</span><span class="result-val" id="res-affordable">—</span></div>
-        <div class="result-row"><span class="result-key">Green cover</span><span class="result-val" id="res-green">—</span></div>
-        <div class="result-row"><span class="result-key">Patterns</span><span class="result-val" id="res-patterns" style="font-size:0.7rem;">—</span></div>
-      </div>
-
-
-      <!-- ANALYSIS VIEWS -->
-      <div class="ctrl-section" style="flex:1;display:flex;flex-direction:column;min-height:0;padding:0;">
-        <div class="analysis-tabs">
-          <button class="analysis-tab active" onclick="switchAnalysis('people', this)">People</button>
-          <button class="analysis-tab" onclick="switchAnalysis('parcels', this)">Parcels</button>
-          <button class="analysis-tab" onclick="switchAnalysis('access', this)">Access</button>
-          <button class="analysis-tab" onclick="switchAnalysis('save', this)">Save</button>
-        </div>
-        <div id="av-people" class="analysis-view active">
-          <div class="av-header">Who lives here?</div>
-          <div id="av-people-content">Run the pipeline to see affordability analysis.</div>
-        </div>
-        <div id="av-parcels" class="analysis-view">
-          <div class="av-header">Developer parcels</div>
-          <div id="av-parcels-content">Run the pipeline to see parcel breakdown.</div>
-        </div>
-        <div id="av-access" class="analysis-view">
-          <div class="av-header">Transit &amp; walkability</div>
-          <div id="av-access-content">Run the pipeline to see access analysis.</div>
-        </div>
-        <div id="av-save" class="analysis-view">
-          <div class="av-header">Save this layout</div>
-          <p style="margin-bottom:0.5rem;line-height:1.6;">
-            Save the current EA result to share or restore exactly.
-            The layout captures all slider positions, the random seed, and every zone assignment.
-          </p>
-          <!-- Canonical badge -->
-          <div id="canonical-badge" style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;padding:0.5rem 0.75rem;background:rgba(72,136,168,0.12);border:1px solid var(--accent);border-radius:2px;">
-            <span style="color:var(--accent);font-size:0.65rem;letter-spacing:0.1em;">★ CANONICAL PLAN</span>
-            <span style="color:var(--muted);font-size:0.6rem;line-height:1.4;">The official Eastside Commons proposal. Seed EC202600.</span>
-          </div>
-          <div class="save-btn-row">
-            <button class="tool-btn" onclick="window.EC_Save?.saveToHash()" title="Set URL hash — copy address bar to share">⊞ Copy link</button>
-            <button class="tool-btn" onclick="window.EC_Save?.saveToFile()" title="Download as JSON">↓ Save JSON</button>
-            <button class="tool-btn" onclick="window.EC_Save?.loadFromFile()" title="Restore from saved JSON">↑ Load JSON</button>
-          </div>
-          <div class="save-btn-row" style="margin-top:0.4rem;">
-            <button class="tool-btn" onclick="newSeed()" title="Generate a new random seed and re-run">⟳ New seed</button>
-            <button class="tool-btn" onclick="loadCanonical()" title="Reset to the canonical plan (seed EC202600)">★ Load canonical</button>
-          </div>
-          <hr class="av-divider">
-          <div class="av-header" style="margin-top:0.4rem;">Current seed</div>
-          <div id="av-seed-display" style="color:var(--accent);font-size:0.65rem;letter-spacing:0.05em;">—</div>
-          <div style="margin-top:0.4rem;line-height:1.6;">
-            Share this seed + slider positions to regenerate the same layout.
-            The EA is fully deterministic from the seed.
-          </div>
-        </div>
-      </div>
-
-      <!-- Legend -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-title">Use legend</div>
-        <div id="legend-chips"></div>
-      </div>
-
-      <!-- Edge legend -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-title">Edge types</div>
-        <div id="edge-legend-chips"></div>
-      </div>
-
-      <!-- Downloads + tools at bottom -->
-      <div class="ctrl-section" style="margin-top:auto;">
-        <div class="ctrl-section-title">Export</div>
-        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
-          <button class="tool-btn" onclick="if(window.EC_Render)window.EC_Render.downloadPNG()">↓ PNG</button>
-          <button class="tool-btn" onclick="if(window.EC_Render)window.EC_Render.downloadGeoJSON()">↓ GeoJSON</button>
-          <button class="tool-btn" id="run-pipeline-btn" onclick="triggerPipeline()" style="margin-left:auto;">↺ Re-run</button>
-        </div>
-      </div>
-
-    </div><!-- /ctrl-col -->
-
-    <!-- RIGHT: MAP -->
-    <div class="map-col">
-
-      <!-- Toolbar -->
-      <div class="map-toolbar">
-        <button class="tool-btn active" id="btn-select" onclick="setTool('select')">↖ Select</button>
-        <button class="tool-btn" id="btn-section" onclick="setTool('section')">⊸ Section</button>
-        <button class="tool-btn" onclick="if(window.EC_PanZoom)window.EC_PanZoom.reset()" title="Reset zoom (or double-click map)">⊡ Reset view</button>
-        <button class="tool-btn" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('block')" title="Zoom to block scale">⊟ Block</button>
-        <button class="tool-btn" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('parcel')" title="Zoom to parcel scale">⊞ Parcel</button>
-        <a class="tool-btn" href="view-3d.html" title="3D view — opens in new tab" target="_blank" style="text-decoration:none">⬡ 3D View ↗</a>
-        <span style="flex:1"></span>
+      <!-- Floating overlay toggles — bottom bar -->
+      <div class="map-bottombar" id="map-bottombar">
         <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
         <button class="overlay-btn on" data-overlay="streets" onclick="toggleOverlay(this)">Streets</button>
         <button class="overlay-btn on" data-overlay="edges" onclick="toggleEdges(this)">Edges</button>
         <button class="overlay-btn" id="btn-patterns" onclick="togglePatternOverlay(this)">Zones</button>
         <button class="overlay-btn" id="btn-nodes" onclick="toggleNodes(this)">Nodes</button>
+        <button class="overlay-btn" id="btn-fields" onclick="toggleFieldLines(this)">Fields</button>
+        <a class="overlay-btn" href="view-3d.html" target="_blank" style="text-decoration:none">⬡ 3D ↗</a>
       </div>
 
-      <!-- SVG map + 3D canvas (toggled) -->
-      <div class="map-wrap" id="map-wrap-2d" style="position:relative;">
-        <!-- Error overlay — shown on pipeline failure, visible without console -->
-        <div id="map-error-overlay" style="display:none;position:absolute;inset:0;z-index:100;
-          background:rgba(4,4,2,0.92);color:#e8784a;font-family:var(--font-mono);font-size:0.7rem;
-          padding:1.5rem;line-height:1.8;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"></div>
-        <svg id="site-plan" viewBox="0 0 4200 3700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
-          <text x="480" y="380" font-family="monospace" font-size="14" fill="#2a2820" text-anchor="middle">Loading GIS data…</text>
-        </svg>
+      <!-- Results panel — bottom right -->
+      <div class="map-results-panel" id="map-results-panel">
+        <div class="res-row"><span class="res-k">Units</span><span class="res-v" id="res-units">—</span></div>
+        <div class="res-row"><span class="res-k">Affordable</span><span class="res-v" id="res-affordable">—</span></div>
+        <div class="res-row"><span class="res-k">Green</span><span class="res-v" id="res-green">—</span></div>
+        <div class="res-row"><span class="res-k">Patterns</span><span class="res-v" id="res-patterns">—</span></div>
       </div>
 
+      <!-- Export buttons — bottom left -->
+      <div class="map-export-panel">
+        <button class="map-btn map-btn-secondary" onclick="exportPNG()">↓ PNG</button>
+        <button class="map-btn map-btn-secondary" onclick="exportGeoJSON()">↓ GeoJSON</button>
+        <button class="map-btn map-btn-secondary" onclick="window.open('view-3d.html','_blank')">⬡ 3D View</button>
+      </div>
 
-    </div><!-- /map-col -->
+      <!-- Solver settings panel — collapsible -->
+      <details class="map-settings-panel" id="solver-settings">
+        <summary class="map-settings-title">⚙ Solver</summary>
+        <div class="map-settings-body">
+          <div class="param-row">
+            <label class="param-key">Passes</label>
+            <input type="range" id="p-rounds" min="4" max="24" step="2" value="16"
+              oninput="document.getElementById('p-rounds-val').textContent=this.value">
+            <span class="param-val" id="p-rounds-val">16</span>
+          </div>
+          <div class="param-row">
+            <label class="param-key">ε conv</label>
+            <input type="range" id="p-eps" min="0.001" max="0.05" step="0.001" value="0.008"
+              oninput="document.getElementById('p-eps-val').textContent=parseFloat(this.value).toFixed(3)">
+            <span class="param-val" id="p-eps-val">0.008</span>
+          </div>
+          <div class="param-row">
+            <label class="param-key">Res ft</label>
+            <input type="range" id="p-res" min="5" max="30" step="5" value="10"
+              oninput="document.getElementById('p-res-val').textContent=this.value+'ft'">
+            <span class="param-val" id="p-res-val">10ft</span>
+          </div>
+          <div class="param-row">
+            <label class="param-key">Thresh</label>
+            <input type="range" id="p-thresh" min="0.05" max="0.5" step="0.05" value="0.2"
+              oninput="document.getElementById('p-thresh-val').textContent=parseFloat(this.value).toFixed(2)">
+            <span class="param-val" id="p-thresh-val">0.20</span>
+          </div>
+        </div>
+      </details>
 
-  </div><!-- /plan-tool -->
+      <!-- Error overlay -->
+      <div id="map-error-overlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);color:#e06060;font-family:monospace;font-size:0.7rem;padding:2rem;white-space:pre-wrap;z-index:200;pointer-events:none;"></div>
+    </div>
+
+    <!-- Analysis panels — scrollable, below map on mobile / side panel on desktop -->
+    <div class="map-analysis-panels" id="analysis-panels">
+
+      <div class="analysis-panel">
+        <div class="analysis-title">Legend</div>
+        <div id="legend-chips" class="legend-chips"></div>
+        <div style="margin-top:0.6rem;font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);">Edge types</div>
+        <div id="edge-legend-chips" class="legend-chips"></div>
+      </div>
+
+      <div class="analysis-panel">
+        <div class="analysis-title">Walkability</div>
+        <div id="walkability-view" class="analysis-content">Run solver</div>
+      </div>
+
+      <div class="analysis-panel">
+        <div class="analysis-title">Parcels</div>
+        <div id="parcels-view" class="analysis-content">Run solver</div>
+      </div>
+
+      <div class="analysis-panel">
+        <div class="analysis-title">Access</div>
+        <div id="access-view" class="analysis-content">Run solver</div>
+      </div>
+
+    </div>
+
+  </div><!-- /map-tool-fullscreen -->
+
 
   <!-- FINANCIALS REPORT — full width, below fold -->
   <div id="financials-report" style="margin-top:2rem;">
@@ -5913,19 +6000,22 @@ function schedulePipelineRegen(delayMs = 600) {
 
 async function triggerPipeline() {
   if (!_pipelineParcels) { alert('Constraint solver must run first.'); return; }
-  const btn = document.getElementById('run-pipeline-btn');
+  const btn = document.getElementById('run-btn');
   if (btn) { btn.disabled = true; btn.textContent = '⟳ Running…'; }
-  const statusText = document.getElementById('pipeline-status-text');
-  const progressBar = document.getElementById('ea-progress-bar');
-  const scoreHistory = document.getElementById('score-history');
-  const progSection = document.getElementById('ea-progress-section');
+  const statusText = document.getElementById('map-status');
+  const progressBar = null;  // removed
+  const scoreHistory = null;  // removed
+  const progSection = null;  // removed
   if (progSection) progSection.style.display = '';
   if (scoreHistory) scoreHistory.innerHTML = '';
   const errOverlay = document.getElementById('map-error-overlay');
   if (errOverlay) errOverlay.style.display = 'none';
 
   const params = {
-    ps_recurse: parseInt(document.getElementById('p-rounds')?.value || 5),
+    ps_recurse: parseInt(document.getElementById('p-rounds')?.value  || 16),
+    ps_eps:     parseFloat(document.getElementById('p-eps')?.value   || 0.008),
+    ps_res:     parseInt(document.getElementById('p-res')?.value     || 10),
+    ps_thresh:  parseFloat(document.getElementById('p-thresh')?.value|| 0.2),
     show_units: true, show_edges: true, show_labels: true, opacity: 0.55,
   };
 
@@ -5954,26 +6044,37 @@ async function triggerPipeline() {
       }
     }
 
-    // ── Pattern Solver ────────────────────────────────────────────────────
-    if (statusText) statusText.textContent = 'Pattern solver: running…';
-    if (!window.EC_PatternSolver) throw new Error('EC_PatternSolver not loaded');
+    // ── Field Solver (Gaussian pressure field → field lines → buildings) ─────
+    if (statusText) statusText.textContent = 'Field solver: running…';
+    if (!window.EC_FieldSolver) throw new Error('EC_FieldSolver not loaded');
 
-    const psResult = window.EC_PatternSolver.solve(
-      parcels, proj, MAP, window._derivedG,
-      { recurse: params.ps_recurse || 8, cluster_k: 40, max_ms: 10000 }
+    const psResult = window.EC_FieldSolver.solve(
+      parcels, proj, MAP, window._derivedG, {
+        passes:    params.ps_recurse || 16,
+        eps:       params.ps_eps     || 0.008,
+        cellSize:  params.ps_res     || 10,
+        threshold: params.ps_thresh  || 0.2,
+      }
     );
+    // Normalize shape for downstream consumers
+    psResult.sceneGraph = {
+      instances:      psResult.hotNodes   || [],
+      buildings:      psResult.buildings  || [],
+      buildingPoints: psResult.hotNodes   || [],
+    };
     window._patternSolverResult = psResult;
     window._lastPatternResult   = psResult;
-    console.group('[PatternSolver]');
-    psResult.log.forEach(l => console.log(l));
-    console.log('counts:', psResult.counts);
+    console.group('[FieldSolver]');
+    (psResult.log || []).forEach(l => console.log(l));
+    console.log('buildings:', psResult.buildings?.length, '| hotNodes:', psResult.hotNodes?.length);
     console.groupEnd();
 
     if (statusText) statusText.textContent =
-      `Pattern solver: ${psResult.sceneGraph.instances.length} instances`;
+      `${psResult.buildings?.length || 0} bldgs · ${psResult.hotNodes?.length || 0} nodes` +
+      (psResult.saturatedAt ? ` · ✓sat@${psResult.saturatedAt}` : '');
 
-    // ── Pattern → Plan render ─────────────────────────────────────────────
-    if (statusText) statusText.textContent = 'Rendering plan…';
+    // ── Render plan ───────────────────────────────────────────────────────
+    if (statusText) statusText.textContent = (statusText.textContent || '') + ' · rendering…';
     if (svg) {
       svg.querySelectorAll('[data-t7],[data-plan-layer]').forEach(e => e.remove());
       svg.querySelector('#pattern-overlay')?.remove();
@@ -5986,10 +6087,14 @@ async function triggerPipeline() {
     window._lastSeed   = getCurrentSeed();
     window._lastParams = params;
 
+    // Field solver buildings: {x,y,w,h,pts,domPid,avgStrong}
+    // Estimate units: 25ft lots × depth/125ft × 5 floors × 15 units/bldg
     let total_units = 0, affordable = 0, green_ac = 0;
-    for (const b of (psResult.sceneGraph.buildings || [])) {
-      total_units += b.units || 0;
-      affordable  += Math.round((b.units || 0) * 0.96);
+    for (const b of (psResult.buildings || [])) {
+      const lots = Math.max(1, Math.round(b.w / 25));
+      const units = lots * 15;
+      total_units += units;
+      affordable  += Math.round(units * 0.96);
     }
     for (const z of zones) {
       if (z.use.startsWith('GREEN')) green_ac += z.area_ac;
@@ -6005,7 +6110,7 @@ async function triggerPipeline() {
 
     if (progSection) progSection.style.display = 'none';
     if (statusText) statusText.textContent = '✓ Complete';
-    if (btn) { btn.disabled=false; btn.textContent='↺ Re-run'; }
+    if (btn) { btn.disabled=false; btn.textContent='▶ SOLVE'; }
 
     renderLegendChips();
     updateAnalysisViews();
@@ -6022,7 +6127,7 @@ async function triggerPipeline() {
     const msg = e?.message || String(e);
     statusText.textContent = '\u2717 Error: ' + msg;
     console.error(e);
-    btn.disabled = false; btn.textContent = '\u25b6 Run pipeline';
+    if (btn) { btn.disabled = false; btn.textContent = '▶ SOLVE'; }
     const overlay = document.getElementById('map-error-overlay');
     if (overlay) {
       overlay.textContent = '\u2717 Pipeline error\n\n' + msg + (e?.stack ? '\n\n' + e.stack : '');
@@ -8157,81 +8262,166 @@ const BLDG_COLORS = {
   COURTYARD:           '#48a860',
 };
 
+let _fieldLinesOn = false;
+function toggleFieldLines(btn) {
+  _fieldLinesOn = !_fieldLinesOn;
+  btn.classList.toggle('on', _fieldLinesOn);
+  const el = document.getElementById('layer-fieldlines');
+  if (el) el.style.display = _fieldLinesOn ? '' : 'none';
+}
+
 function renderPlanBuildings(sg) {
   const svg = document.getElementById('site-plan');
   if (!svg) return;
 
-  // Remove previous plan layer
   svg.querySelectorAll('[data-plan-layer]').forEach(e => e.remove());
 
   const ns = 'http://www.w3.org/2000/svg';
+
+  // ── EDA parcel outlines (always on, low priority) ──────────────────────
+  const gEda = document.createElementNS(ns, 'g');
+  gEda.setAttribute('data-plan-layer', 'eda');
+  gEda.setAttribute('pointer-events', 'none');
+  if (_pipelineParcels && _pipelineProj) {
+    for (const p of _pipelineParcels.filter(q => q.is_eda && q.rings?.[0])) {
+      const pts = p.rings[0].map(([lon,lat]) => { const [x,y] = _pipelineProj(lon,lat); return `${x.toFixed(1)},${y.toFixed(1)}`; });
+      const poly = document.createElementNS(ns, 'polygon');
+      poly.setAttribute('points', pts.join(' '));
+      poly.setAttribute('fill', 'none');
+      poly.setAttribute('stroke', '#2a3828');
+      poly.setAttribute('stroke-width', '2');
+      poly.setAttribute('class', 'eda-outline');
+      gEda.appendChild(poly);
+    }
+  }
+  svg.appendChild(gEda);
+
+  // ── Field line traces ──────────────────────────────────────────────────
+  const _psResult = window._lastPatternResult;
+  const gLines = document.createElementNS(ns, 'g');
+  gLines.setAttribute('data-plan-layer', 'fieldlines');
+  gLines.setAttribute('id', 'layer-fieldlines');
+  gLines.setAttribute('pointer-events', 'none');
+  gLines.style.display = _fieldLinesOn ? '' : 'none';
+  for (const line of (_psResult?.fieldLines || [])) {
+    if (!line.pts?.length) continue;
+    const pl = document.createElementNS(ns, 'polyline');
+    pl.setAttribute('points', line.pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' '));
+    pl.setAttribute('fill', 'none');
+    pl.setAttribute('stroke', '#3a5030');
+    pl.setAttribute('stroke-width', '1.5');
+    pl.setAttribute('stroke-opacity', '0.45');
+    pl.setAttribute('stroke-linecap', 'round');
+    gLines.appendChild(pl);
+  }
+  svg.appendChild(gLines);
+
+  // ── Buildings — field solver shape: {x,y,w,h,domPid,avgStrong,pts} ────
   const g = document.createElementNS(ns, 'g');
   g.setAttribute('data-plan-layer', 'buildings');
   g.setAttribute('pointer-events', 'none');
 
-  // ── Building hulls ──────────────────────────────────────────────────────
+  // Pattern ID → USES color mapping (field solver uses domPid)
+  const PID_COLOR = {
+    29:'#c85018', 30:'#1868b8', 31:'#2878a0', 36:'#8050c0', 53:'#c88020',
+    37:'#c87818', 60:'#22a838', 67:'#22a838', 71:'#0e7828', 87:'#c84818',
+    88:'#6888a8', 46:'#b84898', 95:'#c84818', 109:'#e8b820', 116:'#c87818',
+    104:'#a03020', 105:'#806018', 106:'#486050', 115:'#48a860',
+    122:'#c84818', 127:'#e8b820', 119:'#6888a8', 121:'#2878a0',
+    100:'#2070a0', 61:'#22a838', 51:'#0e7828', 160:'#c84818',
+    123:'#2070a0', 14:'#8050c0', 8:'#8050c0', 107:'#c87818',
+    108:'#a03020', 110:'#c84818', 128:'#806018',
+  };
+
   for (const bldg of (sg.buildings || [])) {
-    const hull = bldg.footprint;
-    const col  = BLDG_COLORS[bldg.type] || '#888';
+    // Field solver buildings: axis-aligned rects {x,y,w,h}
+    const col = PID_COLOR[bldg.domPid] || '#c84818';
+    const lots = Math.max(1, Math.round(bldg.w / 25));
+    const depth = bldg.h;
 
-    if (hull && hull.length >= 3) {
-      const path = document.createElementNS(ns, 'path');
-      const d = 'M ' + hull.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' L ') + ' Z';
-      path.setAttribute('d', d);
-      path.setAttribute('fill', col);
-      path.setAttribute('fill-opacity', '0.72');
-      path.setAttribute('stroke', col);
-      path.setAttribute('stroke-width', '1.5');
-      path.setAttribute('stroke-opacity', '0.9');
-      path.setAttribute('stroke-linejoin', 'round');
-      g.appendChild(path);
+    // Draw as filled rect with 5-over-1 parcel subdivisions
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', bldg.x.toFixed(1));
+    rect.setAttribute('y', bldg.y.toFixed(1));
+    rect.setAttribute('width', bldg.w.toFixed(1));
+    rect.setAttribute('height', bldg.h.toFixed(1));
+    rect.setAttribute('fill', col);
+    rect.setAttribute('fill-opacity', '0.78');
+    rect.setAttribute('stroke', col);
+    rect.setAttribute('stroke-width', '1.5');
+    rect.setAttribute('stroke-opacity', '0.9');
+    rect.setAttribute('data-lod', 'block');
+    g.appendChild(rect);
 
-      // Floor count label for clusters with 5+ units
-      if (bldg.units >= 5) {
-        const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
-        const cy = hull.reduce((s, p) => s + p.y, 0) / hull.length;
-        const lbl = document.createElementNS(ns, 'text');
-        lbl.setAttribute('x', cx);
-        lbl.setAttribute('y', cy + 3);
-        lbl.setAttribute('text-anchor', 'middle');
-        lbl.setAttribute('font-family', 'monospace');
-        lbl.setAttribute('font-size', '7');
-        lbl.setAttribute('fill', '#fff');
-        lbl.setAttribute('fill-opacity', '0.88');
-        lbl.textContent = bldg.units;
-        g.appendChild(lbl);
+    // Parcel subdivision lines — show at parcel LOD
+    if (lots > 1) {
+      const gLots = document.createElementNS(ns, 'g');
+      gLots.setAttribute('data-lod', 'parcel');
+      for (let i = 1; i < lots; i++) {
+        const lx = bldg.x + i * 25;
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', lx.toFixed(1)); line.setAttribute('y1', bldg.y.toFixed(1));
+        line.setAttribute('x2', lx.toFixed(1)); line.setAttribute('y2', (bldg.y + bldg.h).toFixed(1));
+        line.setAttribute('stroke', '#000');
+        line.setAttribute('stroke-width', '0.5');
+        line.setAttribute('stroke-opacity', '0.4');
+        gLots.appendChild(line);
       }
-    } else {
-      // Fallback: circle at centroid
-      const c = document.createElementNS(ns, 'circle');
-      c.setAttribute('cx', bldg.centroid.x);
-      c.setAttribute('cy', bldg.centroid.y);
-      c.setAttribute('r', Math.max(8, Math.sqrt((bldg.units || 1) * 12)));
-      c.setAttribute('fill', col);
-      c.setAttribute('fill-opacity', '0.65');
-      c.setAttribute('stroke', col);
-      c.setAttribute('stroke-width', '1.2');
-      g.appendChild(c);
+      g.appendChild(gLots);
+    }
+
+    // Courtyard void — inset 20% if building deep enough
+    if (bldg.h > 60 && bldg.w > 50) {
+      const inX = bldg.x + bldg.w * 0.2;
+      const inY = bldg.y + bldg.h * 0.2;
+      const inW = bldg.w * 0.6;
+      const inH = bldg.h * 0.6;
+      const cy_rect = document.createElementNS(ns, 'rect');
+      cy_rect.setAttribute('x', inX.toFixed(1)); cy_rect.setAttribute('y', inY.toFixed(1));
+      cy_rect.setAttribute('width', inW.toFixed(1)); cy_rect.setAttribute('height', inH.toFixed(1));
+      cy_rect.setAttribute('fill', '#040402');
+      cy_rect.setAttribute('fill-opacity', '0.6');
+      cy_rect.setAttribute('data-lod', 'parcel');
+      g.appendChild(cy_rect);
+    }
+
+    // Unit count label
+    const units = lots * 15;
+    if (units >= 10) {
+      const lbl = document.createElementNS(ns, 'text');
+      lbl.setAttribute('x', (bldg.x + bldg.w/2).toFixed(1));
+      lbl.setAttribute('y', (bldg.y + bldg.h/2 + 5).toFixed(1));
+      lbl.setAttribute('text-anchor', 'middle');
+      lbl.setAttribute('font-family', 'monospace');
+      lbl.setAttribute('font-size', '9');
+      lbl.setAttribute('fill', '#fff');
+      lbl.setAttribute('fill-opacity', '0.82');
+      lbl.setAttribute('data-lod', 'block');
+      lbl.textContent = units;
+      g.appendChild(lbl);
     }
   }
 
-  // ── Building points (individual parcels) ────────────────────────────────
-  for (const bp of (sg.buildingPoints || [])) {
-    const col = BLDG_COLORS[bp.type] || '#888';
-    const dot = document.createElementNS(ns, 'circle');
-    dot.setAttribute('cx', bp.x);
-    dot.setAttribute('cy', bp.y);
-    dot.setAttribute('r', 3);
-    dot.setAttribute('fill', col);
-    dot.setAttribute('fill-opacity', '0.5');
-    g.appendChild(dot);
+  // ── Hot nodes ─────────────────────────────────────────────────────────
+  const gNodes = document.createElementNS(ns, 'g');
+  gNodes.setAttribute('data-plan-layer', 'hotnodes');
+  gNodes.setAttribute('pointer-events', 'none');
+  for (const n of (_psResult?.hotNodes || [])) {
+    const c = document.createElementNS(ns, 'circle');
+    c.setAttribute('cx', n.x.toFixed(1)); c.setAttribute('cy', n.y.toFixed(1));
+    c.setAttribute('r', (4 + n.nStrong * 1.5).toFixed(1));
+    c.setAttribute('fill', '#e8b820'); c.setAttribute('fill-opacity', '0.35');
+    c.setAttribute('stroke', '#e8b820'); c.setAttribute('stroke-width', '0.8');
+    c.setAttribute('data-lod', 'block');
+    gNodes.appendChild(c);
   }
+  g.appendChild(gNodes);
 
   svg.appendChild(g);
   if (window.EC_PanZoom) window.EC_PanZoom.reinit();
 }
 
-// Node overlay (pattern instance centroids) ──────────────────────────────
+// Node overlay toggle ─────────────────────────────────────────────────────
 let _nodesOn = false;
 function toggleNodes(btn) {
   _nodesOn = !_nodesOn;
@@ -8710,6 +8900,1026 @@ function renderPatternOverlay2D(sg) {
     const s = document.getElementById('site-plan');
     if (s) obs.observe(s, { childList: true });
   });
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EC_FieldSolver — Gaussian pressure-field solver (ported from patterns-3d.html)
+//  50+ Alexander patterns → pressure fields → field lines → buildings
+// ═══════════════════════════════════════════════════════════════════════════
+window.EC_FieldSolver = (function() {
+  const PATTERNS = {};
+
+  function defPattern(id, name, weight, senseFn) {
+    PATTERNS[id] = { id, name, weight, sense: senseFn,
+      color: PATTERN_COLORS[id] || '#888888' };
+  }
+
+  // ── FIELD PRIMITIVES ──────────────────────────────────────────────────────
+  // A Field is a flat Float32Array over the MAP grid.
+  // Coordinates: cell (cx, cy) → site (MAP.x0 + cx*cellSize, MAP.y0 + cy*cellSize)
+
+  function makeField(gw, gh) {
+    return new Float32Array(gw * gh);
+  }
+
+  // Add a gaussian blob of pressure at (sx,sy) with radius r and amplitude a
+  function paintGaussian(field, gw, gh, cellSize, MAP, sx, sy, r, a) {
+    const r2 = r * r;
+    const cx0 = Math.max(0, Math.floor((sx - r - MAP.x0) / cellSize));
+    const cx1 = Math.min(gw-1, Math.ceil((sx + r - MAP.x0) / cellSize));
+    const cy0 = Math.max(0, Math.floor((sy - r - MAP.y0) / cellSize));
+    const cy1 = Math.min(gh-1, Math.ceil((sy + r - MAP.y0) / cellSize));
+    for (let cy = cy0; cy <= cy1; cy++) {
+      for (let cx = cx0; cx <= cx1; cx++) {
+        const px = MAP.x0 + cx*cellSize, py = MAP.y0 + cy*cellSize;
+        const d2 = (px-sx)**2 + (py-sy)**2;
+        if (d2 < r2) field[cy*gw+cx] += a * Math.exp(-3*d2/r2);
+      }
+    }
+  }
+
+  // Add pressure along a line segment (sx0,sy0)→(sx1,sy1) with width w
+  function paintSegment(field, gw, gh, cellSize, MAP, sx0, sy0, sx1, sy1, w, a) {
+    const steps = Math.ceil(Math.hypot(sx1-sx0, sy1-sy0) / (cellSize*0.5));
+    for (let i = 0; i <= steps; i++) {
+      const t = i/steps;
+      paintGaussian(field, gw, gh, cellSize, MAP,
+        sx0+(sx1-sx0)*t, sy0+(sy1-sy0)*t, w, a/steps);
+    }
+  }
+
+  // Add pressure inside an ellipse
+  function paintEllipse(field, gw, gh, cellSize, MAP, ecx, ecy, erx, ery, a) {
+    const cx0 = Math.max(0, Math.floor((ecx-erx-MAP.x0)/cellSize));
+    const cx1 = Math.min(gw-1, Math.ceil((ecx+erx-MAP.x0)/cellSize));
+    const cy0 = Math.max(0, Math.floor((ecy-ery-MAP.y0)/cellSize));
+    const cy1 = Math.min(gh-1, Math.ceil((ecy+ery-MAP.y0)/cellSize));
+    for (let cy=cy0; cy<=cy1; cy++) {
+      for (let cx=cx0; cx<=cx1; cx++) {
+        const px=MAP.x0+cx*cellSize, py=MAP.y0+cy*cellSize;
+        const nx=(px-ecx)/erx, ny=(py-ecy)/ery;
+        const d2=nx*nx+ny*ny;
+        if(d2<1) field[cy*gw+cx] += a * (1-d2);
+      }
+    }
+  }
+
+  // Normalize a field to [0,1]
+  function normalizeField(field) {
+    let mx=0;
+    for (let i=0;i<field.length;i++) if(field[i]>mx) mx=field[i];
+    if (mx>0) for (let i=0;i<field.length;i++) field[i]/=mx;
+  }
+
+  // Combine fields into a weighted sum
+  function combineFields(fieldMap, gw, gh) {
+    const combined = new Float32Array(gw*gh);
+    for (const {field, weight} of Object.values(fieldMap)) {
+      for (let i=0;i<combined.length;i++) combined[i] += field[i]*weight;
+    }
+    return combined;
+  }
+
+  // ── EDA MASK ──────────────────────────────────────────────────────────────
+  let _edaMask = null;
+
+  function buildEdaMask(parcels, proj, gw, gh, cellSize, MAP) {
+    _edaMask = new Uint8Array(gw*gh);
+    // Build projected EDA polygons
+    const edaPolys = parcels
+      .filter(p=>p.is_eda && p.rings?.[0])
+      .map(p=>p.rings[0].map(([lon,lat])=>{const r=proj(lon,lat);return Array.isArray(r)?r:[r.x,r.y];}));
+    function pip(px, py, poly) {
+      let inside=false;
+      for (let i=0,j=poly.length-1;i<poly.length;j=i++) {
+        const [xi,yi]=poly[i],[xj,yj]=poly[j];
+        if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+      }
+      return inside;
+    }
+    for (let cy=0;cy<gh;cy++) {
+      for (let cx=0;cx<gw;cx++) {
+        const px=MAP.x0+cx*cellSize, py=MAP.y0+cy*cellSize;
+        if (edaPolys.some(poly=>pip(px,py,poly))) _edaMask[cy*gw+cx]=1;
+      }
+    }
+  }
+
+  function inEDA(cx, cy, gw, gh) {
+    if (!_edaMask) return true;
+    if (cx<0||cy<0||cx>=gw||cy>=gh) return false;
+    return _edaMask[cy*gw+cx]===1;
+  }
+
+  // ── PATTERN SENSE FUNCTIONS ───────────────────────────────────────────────
+  // Each pattern's sense(field, gw, gh, cellSize, MAP, site, pass) paints into field.
+  // site = { derived, fields (from previous pass), combined (from previous pass) }
+
+  defPattern(29, 'Density Rings', 1.0, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    // Spine axis — the primary organizing pressure (400ft wide influence)
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w/2,s.y, s.x+s.w/2,s.y+s.h, s.w*2, 1.2);
+    // Density rings at 330ft, 660ft, 1150ft from spine centre
+    const scx=s.x+s.w/2, scy=s.y+s.h/2;
+    for (const r of [330,660,1150]) {
+      for (let theta=0;theta<Math.PI*2;theta+=0.15) {
+        const px=scx+Math.cos(theta)*r, py=scy+Math.sin(theta)*r;
+        if(px>=MAP.x0&&px<=MAP.x1&&py>=MAP.y0&&py<=MAP.y1)
+          paintGaussian(field,gw,gh,cs,MAP,px,py,60,0.15);
+      }
+    }
+  });
+
+  defPattern(30, 'Activity Nodes', 1.2, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    // Strong pressure at two nodes: upper and lower spine thirds
+    const scx=s.x+s.w/2;
+    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.25, 230, 1.5);
+    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.75, 230, 1.5);
+    // Secondary nodes at main entries (~100ft radius)
+    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+100, (MAP.y0+MAP.y1)*0.5, 150, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, MAP.x1-100, (MAP.y0+MAP.y1)*0.5, 150, 0.8);
+  });
+
+  defPattern(31, 'Promenade', 1.1, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    // The promenade runs the full spine length — strong linear pressure
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w/2,s.y+30, s.x+s.w/2,s.y+s.h-30, 90, 1.4);
+  });
+
+  defPattern(36, 'Degrees of Publicness', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    // Gradient from spine (most public) outward — a pressure ridge
+    // Paint bands of decreasing pressure east and west of spine
+    const scx=s.x+s.w/2;
+    // Gradient 0–950ft east/west; sigma=400ft; band width=40ft
+    for (let dx=0; dx<950; dx+=cs) {
+      const a = Math.exp(-dx*dx/(400*400)) * 0.6;
+      paintSegment(field,gw,gh,cs,MAP, scx+dx,MAP.y0, scx+dx,MAP.y1, 40, a);
+      if(dx>0) paintSegment(field,gw,gh,cs,MAP, scx-dx,MAP.y0, scx-dx,MAP.y1, 40, a);
+    }
+  });
+
+  defPattern(53, 'Main Gateways', 1.0, (field,gw,gh,cs,MAP,site)=>{
+    // Gateways mark the entries into the commons — where people arrive from
+    // the city and cross the threshold. They need to be at the actual EDA
+    // entry points, not the map edges.
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    const ti=site.derived.TIDE;
+    // South: TIDE station — primary transit gateway
+    const southY=ti?ti.y:MAP.y1-100;
+    paintGaussian(field,gw,gh,cs,MAP, scx, southY, 220, 1.4);
+    const b=site.derived.BAND;
+    paintGaussian(field,gw,gh,cs,MAP, scx, b?b.y+b.h:MAP.y0+200, 210, 1.2);
+    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+200, (MAP.y0+MAP.y1)*0.5, 180, 0.95);
+    const rs=site.derived.RESEARCH;
+    paintGaussian(field,gw,gh,cs,MAP, rs?rs.x:MAP.x1-270, (MAP.y0+MAP.y1)*0.5, 180, 0.95);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+200,(MAP.y0+MAP.y1)*0.5, scx,(MAP.y0+MAP.y1)*0.5, 65, 0.55);
+  });
+
+  defPattern(60, 'Accessible Green', 0.9, (field,gw,gh,cs,MAP,site)=>{
+    // Green space accessible within 3-min walk of every dwelling.
+    // Primary: sponge park. Secondary: west housing greens. Tertiary: east research green.
+    const sg=site.derived.SPONGE; if(!sg) return;
+    paintEllipse(field,gw,gh,cs,MAP, sg.cx,sg.cy,sg.rx*1.3,sg.ry*1.3, 1.0);
+    const s=site.derived.SPINE;
+    // West housing green corridors
+    if(s){
+      paintEllipse(field,gw,gh,cs,MAP, s.x-200,(MAP.y0+MAP.y1)*0.35, 230,165, 0.65);
+      paintEllipse(field,gw,gh,cs,MAP, s.x-200,(MAP.y0+MAP.y1)*0.65, 230,165, 0.65);
+    }
+    const rs=site.derived.RESEARCH;
+    if(rs) paintEllipse(field,gw,gh,cs,MAP, (sg.cx+sg.rx+rs.x)/2,(sg.cy+rs.y+rs.h/2)/2, 180,130, 0.7);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x1-165,MAP.y0+200, MAP.x1-165,MAP.y1-200, 115, 0.55);
+  });
+
+  defPattern(67, 'Common Land', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    const sg=site.derived.SPONGE; if(!sg) return;
+    // Common land clusters around sponge edge
+    for (let theta=0;theta<Math.PI*2;theta+=Math.PI/3) {
+      const px=sg.cx+Math.cos(theta)*sg.rx*0.85;
+      const py=sg.cy+Math.sin(theta)*sg.ry*0.85;
+      paintGaussian(field,gw,gh,cs,MAP, px,py, 130, 0.9);
+    }
+  });
+
+  defPattern(71, 'Still Water', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    const b=site.derived.BASIN; if(!b) return;
+    // Still water at basin center — high pressure, small area
+    paintEllipse(field,gw,gh,cs,MAP, b.cx,b.cy,b.rx*1.5,b.ry*1.5, 1.2);
+  });
+
+  defPattern(37, 'House Cluster', 0.9, (field,gw,gh,cs,MAP,site)=>{
+    // Housing clusters occupy the full west zone — not a single column.
+    // The west side of the spine (sl) to the west EDA edge is where
+    // cooperative housing lives: CLT parcels, shared courtyards, common land.
+    // Paint a distributed field across the entire zone, with clusters at
+    // the natural social grouping size (~8-12 units per cluster).
+    const s=site.derived.SPINE; if(!s) return;
+    const sl=s.x;
+    const westWidth=sl-MAP.x0;  // full width of west zone
+    const clusterR=Math.min(westWidth*0.28, 75); // cluster radius
+    // Six cluster centres distributed across west zone
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+65:MAP.y0+265;
+    const botY=MAP.y1-130;
+    const zoneH=botY-topY;
+    // Two columns × three rows
+    const cols=[MAP.x0+westWidth*0.28, MAP.x0+westWidth*0.68];
+    const rows=[topY+zoneH*0.18, topY+zoneH*0.50, topY+zoneH*0.82];
+    for(const cx of cols) for(const cy of rows)
+      paintGaussian(field,gw,gh,cs,MAP, cx,cy, clusterR, 1.0);
+    // Background wash across full west zone — low amplitude, continuous
+    // Extend to actual MAP south edge to catch SW corner voids
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,topY, MAP.x0+65,MAP.y1-33, westWidth*0.85, 0.38);
+    // From previous pass: reinforce where pressure is already forming
+    if(site.combined){
+      for(let i=0;i<field.length;i++){
+        const cx_=i%gw, px=MAP.x0+cx_*cs;
+        if(px<sl&&px>MAP.x0){ // west zone only
+          const v=site.combined[i];
+          if(v>0.15&&v<0.65) field[i]+=v*0.45;
+        }
+      }
+    }
+  });
+
+  defPattern(51, 'Green Streets', 0.85, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sg=site.derived.SPONGE;
+    // Green street pressure: paths connecting spine to sponge and housing
+    const scx=s.x+s.w/2;
+    if(sg) paintSegment(field,gw,gh,cs,MAP, scx,s.y+s.h*0.3, sg.cx,sg.cy, 72, 1.0);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,(MAP.y0+MAP.y1)*0.4, scx,(MAP.y0+MAP.y1)*0.4, 60, 0.7);
+    paintSegment(field,gw,gh,cs,MAP, scx,(MAP.y0+MAP.y1)*0.6, MAP.x1-65,(MAP.y0+MAP.y1)*0.6, 60, 0.7);
+  });
+
+  defPattern(87, 'Shops', 1.0, (field,gw,gh,cs,MAP,site)=>{
+    // Individually owned shops line the main street band — the full depth
+    // of the band, not just the bottom edge. Shop fronts face the street;
+    // the pressure fills the entire commercial zone.
+    const b=site.derived.BAND; if(!b) return;
+    const s=site.derived.SPINE; if(!s) return;
+    const bandH=b.h; // full band depth
+    // Fill the band with commercial pressure
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,b.y+bandH*0.3, MAP.x1-65,b.y+bandH*0.3, bandH*0.5, 1.1);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,b.y+bandH*0.75, MAP.x1-65,b.y+bandH*0.75, bandH*0.4, 0.9);
+    paintSegment(field,gw,gh,cs,MAP, s.x,MAP.y0+130, s.x,MAP.y1-130, 60, 0.95);
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,MAP.y0+130, s.x+s.w,MAP.y1-130, 60, 0.95);
+  });
+
+  defPattern(88, 'Street Cafe', 0.85, (field,gw,gh,cs,MAP,site)=>{
+    // Cafe pressure overlaps shops but concentrates at nodes
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.25, 180, 1.0);
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.75, 180, 1.0);
+    const b=site.derived.BAND;
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+130,b.y+b.h*0.7, MAP.x1-130,b.y+b.h*0.7, 65, 0.7);
+  });
+
+  defPattern(100, 'Pedestrian Street', 1.1, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    // Pedestrian street = full spine length, strong and narrow
+    const scx=s.x+s.w/2;
+    paintSegment(field,gw,gh,cs,MAP, scx,s.y+50, scx,s.y+s.h-50, 65, 1.3);
+    const ny1=s.y+s.h*0.25, ny2=s.y+s.h*0.75;
+    paintSegment(field,gw,gh,cs,MAP, scx-260,ny1, scx+260,ny1, 52, 0.8);
+    paintSegment(field,gw,gh,cs,MAP, scx-260,ny2, scx+260,ny2, 52, 0.8);
+  });
+
+  defPattern(61, 'Small Public Squares', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    // Small squares at node intersections — localized pressure
+    const nodes=[
+      [scx-200, s.y+s.h*0.25], [scx+200, s.y+s.h*0.25],
+      [scx-200, s.y+s.h*0.75], [scx+200, s.y+s.h*0.75],
+    ];
+    for (const [px,py] of nodes) paintGaussian(field,gw,gh,cs,MAP,px,py,115,0.85);
+  });
+
+  defPattern(95, 'Building Complex', 0.7, (field,gw,gh,cs,MAP,site,pass)=>{
+    if(pass<1) return;
+    const s=site.derived.SPINE; if(!s) return;
+    const by=(MAP.y0+MAP.y1)*0.5;
+    paintGaussian(field,gw,gh,cs,MAP, s.x+s.w+65,by-260, 165, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, s.x+s.w+65,by+260, 165, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-200,by-200, 148, 0.7);
+    // In later passes: concentrate mass where combined field already has peaks
+    if(site.combined&&pass>=2) {
+      for(let i=0;i<field.length;i++){
+        const v=site.combined[i];
+        if(v>0.55) field[i]+=v*0.5; // reinforce hot spots
+      }
+    }
+  });
+
+  defPattern(116, 'Cascade of Roofs', 0.6, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    for (let cy=0;cy<gh;cy++) {
+      for (let cx=0;cx<gw;cx++) {
+        const px=MAP.x0+cx*cs;
+        const dist=Math.abs(px-scx);
+        let a=Math.max(0, 0.9*(1-dist/720));
+        // In subsequent passes: modulate by where buildings are forming
+        if(site.combined) a*=(0.5+site.combined[cy*gw+cx]*0.8);
+        field[cy*gw+cx]+=a;
+      }
+    }
+  });
+
+  // ── PATTERNS ADDED IN FIELD MODEL PHASE ─────────────────────────────────
+
+  defPattern(46, 'Market of Many Shops', 0.9, (field,gw,gh,cs,MAP,site)=>{
+    // A covered market concentrates at the promenade midpoint — the most public
+    // moment of the spine. Strong, localized pressure at spine centre.
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2, scy=s.y+s.h*0.5;
+    paintGaussian(field,gw,gh,cs,MAP, scx,scy, 180, 1.4);
+    if(site.derived.TIDE){
+      const ti=site.derived.TIDE;
+      paintGaussian(field,gw,gh,cs,MAP, ti.x+ti.w/2, ti.y-65, 115, 0.8);
+    }
+  });
+
+  defPattern(104, 'Site Repair', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Buildings belong on the worst land — parking lots, hardscape —
+    // not on green or water. Pressure field is INVERTED from green:
+    // high building pressure where green pressure is low.
+    const sg=site.derived.SPONGE;
+    if(!sg) return;
+    // Paint strong repulsion around sponge and basin
+    // by adding NEGATIVE pressure near green zones
+    // (implemented as low field values — other patterns avoid these zones)
+    // Positive pressure in hard-paved zones: east of spine, ROSS area
+    const s=site.derived.SPINE; if(!s) return;
+    const ro=site.derived.ROSS;
+    // ROSS leasehold is currently hardscape — prime repair zone
+    if(ro) paintGaussian(field,gw,gh,cs,MAP, ro.x+ro.w/2,ro.y+ro.h/2, 260, 1.1);
+    const b=site.derived.BAND;
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,b.y+b.h+65, s.x-33,MAP.y1-65, 180, 0.9);
+    // Subtract pressure from green zones — buildings don't go here
+    if(sg){
+      for(let i=0;i<field.length;i++){
+        const cx_=i%gw, cy_=Math.floor(i/gw);
+        const px=MAP.x0+cx_*cs, py=MAP.y0+cy_*cs;
+        const nx=(px-sg.cx)/sg.rx, ny=(py-sg.cy)/sg.ry;
+        if(nx*nx+ny*ny<1.4) field[i]=Math.max(0,field[i]-0.6);
+      }
+    }
+  });
+
+  defPattern(105, 'South Facing Outdoors', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    // Buildings should be north of their outdoor/green space so the
+    // outdoor area catches southern light. Pressure gradient: building
+    // mass pushed north, open space pushed south.
+    const sg=site.derived.SPONGE; if(!sg) return;
+    const s=site.derived.SPINE; if(!s) return;
+    // High building pressure north of sponge, low south
+    const northY=sg.cy-sg.ry-20;
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+100,MAP.y0+100, MAP.x1-100,northY, 180, 0.95);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,MAP.y0+100, s.x-33,northY, 130, 0.75);
+    // High outdoor pressure south of spine nodes
+    const scx=s.x+s.w/2;
+    paintGaussian(field,gw,gh,cs,MAP, scx-200, s.y+s.h*0.35+100, 130, 0.6);
+    paintGaussian(field,gw,gh,cs,MAP, scx+200, s.y+s.h*0.65+100, 130, 0.6);
+  });
+
+  defPattern(106, 'Positive Outdoor Space', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Outdoor space between buildings must have a definite, convex shape.
+    // Pressure in the voids between building clusters — enforces shaped courtyards
+    // rather than leftover gaps.
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    // Positive void pressure: the spaces that SHOULD be outdoor
+    // — pockets between spine and sponge, between housing clusters
+    const sg=site.derived.SPONGE;
+    if(sg){
+      // Crescent between spine and sponge east edge
+      paintGaussian(field,gw,gh,cs,MAP, (s.x+s.w+sg.cx-sg.rx)/2, sg.cy, 45, 0.9);
+    }
+    // Courtyard voids within housing band (west of spine)
+    paintGaussian(field,gw,gh,cs,MAP, s.x-165, s.y+s.h*0.35, 125, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-165, s.y+s.h*0.65, 125, 0.8);
+    paintGaussian(field,gw,gh,cs,MAP, scx, s.y+s.h*0.55, 105, 0.7);
+    // From previous pass: add pressure where combined is mid-low (potential void zones)
+    if(site.combined){
+      for(let i=0;i<field.length;i++){
+        const v=site.combined[i];
+        if(v>0.15&&v<0.35) field[i]+=v*0.35;
+      }
+    }
+  });
+
+  defPattern(109, 'Long Thin House', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    // The strip house: ~25ft frontage, running deep into the parcel (E-W).
+    // Stacked N-S with shared walls. The strips ARE the pattern — between
+    // them is shared outdoor space, not void.
+    // Strip width ~14px (25ft at site scale), spacing ~32px (gap = ~18ft courtyard).
+    const s=site.derived.SPINE; if(!s) return;
+    const sl=s.x;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+16:s.y+40;
+    const stripW=46, spacing=105;   // 25ft unit + ~5ft wall + 75ft shared outdoor
+    const westLeft=MAP.x0+52, westRight=sl-26;
+    let y=topY;
+    while(y<s.y+s.h-100){
+      paintSegment(field,gw,gh,cs,MAP, westLeft,y, westRight,y, stripW, 1.0);
+      y+=spacing;
+    }
+    // East: shallower commercial strips, ~230ft deep
+    let ey=topY+65;
+    while(ey<s.y+s.h-200){
+      paintSegment(field,gw,gh,cs,MAP, s.x+s.w+13,ey, s.x+s.w+236,ey, 33, 0.72);
+      ey+=spacing*1.3;
+    }
+  });
+
+  defPattern(114, 'Hierarchy of Open Space', 0.65, (field,gw,gh,cs,MAP,site)=>{
+    // Every outdoor space must look into a smaller AND a larger space.
+    // Creates a fractal nesting: pocket (r~20) inside courtyard (r~50)
+    // inside square (r~100) inside park (r~200).
+    const sg=site.derived.SPONGE;
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    // Park scale — the sponge itself
+    if(sg) paintEllipse(field,gw,gh,cs,MAP, sg.cx,sg.cy,sg.rx,sg.ry, 0.5);
+    // Square scale — at activity nodes
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.25, 200, 0.7);
+    paintGaussian(field,gw,gh,cs,MAP, scx,s.y+s.h*0.75, 200, 0.7);
+    // Courtyard scale — between strip houses
+    paintGaussian(field,gw,gh,cs,MAP, s.x-148,s.y+s.h*0.3, 92, 0.65);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-148,s.y+s.h*0.5, 92, 0.65);
+    paintGaussian(field,gw,gh,cs,MAP, s.x-148,s.y+s.h*0.7, 92, 0.65);
+    const pocketPts=[[scx-59,s.y+s.h*0.2],[scx+59,s.y+s.h*0.4],[scx-59,s.y+s.h*0.6],[scx+59,s.y+s.h*0.8]];
+    for(const [px,py] of pocketPts) paintGaussian(field,gw,gh,cs,MAP,px,py,46,0.55);
+  });
+
+  defPattern(115, 'Courtyards Which Live', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Every housing cluster wraps a south-facing courtyard on three sides.
+    // Ring pressure: peak at building perimeter, hollow at courtyard center.
+    // Clusters distributed across the full west zone to match P37.
+    const s=site.derived.SPINE; if(!s) return;
+    const sl=s.x;
+    const westWidth=sl-MAP.x0;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+20:MAP.y0+80;
+    const botY=MAP.y1-40;
+    const zoneH=botY-topY;
+    // West clusters — match P37 distribution
+    const westClusters=[
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.18, r:92},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.18, r:92},
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.50, r:92},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.50, r:92},
+      {cx:MAP.x0+westWidth*0.28, cy:topY+zoneH*0.82, r:92},
+      {cx:MAP.x0+westWidth*0.68, cy:topY+zoneH*0.82, r:92},
+    ];
+    const eastClusters=[
+      {cx:s.x+s.w+148, cy:s.y+s.h*0.28, r:105},
+      {cx:s.x+s.w+148, cy:s.y+s.h*0.60, r:105},
+    ];
+    for(const {cx,cy,r} of [...westClusters,...eastClusters]){
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        const d=Math.hypot(px-cx,py-cy);
+        field[i]+=Math.exp(-((d-r)*(d-r))/(r*0.42)**2)*0.9;
+      }
+    }
+  });
+
+  defPattern(122, 'Building Fronts', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    // No setbacks. Building faces align flush to the promenade/street edge.
+    // Pressure concentrated in thin bands along both sides of spine —
+    // exactly where building facades should land.
+    const s=site.derived.SPINE; if(!s) return;
+    const edgeW=26; // ~26ft facade depth
+    paintSegment(field,gw,gh,cs,MAP, s.x,s.y+100, s.x,s.y+s.h-100, edgeW, 1.1);
+    paintSegment(field,gw,gh,cs,MAP, s.x+s.w,s.y+100, s.x+s.w,s.y+s.h-100, edgeW, 1.1);
+    const b=site.derived.BAND;
+    if(b) paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,b.y+b.h, MAP.x1-65,b.y+b.h, edgeW, 0.9);
+  });
+
+  defPattern(127, 'Intimacy Gradient', 0.65, (field,gw,gh,cs,MAP,site)=>{
+    // Public → semi-public → semi-private → private sequence inward from street.
+    // A depth gradient away from circulation paths.
+    // In field terms: pressure decreases with depth from promenade/street.
+    const s=site.derived.SPINE; if(!s) return;
+    const scx=s.x+s.w/2;
+    // Gradient radiates outward from spine centerline — near spine is public,
+    // far from spine is private. Paint inverse-distance field.
+    for(let i=0;i<field.length;i++){
+      const fx=i%gw;
+      const px=MAP.x0+fx*cs;
+      const dist=Math.abs(px-scx);
+      // Four depth bands: 0-40px (public), 40-90px (semi-pub), 90-160px (semi-priv), 160+(private)
+      // Pressure concentrated at the TRANSITIONS between bands — where building edges sit
+      const band=[130,296,525].map(b=>Math.exp(-((dist-b)*(dist-b))/(40*40))*0.7);
+      field[i]+=band.reduce((a,b)=>a+b,0);
+    }
+    // Also north-south gradient: entries (promenade ends) are most public
+    for(let i=0;i<field.length;i++){
+      const fy=Math.floor(i/gw);
+      const py=MAP.y0+fy*cs;
+      const distN=Math.min(py-MAP.y0, MAP.y1-py);
+      field[i]+=Math.exp(-(distN*distN)/(200*200))*0.5;
+    }
+  });
+
+  defPattern(119, 'Arcades', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    // Covered walkways at building edges along major pedestrian routes.
+    // Pressure in the 10-30ft strip flanking the promenade — where a colonnade sits.
+    const s=site.derived.SPINE; if(!s) return;
+    const spineY=s.y+s.h/2;
+    const arcadeWidth=25;
+    for(let i=0;i<field.length;i++){
+      const fy=Math.floor(i/gw);
+      const py=MAP.y0+fy*cs;
+      const dy=Math.abs(py-spineY);
+      if(dy>s.h*0.3 && dy<s.h*0.3+arcadeWidth) field[i]+=0.8;
+    }
+    const hb=site.derived.HOUSING_B; if(hb){
+      const edges=[hb.x, hb.x+hb.w];
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw;
+        const px=MAP.x0+fx*cs;
+        for(const ex of edges){
+          const d=Math.abs(px-ex);
+          if(d<arcadeWidth) field[i]+=Math.exp(-(d*d)/(arcadeWidth*arcadeWidth/4))*0.7;
+        }
+      }
+    }
+  });
+
+  defPattern(121, 'Path Shape', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Paths with clear shape — widening at activity nodes, narrowing between.
+    // Pressure at the three natural node-pinches along the spine.
+    const s=site.derived.SPINE; if(!s) return;
+    const fracs=[0.25, 0.5, 0.75];
+    const spineY=s.y+s.h/2;
+    for(const f of fracs){
+      const nx=s.x+s.w*f;
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        const d=Math.sqrt((px-nx)**2+(py-spineY)**2);
+        field[i]+=Math.exp(-(d*d)/(50*50))*0.9;
+      }
+    }
+  });
+
+  defPattern(160, 'Building Edge', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    // The zone where building meets ground must be alive.
+    // Pressure at the perimeter strip (0-15ft) of every EDA parcel.
+    const edgeDepth=15;
+    for(const parcel of (site.edaParcels||[])){
+      const {x,y,w,h}=parcel.bbox;
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        const inX=px>=x&&px<=x+w, inY=py>=y&&py<=y+h;
+        if(!inX||!inY) continue;
+        const dEdge=Math.min(px-x, x+w-px, py-y, y+h-py);
+        if(dEdge<edgeDepth) field[i]+=((edgeDepth-dEdge)/edgeDepth)*0.9;
+      }
+    }
+  });
+
+  defPattern(123, 'Pedestrian Density', 0.85, (field,gw,gh,cs,MAP,site)=>{
+    // Enough people on foot (~300+ ppa) to sustain street life and shops.
+    // Pressure concentrated at main street core and CLT residential cluster.
+    const s=site.derived.SPINE, clt=site.derived.CLT_NORTH;
+    if(s){
+      const mid=s.x+s.w/2, halfW=s.w*0.25;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const dx=Math.abs(px-mid), dy=Math.abs(py-(s.y+s.h/2));
+        if(dx<halfW&&dy<s.h*0.5) field[i]+=0.85;
+      }
+    }
+    if(clt){
+      const cx=clt.x+clt.w/2, cy=clt.y+clt.h/2;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-cx)**2+(py-cy)**2);
+        field[i]+=Math.exp(-(d*d)/(120*120))*0.8;
+      }
+    }
+  });
+
+  defPattern(14, 'Identifiable Neighborhood', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Each sub-district ~7min walk across, recognizable from within.
+    // Pressure at the boundary ring of each character zone.
+    const zones=[
+      site.derived.CLT_NORTH, site.derived.SPINE,
+      site.derived.HOUSING_B, site.derived.CIVIC
+    ].filter(Boolean);
+    for(const z of zones){
+      const cx=z.x+z.w/2, cy=z.y+z.h/2;
+      const r=150;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-cx)**2+(py-cy)**2);
+        field[i]+=Math.exp(-((d-r)*(d-r))/(60*60))*0.6;
+      }
+    }
+  });
+
+  defPattern(8, 'Mosaic of Subcultures', 0.65, (field,gw,gh,cs,MAP,site)=>{
+    // Distinct sub-areas require clear edges between character zones.
+    // Pressure peaks at the Voronoi boundaries between zone centroids.
+    const zoneCenters=[
+      site.derived.CLT_NORTH, site.derived.SPINE,
+      site.derived.HOUSING_B, site.derived.CIVIC
+    ].filter(Boolean).map(z=>({x:z.x+z.w/2, y:z.y+z.h/2}));
+    if(zoneCenters.length<2) return;
+    for(let i=0;i<field.length;i++){
+      const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+      const dists=zoneCenters.map(c=>Math.sqrt((px-c.x)**2+(py-c.y)**2)).sort((a,b)=>a-b);
+      const boundary=dists[1]>0 ? (dists[0]/dists[1]) : 0;
+      field[i]+=Math.pow(boundary,4)*0.7;
+    }
+  });
+
+  // ── WINGS OF LIGHT CLUSTER ────────────────────────────────────────────────
+  // P107 Wings of Light: long thin wings perpendicular to sun axis (E-W),
+  //   so every room gets light from two sides. Max wing depth 25ft.
+  //   Pressure wherever light can enter from two sides — strip along spine,
+  //   near park, and at residential perimeters.
+  defPattern(107, 'Wings of Light', 0.85, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE, sp=site.derived.SPONGE;
+    // High pressure along the east and west edges of the spine — where wing
+    // orientation maximises bilateral light access (N and S exposure).
+    if(s){
+      const edges=[s.x, s.x+s.w]; // spine flanks
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        for(const ex of edges){
+          const d=Math.abs(px-ex);
+          field[i]+=Math.exp(-(d*d)/(80*80))*1.0;
+        }
+      }
+    }
+    // Park rim: bilateral light from park-side + street-side
+    if(sp){
+      const rimR=Math.max(sp.rx,sp.ry)+40;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-sp.cx)**2+(py-sp.cy)**2);
+        field[i]+=Math.exp(-((d-rimR)*(d-rimR))/(50*50))*0.85;
+      }
+    }
+  });
+
+  // P108 Connected Buildings: covered link passages between separate wings.
+  // Pressure at mid-points between pairs of high-pressure wing locations.
+  defPattern(108, 'Connected Buildings', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    // Mid-spine horizontal links — where connectors bridge the gap between wings
+    const linkX=s.x+s.w/2; // spine centerline
+    const fracs=[0.3, 0.5, 0.7];
+    for(const f of fracs){
+      const linkY=MAP.y0+(MAP.y1-MAP.y0)*f;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        // Pressure in a short E-W band crossing the spine — connector corridor
+        const dx=Math.abs(px-linkX)/s.w, dy=Math.abs(py-linkY)/40;
+        if(dx<0.6) field[i]+=Math.exp(-(dy*dy))*0.8;
+      }
+    }
+  });
+
+  // P110 Main Building: one dominant building mass per cluster that anchors
+  // subsidiary wings. Pressure at each zone centroid — one clear center per zone.
+  defPattern(110, 'Main Building', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    const zones=[
+      site.derived.CLT_NORTH, site.derived.SPINE,
+      site.derived.HOUSING_B, site.derived.CIVIC
+    ].filter(Boolean);
+    for(const z of zones){
+      const cx=z.x+z.w/2, cy=z.y+z.h/2;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-cx)**2+(py-cy)**2);
+        // Sharp gaussian — one anchor point per zone, not a blob
+        field[i]+=Math.exp(-(d*d)/(80*80))*0.9;
+      }
+    }
+  });
+
+  // P128 Indoor Sunlight: every room gets direct sun at some point in the day.
+  // Pressure along the south face of every EDA parcel — south-facing rooms
+  // get winter sun. Pairs with P107.
+  defPattern(128, 'Indoor Sunlight', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // South-face strip = low-y edge of each EDA parcel (small y = south in ft coords)
+    for(const p of (site.edaParcels||[])){
+      const {x,y,w,h}=p.bbox;
+      // Strip along south edge (y=bottom) ±30ft
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        if(px<x||px>x+w) continue;
+        const dy=Math.abs(py-y);
+        field[i]+=Math.exp(-(dy*dy)/(35*35))*0.8;
+      }
+    }
+  });
+
+
+  // ── FIELD LINE TRACER ─────────────────────────────────────────────────────
+  // Trace splines along ridges of the combined field.
+  // A field line follows the path where combined pressure stays above threshold.
+  // At each point, it records which patterns contribute and at what weight.
+
+  function findSeeds(combined, gw, gh, threshold, cellSize, MAP) {
+    // Local maxima above threshold
+    const seeds = [];
+    for (let cy=1;cy<gh-1;cy++) {
+      for (let cx=1;cx<gw-1;cx++) {
+        const v=combined[cy*gw+cx];
+        if (v<threshold) continue;
+        // Is this a local max in any direction?
+        const isMax = v >= combined[(cy-1)*gw+cx] && v >= combined[(cy+1)*gw+cx] &&
+                      v >= combined[cy*gw+(cx-1)] && v >= combined[cy*gw+(cx+1)];
+        if (isMax) seeds.push({cx,cy,v});
+      }
+    }
+    // Sort by pressure descending, keep top seeds (deduplicated by proximity)
+    seeds.sort((a,b)=>b.v-a.v);
+    const kept=[], minSep=6; // cells
+    for (const s of seeds) {
+      if (kept.some(k=>Math.abs(k.cx-s.cx)<minSep&&Math.abs(k.cy-s.cy)<minSep)) continue;
+      kept.push(s);
+      if(kept.length>=80) break;
+    }
+    return kept;
+  }
+
+  function traceFieldLine(combined, gw, gh, startCx, startCy, cellSize, MAP, threshold) {
+    // Bidirectional ridge tracer.
+    // From the seed: trace in both directions along the local ridge.
+    // "Ridge" = path that stays above threshold, preferring higher-valued neighbours
+    // while also preferring to continue in the same direction (momentum).
+    const maxSteps = Math.max(80, Math.round((gw+gh)*1.2));
+
+    function traceDir(cx0, cy0, dirX, dirY, globalVisited) {
+      const pts = [];
+      let cx=cx0, cy=cy0, dx=dirX, dy=dirY;
+      const localVisited = new Set();
+      for (let step=0;step<maxSteps;step++) {
+        const key=cy*gw+cx;
+        if (globalVisited.has(key)||localVisited.has(key)) break;
+        if (combined[key]<threshold*0.55) break;
+        localVisited.add(key);
+        pts.push({x:MAP.x0+cx*cellSize, y:MAP.y0+cy*cellSize, v:combined[key]});
+        // Candidate neighbours: prefer direction momentum, then highest value
+        const neighbours=[[cx-1,cy],[cx+1,cy],[cx,cy-1],[cx,cy+1],[cx-1,cy-1],[cx+1,cy-1],[cx-1,cy+1],[cx+1,cy+1]];
+        let best=null, bestScore=-Infinity;
+        for (const [nx,ny] of neighbours) {
+          if(nx<0||ny<0||nx>=gw||ny>=gh) continue;
+          if(localVisited.has(ny*gw+nx)) continue;
+          const nv=combined[ny*gw+nx];
+          if(nv<threshold*0.45) continue;
+          // Score: field value + momentum alignment bonus
+          const ndx=nx-cx, ndy=ny-cy;
+          const alignment = (dx*ndx+dy*ndy)/(Math.hypot(ndx,ndy)||1);
+          const score = nv*0.7 + alignment*0.3;
+          if(score>bestScore){bestScore=score;best=[nx,ny,ndx,ndy];}
+        }
+        if(!best) break;
+        [cx,cy,dx,dy]=best;
+      }
+      return pts;
+    }
+
+    // Forward trace: start with (0,0) direction — will follow steepest gradient
+    const globalVisited = new Set();
+    const fwd = traceDir(startCx, startCy, 0, 0, globalVisited);
+    // Mark forward path as visited
+    for (const pt of fwd) {
+      const cx=Math.round((pt.x-MAP.x0)/cellSize), cy=Math.round((pt.y-MAP.y0)/cellSize);
+      globalVisited.add(cy*gw+cx);
+    }
+    // Backward trace: opposite initial direction of first forward step
+    let bwd = [];
+    if (fwd.length>=2) {
+      const cx1=Math.round((fwd[0].x-MAP.x0)/cellSize), cy1=Math.round((fwd[0].y-MAP.y0)/cellSize);
+      const cx2=Math.round((fwd[1].x-MAP.x0)/cellSize), cy2=Math.round((fwd[1].y-MAP.y0)/cellSize);
+      const revDx=cx1-cx2, revDy=cy1-cy2;
+      bwd = traceDir(startCx, startCy, revDx, revDy, globalVisited);
+    }
+    // Assemble: reversed bwd + fwd (excluding duplicated seed)
+    return [...bwd.reverse(), ...fwd];
+  }
+
+  // For each point on a line, read per-pattern contributions
+  function annotateFieldLine(pts, fieldMap, gw, gh, cellSize, MAP) {
+    return pts.map(pt => {
+      const cx = Math.round((pt.x-MAP.x0)/cellSize);
+      const cy = Math.round((pt.y-MAP.y0)/cellSize);
+      const idx = cy*gw+cx;
+      const weights = {};
+      let total = 0;
+      for (const [pid, {field, weight}] of Object.entries(fieldMap)) {
+        const w = (field[idx]||0)*weight;
+        if (w>0.05) { weights[pid]=w; total+=w; }
+      }
+      return { ...pt, weights, total };
+    });
+  }
+
+  // ── MAIN SOLVE ────────────────────────────────────────────────────────────
+  // Runs until the combined field saturates (Δ < ε) or max passes is hit.
+  // Saturation = patterns have squeezed as much simultaneous information
+  // into the field as they can. This is the terminal condition.
+  function solve(parcels, _proj, MAP, derivedG, opts={}) {
+    // Normalize proj: accept both [x,y] and {x,y} return forms
+    const proj = (lon,lat) => { const r=_proj(lon,lat); return Array.isArray(r)?r:[r.x,r.y]; };
+    const MAX_PASSES  = opts.passes   || 16;
+    const EPSILON     = opts.eps      || 0.008;
+    const CELL_SIZE   = opts.cellSize || 10;  // feet per cell
+    const ftToSvg     = opts.ftToSvg  || ((fx,fy)=>[fx,fy]); // fallback: identity
+    const THRESHOLD   = opts.threshold|| 0.2;
+    const log = [];
+
+    const gw = Math.ceil((MAP.x1-MAP.x0)/CELL_SIZE)+1;
+    const gh = Math.ceil((MAP.y1-MAP.y0)/CELL_SIZE)+1;
+
+    log.push(`Grid: ${gw}×${gh} = ${gw*gh} cells @ ${CELL_SIZE}ft | ε=${EPSILON}`);
+
+    buildEdaMask(parcels, proj, gw, gh, CELL_SIZE, MAP);
+
+    const site = { derived: derivedG, fields: {}, combined: null };
+    let allFieldLines = [];
+    const snapshots = [];
+    let prevCombined = null;
+    let saturatedAt = null;
+
+    for (let pass=0; pass<MAX_PASSES; pass++) {
+      log.push(`Pass ${pass+1}/${MAX_PASSES}`);
+
+      // Sense: each pattern fills its field
+      const fieldMap = {};
+      for (const [pid, pat] of Object.entries(PATTERNS)) {
+        const field = makeField(gw, gh);
+        try {
+          pat.sense(field, gw, gh, CELL_SIZE, MAP, site, pass);
+          // Mask to EDA
+          for (let i=0;i<field.length;i++) {
+            const cx=i%gw, cy=Math.floor(i/gw);
+            if(!inEDA(cx,cy,gw,gh)) field[i]=0;
+          }
+          normalizeField(field);
+          fieldMap[pid] = { field, weight: pat.weight };
+        } catch(e) { log.push(`  P${pid} sense error: ${e.message}`); }
+      }
+
+      // Combine
+      const combined = combineFields(fieldMap, gw, gh);
+      normalizeField(combined);
+
+      // Convergence check: mean absolute change vs previous pass
+      if (prevCombined) {
+        let delta = 0;
+        for (let i=0;i<combined.length;i++) delta += Math.abs(combined[i]-prevCombined[i]);
+        delta /= combined.length;
+        log.push(`  Δ=${delta.toFixed(5)}`);
+        if (delta < EPSILON && pass >= 2) {
+          saturatedAt = pass+1;
+          log.push(`  ✓ Saturated at pass ${saturatedAt} (Δ=${delta.toFixed(5)} < ε=${EPSILON})`);
+          // Still trace lines for this final pass, then break
+        }
+      }
+      prevCombined = combined.slice();
+
+      // Update site context for next pass
+      site.fields = fieldMap;
+      site.combined = combined;
+
+      // Trace field lines
+      const seeds = findSeeds(combined, gw, gh, THRESHOLD, CELL_SIZE, MAP);
+      log.push(`  ${seeds.length} seeds → tracing lines`);
+
+      const lines = [];
+      for (const seed of seeds) {
+        const pts = traceFieldLine(combined, gw, gh, seed.cx, seed.cy, CELL_SIZE, MAP, THRESHOLD);
+        if (pts.length < 3) continue;
+        const annotated = annotateFieldLine(pts, fieldMap, gw, gh, CELL_SIZE, MAP);
+        lines.push({ pts: annotated, seedPressure: seed.v });
+      }
+      log.push(`  ${lines.length} field lines`);
+
+      allFieldLines = lines;
+
+      snapshots.push({
+        pass, combined: combined.slice(), fieldMap, lines,
+        seeds: seeds.length, gw, gh,
+        delta: prevCombined ? null : null, // populated above
+        saturated: !!saturatedAt,
+      });
+
+      if (saturatedAt) break;
+    }
+
+    if (!saturatedAt) log.push(`Max passes (${MAX_PASSES}) reached without saturation`);
+
+    // Hot nodes: local maxima of pattern-count along lines
+    // Sparse — one per distinct high-pressure cluster, not every qualifying point
+    const hotNodes = buildHotNodes(allFieldLines);
+
+    // Building footprints from hot node clusters
+    const buildings = buildFootprints(hotNodes, CELL_SIZE);
+
+    log.push(`${hotNodes.length} hot nodes | ${buildings.length} building footprints`);
+    log.push(`Done in ${snapshots.length} passes.`);
+
+    return {
+      snapshots, fieldLines: allFieldLines, hotNodes, buildings,
+      log, gw, gh, cellSize: CELL_SIZE, MAP, ftToSvg,
+      saturatedAt,
+      patternColors: Object.fromEntries(
+        Object.entries(PATTERNS).map(([id,p])=>[id,p.color])
+      ),
+      patternNames: Object.fromEntries(
+        Object.entries(PATTERNS).map(([id,p])=>[id,p.name])
+      ),
+    };
+  }
+
+  // Sparse hot nodes: local maxima of simultaneous pattern count along lines.
+  // One node per high-pressure peak, not every qualifying point.
+  function buildHotNodes(lines) {
+    const candidates = [];
+    for (const line of lines) {
+      // Count strong patterns at each point
+      const scored = line.pts.map(pt => ({
+        ...pt,
+        nStrong: Object.values(pt.weights||{}).filter(w=>w>0.28).length
+      }));
+      // Find local maxima of nStrong along the line
+      for (let i=1;i<scored.length-1;i++) {
+        const p=scored[i];
+        if (p.nStrong < 3) continue;
+        if (p.nStrong >= scored[i-1].nStrong && p.nStrong >= scored[i+1].nStrong) {
+          candidates.push(p);
+        }
+      }
+    }
+    // Deduplicate: keep one per 40px neighbourhood
+    const kept = [];
+    for (const c of candidates.sort((a,b)=>b.nStrong-a.nStrong)) {
+      if (kept.some(k=>Math.hypot(k.x-c.x,k.y-c.y)<16)) continue;
+      kept.push(c);
+    }
+    return kept;
+  }
+
+  // Building footprints: cluster hot nodes spatially, fit rectangles.
+  // Each building is the bounding box of a cluster, oriented to the spine.
+  function buildFootprints(hotNodes, cellSize) {
+    if (hotNodes.length === 0) return [];
+    const minDist = Math.max(cellSize*3.5, 28);
+    // Single-linkage clustering
+    const clusters = [];
+    const assigned = new Uint8Array(hotNodes.length);
+    for (let i=0;i<hotNodes.length;i++) {
+      if (assigned[i]) continue;
+      const cluster = [hotNodes[i]];
+      assigned[i] = 1;
+      for (let j=i+1;j<hotNodes.length;j++) {
+        if (assigned[j]) continue;
+        if (cluster.some(c=>Math.hypot(c.x-hotNodes[j].x,c.y-hotNodes[j].y)<minDist)) {
+          cluster.push(hotNodes[j]);
+          assigned[j] = 1;
+        }
+      }
+      clusters.push(cluster);
+    }
+    // Fit axis-aligned rectangle to each cluster, padded slightly
+    const pad = cellSize*1.5;
+    return clusters.map(pts => {
+      const xs=pts.map(p=>p.x), ys=pts.map(p=>p.y);
+      const x=Math.min(...xs)-pad, y=Math.min(...ys)-pad;
+      const w=Math.max(...xs)-Math.min(...xs)+pad*2;
+      const h=Math.max(...ys)-Math.min(...ys)+pad*2;
+      // Dominant pattern = most common top pattern across cluster pts
+      const tally = {};
+      for (const pt of pts) {
+        const top=Object.entries(pt.weights||{}).sort((a,b)=>b[1]-a[1])[0];
+        if(top) tally[top[0]]=(tally[top[0]]||0)+1;
+      }
+      const domPid = Object.entries(tally).sort((a,b)=>b[1]-a[1])[0]?.[0];
+      const avgStrong = pts.reduce((s,p)=>s+p.nStrong,0)/pts.length;
+      return { x, y, w, h, pts: pts.length, domPid, avgStrong };
+    }).filter(b=>b.w>8&&b.h>8); // discard degenerate singletons
+  }
+
+  return { solve, PATTERNS };
 })();
 
 </script>
