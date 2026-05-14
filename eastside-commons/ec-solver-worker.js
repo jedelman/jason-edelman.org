@@ -251,7 +251,7 @@ self.EC_FieldSolver = (function() {
     paintEllipse(field,gw,gh,cs,MAP, b.cx,b.cy,b.rx*1.5,b.ry*1.5, 1.2);
   });
 
-  defPattern(37, 'House Cluster', 0.9, (field,gw,gh,cs,MAP,site)=>{
+  defPattern(37, 'House Cluster', 1.1, (field,gw,gh,cs,MAP,site)=>{
     // Housing clusters occupy the full west zone — not a single column.
     // The west side of the spine (sl) to the west EDA edge is where
     // cooperative housing lives: CLT parcels, shared courtyards, common land.
@@ -273,7 +273,7 @@ self.EC_FieldSolver = (function() {
       paintGaussian(field,gw,gh,cs,MAP, cx,cy, clusterR, 1.0);
     // Background wash across full west zone — low amplitude, continuous
     // Extend to actual MAP south edge to catch SW corner voids
-    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,topY, MAP.x0+65,MAP.y1-33, westWidth*0.85, 0.38);
+    paintSegment(field,gw,gh,cs,MAP, MAP.x0+65,topY, MAP.x0+65,MAP.y1-33, westWidth*0.85, 0.62);
     // From previous pass: reinforce where pressure is already forming
     if(site.combined){
       for(let i=0;i<field.length;i++){
@@ -1329,7 +1329,7 @@ self.EC_FieldSolver = (function() {
     const EPSILON     = opts.eps      || 0.008;
     const CELL_SIZE   = opts.cellSize || 10;  // feet per cell
     const ftToSvg     = opts.ftToSvg  || ((fx,fy)=>[fx,fy]); // fallback: identity
-    const THRESHOLD   = opts.threshold|| 0.2;
+    const THRESHOLD   = opts.threshold|| 0.12;
     const log = [];
 
     const gw = Math.ceil((MAP.x1-MAP.x0)/CELL_SIZE)+1;
