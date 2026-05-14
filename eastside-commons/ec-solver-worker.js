@@ -44,7 +44,7 @@ function buildProjection(parcels) {
 // ── PARCEL GEOMETRY ─────────────────────────────────────────────
 
 // ── Field solver ──────────────────────────────────────────────────────────
-window.EC_FieldSolver = (function() {
+self.EC_FieldSolver = (function() {
   const PATTERNS = {};
 
   function defPattern(id, name, weight, senseFn) {
@@ -1068,7 +1068,7 @@ self.onmessage = function(e) {
   const { proj } = buildProjection(parcels);
 
   // Progress ping every pass so UI stays responsive
-  const origSolve = window?.EC_FieldSolver?.solve;
+  
 
   self.postMessage({ type: 'status', msg: 'Building EDA mask…' });
 
