@@ -275,21 +275,12 @@ function solveConstraintsMin(G, MAP) {
   derived.BIKE={y:bby+15, x0:MAP.x0, x0end:sl-8, x1start:sr+8, x1end:MAP.x1};
 
   // ── Named parcel zones: expose bbox rects for building generator ────────
-  // CLT_NORTH: 9.2ac residential cluster north of MALL
-  const CLT_N = G['CLT_NORTH'];
-  if (CLT_N) derived.CLT_NORTH = {x:CLT_N.bbox.left, y:CLT_N.bbox.bottom, w:CLT_N.bbox.width, h:CLT_N.bbox.height};
-
-  // HOUSING_B_S: 9.7ac housing south band
-  if (HB_PAR) derived.HOUSING_B = {x:HB_PAR.bbox.left, y:HB_PAR.bbox.bottom, w:HB_PAR.bbox.width, h:HB_PAR.bbox.height};
-
-  // HOUSING_A_530
-  const HA = G['HOUSING_A_530'];
-  if (HA) derived.HOUSING_A = {x:HA.bbox.left, y:HA.bbox.bottom, w:HA.bbox.width, h:HA.bbox.height};
-
-  // Civic parcels
-  ['CIVIC_700','CIVIC_854','CIVIC_862','CIVIC_920','CIVIC_SPINE_S','CIVIC_STRIP','CIVIC_ROW'].forEach(k=>{
-    const p=G[k]; if(p) derived[k]={x:p.bbox.left, y:p.bbox.bottom, w:p.bbox.width, h:p.bbox.height};
-  });
+  // Add ALL named EDA parcels so clusterUrbanBlocks can iterate them directly.
+  for (const [spec, g] of Object.entries(G)) {
+    if (!derived[spec]) { // don't overwrite computed zones (SPINE etc.)
+      derived[spec] = {x:g.bbox.left, y:g.bbox.bottom, w:g.bbox.width, h:g.bbox.height};
+    }
+  }
 
   // Walk-mode entrance: south entrance of spine (BAND/SPINE intersection)
   derived.ENTRANCE_POS = { x: spine_x + spine_w/2, y: MAP.y0 + derived.BAND.h + 20 };
@@ -2165,160 +2156,132 @@ function buildExclusionVoid(group, blk, exclusionType, derived) {
 const _collisionBoxes = []; // {minX,maxX,minY,maxY,minZ,maxZ}
 
 function clusterUrbanBlocks(hotNodes, derived) {
-  // Strategy: seed blocks from zone geometry directly, not from sparse hotNodes.
-  // This guarantees coverage. hotNodes are used to nudge positions and assign
-  // dominant patterns, but are not required for a block to exist.
+  // Seed buildings directly from every named EDA parcel bbox.
+  // Parcel spec prefix drives typology and floor count.
+  // This guarantees coverage: if it's in PARCEL_DATA as EDA with a spec, it gets buildings.
   const blocks = [];
   const SPINE = derived.SPINE;
   if (!SPINE) return blocks;
+  const spineX = SPINE.x + SPINE.w / 2;
 
-  // --- Helper: place a grid of blocks inside a bbox, avoiding exclusions ---
-  function gridZone(zone, params) {
-    if (!zone) return;
-    const { fw, fh, stepX, stepY, floorsFn, typFn } = params;
+  // Build a lookup of EDA parcel bboxes from PARCEL_DATA
+  const parcelBboxes = {};
+  for (const p of PARCEL_DATA.parcels) {
+    if (!p.is_eda || !p.spec || !p.rings?.[0]) continue;
+    // We need projected coords — use the same proj as buildParcelGeometry
+    // but we don't have proj here. Instead, use derived zones which are already in ft.
+    // Fall back: use the derived key if it exists.
+    if (derived[p.spec]) parcelBboxes[p.spec] = derived[p.spec];
+  }
+
+  // Parcel config: spec prefix → {fw, fh, stepX, stepY, floorsFn, typology}
+  function parcelConfig(spec) {
+    if (spec === 'SPONGE_PARCEL' || spec === 'CIVIC_ROW') return null; // open space / too small
+    if (spec.startsWith('MALL_CORE')) return {
+      fw:85, fh:65, stepX:115, stepY:95,
+      floorsFn: (cx) => Math.max(3, Math.round(7 - Math.abs(cx-spineX)/180)),
+      typFn: (cx,cy,fw,fh) => {
+        if (isExclusion({cx,cy,fw,fh},derived)) return 'exclusion';
+        if (isCourtyardTypology({cx,cy,fw,fh,count:4},derived)) return 'courtyard';
+        if (isArcadeTypology({cx,cy},derived)) return 'arcade';
+        const f = Math.max(3, Math.round(7 - Math.abs(cx-spineX)/180));
+        return f >= 5 ? 'p105' : 'solid';
+      }
+    };
+    if (spec.startsWith('CLT')) return {
+      fw:70, fh:55, stepX:100, stepY:85,
+      floorsFn: () => Math.round(3 + Math.random() * 2),
+      typFn: (cx,cy,fw,fh) => isExclusion({cx,cy,fw,fh},derived) ? 'exclusion' :
+        isCourtyardTypology({cx,cy,fw,fh,count:4},derived) ? 'courtyard' : 'solid'
+    };
+    if (spec.startsWith('HOUSING')) return {
+      fw:65, fh:55, stepX:95, stepY:80,
+      floorsFn: () => Math.round(3 + Math.random() * 2),
+      typFn: (cx,cy,fw,fh) => isExclusion({cx,cy,fw,fh},derived) ? 'exclusion' : 'solid'
+    };
+    if (spec.startsWith('MAIN_ST')) return {
+      fw:55, fh:45, stepX:80, stepY:65,
+      floorsFn: () => Math.round(2 + Math.random() * 2),
+      typFn: () => 'arcade'
+    };
+    if (spec.startsWith('CIVIC')) return {
+      fw:55, fh:45, stepX:80, stepY:70,
+      floorsFn: () => Math.round(1 + Math.random() * 2),
+      typFn: () => 'solid'
+    };
+    return null;
+  }
+
+  for (const [spec, zone] of Object.entries(parcelBboxes)) {
+    const cfg = parcelConfig(spec);
+    if (!cfg) continue;
+    const {fw, fh, stepX, stepY, floorsFn, typFn} = cfg;
     const margin = Math.max(fw, fh) * 0.6;
     const x0 = zone.x + margin, x1 = zone.x + zone.w - margin;
     const y0 = zone.y + margin, y1 = zone.y + zone.h - margin;
-    if (x1 < x0 || y1 < y0) return;
+    if (x1 < x0 || y1 < y0) continue;
 
     for (let gx = x0; gx <= x1; gx += stepX) {
       for (let gy = y0; gy <= y1; gy += stepY) {
-        // Nudge by nearest hot node (up to 20ft)
+        // Nudge toward nearest hot node (up to 20%)
         let cx = gx, cy = gy;
-        if (hotNodes && hotNodes.length) {
-          let best = null, bestD = 80;
+        if (hotNodes?.length) {
+          let bestD = 80, best = null;
           for (const n of hotNodes) {
-            const d = Math.hypot(n.x - gx, n.y - gy);
+            const d = Math.hypot(n.x-gx, n.y-gy);
             if (d < bestD) { bestD = d; best = n; }
           }
-          if (best) { cx += (best.x - gx) * 0.25; cy += (best.y - gy) * 0.25; }
+          if (best) { cx += (best.x-gx)*0.25; cy += (best.y-gy)*0.25; }
         }
-
-        const blockW = fw + (Math.random() * fw * 0.2 - fw * 0.1);
-        const blockH = fh + (Math.random() * fh * 0.2 - fh * 0.1);
+        const blockW = fw * (0.9 + Math.random()*0.2);
+        const blockH = fh * (0.9 + Math.random()*0.2);
         const floors = floorsFn(cx, cy);
         if (floors < 1) continue;
+        const excl = isExclusion({cx, cy, fw:blockW, fh:blockH}, derived);
+        const typology = excl ? 'exclusion' : typFn(cx, cy, blockW, blockH);
 
-        const excl = isExclusion({ cx, cy, fw: blockW, fh: blockH }, derived);
-        const typology = excl ? 'exclusion' : (typFn ? typFn(cx, cy, blockW, blockH) : 'solid');
-
-        // Dominant pattern from nearest hot node
         let domPid = null;
-        if (hotNodes && hotNodes.length) {
-          let best2 = null, bestD2 = 300;
+        if (hotNodes?.length) {
+          let bestD2 = 300, best2 = null;
           for (const n of hotNodes) {
-            const d = Math.hypot(n.x - cx, n.y - cy);
+            const d = Math.hypot(n.x-cx, n.y-cy);
             if (d < bestD2) { bestD2 = d; best2 = n; }
           }
-          if (best2 && best2.weights) {
+          if (best2?.weights) {
             let domW = 0;
-            for (const [pid, w] of Object.entries(best2.weights)) {
-              if (w > domW) { domW = w; domPid = pid; }
-            }
+            for (const [pid,w] of Object.entries(best2.weights)) { if(w>domW){domW=w;domPid=pid;} }
           }
         }
 
         let openDir = 'S';
         if (typology === 'courtyard' && derived.SPONGE) {
-          const dx = derived.SPONGE.cx - cx, dy = derived.SPONGE.cy - cy;
-          openDir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'N' : 'S');
+          const dx=derived.SPONGE.cx-cx, dy=derived.SPONGE.cy-cy;
+          openDir = Math.abs(dx)>Math.abs(dy) ? (dx>0?'E':'W') : (dy>0?'N':'S');
         }
-
-        blocks.push({ cx, cy, fw: blockW, fh: blockH, floors, domPid,
-                      avgStrong: 3, count: 4, typology, openDir, exclusion: excl ? excl : null });
+        blocks.push({cx,cy,fw:blockW,fh:blockH,floors,domPid,
+                     avgStrong:3,count:4,typology,openDir,exclusion:excl||null});
       }
     }
   }
 
-  const spineX = SPINE.x + SPINE.w / 2;
-
-  // --- SPINE ZONE: dense mixed-use, 4-8 floors ---
-  const spineFloors = (cx, cy) => {
-    const t = Math.min(Math.abs(cx - spineX) / (SPINE.w * 0.5), 1);
-    return Math.max(2, Math.round(7 - t * 3));
-  };
-  const spineTyp = (cx, cy, fw, fh) => {
-    if (isExclusion({cx, cy, fw, fh}, derived)) return 'exclusion';
-    if (isCourtyardTypology({cx, cy, fw, fh, count:4}, derived)) return 'courtyard';
-    if (isArcadeTypology({cx, cy}, derived)) return 'arcade';
-    const floors = spineFloors(cx, cy);
-    return floors >= 5 ? 'p105' : 'solid';
-  };
-  gridZone(SPINE, { fw: 80, fh: 60, stepX: 110, stepY: 90, floorsFn: spineFloors, typFn: spineTyp });
-
-  // --- MAIN STREET BAND: 2-4 floors, arcade fronts ---
-  if (derived.BAND) {
-    const bandFloors = () => Math.round(2 + Math.random() * 2);
-    const bandTyp = () => 'arcade';
-    const bandZone = {
-      x: derived.BAND.x + SPINE.w * 0.5,
-      y: derived.BAND.y,
-      w: derived.BAND.w - SPINE.w,
-      h: derived.BAND.h,
-    };
-    gridZone(bandZone, { fw: 60, fh: 45, stepX: 90, stepY: 70, floorsFn: bandFloors, typFn: bandTyp });
-  }
-
-  // --- CLT NORTH: 3-6 floors, courtyard / solid residential ---
-  if (derived.CLT_NORTH) {
-    const cltFloors = (cx, cy) => {
-      const d = Math.abs(cx - spineX);
-      return Math.max(2, Math.round(5 - d / 400));
-    };
-    const cltTyp = (cx, cy, fw, fh) => {
-      if (isExclusion({cx, cy, fw, fh}, derived)) return 'exclusion';
-      return isCourtyardTypology({cx, cy, fw, fh, count:4}, derived) ? 'courtyard' : 'solid';
-    };
-    gridZone(derived.CLT_NORTH, { fw: 70, fh: 55, stepX: 105, stepY: 85, floorsFn: cltFloors, typFn: cltTyp });
-  }
-
-  // --- HOUSING_B_S: 3-5 floors, mostly solid ---
-  if (derived.HOUSING_B) {
-    const hbFloors = (cx, cy) => Math.max(2, Math.round(4 - Math.abs(cx - spineX) / 500));
-    const hbTyp = (cx, cy, fw, fh) => {
-      if (isExclusion({cx, cy, fw, fh}, derived)) return 'exclusion';
-      return 'solid';
-    };
-    gridZone(derived.HOUSING_B, { fw: 65, fh: 55, stepX: 100, stepY: 85, floorsFn: hbFloors, typFn: hbTyp });
-  }
-
-  // --- CIVIC zones: 1-3 floors, solid ---
-  const civicZones = ['CIVIC', 'CIVIC_700', 'CIVIC_854', 'CIVIC_862', 'CIVIC_920',
-                      'CIVIC_SPINE_S', 'CIVIC_STRIP', 'HOUSING_A'].filter(k => derived[k]);
-  for (const k of civicZones) {
-    const z = derived[k];
-    if (!z || z.w < 80 || z.h < 60) continue;
-    gridZone(z, {
-      fw: 55, fh: 45, stepX: 85, stepY: 75,
-      floorsFn: () => Math.round(1 + Math.random() * 2),
-      typFn: () => 'solid',
-    });
-  }
-
-  // --- Supplement with hotNode clusters for field-line-driven detail ---
-  const usedPos = blocks.map(b => ({x: b.cx, y: b.cy}));
+  // Supplement: hot nodes outside all parcel zones
   const MIN_SEP = 70;
+  const usedPos = blocks.map(b=>({x:b.cx,y:b.cy}));
   if (hotNodes) {
-    for (const n of hotNodes.sort((a,b) => b.nStrong - a.nStrong)) {
-      if (usedPos.some(p => Math.hypot(p.x - n.x, p.y - n.y) < MIN_SEP)) continue;
-      const t = Math.min(Math.abs(n.x - spineX) / 550, 1);
-      const floors = Math.max(2, 7 - Math.round(t * 4));
-      const excl = isExclusion({ cx: n.x, cy: n.y, fw: 70, fh: 55 }, derived);
-      let domPid = null;
-      if (n.weights) {
-        let domW = 0;
-        for (const [pid, w] of Object.entries(n.weights)) { if (w > domW) { domW = w; domPid = pid; } }
-      }
-      const typology = excl ? 'exclusion' :
-        isCourtyardTypology({cx:n.x, cy:n.y, fw:70, fh:55, count:4}, derived) ? 'courtyard' :
-        isArcadeTypology({cx:n.x, cy:n.y}, derived) ? 'arcade' :
-        floors >= 5 ? 'p105' : 'solid';
-      blocks.push({ cx: n.x, cy: n.y, fw: 70, fh: 55, floors, domPid,
-                    avgStrong: n.nStrong, count: 4, typology, openDir: 'S', exclusion: excl || null });
-      usedPos.push({x: n.x, y: n.y});
+    for (const n of hotNodes.sort((a,b)=>b.nStrong-a.nStrong)) {
+      if (usedPos.some(p=>Math.hypot(p.x-n.x,p.y-n.y)<MIN_SEP)) continue;
+      const t = Math.min(Math.abs(n.x-spineX)/550,1);
+      const floors = Math.max(2,7-Math.round(t*4));
+      const excl = isExclusion({cx:n.x,cy:n.y,fw:70,fh:55},derived);
+      let domPid=null;
+      if(n.weights){let domW=0;for(const[pid,w]of Object.entries(n.weights)){if(w>domW){domW=w;domPid=pid;}}}
+      const typology = excl?'exclusion':isCourtyardTypology({cx:n.x,cy:n.y,fw:70,fh:55,count:4},derived)?'courtyard':
+        isArcadeTypology({cx:n.x,cy:n.y},derived)?'arcade':floors>=5?'p105':'solid';
+      blocks.push({cx:n.x,cy:n.y,fw:70,fh:55,floors,domPid,avgStrong:n.nStrong,
+                   count:4,typology,openDir:'S',exclusion:excl||null});
+      usedPos.push({x:n.x,y:n.y});
     }
   }
-
   return blocks;
 }
 
