@@ -87,8 +87,8 @@
   </div>
   <div class="ctrl-group">
     <span class="ctrl-label">Ht scale</span>
-    <input type="range" id="ctrl-htscale" min="0.5" max="8" value="2.5" step="0.25">
-    <span class="ctrl-val" id="val-htscale">2.5×</span>
+    <input type="range" id="ctrl-htscale" min="0.5" max="8" value="1" step="0.25">
+    <span class="ctrl-val" id="val-htscale">1×</span>
   </div>
 
   <button class="toggle-btn on" id="tog-buildings">Bldgs</button>
@@ -245,16 +245,18 @@ function solveConstraintsMin(G, MAP) {
   const bby=MAP.y0+derived.BAND.h;  // north edge of band in ft
 
   // Sponge Park: east of spine, between band north edge and housing south edge
-  const sg_avail_left=sr+30, sg_avail_right=MAP.x1-300;
-  const sg_avail_south=bby+25;
-  const sg_avail_north=HB_PAR ? HB_PAR.bbox.bottom-20 : MAP.y1-300;
-  const sg_rx=Math.min((sg_avail_right-sg_avail_left)/2, 300);
-  const sg_ry=Math.min((sg_avail_north-sg_avail_south)/2, 230);
-  let sg_cx=sg_avail_left+sg_rx, sg_cy=(sg_avail_south+sg_avail_north)/2;
-  if(SP_PAR){
-    const dist=Math.abs(SP_PAR.centroid_x-sg_cx);
-    if(dist<sg_rx*1.5) sg_cx=(sg_cx+SP_PAR.centroid_x)/2;
-    sg_cy=(sg_cy+SP_PAR.centroid_y)/2;
+  // Sponge Park: use the actual SPONGE_PARCEL centroid if present; otherwise estimate.
+  // SP_PAR centroid is the authoritative position.
+  let sg_cx, sg_cy, sg_rx, sg_ry;
+  if (SP_PAR) {
+    sg_cx = SP_PAR.centroid_x;
+    sg_cy = SP_PAR.centroid_y;
+    // rx/ry from parcel bbox
+    sg_rx = Math.min(SP_PAR.bbox.width / 2, 300);
+    sg_ry = Math.min(SP_PAR.bbox.height / 2, 230);
+  } else {
+    sg_cx = sr + 300; sg_cy = MALL.centroid_y;
+    sg_rx = 200; sg_ry = 150;
   }
   derived.SPONGE={cx:sg_cx, cy:sg_cy, rx:Math.max(sg_rx,50), ry:Math.max(sg_ry,50)};
   derived.BASIN ={cx:sg_cx, cy:sg_cy, rx:Math.max(sg_rx,50)*0.38, ry:Math.max(sg_ry,50)*0.38};
@@ -1282,7 +1284,7 @@ window.EC_FieldSolver = (() => {
     this.enabled = true;
     this.target = new THREE.Vector3();
     this.minDistance = 50; this.maxDistance = 8000;
-    this.enableDamping = true; this.dampingFactor = 0.05;
+    this.enableDamping = false; this.dampingFactor = 0.05;
     this.rotateSpeed = 0.5; this.panSpeed = 0.8; this.zoomSpeed = 1.2;
 
     const scope = this;
@@ -1610,7 +1612,7 @@ function buildGreenery(hotNodes, derived, MAP, fieldLines) {
 
 // State
 let lastResult = null;
-let HT_SCALE = 2.5;
+let HT_SCALE = 1.0;
 
 // Parse controls
 function getSettings() {
@@ -2635,7 +2637,7 @@ document.getElementById('ctrl-htscale').addEventListener('input', e => {
   document.getElementById('val-htscale').textContent = HT_SCALE.toFixed(2) + '×';
   if (lastResult) render3D(lastResult);
 });
-document.getElementById('val-htscale').textContent = '2.50×';
+document.getElementById('val-htscale').textContent = '1.00×';
 
 // ── RENDER 3D FROM RESULT ─────────────────────────────────────────────────────
 function render3D(result) {
@@ -2883,10 +2885,21 @@ function flyStep() {
 
 // ── KEYBOARD PAN (WASD / Arrow keys) ─────────────────────────────────────────
 const _keys = {};
+// Click canvas to capture keyboard focus for WASD
+canvas.setAttribute('tabindex', '0');
+canvas.style.outline = 'none';
+canvas.addEventListener('click', () => canvas.focus());
+canvas.addEventListener('keydown', e => {
+  const nav = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+  if (nav.includes(e.code)) { e.preventDefault(); _keys[e.code] = true; }
+});
+canvas.addEventListener('keyup', e => { _keys[e.code] = false; });
+// Also catch keys on document when canvas has focus, and prevent OrbitControls
+// from swallowing arrow keys via the domElement
 document.addEventListener('keydown', e => {
-  // Don't steal input focus from range sliders / selects
-  if (e.target !== document.body && e.target !== document.documentElement) return;
-  _keys[e.code] = true;
+  if (document.activeElement === canvas) return; // already handled above
+  const nav = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'];
+  if (nav.includes(e.code)) { e.preventDefault(); _keys[e.code] = true; }
 });
 document.addEventListener('keyup', e => { _keys[e.code] = false; });
 
