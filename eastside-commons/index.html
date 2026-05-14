@@ -677,113 +677,32 @@ details[open] summary::before { content: '▼  '; }
 
       <!-- Header -->
       <div class="ctrl-section" style="padding:0.5rem 0.65rem 0.4rem;">
-        <div style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);">Plan tool</div>
-        <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--muted);margin-top:0.15rem;">T1–T7 spatial decomposition</div>
+        <div style="font-family:var(--font-mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text);">Pattern solver</div>
+        <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--muted);margin-top:0.15rem;">Alexander pattern language → site geometry</div>
       </div>
 
-      <!-- T2: Zone decomposition params -->
+      <!-- Pattern solver params -->
       <div class="ctrl-section">
-        <div class="ctrl-section-title">T2 — Zone decomposition</div>
+        <div class="ctrl-section-title">Solver passes</div>
         <div class="param-row">
-          <label class="param-key">Block size</label>
+          <label class="param-key">Recurse passes</label>
           <div class="param-control">
-            <input type="range" id="p-block-size" min="75" max="400" step="25" value="200"
-              oninput="document.getElementById('p-block-size-val').textContent=this.value+'ft'"
-              onchange="schedulePipelineRegen()">
-            <span class="param-val" id="p-block-size-val">200ft</span>
-          </div>
-        </div>
-        <div class="param-row" style="margin-top:0.25rem;">
-          <label class="param-key">Strategy</label>
-          <div class="param-control">
-            <select id="p-strategy" class="param-select" onchange="schedulePipelineRegen()">
-              <option value="hybrid" selected>Hybrid</option>
-              <option value="grid">Grid</option>
-              <option value="parcel">Parcel</option>
-            </select>
-          </div>
-        </div>
-        <div class="param-row" style="margin-top:0.25rem;">
-          <label class="param-key">Courtyard inset</label>
-          <div class="param-control">
-            <input type="range" id="p-courtyard" min="30" max="120" step="10" value="60"
-              oninput="document.getElementById('p-courtyard-val').textContent=this.value+'ft'"
-              onchange="schedulePipelineRegen()">
-            <span class="param-val" id="p-courtyard-val">60ft</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- T3: EA params -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-title">T3 — Evolutionary algorithm</div>
-        <div class="param-row">
-          <label class="param-key">Rounds</label>
-          <div class="param-control">
-            <input type="range" id="p-rounds" min="5" max="30" step="5" value="15"
+            <input type="range" id="p-rounds" min="3" max="12" step="1" value="5"
               oninput="document.getElementById('p-rounds-val').textContent=this.value"
               onchange="schedulePipelineRegen()">
-            <span class="param-val" id="p-rounds-val">15</span>
+            <span class="param-val" id="p-rounds-val">5</span>
           </div>
         </div>
-        <div class="param-row">
-          <label class="param-key">Mutation</label>
-          <div class="param-control">
-            <input type="range" id="p-mutation" min="5" max="30" step="1" value="10"
-              oninput="document.getElementById('p-mutation-val').textContent=this.value+'%'"
-              onchange="schedulePipelineRegen()">
-            <span class="param-val" id="p-mutation-val">10%</span>
-          </div>
+        <div style="font-family:var(--font-mono);font-size:0.55rem;color:var(--muted);padding:0.3rem 0 0.1rem;line-height:1.6;">
+          More passes = more pattern interactions, slower.
+          5 passes (~2s) is a good default.
         </div>
       </div>
 
-      <!-- T3: Reward weights -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-title">T3 — Reward weights</div>
-        <div class="param-row">
-          <label class="param-key">Housing units</label>
-          <div class="param-control">
-            <input type="range" id="w-units" min="0" max="50" step="1" value="20"
-              oninput="document.getElementById('w-units-val').textContent=this.value+'%'"
-              onchange="schedulePipelineRegen()">
-            <span class="param-val" id="w-units-val">20%</span>
-          </div>
-        </div>
-        <div class="param-row">
-          <label class="param-key">Affordability</label>
-          <div class="param-control">
-            <input type="range" id="w-affordable" min="0" max="50" step="1" value="35"
-              oninput="document.getElementById('w-affordable-val').textContent=this.value+'%'"
-              onchange="schedulePipelineRegen()">
-            <span class="param-val" id="w-affordable-val">35%</span>
-          </div>
-        </div>
-        <div class="param-row">
-          <label class="param-key">Green corridors</label>
-          <div class="param-control">
-            <input type="range" id="w-green" min="0" max="40" step="1" value="22"
-              oninput="document.getElementById('w-green-val').textContent=this.value+'%'"
-              onchange="schedulePipelineRegen()">
-            <span class="param-val" id="w-green-val">22%</span>
-          </div>
-        </div>
-        <div class="param-row">
-          <label class="param-key">Walkability</label>
-          <div class="param-control">
-            <input type="range" id="w-walk" min="0" max="40" step="1" value="13"
-              oninput="document.getElementById('w-walk-val').textContent=this.value+'%'"
-              onchange="schedulePipelineRegen()">
-            <span class="param-val" id="w-walk-val">13%</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- EA progress -->
+      <!-- Status / progress -->
       <div class="ctrl-section" id="ea-progress-section" style="display:none;">
         <div class="ctrl-section-title">Running…</div>
-        <div class="ea-mini-progress"><div class="ea-mini-bar" id="ea-progress-bar"></div></div>
         <div class="ea-status" id="pipeline-status-text">Initializing…</div>
-        <div class="ea-status" id="score-history" style="max-height:5rem;overflow-y:auto;opacity:0.6;"></div>
       </div>
 
       <!-- Results -->
@@ -792,8 +711,6 @@ details[open] summary::before { content: '▼  '; }
         <div class="result-row"><span class="result-key">Units placed</span><span class="result-val" id="res-units">—</span></div>
         <div class="result-row"><span class="result-key">Affordable</span><span class="result-val" id="res-affordable">—</span></div>
         <div class="result-row"><span class="result-key">Green cover</span><span class="result-val" id="res-green">—</span></div>
-        <div class="result-row"><span class="result-key">Avg FAR</span><span class="result-val" id="dv-far">—</span></div>
-        <div class="result-row"><span class="result-key">EA score</span><span class="result-val" id="res-score" style="font-size:0.75rem;">—</span></div>
         <div class="result-row"><span class="result-key">Patterns</span><span class="result-val" id="res-patterns" style="font-size:0.7rem;">—</span></div>
       </div>
 
@@ -4143,6 +4060,217 @@ window.EC_Pipeline = {
   runPipeline, scoreCandidate,
 };
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PATTERN → ZONE TRANSLATOR
+//  Converts EC_PatternSolver scene graph instances into the zone object format
+//  that T4 (unit placement) and T7 (SVG renderer) consume.
+//
+//  Pattern ID → USES key mapping:
+//    P95  (Building Complex)      → MIXED_USE_5OVER1   (25ft parcel strips)
+//    P109 (Long Thin House)       → RESIDENTIAL_CLT_OWN
+//    P37  (House Cluster)         → RESIDENTIAL_MARKET  (cluster centroid → district)
+//    P87  (Individually Owned Shops) → MIXED_USE_5OVER1 (ground retail)
+//    P88  (Street Cafe)           → PLAZA
+//    P46  (Market of Many Shops)  → MARKET_HALL
+//    P60  (Accessible Green)      → GREEN_ACTIVE
+//    P67  (Common Land)           → GREEN_ACTIVE
+//    P71  (Still Water / Bioswale)→ GREEN_PASSIVE
+//    P115 (Courtyards Which Live) → PLAZA               (courtyard void → plaza)
+//    P53  (Main Gateways)         → PLAZA
+//    P31  (Promenade)             → PLAZA               (spine as linear plaza)
+//
+//  Geometry flow:
+//    inst.geom [{x,y},...] → toOuterPts [[x,y],...] → clip to EDA → poly.outer
+//    poly.outer → ptsToSVGPath → poly.svgPath
+//    bounds of poly.outer → poly.x/y/w/h  (for T4 rect fallback)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const PATTERN_USE_MAP = {
+  95:  'MIXED_USE_5OVER1',
+  109: 'RESIDENTIAL_CLT_OWN',
+  37:  'RESIDENTIAL_MARKET',
+  87:  'MIXED_USE_5OVER1',
+  88:  'PLAZA',
+  46:  'MARKET_HALL',
+  60:  'GREEN_ACTIVE',
+  67:  'GREEN_ACTIVE',
+  71:  'GREEN_PASSIVE',
+  115: 'PLAZA',
+  53:  'PLAZA',
+  31:  'PLAZA',
+  114: 'GREEN_ACTIVE',
+  106: 'GREEN_ACTIVE',
+  127: 'RESIDENTIAL_CLT_OWN',
+  122: 'MIXED_USE_5OVER1',
+  30:  'CIVIC',
+  36:  'CIVIC',
+  29:  null,  // Density Rings: district-scale only, no rendered zone
+};
+
+// FAR by use for constraints
+const PATTERN_FAR = {
+  MIXED_USE_5OVER1:    5.0,
+  RESIDENTIAL_CLT_OWN: 4.0,
+  RESIDENTIAL_MARKET:  4.5,
+  GREEN_ACTIVE:        0,
+  GREEN_PASSIVE:       0,
+  PLAZA:               0,
+  MARKET_HALL:         2.0,
+  CIVIC:               3.0,
+};
+
+function patternInstancesToZones(sg, t1) {
+  if (!sg || !sg.instances) return [];
+
+  const { scale, MAP, setbacks } = t1;
+  const PX_TO_AC = (scale.ft_per_px_ew * scale.ft_per_px_ns) / 43560;
+
+  // Build EDA boundary as a single unioned Clipper path for intersection
+  let edaClipPaths = null;
+  if (typeof ClipperLib !== 'undefined' && _pipelineParcels) {
+    const edaRings = _pipelineParcels
+      .filter(p => p.is_eda && p.rings?.[0])
+      .map(p => {
+        const svgPts = p.rings[0].map(([lon, lat]) => _pipelineProj(lon, lat));
+        return toClipper(svgPts);
+      })
+      .filter(r => r.length >= 3);
+    if (edaRings.length > 0) {
+      edaClipPaths = clipperUnion(edaRings);
+    }
+  }
+
+  const zones = [];
+  let zIdx = 0;
+
+  // Which pattern IDs to render as zones (skip singletons that are pure annotations)
+  const RENDERABLE = new Set(Object.keys(PATTERN_USE_MAP)
+    .map(Number).filter(k => PATTERN_USE_MAP[k] !== null));
+
+  for (const inst of sg.instances) {
+    if (!RENDERABLE.has(inst.patternId)) continue;
+
+    const use = PATTERN_USE_MAP[inst.patternId];
+    if (!use || !USES[use]) continue;
+
+    // Collect geometry — handle polygon, polygon_array, point_cloud
+    const geomList = inst.geomType === 'polygon_array'
+      ? inst.geom
+      : [inst.geom];
+
+    for (const geom of geomList) {
+      // Convert {x,y}[] to [[x,y][] for Clipper/SVG
+      const rawPts = Array.isArray(geom)
+        ? geom.map(p => [p.x ?? 0, p.y ?? 0])
+        : null;
+
+      if (!rawPts || rawPts.length < 3) continue;
+
+      // Compute bounds before clipping (for centroid + fallback rect)
+      const xs = rawPts.map(([x]) => x);
+      const ys = rawPts.map(([, y]) => y);
+      const bx = Math.min(...xs), bX = Math.max(...xs);
+      const by = Math.min(...ys), bY = Math.max(...ys);
+      const bw = bX - bx, bh = bY - by;
+
+      // Reject tiny or degenerate polygons
+      if (bw < 4 || bh < 4) continue;
+
+      // Clip to EDA boundary (if Clipper available)
+      let finalPts = rawPts;
+      if (edaClipPaths && typeof ClipperLib !== 'undefined') {
+        try {
+          const subj = [toClipper(rawPts)];
+          const clipped = clipperIntersection(subj, edaClipPaths);
+          if (clipped.length === 0) continue;  // entirely outside EDA
+          // Take the largest resulting polygon
+          clipped.sort((a, b) => Math.abs(clipperArea(b)) - Math.abs(clipperArea(a)));
+          finalPts = fromClipper(clipped[0]);
+          if (finalPts.length < 3) continue;
+        } catch (e) {
+          // Clipper failed — use unclipped
+        }
+      }
+
+      // Build poly fields
+      const fxs = finalPts.map(([x]) => x);
+      const fys = finalPts.map(([, y]) => y);
+      const fx0 = Math.min(...fxs), fx1 = Math.max(...fxs);
+      const fy0 = Math.min(...fys), fy1 = Math.max(...fys);
+      const fw = fx1 - fx0, fh = fy1 - fy0;
+      const cx = (fx0 + fx1) / 2, cy = (fy0 + fy1) / 2;
+
+      const area_px = Math.abs(finalPts.reduce((s, [x, y], i, a) => {
+        const [nx, ny] = a[(i + 1) % a.length];
+        return s + x * ny - nx * y;
+      }, 0)) / 2;
+
+      const area_ac = area_px * PX_TO_AC;
+      const area_sf = area_ac * 43560;
+
+      // Skip zones too small to be meaningful (<0.02ac ≈ 870 sf)
+      if (area_ac < 0.02) continue;
+
+      // Road adjacency
+      const road_adj = [];
+      if (fy0 <= MAP.y0 + 40) road_adj.push('VA_BEACH_BLVD');
+      if (fy1 >= MAP.y1 - 40) road_adj.push('I264');
+      if (fx0 <= MAP.x0 + 40) road_adj.push('N_MILITARY_HWY');
+      if (fx1 >= MAP.x1 - 40) road_adj.push('TIDEWATER_DR');
+
+      const in_setback = setbacks.some(s =>
+        cx >= s.poly.x && cx <= s.poly.x + s.poly.w &&
+        cy >= s.poly.y && cy <= s.poly.y + s.poly.h
+      );
+
+      // Derive contextual flags from centroid position vs derivedG
+      const G = window._derivedG || {};
+      const on_spine   = G.SPINE  ? cx >= G.SPINE.x - 10 && cx <= G.SPINE.x + G.SPINE.w + 10 : false;
+      const near_sponge= G.SPONGE ? Math.hypot(cx - G.SPONGE.cx, cy - G.SPONGE.cy) < Math.max(G.SPONGE.rx, G.SPONGE.ry) * 1.5 : false;
+
+      const far = PATTERN_FAR[use] ?? 0;
+      const isGreen = use.startsWith('GREEN') || use === 'PLAZA';
+      const maxH = isGreen ? 0 : (PLANNING.MAX_HEIGHT_FT.mixed || 65);
+
+      zones.push({
+        id: `P${inst.patternId}_${zIdx++}`,
+        source: 'pattern',
+        patternId: inst.patternId,
+        poly: {
+          outer:   finalPts,          // [[x,y],...] — for T4, T5
+          svgPath: ptsToSVGPath(finalPts),  // for T7
+          x: fx0, y: fy0, w: fw, h: fh,    // rect fallback for T4 wing calc
+        },
+        centroid: { x: cx, y: cy },
+        area_px,
+        area_ac,
+        area_sf,
+        parcel_specs: [],
+        road_adj,
+        in_setback: in_setback && isGreen ? false : in_setback,  // green ok in setback
+        on_spine,
+        near_sponge,
+        in_main_st: false,
+        near_tide:  false,
+        eligible_uses: [use],
+        use,
+        district: `P${inst.patternId}`,
+        edge_mutations: [],
+        constraints: {
+          max_height_ft: maxH,
+          min_courtyard_ratio: PLANNING.MIN_COURTYARD_RATIO,
+          max_depth_ft: PLANNING.MAX_BUILDING_DEPTH_FT,
+          far,
+        },
+      });
+    }
+  }
+
+  console.log(`[PatternZones] ${zones.length} zones from ${sg.instances.length} instances`);
+  return zones;
+}
+
+
 
 
 // ── PIPELINE WIRING ──────────────────────────────────────────────────────────
@@ -5790,100 +5918,141 @@ async function triggerPipeline() {
   if (errOverlay) errOverlay.style.display = 'none';
 
   const params = {
-    block_size_ft:       parseInt(document.getElementById('p-block-size').value),
-    strategy:            document.getElementById('p-strategy').value,
-    courtyard_inset_ft:  parseInt(document.getElementById('p-courtyard')?.value || 60),
-    ea_rounds:           parseInt(document.getElementById('p-rounds').value) || (window.innerWidth < 700 ? 5 : 15),
-    ea_candidates:       30,
-    ea_mutation:         parseInt(document.getElementById('p-mutation').value) / 100,
-    show_units:true, show_edges:true, show_labels:true, opacity:0.55,
-    weights: {
-      w_units:         parseInt(document.getElementById('w-units').value) / 100,
-      w_affordable:    parseInt(document.getElementById('w-affordable').value) / 100,
-      w_green_connect: parseInt(document.getElementById('w-green').value) / 100,
-      w_walkability:   parseInt(document.getElementById('w-walk').value) / 100,
-      w_conflict: -0.05, w_synergy: 0.05,
-    },
+    ps_recurse: parseInt(document.getElementById('p-rounds')?.value || 5),
+    show_units: true, show_edges: true, show_labels: true, opacity: 0.55,
   };
 
   try {
-    await window.EC_Pipeline.runPipeline(
-      _pipelineParcels, _pipelineProj, _pipelineMAP, window._derivedG, params,
-      {
-        onStatus: (msg) => { if (statusText) statusText.textContent = msg; },
-        onT2Complete: (zones) => { if (statusText) statusText.textContent = `T2: ${zones.length} zones`; },
-        onEAProgress: ({ round, total, best, history }) => {
-          if (progressBar) progressBar.style.width = `${(round/total)*100}%`;
-          const last = history[history.length-1];
-          if (scoreHistory) {
-            scoreHistory.innerHTML += `<div>R${last.round} score=${last.best.toFixed(3)} · ${last.units}u</div>`;
-            scoreHistory.scrollTop = scoreHistory.scrollHeight;
-          }
-          if (statusText) statusText.textContent = `Round ${round}/${total} · best ${last.best.toFixed(3)}`;
-        },
-        onComplete: ({ zones, score }) => {
-          window._lastPipelineZones = zones;  // for GeoJSON export
-          window._lastSeed   = getCurrentSeed();
-          window._lastParams = params;
-          let total_units=0, affordable=0, green_ac=0;
-          for (const z of zones) {
-            if (z.units && z.use.startsWith('RESIDENTIAL') && !z.district?.includes('COURTYARD')) {
-              total_units+=z.units.unit_count; affordable+=z.units.affordable_units;
-            }
-            if (z.use.startsWith('GREEN')) green_ac+=z.area_ac;
-          }
-          document.getElementById('res-units').textContent = total_units.toLocaleString();
-          document.getElementById('res-affordable').textContent =
-            total_units>0 ? `${((affordable/total_units)*100).toFixed(0)}%` : '—';
-          document.getElementById('res-green').textContent = (green_ac/73.4*100).toFixed(1)+'%';
-          const farEl = document.getElementById('dv-far');
-          if (farEl) farEl.textContent = score.realized_far_avg || '—';
-          document.getElementById('res-score').textContent = score.total.toFixed(3);
-          if (progSection) progSection.style.display = 'none';
-          if (statusText) statusText.textContent = '\u2713 Complete';
-          if (btn) { btn.disabled=false; btn.textContent='\u21ba Re-run'; }
+    const svg = document.getElementById('site-plan');
+    const MAP = _pipelineMAP;
+    const proj = _pipelineProj;
+    const parcels = _pipelineParcels;
 
-          // ── Run Alexander pattern solver ──
-          if (window.EC_PatternSolver) {
-            try {
-              const st2 = window._getPipelineState?.() || {};
-              const psResult = window.EC_PatternSolver.solve(
-                st2.parcels, st2.proj, {x0:139,y0:163,x1:841,y1:653},
-                window._derivedG, { recurse:3, cluster_k:40 }
-              );
-              window._patternSolverResult = psResult;
-              window._lastPatternResult    = psResult;
-              const patEl = document.getElementById('res-patterns');
-              if (patEl) patEl.textContent =
-                psResult.sceneGraph.instances.length + ' inst / ' + psResult.buildings.length + ' bldgs';
-              console.group('[PatternSolver]');
-              psResult.log.forEach(l => console.log(l));
-              console.log('counts:', psResult.counts);
-              console.groupEnd();
-              // (pattern animation panel removed — 2D overlay is the display now)
-            } catch(e) { console.error('[PatternSolver]', e); }
+    // ── T1: Ground truth ──────────────────────────────────────────────────
+    if (statusText) statusText.textContent = 'T1: Building ground truth…';
+    const t1 = window.EC_Pipeline.buildT1GroundTruth(parcels, proj, MAP);
+
+    // Attach bboxes (needed by some T4 helpers)
+    for (const p of t1.edaParcels) {
+      if (!p._bbox) {
+        let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+        for (const ring of p.rings) {
+          for (const [lon,lat] of ring) {
+            const [x,y] = proj(lon,lat);
+            if(x<minX)minX=x; if(x>maxX)maxX=x;
+            if(y<minY)minY=y; if(y>maxY)maxY=y;
           }
-
-          // Update legend chips
-          renderLegendChips();
-          updateAnalysisViews();
-
-          // Persist state for 3D view (view-3d.html reads this)
-          try {
-            const st = window._getPipelineState?.() || {};
-            const payload = {
-              zones:    window._lastPipelineZones || [],
-              parcels:  (st.parcels || []).filter(p => p.is_eda),
-              proj:     null,   // proj fn not serializable — view-3d re-derives from seed
-              seed:     window._lastSeed,
-              params:   window._lastParams,
-              ts:       Date.now(),
-            };
-            localStorage.setItem('ec-state', JSON.stringify(payload));
-          } catch(e) { /* storage full or private mode */ }
-        },
+        }
+        p._bbox = {left:minX,right:maxX,top:minY,bottom:maxY};
       }
+    }
+
+    // ── Pattern Solver ────────────────────────────────────────────────────
+    if (statusText) statusText.textContent = 'Pattern solver: running…';
+    if (!window.EC_PatternSolver) throw new Error('EC_PatternSolver not loaded');
+
+    const psResult = window.EC_PatternSolver.solve(
+      parcels, proj, MAP, window._derivedG,
+      { recurse: params.ps_recurse || 5, cluster_k: 40 }
     );
+    window._patternSolverResult = psResult;
+    window._lastPatternResult   = psResult;
+    console.group('[PatternSolver]');
+    psResult.log.forEach(l => console.log(l));
+    console.log('counts:', psResult.counts);
+    console.groupEnd();
+
+    if (statusText) statusText.textContent =
+      `Pattern solver: ${psResult.sceneGraph.instances.length} instances`;
+
+    // ── Pattern → Zones ───────────────────────────────────────────────────
+    if (statusText) statusText.textContent = 'Translating pattern instances to zones…';
+    const t2Zones = patternInstancesToZones(psResult.sceneGraph, t1);
+
+    if (t2Zones.length === 0)
+      throw new Error('Pattern solver produced no renderable zones — check EDA parcel coverage');
+
+    if (statusText) statusText.textContent = `Zones: ${t2Zones.length} from patterns`;
+
+    // ── T4: Unit placement ────────────────────────────────────────────────
+    if (statusText) statusText.textContent = 'T4: Placing unit modules…';
+    const t4Zones = (window.EC_T4 && t2Zones[0]?.poly?.outer)
+      ? window.EC_T4.buildUnits(t2Zones, t1)
+      : window.EC_Pipeline.buildT4Units(t2Zones, t1);
+
+    // ── T5: Interaction constraints ───────────────────────────────────────
+    if (statusText) statusText.textContent = 'T5: Applying interaction constraints…';
+    const t5Zones = window.EC_Pipeline.applyT5Interactions(t4Zones);
+
+    // ── T6: Cleanup ───────────────────────────────────────────────────────
+    if (statusText) statusText.textContent = 'T6: Cleanup pass…';
+    const t6Zones = window.EC_Pipeline.applyT6Cleanup(t5Zones);
+
+    // ── T7: Render ────────────────────────────────────────────────────────
+    if (statusText) statusText.textContent = 'T7: Rendering…';
+    if (svg) {
+      // Clear previous T7 layers
+      svg.querySelectorAll('[data-t7]').forEach(e => e.remove());
+      svg.querySelector('#pattern-overlay')?.remove();
+
+      if (window.EC_Decomp && t6Zones[0]?.poly?.svgPath) {
+        window.EC_Decomp.renderT7Polygons(t6Zones, svg, params);
+      } else {
+        window.EC_Pipeline.renderT7(t6Zones, svg, params);
+      }
+
+      // Unit layer
+      if (params.show_units !== false && typeof renderUnits === 'function') {
+        renderUnits(t6Zones, svg, params);
+      }
+
+      // Edge overlay
+      if (window.EC_Edges) {
+        const edges = window.EC_Edges.buildEdges(t6Zones, { bufferPx: 5 });
+        window.EC_Edges.renderEdges(edges, svg, { opacity: '0.8' });
+      }
+
+      if (window.EC_PanZoom) window.EC_PanZoom.reinit();
+    }
+
+    // ── onComplete ────────────────────────────────────────────────────────
+    const zones = t6Zones;
+    window._lastPipelineZones = zones;
+    window._lastSeed   = getCurrentSeed();
+    window._lastParams = params;
+
+    // Summarise
+    let total_units=0, affordable=0, green_ac=0;
+    for (const z of zones) {
+      if (z.units && z.use.startsWith('RESIDENTIAL') && !z.district?.includes('COURTYARD')) {
+        total_units += z.units.unit_count || 0;
+        affordable  += z.units.affordable_units || 0;
+      }
+      if (z.use.startsWith('GREEN')) green_ac += z.area_ac;
+    }
+    document.getElementById('res-units').textContent = total_units.toLocaleString();
+    document.getElementById('res-affordable').textContent =
+      total_units > 0 ? `${((affordable/total_units)*100).toFixed(0)}%` : '—';
+    document.getElementById('res-green').textContent = (green_ac/73.4*100).toFixed(1)+'%';
+    const patEl = document.getElementById('res-patterns');
+    if (patEl) patEl.textContent =
+      `${psResult.sceneGraph.instances.length} inst / ${zones.length} zones`;
+
+    if (progSection) progSection.style.display = 'none';
+    if (statusText) statusText.textContent = '✓ Complete';
+    if (btn) { btn.disabled=false; btn.textContent='↺ Re-run'; }
+
+    renderLegendChips();
+    updateAnalysisViews();
+
+    // Persist for 3D view
+    try {
+      localStorage.setItem('ec-state', JSON.stringify({
+        zones, parcels: parcels.filter(p=>p.is_eda),
+        seed: window._lastSeed, params, ts: Date.now(),
+      }));
+    } catch(e) { /* storage full */ }
+
   } catch(e) {
     const msg = e?.message || String(e);
     statusText.textContent = '\u2717 Error: ' + msg;
