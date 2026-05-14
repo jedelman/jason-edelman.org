@@ -114,7 +114,7 @@
   <div id="tooltip"></div>
   <canvas id="three-canvas"></canvas>
   <div id="canvas-label">Military Circle · 73.4 ac · Norfolk VA · 3D field model · ft</div>
-  <div id="legend">drag to orbit · scroll to zoom · shift+drag to pan</div>
+  <div id="legend">drag to orbit · scroll to zoom · shift+drag to pan · WASD to walk</div>
 </div>
 
 <script>
@@ -832,6 +832,121 @@ window.EC_FieldSolver = (() => {
       const py=MAP.y0+fy*cs;
       const distN=Math.min(py-MAP.y0, MAP.y1-py);
       field[i]+=Math.exp(-(distN*distN)/(200*200))*0.5;
+    }
+  });
+
+  defPattern(119, 'Arcades', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    // Covered walkways at building edges along major pedestrian routes.
+    // Pressure in the 10-30ft strip flanking the promenade — where a colonnade sits.
+    const s=site.derived.SPINE; if(!s) return;
+    const spineY=s.y+s.h/2;
+    const arcadeWidth=25;
+    for(let i=0;i<field.length;i++){
+      const fy=Math.floor(i/gw);
+      const py=MAP.y0+fy*cs;
+      const dy=Math.abs(py-spineY);
+      if(dy>s.h*0.3 && dy<s.h*0.3+arcadeWidth) field[i]+=0.8;
+    }
+    const hb=site.derived.HOUSING_B; if(hb){
+      const edges=[hb.x, hb.x+hb.w];
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw;
+        const px=MAP.x0+fx*cs;
+        for(const ex of edges){
+          const d=Math.abs(px-ex);
+          if(d<arcadeWidth) field[i]+=Math.exp(-(d*d)/(arcadeWidth*arcadeWidth/4))*0.7;
+        }
+      }
+    }
+  });
+
+  defPattern(121, 'Path Shape', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Paths with clear shape — widening at activity nodes, narrowing between.
+    // Pressure at the three natural node-pinches along the spine.
+    const s=site.derived.SPINE; if(!s) return;
+    const fracs=[0.25, 0.5, 0.75];
+    const spineY=s.y+s.h/2;
+    for(const f of fracs){
+      const nx=s.x+s.w*f;
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        const d=Math.sqrt((px-nx)**2+(py-spineY)**2);
+        field[i]+=Math.exp(-(d*d)/(50*50))*0.9;
+      }
+    }
+  });
+
+  defPattern(160, 'Building Edge', 0.75, (field,gw,gh,cs,MAP,site)=>{
+    // The zone where building meets ground must be alive.
+    // Pressure at the perimeter strip (0-15ft) of every EDA parcel.
+    const edgeDepth=15;
+    for(const parcel of (site.edaParcels||[])){
+      const {x,y,w,h}=parcel.bbox;
+      for(let i=0;i<field.length;i++){
+        const fx=i%gw, fy=Math.floor(i/gw);
+        const px=MAP.x0+fx*cs, py=MAP.y0+fy*cs;
+        const inX=px>=x&&px<=x+w, inY=py>=y&&py<=y+h;
+        if(!inX||!inY) continue;
+        const dEdge=Math.min(px-x, x+w-px, py-y, y+h-py);
+        if(dEdge<edgeDepth) field[i]+=((edgeDepth-dEdge)/edgeDepth)*0.9;
+      }
+    }
+  });
+
+  defPattern(123, 'Pedestrian Density', 0.85, (field,gw,gh,cs,MAP,site)=>{
+    // Enough people on foot (~300+ ppa) to sustain street life and shops.
+    // Pressure concentrated at main street core and CLT residential cluster.
+    const s=site.derived.SPINE, clt=site.derived.CLT_NORTH;
+    if(s){
+      const mid=s.x+s.w/2, halfW=s.w*0.25;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const dx=Math.abs(px-mid), dy=Math.abs(py-(s.y+s.h/2));
+        if(dx<halfW&&dy<s.h*0.5) field[i]+=0.85;
+      }
+    }
+    if(clt){
+      const cx=clt.x+clt.w/2, cy=clt.y+clt.h/2;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-cx)**2+(py-cy)**2);
+        field[i]+=Math.exp(-(d*d)/(120*120))*0.8;
+      }
+    }
+  });
+
+  defPattern(14, 'Identifiable Neighborhood', 0.7, (field,gw,gh,cs,MAP,site)=>{
+    // Each sub-district ~7min walk across, recognizable from within.
+    // Pressure at the boundary ring of each character zone.
+    const zones=[
+      site.derived.CLT_NORTH, site.derived.SPINE,
+      site.derived.HOUSING_B, site.derived.CIVIC
+    ].filter(Boolean);
+    for(const z of zones){
+      const cx=z.x+z.w/2, cy=z.y+z.h/2;
+      const r=150;
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-cx)**2+(py-cy)**2);
+        field[i]+=Math.exp(-((d-r)*(d-r))/(60*60))*0.6;
+      }
+    }
+  });
+
+  defPattern(8, 'Mosaic of Subcultures', 0.65, (field,gw,gh,cs,MAP,site)=>{
+    // Distinct sub-areas require clear edges between character zones.
+    // Pressure peaks at the Voronoi boundaries between zone centroids.
+    const zoneCenters=[
+      site.derived.CLT_NORTH, site.derived.SPINE,
+      site.derived.HOUSING_B, site.derived.CIVIC
+    ].filter(Boolean).map(z=>({x:z.x+z.w/2, y:z.y+z.h/2}));
+    if(zoneCenters.length<2) return;
+    for(let i=0;i<field.length;i++){
+      const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+      const dists=zoneCenters.map(c=>Math.sqrt((px-c.x)**2+(py-c.y)**2)).sort((a,b)=>a-b);
+      const boundary=dists[1]>0 ? (dists[0]/dists[1]) : 0;
+      field[i]+=Math.pow(boundary,4)*0.7;
     }
   });
 
@@ -2671,9 +2786,46 @@ function flyStep() {
 }
 
 
+// ── KEYBOARD PAN (WASD / Arrow keys) ─────────────────────────────────────────
+const _keys = {};
+document.addEventListener('keydown', e => {
+  // Don't steal input focus from range sliders / selects
+  if (e.target !== document.body && e.target !== document.documentElement) return;
+  _keys[e.code] = true;
+});
+document.addEventListener('keyup', e => { _keys[e.code] = false; });
+
+function _applyWASD() {
+  if (_flyActive) return;
+  const speed = camera.position.distanceTo(controls.target) * 0.012;
+  const left  = _keys['KeyA'] || _keys['ArrowLeft'];
+  const right = _keys['KeyD'] || _keys['ArrowRight'];
+  const fwd   = _keys['KeyW'] || _keys['ArrowUp'];
+  const back  = _keys['KeyS'] || _keys['ArrowDown'];
+  if (!left && !right && !fwd && !back) return;
+
+  // Pan in camera-local XZ plane (no vertical drift)
+  const panVec = new THREE.Vector3();
+  const camRight = new THREE.Vector3();
+  camRight.setFromMatrixColumn(camera.matrix, 0); // camera's local X axis
+  camRight.y = 0; camRight.normalize();
+  const camFwd = new THREE.Vector3();
+  camFwd.setFromMatrixColumn(camera.matrix, 2); // camera's local -Z axis
+  camFwd.y = 0; camFwd.normalize();
+
+  if (left)  panVec.addScaledVector(camRight, -speed);
+  if (right) panVec.addScaledVector(camRight,  speed);
+  if (fwd)   panVec.addScaledVector(camFwd,   -speed);
+  if (back)  panVec.addScaledVector(camFwd,    speed);
+
+  camera.position.add(panVec);
+  controls.target.add(panVec);
+}
+
 // ── RENDER LOOP ───────────────────────────────────────────────────────────────
 function animate() {
   requestAnimationFrame(animate);
+  _applyWASD();
   controls.update();
   // LOD: show facade detail only when camera is close enough to read it
   const camDist = camera.position.length();
