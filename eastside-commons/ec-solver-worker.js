@@ -959,6 +959,142 @@ self.EC_FieldSolver = (function() {
       paintGaussian(field,gw,gh,cs,MAP, rx,ry, 45, 0.85);
   });
 
+  // ── HIGHER-LEVEL PATTERNS (added 2026-05-14 — Option A: field drives everything) ──
+
+  // P3 — City Country Fingers
+  // Hard urban/green edge: development concentrates in fingers of dense building
+  // interlocked with green fingers reaching in from the perimeter. Prevents
+  // field pressure from uniformly carpeting the site — forces distinct character
+  // bands rather than gradient sprawl. High pressure at finger AXES (buildable
+  // spines), negative pressure at finger GAPS (green corridors between).
+  defPattern(3, 'City Country Fingers', 1.0, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sg=site.derived.SPONGE;
+    const scx=s.x+s.w/2;
+    // Three buildable fingers: spine axis + two offset columns east/west
+    const fingerW=180;
+    const fingers=[
+      scx,                    // central spine finger
+      scx - (s.x-MAP.x0)*0.55, // west housing finger
+      scx + (MAP.x1-s.x-s.w)*0.45, // east research finger
+    ];
+    for(const fx of fingers)
+      paintSegment(field,gw,gh,cs,MAP, fx,MAP.y0+100, fx,MAP.y1-100, fingerW, 1.1);
+    // Green corridors between fingers: negative pressure (subtract)
+    // between spine and each outer finger
+    const gapW=110;
+    const gapPts=[
+      (scx + fingers[1])/2,
+      (scx + fingers[2])/2,
+    ];
+    for(const gx of gapPts){
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs;
+        const d=Math.abs(px-gx);
+        if(d<gapW) field[i]=Math.max(0, field[i]-Math.exp(-(d*d)/(gapW*gapW/4))*0.5);
+      }
+    }
+    // Sponge finger: the central green finger reaching from south
+    if(sg) paintEllipse(field,gw,gh,cs,MAP, sg.cx,sg.cy,sg.rx*1.6,sg.ry*1.8, -0.4);
+  });
+
+  // P21 — Four-Story Limit
+  // Human-scale height ceiling: maximum 4 stories across the CLT residential
+  // zone; taller mass only at activity nodes. Enforces consistent datum across
+  // the housing zones while concentrating height at the commercial/civic core.
+  // In field terms: pressure for mass is capped at mid-range outside nodes —
+  // the solver interprets high combined pressure as taller buildings, so this
+  // pattern actively suppresses far-field pressure in the residential zone.
+  defPattern(21, 'Four-Story Limit', 0.85, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sl=s.x, sr=s.x+s.w;
+    const scx=s.x+s.w/2;
+    // West residential zone: uniform low-medium pressure (4-story datum)
+    // Paint a flat field across the west zone — discourages hot-spot concentration
+    const westWidth=sl-MAP.x0;
+    for(let i=0;i<field.length;i++){
+      const px=MAP.x0+(i%gw)*cs;
+      if(px<sl&&px>MAP.x0){
+        // Flat contribution — equalising pressure, not peaking
+        field[i]+=0.55;
+      }
+    }
+    // Activity node exemptions: allow height at spine nodes
+    const nodeYs=[s.y+s.h*0.25, s.y+s.h*0.75];
+    for(const ny of nodeYs)
+      paintGaussian(field,gw,gh,cs,MAP, scx,ny, 160, 0.5);
+    // Suppress excess pressure east of spine (research zone can be taller
+    // but this pattern isn't about height there)
+    for(let i=0;i<field.length;i++){
+      const px=MAP.x0+(i%gw)*cs;
+      if(px>sr) field[i]=Math.max(0, field[i]-0.15);
+    }
+  });
+
+  // P25 — Access to Water
+  // Every building within 3-minute walk of water — stormwater bioswale,
+  // sponge park basin, or still-water feature. In field terms: high pressure
+  // radially from SPONGE and BASIN, decaying beyond 900ft (3-min walk at 300fpm).
+  // Pairs with P71 (Still Water) and P60 (Accessible Green) to create a
+  // continuous water-access field that pulls buildings toward the commons edge.
+  defPattern(25, 'Access to Water', 0.9, (field,gw,gh,cs,MAP,site)=>{
+    const sg=site.derived.SPONGE; if(!sg) return;
+    const b=site.derived.BASIN;
+    const WALK_3MIN_FT=900;
+    // Radial decay from sponge centre — peak at sponge edge, falls to 0 at 900ft
+    for(let i=0;i<field.length;i++){
+      const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+      const d=Math.sqrt((px-sg.cx)**2+(py-sg.cy)**2);
+      // Peak ring at sponge rim, Gaussian decay beyond
+      const rimR=Math.max(sg.rx,sg.ry);
+      const dFromRim=Math.max(0,d-rimR);
+      field[i]+=Math.exp(-(dFromRim*dFromRim)/(WALK_3MIN_FT*0.4)**2)*1.0;
+    }
+    // Basin water feature — secondary source
+    if(b){
+      for(let i=0;i<field.length;i++){
+        const px=MAP.x0+(i%gw)*cs, py=MAP.y0+Math.floor(i/gw)*cs;
+        const d=Math.sqrt((px-b.cx)**2+(py-b.cy)**2);
+        field[i]+=Math.exp(-(d*d)/(500*500))*0.7;
+      }
+    }
+    // Bioswale linear corridor — the spine of stormwater infrastructure
+    // runs N-S through the sponge and connects to the transit node
+    const ti=site.derived.TIDE;
+    if(ti) paintSegment(field,gw,gh,cs,MAP, sg.cx,sg.cy, ti.x+ti.w/2,ti.y, 55, 0.65);
+  });
+
+  // P35 — Household Mix
+  // Every housing cluster contains a range of unit sizes: studios, 1BR, 2BR, 3BR+.
+  // Prevents monoculture. In field terms: pressure distributed across the full
+  // width of the west zone (not concentrated in one column), with extra weight
+  // near community facilities (market, civic spaces) where family units cluster.
+  // This forces the solver to spread building mass laterally rather than stacking
+  // all density at one spot.
+  defPattern(35, 'Household Mix', 0.8, (field,gw,gh,cs,MAP,site)=>{
+    const s=site.derived.SPINE; if(!s) return;
+    const sl=s.x;
+    const b=site.derived.BAND;
+    const topY=b?b.y+b.h+30:MAP.y0+200;
+    const westWidth=sl-MAP.x0;
+    // Spread pressure: horizontal gradient across west zone (not E-W concentrated)
+    // Paint vertical stripes of equal weight — forces lateral distribution
+    const stripeW=westWidth/5;
+    for(let col=0;col<5;col++){
+      const cx=MAP.x0+stripeW*(col+0.5);
+      paintSegment(field,gw,gh,cs,MAP, cx,topY, cx,MAP.y1-60, stripeW*0.7, 0.7);
+    }
+    // Family cluster near market/civic: 3BR+ units gravitate toward
+    // P46 (Market) and P30 (Activity Nodes) — add weight at those zones
+    const ti=site.derived.TIDE;
+    if(ti) paintGaussian(field,gw,gh,cs,MAP, ti.x+ti.w/2,ti.y+ti.h/2, 200, 0.6);
+    // Studio/1BR near promenade entry (young singles): north end of west zone
+    paintGaussian(field,gw,gh,cs,MAP, MAP.x0+westWidth*0.4, topY+80, 150, 0.55);
+    // 3BR+ family units: south cluster (quieter, near sponge)
+    const sg=site.derived.SPONGE;
+    if(sg) paintGaussian(field,gw,gh,cs,MAP, MAP.x0+westWidth*0.5, sg.cy, 180, 0.6);
+  });
+
 
   // ── FIELD LINE TRACER ─────────────────────────────────────────────────────
   // Trace splines along ridges of the combined field.
