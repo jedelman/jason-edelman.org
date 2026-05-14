@@ -199,11 +199,30 @@
   <div id="sidebar">
     <div class="tab-bar">
       <button class="tab-btn active" data-tab="fields">Fields</button>
+      <button class="tab-btn" data-tab="gpu">GPU Buffers</button>
       <button class="tab-btn" data-tab="log">Log</button>
       <button class="tab-btn" data-tab="info">Info</button>
     </div>
     <div id="tab-fields" class="tab-panel active">
       <div id="field-list"></div>
+    </div>
+    <div id="tab-gpu" class="tab-panel">
+      <div id="gpu-status" style="padding:8px;font-size:11px;color:#888;">
+        GPU buffers available after a GPU-path solve.
+      </div>
+      <!-- Semantic field heatmaps (7 channels) -->
+      <div style="padding:6px 8px 2px;font-size:10px;color:#c87818;letter-spacing:.08em;text-transform:uppercase;">Semantic Fields</div>
+      <div id="gpu-fields-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px 8px;"></div>
+      <!-- Pattern selector + detector buffer view -->
+      <div style="padding:6px 8px 2px;margin-top:4px;font-size:10px;color:#c87818;letter-spacing:.08em;text-transform:uppercase;">Pattern Detector Buffer</div>
+      <div style="padding:0 8px;">
+        <select id="gpu-pattern-sel" style="width:100%;background:#1a1a1a;color:#e0d8cc;border:1px solid #333;padding:4px;font-size:11px;margin-bottom:4px;">
+          <option value="">— select pattern —</option>
+        </select>
+        <canvas id="gpu-pattern-canvas" width="200" height="160"
+          style="width:100%;image-rendering:pixelated;border:1px solid #2a2a2a;display:block;"></canvas>
+        <div id="gpu-pattern-stats" style="font-size:10px;color:#888;padding:2px 0;"></div>
+      </div>
     </div>
     <div id="tab-log" class="tab-panel">
       <div id="log-content">Run the solver to see output.</div>
@@ -1888,54 +1907,239 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!e.target.closest('[data-tip]')) tipPanel.style.display = 'none';
   });
 
-  // Run
-  document.getElementById('btn-run').addEventListener('click',async()=>{
-    const btn=document.getElementById('btn-run');
-    const status=document.getElementById('status');
-    btn.disabled=true; btn.textContent='Solving…'; status.textContent='…';
-    await new Promise(r=>setTimeout(r,10));
-    try {
-      const passes=+document.getElementById('ctrl-passes').value;
-      const res=+document.getElementById('ctrl-res').value;
-      const thresh=+document.getElementById('ctrl-thresh').value;
-      const eps=+document.getElementById('ctrl-eps').value;
-      status.textContent = 'Building EDA mask…';
-      await new Promise(r=>setTimeout(r,0));
-      const t0=performance.now();
-      _result=window.EC_FieldSolver.solve(parcels,proj,MAP,derived,{passes,cellSize:res,threshold:thresh,eps,ftToSvg});
-      const ms=Math.round(performance.now()-t0);
+  // Run — Worker path (GPU-first, JS fallback)
+  document.getElementById('btn-run').addEventListener('click', async () => {
+    const btn    = document.getElementById('btn-run');
+    const status = document.getElementById('status');
+    btn.disabled = true; btn.textContent = 'Solving…'; status.textContent = '…';
+    await new Promise(r => setTimeout(r, 10));
 
-      _currentSnap=_result.snapshots.length-1;
-      slider.max=_result.snapshots.length-1;
-      slider.value=_currentSnap;
+    const passes = +document.getElementById('ctrl-passes').value;
+    const res    = +document.getElementById('ctrl-res').value;
+    const thresh = +document.getElementById('ctrl-thresh').value;
+    const eps    = +document.getElementById('ctrl-eps').value;
+    const t0     = performance.now();
 
-      renderSnapshot(_result.snapshots[_currentSnap],_result);
+    // Launch Worker (supports GPU path)
+    const worker = new Worker('/eastside-commons/ec-solver-worker.js');
+    worker.postMessage({ parcels, derivedG: derived, MAP,
+      opts: { passes, cellSize: res, threshold: thresh, eps, useGPU: true } });
+
+    worker.onmessage = ev => {
+      const { type, msg, pass, payload, path } = ev.data;
+      if (type === 'status')   { status.textContent = msg; return; }
+      if (type === 'progress') { status.textContent = `Pass ${pass+1} (${path||'js'})…`; return; }
+      if (type === 'error')    {
+        status.textContent = '⚠ ' + msg;
+        const logEl = document.getElementById('log-content');
+        if (logEl) logEl.innerHTML = `<span class="log-err">${msg}</span>`;
+        btn.disabled = false; btn.textContent = '↺ Re-run';
+        worker.terminate(); return;
+      }
+      if (type !== 'result') return;
+      worker.terminate();
+
+      const ms = Math.round(performance.now() - t0);
+      _result = payload;
+
+      // GPU buffer viewer
+      if (payload.fields) {
+        window._gpuGW = payload.gw;
+        window._gpuPatternNames = payload.patternNames || {};
+        updateGPUViewer(payload.fields, payload.patternFields, payload.gw, payload.gh);
+        if (!window._gpuViewedOnce) {
+          window._gpuViewedOnce = true;
+          document.querySelector('.tab-btn[data-tab="gpu"]')?.click();
+        }
+      }
+
+      // Compat: ensure snapshots array exists for existing renderSnapshot
+      _result.snapshots = _result.snapshots || [{ pass:0, combined:new Float32Array(1),
+        fieldMap:{}, lines:[], gw:payload.gw, gh:payload.gh }];
+      _currentSnap = _result.snapshots.length - 1;
+      const slider = document.getElementById('pass-slider');
+      if (slider) { slider.max = _currentSnap; slider.value = _currentSnap; }
+      if (_result.snapshots[_currentSnap]?.fieldMap &&
+          Object.keys(_result.snapshots[_currentSnap].fieldMap).length)
+        renderSnapshot(_result.snapshots[_currentSnap], _result);
+
       updateFieldList(_result);
 
-      const satMsg=_result.saturatedAt?` (sat @${_result.saturatedAt})`:'';
-      document.getElementById('s-lines').textContent=_result.fieldLines.length;
-      document.getElementById('s-nodes').textContent=_result.hotNodes.length+` / ${_result.buildings.length}b`;
-      document.getElementById('s-patterns').textContent=Object.keys(window.EC_FieldSolver.PATTERNS).length;
-      document.getElementById('s-ms').textContent=ms+satMsg;
+      const satMsg = payload.saturatedAt ? ` (sat @${payload.saturatedAt})` : '';
+      const gpuTag = payload.fields ? ' [GPU]' : ' [JS]';
+      document.getElementById('s-lines').textContent   = payload.fieldLines?.length ?? 0;
+      document.getElementById('s-nodes').textContent   = `${payload.hotNodes?.length??0} / ${payload.buildings?.length??0}b`;
+      document.getElementById('s-patterns').textContent = Object.keys(window.EC_FieldSolver?.PATTERNS||{}).length;
+      document.getElementById('s-ms').textContent       = ms + satMsg + gpuTag;
 
-      const logEl=document.getElementById('log-content');
-      logEl.innerHTML=_result.log.map(l=>{
-        const s=typeof l==='string'?l:JSON.stringify(l);
-        if(s.startsWith('Pass')) return `<span class="log-pass">${s}</span>`;
-        if(s.includes('lines traced')) return `<span class="log-new">${s}</span>`;
-        if(s.includes('error')||s.includes('Error')) return `<span class="log-err">${s}</span>`;
+      const logEl = document.getElementById('log-content');
+      if (logEl) logEl.innerHTML = (payload.log||[]).map(l => {
+        const s = typeof l === 'string' ? l : JSON.stringify(l);
+        if (s.startsWith('Pass'))           return `<span class="log-pass">${s}</span>`;
+        if (s.includes('✓'))                return `<span class="log-new">${s}</span>`;
+        if (s.includes('error')||s.includes('Error')) return `<span class="log-err">${s}</span>`;
+        if (s.startsWith('GPU'))            return `<span style="color:#4af">${s}</span>`;
         return s;
       }).join('\n');
 
-      document.getElementById('pass-bar').style.display='flex';
-      status.textContent=`✓ ${_result.fieldLines.length} lines · ${_result.hotNodes.length} nodes · ${ms}ms`;
-    } catch(e) {
-      status.textContent='⚠ '+e.message;
-      const logEl=document.getElementById('log-content');
-      if(logEl) logEl.innerHTML=`<span class="log-err">Error: ${e.message}\n${(e.stack||'').split('\n').slice(1,4).join('\n')}</span>`;
-      console.error(e);
+      document.getElementById('pass-bar').style.display = 'flex';
+      status.textContent = `✓ ${payload.buildings?.length??0} bldgs · ${payload.hotNodes?.length??0} nodes · ${ms}ms${gpuTag}`;
+      btn.disabled = false; btn.textContent = '↺ Re-run';
+    };
+  });
+
+  // ── GPU Buffer Viewer ─────────────────────────────────────────────────
+  // Called after a GPU solve completes — renders all 7 semantic fields
+  // and wires the pattern-selector to show per-pattern detector buffers.
+
+  let _gpuFields = null;       // last GPU field readback
+  let _gpuPatternFields = null; // last GPU per-pattern detector buffers
+
+  // Render a Float32Array (single channel, WxH) into a canvas as a heatmap
+  function renderHeatmap(canvas, data, W, H, opts = {}) {
+    canvas.width  = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(W, H);
+    const { colorFn, minV, maxV } = opts;
+
+    let lo = minV ?? Infinity, hi = maxV ?? -Infinity;
+    if (lo === Infinity) for (let i=0;i<data.length;i++){if(data[i]<lo)lo=data[i];if(data[i]>hi)hi=data[i];}
+    const range = hi - lo || 1;
+
+    for (let i = 0; i < data.length; i++) {
+      const t = Math.max(0, Math.min(1, (data[i] - lo) / range));
+      const p = i * 4;
+      if (colorFn) {
+        const [r,g,b] = colorFn(t);
+        img.data[p]=r; img.data[p+1]=g; img.data[p+2]=b; img.data[p+3]=255;
+      } else {
+        // Default: deep blue → cyan → yellow → white
+        const r = t < 0.5 ? 0 : (t-0.5)*2 * 255;
+        const g = t < 0.5 ? t*2*200 : 200;
+        const b = t < 0.5 ? 180 : (1-t)*180;
+        img.data[p]=r; img.data[p+1]=g; img.data[p+2]=b; img.data[p+3]=255;
+      }
     }
-    btn.disabled=false; btn.textContent='↺ Re-run';
+    ctx.putImageData(img, 0, 0);
+    return { lo, hi, range };
+  }
+
+  // Render vec2 field (dx+dy) as direction arrows colour — hue=direction, sat=magnitude
+  function renderVec2Heatmap(canvas, dx, dy, W, H) {
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    const img = ctx.createImageData(W, H);
+    let maxMag = 0;
+    for (let i=0; i<dx.length; i++) {
+      const m = Math.sqrt(dx[i]*dx[i]+dy[i]*dy[i]);
+      if (m>maxMag) maxMag=m;
+    }
+    for (let i=0; i<dx.length; i++) {
+      const m = Math.sqrt(dx[i]*dx[i]+dy[i]*dy[i]) / (maxMag||1);
+      const angle = Math.atan2(dy[i], dx[i]); // -π..π
+      const hue = ((angle + Math.PI) / (2*Math.PI)) * 360;
+      // HSV→RGB: H=hue, S=m, V=m
+      const [r,g,b] = hsvToRgb(hue, m, 0.2+m*0.8);
+      const p = i*4;
+      img.data[p]=r; img.data[p+1]=g; img.data[p+2]=b; img.data[p+3]=255;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  function hsvToRgb(h, s, v) {
+    const hi = Math.floor(h/60)%6;
+    const f = h/60 - Math.floor(h/60);
+    const p=v*(1-s), q=v*(1-f*s), t_=v*(1-(1-f)*s);
+    const lut=[[v,t_,p],[q,v,p],[p,v,t_],[p,q,v],[t_,p,v],[v,p,q]];
+    return lut[hi].map(x=>Math.round(x*255));
+  }
+
+  // Populate GPU buffers tab after a GPU solve
+  function updateGPUViewer(gpuFields, gpuPatternFields, GW, GH) {
+    _gpuFields = gpuFields;
+    _gpuPatternFields = gpuPatternFields;
+
+    const statusEl = document.getElementById('gpu-status');
+    const grid = document.getElementById('gpu-fields-grid');
+    const sel  = document.getElementById('gpu-pattern-sel');
+    grid.innerHTML = '';
+    if (!gpuFields) { statusEl.textContent = 'No GPU data.'; return; }
+
+    statusEl.textContent = `GPU ${GW}×${GH} · ${(GW*GH).toLocaleString()} cells`;
+
+    // 7 semantic fields
+    const fieldDefs = [
+      { label:'SOCIAL',       data: gpuFields.social,      color: null },
+      { label:'WILD',         data: gpuFields.wild,        color: null },
+      { label:'BUILT HEIGHT', data: gpuFields.built_height, minV:0, maxV:96 },
+      { label:'WALL',         data: gpuFields.wall,        color: null },
+      { label:'INTEREST Z',  data: gpuFields.interest_z,   color: null },
+      { label:'MOVEMENT',     vec2: [gpuFields.movement_x, gpuFields.movement_y] },
+      { label:'INTEREST XY', vec2: [gpuFields.interest_x, gpuFields.interest_y] },
+    ];
+
+    for (const fd of fieldDefs) {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
+      const lbl = document.createElement('div');
+      lbl.style.cssText = 'font-size:9px;color:#888;letter-spacing:.06em;';
+      lbl.textContent = fd.label;
+      const c = document.createElement('canvas');
+      c.style.cssText = 'width:100%;image-rendering:pixelated;border:1px solid #2a2a2a;';
+      wrap.appendChild(lbl);
+      wrap.appendChild(c);
+      grid.appendChild(wrap);
+      if (fd.vec2) {
+        renderVec2Heatmap(c, fd.vec2[0], fd.vec2[1], GW, GH);
+      } else {
+        const { lo, hi } = renderHeatmap(c, fd.data, GW, GH, { minV: fd.minV, maxV: fd.maxV });
+        lbl.title = `min=${lo.toFixed(2)} max=${hi.toFixed(2)}`;
+      }
+    }
+
+    // Populate pattern selector
+    sel.innerHTML = '<option value="">— select pattern —</option>';
+    if (gpuPatternFields) {
+      const pnames = window._gpuPatternNames || {};
+      const pids = Object.keys(gpuPatternFields).map(Number).sort((a,b)=>b-a);
+      for (const pid of pids) {
+        const opt = document.createElement('option');
+        opt.value = pid;
+        opt.textContent = `P${pid} ${pnames[pid] || ''}`;
+        sel.appendChild(opt);
+      }
+    }
+  }
+
+  // Render selected pattern detector buffer
+  document.getElementById('gpu-pattern-sel')?.addEventListener('change', e => {
+    const pid = Number(e.target.value);
+    if (!pid || !_gpuPatternFields || !_gpuPatternFields[pid]) return;
+    const data = _gpuPatternFields[pid];
+    let W = 0, H = 0;
+    // Infer W/H from the semantic fields we have
+    if (_gpuFields?.social) {
+      const n = _gpuFields.social.length;
+      // GW and GH stored globally
+      W = window._gpuGW || Math.round(Math.sqrt(n * (4200/3700)));
+      H = Math.round(n / W);
+    }
+    if (!W || !H) return;
+    const canvas = document.getElementById('gpu-pattern-canvas');
+    const { lo, hi } = renderHeatmap(canvas, data, W, H);
+    document.getElementById('gpu-pattern-stats').textContent =
+      `peak=${hi.toFixed(3)}  mean=${(data.reduce((a,b)=>a+b,0)/data.length).toFixed(4)}`;
+  });
+
+  // Tab switching (extended to include new gpu tab)
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab)?.classList.add('active');
+    });
   });
 
   // Auto-run on load

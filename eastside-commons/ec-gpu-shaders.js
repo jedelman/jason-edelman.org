@@ -134,12 +134,11 @@ uniform float uSeedIntZ[16];
 layout(location=0) out vec4 outF0;
 layout(location=1) out vec4 outF1;
 layout(location=2) out vec4 outF2;
+layout(location=3) out float outPID;
 
 void main() {
   if (!IN_EDA(vUV)) {
-    outF0 = vec4(0.0);
-    outF1 = vec4(0.0);
-    outF2 = vec4(0.0);
+    outF0 = vec4(0.0); outF1 = vec4(0.0); outF2 = vec4(0.0); outPID = 0.0;
     return;
   }
 
@@ -177,16 +176,19 @@ void main() {
   outF0 = vec4(social, comfort, clamp(wild,0.,1.), built);
   outF1 = vec4(mvx, mvy, 0.0, 0.0);
   outF2 = vec4(ix, iy, iz, 0.0);
+  outPID = 0.0; // ICs don't set a pattern
 }`;
 
 // ── Invariant constraints shader ───────────────────────────────────────────
 const INVARIANT_FRAG = STDLIB + `
-uniform float uFourStoryFt;    // e.g. 48.0
-uniform float uNodeHeightFt;   // e.g. 96.0 (8-story at nodes)
+uniform sampler2D uPID;
+uniform float uFourStoryFt;
+uniform float uNodeHeightFt;
 
 layout(location=0) out vec4 outF0;
 layout(location=1) out vec4 outF1;
 layout(location=2) out vec4 outF2;
+layout(location=3) out float outPID;
 
 void main() {
   vec4 f0 = texture(uF0, vUV);
@@ -222,6 +224,7 @@ void main() {
   outF0 = vec4(social, comfort, wild, built);
   outF1 = vec4(f1.rg, wall, f1.a);
   outF2 = vec4(f2.rg, iz, f2.a);
+  outPID = texture(uPID, vUV).r; // PID passthrough — invariant doesn't change it
 }`;
 
 // ── Wall-distance shader (single-pass approximation) ───────────────────────
@@ -254,13 +257,16 @@ void main() {
 
 // ── Copy shader (copy _A → _B, used before additive modulator) ────────────
 const COPY_FRAG = STDLIB + `
+uniform sampler2D uPID;
 layout(location=0) out vec4 outF0;
 layout(location=1) out vec4 outF1;
 layout(location=2) out vec4 outF2;
+layout(location=3) out float outPID;
 void main() {
   outF0 = texture(uF0, vUV);
   outF1 = texture(uF1, vUV);
   outF2 = texture(uF2, vUV);
+  outPID = texture(uPID, vUV).r;
 }`;
 
 // ── Pattern shaders ────────────────────────────────────────────────────────
@@ -274,8 +280,10 @@ void main() {
 // Shared pattern stdlib header (weight uniforms etc.)
 const PAT_STDLIB = STDLIB + `
 uniform sampler2D uPattern; // per-pattern detector buffer (R32F)
-uniform float uWeight;      // pattern weight
-uniform float uNbhdR;       // neighbourhood radius in cells (default ~7)
+uniform sampler2D uPID;     // pattern-id tracking texture
+uniform float uWeight;
+uniform float uNbhdR;
+uniform float uPatternId;   // id of this pattern (for PID write)
 
 float P() { return texture(uPattern, vUV).r; }
 // Sample pattern buffer with spatial kernel (inverted Gaussian accumulation)
@@ -303,6 +311,7 @@ const MODULATE_P176 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   // Garden wall: low wall, some comfort (enclosure), wild holds
@@ -331,6 +340,7 @@ const MODULATE_P174 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(0.0, p*0.5, -p*0.4, p*4.0);   // comfort, wild suppression, low built height
@@ -356,6 +366,7 @@ const MODULATE_P172 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   float built = BUILT(vUV);
@@ -384,6 +395,7 @@ const MODULATE_P160 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 bg = grad_f(uF0, 3, vUV);
@@ -411,6 +423,7 @@ const MODULATE_P128 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(0.0, p*0.8, 0.0, 0.0); // COMFORT (indoor daylight)
@@ -437,6 +450,7 @@ const MODULATE_P127 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 mv = MVMT(vUV);
@@ -462,6 +476,7 @@ const MODULATE_P123 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 mv = MVMT(vUV);
@@ -495,6 +510,7 @@ const MODULATE_P122 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 wg = grad_f(uF1, 2, vUV);
@@ -525,6 +541,7 @@ const MODULATE_P121 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 mv = MVMT(vUV);
@@ -551,6 +568,7 @@ const MODULATE_P120 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR * 2.0); // wide neighbourhood — paths influence large areas
   vec2 ixy = INTEREST_XY(vUV);
@@ -584,6 +602,7 @@ const MODULATE_P119 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*0.5, p*1.0, -p*0.3, p*8.0);  // SOCIAL, COMFORT, -WILD, arcade roof height
@@ -618,6 +637,7 @@ uniform float uRoofHeightFt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   float existing_wall = WALL(vUV);
@@ -648,6 +668,7 @@ const MODULATE_P115 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*0.8, p*0.6, -p*0.4, 0.0);  // SOCIAL, COMFORT, -WILD
@@ -676,6 +697,7 @@ const MODULATE_P114 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*0.3, 0.0, p*0.2, 0.0);    // SOCIAL, WILD reinforcement
@@ -703,6 +725,7 @@ uniform float uMainBuildingHt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*1.0, p*0.5, -p*0.8, p*uMainBuildingHt);  // SOCIAL, COMFORT, -WILD, BUILT
@@ -733,6 +756,7 @@ uniform float uResidentialHt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 bg = grad_f(uF0, 3, vUV);
@@ -764,6 +788,7 @@ const MODULATE_P108 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR * 0.5); // tight neighbourhood
   vec2 mv = MVMT(vUV);
@@ -794,6 +819,7 @@ const MODULATE_P107 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(0.0, p*0.7, 0.0, 0.0);    // COMFORT (light enters)
@@ -814,13 +840,14 @@ void main() {
   // Convex outdoor: empty here, surrounded by mass
   float convex = (1.0-clamp(built/15.0,0.,1.)) * clamp(built_nb/25.0,0.,1.);
   float wild_ok = 1.0 - WILD(vUV) * 0.5; // some wild OK in positive space
-  outP = convex * wild_ok * IN_EDA(vUV) ? uWeight : 0.0;
+  outP = convex * wild_ok * (IN_EDA(vUV) ? uWeight : 0.0);
 }`;
 
 const MODULATE_P106 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   // INTEREST.xy: inward pull (the space pulls people into it)
@@ -845,13 +872,14 @@ void main() {
   vec2 d = 1.0/uResolution;
   float built_n = BUILT(vUV + vec2(0.0, d.y*2.0));
   float south_face = (1.0-clamp(built/10.0,0.,1.)) * clamp(built_n/20.0,0.,1.);
-  outP = south_face * IN_EDA(vUV) ? uWeight : 0.0;
+  outP = south_face * (IN_EDA(vUV) ? uWeight : 0.0);
 }`;
 
 const MODULATE_P105 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*0.5, p*0.8, p*0.2, 0.0);  // SOCIAL, COMFORT (solar), slight WILD
@@ -881,6 +909,7 @@ const MODULATE_P104 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR * 0.5);
   dF0 = vec4(0.0, 0.0, p*0.5, -p*10.0);  // WILD reinforcement, built suppression
@@ -907,6 +936,7 @@ const MODULATE_P100 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 mv = MVMT(vUV);
@@ -935,6 +965,7 @@ uniform float uComplexHt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*0.4, p*0.3, -p*0.5, p*uComplexHt);
@@ -962,6 +993,7 @@ const MODULATE_P88 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*1.2, p*0.6, -p*0.3, 0.0);   // strong SOCIAL, COMFORT, -WILD
@@ -987,6 +1019,7 @@ const MODULATE_P87 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*0.8, 0.0, -p*0.6, p*14.0);  // SOCIAL, -WILD, ground floor BUILT
@@ -1006,13 +1039,14 @@ void main() {
   float wild_nb = nbhd(uF0, 2, vUV, 6.0);
   // Ring: moderate wild here, high wild nearby (the sponge edge)
   float ring = wild * (1.0 - wild * 0.5) * clamp(wild_nb * 1.5, 0.0, 1.0);
-  outP = ring * IN_EDA(vUV) ? uWeight : 0.0;
+  outP = ring * (IN_EDA(vUV) ? uWeight : 0.0);
 }`;
 
 const MODULATE_P67 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 wg = grad_f(uF0, 2, vUV);
@@ -1041,6 +1075,7 @@ const MODULATE_P61 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*1.0, p*0.4, -p*0.3, 0.0);  // SOCIAL, COMFORT, -WILD
@@ -1068,6 +1103,7 @@ const MODULATE_P60 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*0.5, p*0.4, p*0.8, 0.0);   // SOCIAL, COMFORT, WILD sustain
@@ -1094,6 +1130,7 @@ const MODULATE_P56 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 mv = MVMT(vUV);
@@ -1128,6 +1165,7 @@ uniform float uGatewayHt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*0.8, 0.0, 0.0, 0.0);         // SOCIAL
@@ -1153,6 +1191,7 @@ const MODULATE_P51 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 mv = MVMT(vUV);
@@ -1181,6 +1220,7 @@ uniform float uMarketHt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   dF0 = vec4(p*1.5, 0.0, -p*0.8, p*uMarketHt);  // strong SOCIAL, -WILD, BUILT
@@ -1207,6 +1247,7 @@ uniform float uTownHallHt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR * 1.5); // wide influence
   dF0 = vec4(p*1.8, 0.0, -p*0.8, p*uTownHallHt);  // SOCIAL, -WILD, BUILT
@@ -1221,11 +1262,10 @@ void main() {
 //           ATTRACT ring around them (new construction clusters adjacently)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P40 = PAT_STDLIB + `
+uniform float uPreserveHtMarker;
 layout(location=0) out float outP;
 void main() {
   float built = BUILT(vUV);
-  // Existing buildings from IC have non-zero built height; flag them
-  // IC seeds existing buildings with a specific height marker
   outP = clamp(built/uPreserveHtMarker - 0.8, 0.0, 0.2) * uWeight;
 }`;
 // Note: uPreserveHtMarker is a uniform marking IC-seeded existing buildings
@@ -1235,6 +1275,7 @@ uniform float uPreserveHtMarker;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR * 0.5); // tight core — repel
   float p_ring = Pnbhd(uNbhdR * 2.0) - p; // attract ring outside core
@@ -1267,6 +1308,7 @@ uniform float uResidentialHt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 bg = grad_f(uF0, 3, vUV);
@@ -1292,6 +1334,7 @@ const MODULATE_P36 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 sg = grad_f(uF0, 0, vUV);
@@ -1325,6 +1368,7 @@ uniform float uShopHt;
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 mv = MVMT(vUV);
@@ -1356,6 +1400,7 @@ const MODULATE_P31 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR);
   vec2 mv = MVMT(vUV);
@@ -1382,6 +1427,7 @@ const MODULATE_P30 = PAT_STDLIB + `
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR * 2.0); // wide influence
   // INTEREST.xy: this node pulls people — radiates interest outward
@@ -1412,6 +1458,7 @@ uniform float uDensityHtScale; // ft per unit of combined social pressure
 layout(location=0) out vec4 dF0;
 layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
+layout(location=3) out float dPID;
 void main() {
   float p = Pnbhd(uNbhdR * 3.0); // very wide
   vec2 sg = grad_f(uF0, 0, vUV);

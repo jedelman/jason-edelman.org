@@ -161,7 +161,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     log.push(`Pass ${pass+1}/${MAX_PASSES}`);
 
     // Recompute wall-distance texture
-    gpu.runWallDistance();
+    gpu.runWallDistance({ uWallThreshold: 0.2 });
 
     // Run each pattern: detector → modulator → invariant (interleaved)
     for (const pid of patternOrder) {
@@ -170,13 +170,14 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 
       // Pattern-specific uniforms
       const pu = {
-        uWeight: 1.0, // weight overridden per-pattern in ec-pattern-defs.js
-        uNbhdR: pdef.nbhdR || 4.0,
+        uWeight:    1.0,
+        uNbhdR:     pdef.nbhdR || 4.0,
+        uPatternId: pid,          // written to PID texture by modulator
         ...pdef.uniforms,
       };
 
       // Look up weight from EC_PATTERN_DEFS
-      const defEntry = (self.EC_PATTERN_DEFS || []).find(d=>d.id===pid);
+      const defEntry = (self.EC_PATTERN_DEFS || []).find(d => d.id === pid);
       if (defEntry && defEntry.weight !== undefined) pu.uWeight = defEntry.weight;
       if (defEntry && defEntry.enabled === false) continue;
 
@@ -245,18 +246,16 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 // Clusters BUILT_HEIGHT > threshold into building footprints.
 function extractBuildingsFromFields(fields, gw, gh, cellSize, MAP, edaMask) {
   const BUILT_THRESH = 8.0; // ft — minimum height to be a building
-  const built = fields.built_height;
+  const built  = fields.built_height;
   const social = fields.social;
+  const pid    = fields.pid;  // per-cell pattern-id texture
 
   // Single-linkage clustering on built cells
-  const clusters = [];
   const visited = new Uint8Array(gw * gh);
+  const clusters = [];
 
-  for (let i=0; i<built.length; i++) {
-    if (built[i] < BUILT_THRESH) continue;
-    if (visited[i]) continue;
-    if (!edaMask[i]) continue;
-    // BFS cluster
+  for (let i = 0; i < built.length; i++) {
+    if (built[i] < BUILT_THRESH || visited[i] || !edaMask[i]) continue;
     const cluster = [];
     const queue = [i];
     visited[i] = 1;
@@ -264,12 +263,12 @@ function extractBuildingsFromFields(fields, gw, gh, cellSize, MAP, edaMask) {
       const idx = queue.shift();
       cluster.push(idx);
       const cx = idx % gw, cy = Math.floor(idx / gw);
-      for (const [dx,dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
-        const nx=cx+dx, ny=cy+dy;
+      for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+        const nx = cx+dx, ny = cy+dy;
         if (nx<0||ny<0||nx>=gw||ny>=gh) continue;
         const ni = ny*gw+nx;
         if (!visited[ni] && built[ni] >= BUILT_THRESH && edaMask[ni]) {
-          visited[ni]=1;
+          visited[ni] = 1;
           queue.push(ni);
         }
       }
@@ -277,29 +276,40 @@ function extractBuildingsFromFields(fields, gw, gh, cellSize, MAP, edaMask) {
     if (cluster.length >= 2) clusters.push(cluster);
   }
 
-  // Fit bounding box to each cluster
-  const FT2_CELL = cellSize;
+  const FT = cellSize;
   return clusters.map(cells => {
-    let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-    let sumH=0, sumS=0;
+    let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+    let sumH = 0, sumS = 0;
+    const pidTally = {};
     for (const idx of cells) {
-      const cx=idx%gw, cy=Math.floor(idx/gw);
-      const px=MAP.x0+cx*FT2_CELL, py=MAP.y0+cy*FT2_CELL;
-      if(px<minX)minX=px; if(px>maxX)maxX=px;
-      if(py<minY)minY=py; if(py>maxY)maxY=py;
+      const cx = idx % gw, cy = Math.floor(idx / gw);
+      const px = MAP.x0 + cx*FT, py = MAP.y0 + cy*FT;
+      if (px < minX) minX = px; if (px > maxX) maxX = px;
+      if (py < minY) minY = py; if (py > maxY) maxY = py;
       sumH += built[idx];
       sumS += social[idx];
+      // Tally pattern ids — use rounded PID value
+      if (pid) {
+        const p = Math.round(pid[idx]);
+        if (p > 0) pidTally[p] = (pidTally[p] || 0) + 1;
+      }
     }
-    const avgH = sumH/cells.length;
-    const avgS = sumS/cells.length;
-    // domPid: use social level to pick a use class (rough heuristic until pattern ids are propagated)
-    const domPid = avgS > 0.6 ? 30 : avgS > 0.3 ? 87 : 37; // civic / commercial / residential
+    const avgH = sumH / cells.length;
+    // domPid: most frequent pattern id that wrote BUILT_HEIGHT to this cluster
+    let domPid = null;
+    if (Object.keys(pidTally).length > 0) {
+      domPid = Number(Object.entries(pidTally).sort((a,b) => b[1]-a[1])[0][0]);
+    } else {
+      // Fallback: classify by social level
+      const avgS = sumS / cells.length;
+      domPid = avgS > 0.65 ? 44 : avgS > 0.4 ? 87 : 37;
+    }
     return {
       x: minX, y: minY,
-      w: maxX - minX + FT2_CELL,
-      h: maxY - minY + FT2_CELL,
+      w: maxX - minX + FT,
+      h: maxY - minY + FT,
       pts: cells.length,
-      avgStrong: avgH / 12, // stories approximation
+      avgStrong: avgH / 12,
       domPid,
     };
   }).filter(b => b.w > 8 && b.h > 8);
