@@ -1865,6 +1865,181 @@ function addFloorBands(group, cx, cy, fw, fh, heightFt, floors, col) {
   }
 }
 
+// ── ROOF FORMS ───────────────────────────────────────────────────────────────
+// Gabled, shed, hip and flat roofs driven by func and a seeded hash.
+function addRoof(group, cx, cy, fw, fh, heightFt, col, func, seed) {
+  // Deterministic roof type from block identity
+  const h = ((seed * 2654435761) >>> 0) % 100;
+  const roofH = func === 'residential' ? Math.min(fh * 0.35, 18) * HT_SCALE
+              : func === 'civic'        ? Math.min(fh * 0.28, 14) * HT_SCALE
+              : 4 * HT_SCALE; // flat parapet for retail/mixed
+
+  const ridgeMat = new THREE.MeshLambertMaterial({
+    color: col.clone().lerp(new THREE.Color(0.15, 0.12, 0.10), 0.55),
+    opacity: 0.95, transparent: false
+  });
+  const ridgeLine = new THREE.LineBasicMaterial({
+    color: col.clone().multiplyScalar(0.6), opacity: 0.7, transparent: true
+  });
+
+  if ((func === 'mixed' || func === 'retail') || roofH < 5 * HT_SCALE) {
+    // Flat parapet cap — just a thin box
+    const geo = new THREE.BoxGeometry(fw + 2, roofH, fh + 2);
+    geo.translate(0, roofH / 2, 0);
+    const mesh = new THREE.Mesh(geo, ridgeMat.clone());
+    const p = ftTo3(cx, cy, heightFt);
+    mesh.position.set(p.x, heightFt, p.z);
+    group.add(mesh);
+    return;
+  }
+
+  if (func === 'residential' && h < 55) {
+    // Gabled roof: two triangular faces, ridge runs E-W (along long axis)
+    const isLong = fw >= fh; // ridge along long dimension
+    const rw = isLong ? fw : fh; // ridge span
+    const rd = isLong ? fh : fw; // depth (pitch direction)
+    const pts = [];
+    const s = isLong ? 1 : 0;
+    // Build roof as a simple custom geometry: 5 verts (4 eaves + 2 ridge pts)
+    const p = ftTo3(cx, cy, heightFt);
+    // Ridge points (top center, ±half ridge length)
+    const r0 = isLong
+      ? new THREE.Vector3(p.x - rw/2, heightFt + roofH, p.z)
+      : new THREE.Vector3(p.x,        heightFt + roofH, p.z - rw/2);
+    const r1 = isLong
+      ? new THREE.Vector3(p.x + rw/2, heightFt + roofH, p.z)
+      : new THREE.Vector3(p.x,        heightFt + roofH, p.z + rw/2);
+    // Eave corners
+    const e0 = new THREE.Vector3(p.x - fw/2, heightFt, p.z - fh/2);
+    const e1 = new THREE.Vector3(p.x + fw/2, heightFt, p.z - fh/2);
+    const e2 = new THREE.Vector3(p.x + fw/2, heightFt, p.z + fh/2);
+    const e3 = new THREE.Vector3(p.x - fw/2, heightFt, p.z + fh/2);
+    // Two sloping faces as triangle pairs
+    const verts = new Float32Array([
+      ...r0.toArray(),...r1.toArray(),...e0.toArray(), // front slope tri 1
+      ...r1.toArray(),...e1.toArray(),...e0.toArray(), // front slope tri 2
+      ...r0.toArray(),...e3.toArray(),...r1.toArray(), // back slope tri 1
+      ...r1.toArray(),...e3.toArray(),...e2.toArray(), // back slope tri 2
+      ...r0.toArray(),...e0.toArray(),...e3.toArray(), // gable end 1
+      ...r1.toArray(),...e2.toArray(),...e1.toArray(), // gable end 2
+    ]);
+    const roofGeo = new THREE.BufferGeometry();
+    roofGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    roofGeo.computeVertexNormals();
+    group.add(new THREE.Mesh(roofGeo, ridgeMat.clone()));
+    // Ridge line
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([r0, r1]), ridgeLine.clone()));
+
+  } else if (func === 'civic' || (func === 'residential' && h >= 55)) {
+    // Hip roof: all four eaves slope up to a central ridge or point
+    const p = ftTo3(cx, cy, heightFt);
+    const rw = fw * 0.55, rd = fh * 0.55;
+    const apex = new THREE.Vector3(p.x, heightFt + roofH, p.z);
+    const e0 = new THREE.Vector3(p.x - fw/2, heightFt, p.z - fh/2);
+    const e1 = new THREE.Vector3(p.x + fw/2, heightFt, p.z - fh/2);
+    const e2 = new THREE.Vector3(p.x + fw/2, heightFt, p.z + fh/2);
+    const e3 = new THREE.Vector3(p.x - fw/2, heightFt, p.z + fh/2);
+    const verts = new Float32Array([
+      ...apex.toArray(),...e0.toArray(),...e1.toArray(),
+      ...apex.toArray(),...e1.toArray(),...e2.toArray(),
+      ...apex.toArray(),...e2.toArray(),...e3.toArray(),
+      ...apex.toArray(),...e3.toArray(),...e0.toArray(),
+    ]);
+    const roofGeo = new THREE.BufferGeometry();
+    roofGeo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    roofGeo.computeVertexNormals();
+    group.add(new THREE.Mesh(roofGeo, ridgeMat.clone()));
+  }
+}
+
+// ── STOCHASTIC EXTERIOR TEXTURE ───────────────────────────────────────────────
+// Adds surface variation to building facades: pilasters, horizontal reveals,
+// panel breaks, and subtle color perturbation — all deterministic from block seed.
+function addExteriorTexture(group, cx, cy, fw, fh, heightFt, floors, col, seed) {
+  // Seeded LCG for this building
+  let s = (seed * 1664525 + 1013904223) & 0x7fffffff;
+  const rng = () => { s = (s * 1664525 + 1013904223) & 0x7fffffff; return s / 0x7fffffff; };
+
+  const floorH = heightFt / Math.max(floors, 1);
+  const hw = fw / 2, hd = fh / 2;
+
+  // 1. Subtle color variation: each face gets a slight HSL shift
+  const faceShifts = [rng()*0.04-0.02, rng()*0.04-0.02, rng()*0.04-0.02, rng()*0.04-0.02];
+
+  // 2. Vertical pilasters on long faces — 2-5 per face, width 2-4ft, depth 2-3ft
+  const nPilasters = 2 + Math.floor(rng() * 3);
+  const pilasterW = 2 + rng() * 2; // ft
+  const pilasterD = 1.5 + rng() * 1.5;
+  const pilasterH = heightFt * (0.7 + rng() * 0.25); // don't go full height
+  const pilasterMat = new THREE.MeshLambertMaterial({
+    color: col.clone().lerp(new THREE.Color(1,1,1), 0.12 + rng()*0.08),
+    opacity: 0.9, transparent: true
+  });
+
+  // South face pilasters
+  for (let i = 0; i < nPilasters; i++) {
+    const t = (i + 1) / (nPilasters + 1);
+    const px = cx - hw + t * fw;
+    const pMat = pilasterMat.clone();
+    pMat.color.offsetHSL(faceShifts[0], 0, rng()*0.06-0.03);
+    const geo = new THREE.BoxGeometry(pilasterW, pilasterH, pilasterD);
+    geo.translate(0, pilasterH/2, 0);
+    const mesh = new THREE.Mesh(geo, pMat);
+    const pos = ftTo3(px, cy - hd - pilasterD/2, 0);
+    mesh.position.set(pos.x, 0, pos.z);
+    group.add(mesh);
+  }
+  // North face pilasters (same count, different color shift)
+  for (let i = 0; i < nPilasters; i++) {
+    const t = (i + 1) / (nPilasters + 1);
+    const px = cx - hw + t * fw;
+    const pMat = pilasterMat.clone();
+    pMat.color.offsetHSL(faceShifts[1], 0, rng()*0.06-0.03);
+    const geo = new THREE.BoxGeometry(pilasterW, pilasterH * (0.8+rng()*0.2), pilasterD);
+    geo.translate(0, geo.parameters.height/2, 0);
+    const mesh = new THREE.Mesh(geo, pMat);
+    const pos = ftTo3(px, cy + hd + pilasterD/2, 0);
+    mesh.position.set(pos.x, 0, pos.z);
+    group.add(mesh);
+  }
+
+  // 3. Horizontal reveals: 1-2 shadow lines per facade, not at every floor
+  //    Offset reveals read as panel breaks or material changes
+  const nReveals = 1 + Math.floor(rng() * 2);
+  const revealMat = new THREE.LineBasicMaterial({
+    color: col.clone().multiplyScalar(0.45), opacity: 0.5, transparent: true
+  });
+  for (let r = 0; r < nReveals; r++) {
+    const ry = floorH * (1 + Math.floor(rng() * Math.max(floors-1, 1)));
+    if (ry >= heightFt) continue;
+    const offset = 0.8 + rng() * 0.8; // slight outset
+    // South
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      ftTo3(cx-hw-offset, cy-hd, ry), ftTo3(cx+hw+offset, cy-hd, ry)
+    ]), revealMat.clone()));
+    // North
+    group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+      ftTo3(cx-hw-offset, cy+hd, ry), ftTo3(cx+hw+offset, cy+hd, ry)
+    ]), revealMat.clone()));
+  }
+
+  // 4. Panel variation: occasional recessed panel box on one face
+  if (rng() < 0.45 && floors >= 3) {
+    const panelFloor = 1 + Math.floor(rng() * (floors - 1));
+    const py = panelFloor * floorH;
+    const panelW = fw * (0.3 + rng() * 0.3);
+    const panelH = floorH * (0.6 + rng() * 0.3);
+    const panelD = 1.5 + rng() * 2;
+    const darkCol = col.clone().multiplyScalar(0.55 + rng() * 0.15);
+    const panelMat = new THREE.MeshLambertMaterial({ color: darkCol, opacity: 0.9, transparent: true });
+    const geo = new THREE.BoxGeometry(panelW, panelH, panelD);
+    const mesh = new THREE.Mesh(geo, panelMat);
+    const pos = ftTo3(cx, cy - hd - panelD/2, py + panelH/2);
+    mesh.position.set(pos.x, py + panelH/2, pos.z);
+    group.add(mesh);
+  }
+}
+
 // P122: Base differentiation — ground floor as distinct volume
 // Ground floor: slightly wider, lighter color (active, permeable)
 // Returns the base height used so shaft can start above it
@@ -1997,24 +2172,33 @@ function addParapet127(group, cx, cy, fw, fh, heightFt, col, face) {
 // Called instead of bare addBox for the main building shaft.
 // Applies all relevant pattern details based on typology + floor count.
 function addDetailedBuilding(group, blk, heightFt, col, derived) {
-  const { cx, cy, fw, fh, floors, typology } = blk;
+  const { cx, cy, fw, fh, floors, typology, func } = blk;
   const face = publicFace(blk, derived);
+
+  // Seeded hash for stochastic variation — stable across re-renders
+  const seed = Math.round(Math.abs(cx * 7 + cy * 13)) | 0;
+
+  // Slight per-building color perturbation (±4% lightness, ±2% hue)
+  const pertCol = col.clone().offsetHSL(
+    (((seed * 2531011) & 0xff) / 255 - 0.5) * 0.04,
+    0,
+    (((seed * 1664525) & 0xff) / 255 - 0.5) * 0.08
+  );
 
   // Main shaft material
   const shaftMat = new THREE.MeshLambertMaterial({
-    color: col, opacity: 0.88, transparent: true
+    color: pertCol, opacity: 0.88, transparent: true
   });
   const edgeMat = new THREE.LineBasicMaterial({
-    color: col.clone().multiplyScalar(1.1), opacity: 0.18, transparent: true
+    color: pertCol.clone().multiplyScalar(1.1), opacity: 0.18, transparent: true
   });
 
   // P122: Base — always applied (ground floor is always active)
-  const baseH = addBase122(group, cx, cy, fw, fh, heightFt, floors, col);
+  const baseH = addBase122(group, cx, cy, fw, fh, heightFt, floors, pertCol);
 
   // Shaft above base
   const shaftH = heightFt - baseH;
   if (shaftH > 4) {
-    const shaftCY_world = baseH + shaftH / 2;
     const shaftGeo = new THREE.BoxGeometry(fw, shaftH, fh);
     shaftGeo.translate(0, shaftH / 2, 0);
     const shaftMesh = new THREE.Mesh(shaftGeo, shaftMat.clone());
@@ -2026,12 +2210,18 @@ function addDetailedBuilding(group, blk, heightFt, col, derived) {
   // Top edge
   addTopRect(group, cx, cy, fw, fh, heightFt, edgeMat.clone());
 
-  // P166/P164/P121/P127 — routed to gDetail (LOD: only shown when zoomed in)
+  // Roof (always)
+  addRoof(group, cx, cy, fw, fh, heightFt, pertCol, func || 'mixed', seed);
+
+  // Exterior texture (always — stochastic pilasters + reveals + panels)
+  addExteriorTexture(group, cx, cy, fw, fh, heightFt, floors, pertCol, seed);
+
+  // P166/P164/P121/P127 detail
   const dg = gDetail;
-  if (floors >= 2) addFloorBands(dg, cx, cy, fw, fh, heightFt, floors, col);
-  if (floors >= 3) addWindowBands(dg, cx, cy, fw, fh, baseH, heightFt, floors, col, face);
-  addEntryRecess(dg, cx, cy, fw, fh, baseH, col, face);
-  if (floors >= 4) addParapet127(dg, cx, cy, fw, fh, heightFt, col, face);
+  if (floors >= 2) addFloorBands(dg, cx, cy, fw, fh, heightFt, floors, pertCol);
+  if (floors >= 3) addWindowBands(dg, cx, cy, fw, fh, baseH, heightFt, floors, pertCol, face);
+  addEntryRecess(dg, cx, cy, fw, fh, baseH, pertCol, face);
+  if (floors >= 4) addParapet127(dg, cx, cy, fw, fh, heightFt, pertCol, face);
 }
 
 
@@ -2359,7 +2549,8 @@ function clusterUrbanBlocks(hotNodes, derived) {
 
     for (let gx = x0; gx <= x1; gx += stepX) {
       for (let gy = y0; gy <= y1; gy += stepY) {
-        // Nudge toward nearest hot node (up to 20%)
+        // Seeded deterministic jitter — breaks grid without randomness per-frame
+        const jSeed = Math.abs(Math.round(gx * 31 + gy * 17)) | 0;
         let cx = gx, cy = gy;
         if (hotNodes?.length) {
           let bestD = 80, best = null;
@@ -2369,8 +2560,15 @@ function clusterUrbanBlocks(hotNodes, derived) {
           }
           if (best) { cx += (best.x-gx)*0.25; cy += (best.y-gy)*0.25; }
         }
-        const blockW = fw * (0.9 + Math.random()*0.2);
-        const blockH = fh * (0.9 + Math.random()*0.2);
+        // Additional seeded offset: ±18% of step — breaks the visible grid
+        cx += ((jSeed * 2531011) & 0xff) / 255 * stepX * 0.36 - stepX * 0.18;
+        cy += ((jSeed * 1664525) & 0xff) / 255 * stepY * 0.36 - stepY * 0.18;
+
+        // Independent size variation ±30% per axis
+        const sxSeed = (jSeed * 40503) & 0xff;
+        const sySeed = (jSeed * 22695477) & 0xff;
+        const blockW = fw * (0.72 + (sxSeed / 255) * 0.58);
+        const blockH = fh * (0.72 + (sySeed / 255) * 0.58);
         const floors = floorsFn(cx, cy);
         if (floors < 1) continue;
         const excl = isExclusion({cx, cy, fw:blockW, fh:blockH}, derived);
