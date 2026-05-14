@@ -1071,6 +1071,9 @@ self.EC_FieldSolver = (function() {
 
 // ── Message handler ───────────────────────────────────────────────────────
 self.onmessage = function(e) {
+  // Immediate ping — confirms worker loaded and message handler fired
+  self.postMessage({ type: 'status', msg: 'Worker loaded OK' });
+
   const { parcels, derivedG, opts, MAP } = e.data;
 
   // Rebuild proj from parcel data (can't pass functions across boundary)
@@ -1099,10 +1102,12 @@ self.onmessage = function(e) {
       };
       // Write crash-safe checkpoint — main thread does the actual localStorage write
       // (workers have no localStorage access)
+      // Strip pts from fieldLines — weights objects are large, clone is slow
+      // Only send what's needed to render buildings (hot nodes + footprints)
       self.postMessage({ type: 'checkpoint', pass, buildings: buildings.length, hotNodes: hotNodes.length, payload: {
         buildings, hotNodes,
-        fieldLines: lines.map(l => ({ pts: l.pts, seedPressure: l.seedPressure })),
-        log: log.slice(-20),  // last 20 log lines only — keep message small
+        fieldLines: [],  // omit from checkpoint — included in final result only
+        log: log.slice(-20),
         saturatedAt: saturated ? pass + 1 : null,
         ts: Date.now(), opts, partial: !saturated,
       }});

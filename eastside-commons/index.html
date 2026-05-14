@@ -888,10 +888,19 @@ details[open] summary::before { content: '▼  '; }
 
       <!-- Error overlay -->
       <!-- Ephemeral console overlay — messages fade out -->
+      <!-- Copy button — outside the message container so it's never removed -->
+      <button onclick="copyMapLog()" style="
+        position:absolute; bottom:3.5rem; right:0.7rem;
+        font-family:var(--font-mono); font-size:0.52rem; letter-spacing:0.08em;
+        background:rgba(4,4,2,0.75); border:1px solid var(--border);
+        color:var(--muted); padding:0.15rem 0.4rem; cursor:pointer;
+        border-radius:2px; text-transform:uppercase; z-index:51;
+      " title="Copy full log to clipboard">⎘ log</button>
+
       <div id="map-console" style="
         position:absolute; bottom:3.5rem; left:50%; transform:translateX(-50%);
         display:flex; flex-direction:column; align-items:center; gap:0.25rem;
-        z-index:50; pointer-events:none; width:90%; max-width:480px;
+        z-index:50; pointer-events:none; width:80%; max-width:420px;
       "></div>
 
       <!-- Git hash / version chip — bottom center -->
@@ -6103,7 +6112,13 @@ function resumeFromCache() {
 }
 
 // ── Map console overlay — ephemeral per-message fade-out ─────────────────────
+const _mapLogBuffer = [];
+
 function mapLog(msg, type = 'info') {
+  const ts = new Date().toISOString().slice(11,23);
+  _mapLogBuffer.push(`[${ts}] ${msg}`);
+  if (_mapLogBuffer.length > 200) _mapLogBuffer.shift();
+
   const container = document.getElementById('map-console');
   if (!container) return;
 
@@ -6119,16 +6134,33 @@ function mapLog(msg, type = 'info') {
   el.textContent = msg;
   container.appendChild(el);
 
-  // Keep last 6 messages, fade out older ones
+  // Keep last 6 messages, fade older ones
   const msgs = container.children;
   while (msgs.length > 6) container.removeChild(msgs[0]);
   Array.from(msgs).forEach((m, i, a) => {
     m.style.opacity = String(0.35 + 0.65 * (i / Math.max(1, a.length - 1)));
   });
 
-  // Fade out and remove after 4s
   setTimeout(() => { el.style.opacity = '0'; }, 3500);
   setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 4200);
+}
+
+function copyMapLog() {
+  const text = _mapLogBuffer.join('\n');
+  navigator.clipboard?.writeText(text).then(() => mapLog('log copied to clipboard', 'ok'))
+    .catch(() => {
+      // Fallback: show in a textarea
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.cssText = 'position:fixed;top:10%;left:5%;width:90%;height:80%;z-index:9999;font-family:monospace;font-size:0.65rem;background:#0b0f08;color:#e0d8c0;border:1px solid #c87818;padding:0.5rem;';
+      ta.setAttribute('readonly', '');
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.addEventListener('blur', () => document.body.removeChild(ta));
+      ta.focus();
+      mapLog('select all + copy from textarea', 'warn');
+    });
 }
 
 // ── Git hash version display ──────────────────────────────────────────────────
@@ -9067,9 +9099,14 @@ function renderPatternOverlay2D(sg) {
 
   // Boot after DOM ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => window.EC_PanZoom.init());
+    document.addEventListener('DOMContentLoaded', () => {
+      window.EC_PanZoom.init();
+      // Smoke test: confirm mapLog is wired
+      setTimeout(() => mapLog('map ready', 'ok'), 500);
+    });
   } else {
     window.EC_PanZoom.init();
+    setTimeout(() => mapLog('map ready', 'ok'), 500);
   }
 
   // After re-renders, rewrap new children into pz-root
