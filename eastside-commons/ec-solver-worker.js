@@ -957,6 +957,11 @@ self.EC_FieldSolver = (function() {
 
       allFieldLines = lines;
 
+      // Progress callback — fires after lines updated so checkpoint has current data
+      if (typeof opts.onPass === 'function') {
+        try { opts.onPass(pass, delta, !!saturatedAt, allFieldLines, log); } catch(_) {}
+      }
+
       snapshots.push({
         pass, combined: combined.slice(), fieldMap, lines,
         seeds: seeds.length, gw, gh,
@@ -1060,7 +1065,7 @@ self.EC_FieldSolver = (function() {
     }).filter(b=>b.w>8&&b.h>8); // discard degenerate singletons
   }
 
-  return { solve, PATTERNS };
+  return { solve, PATTERNS, _buildHotNodes: buildHotNodes, _buildFootprints: buildFootprints };
 })();
 
 // ── Message handler ───────────────────────────────────────────────────────
@@ -1075,13 +1080,36 @@ self.onmessage = function(e) {
 
   self.postMessage({ type: 'status', msg: 'Building EDA mask…' });
 
+  // Per-pass checkpoint: extract buildings from current field lines and persist
+  function checkpoint(pass, lines, log, saturated, opts) {
+    try {
+      // Reuse solver internals via closure — hotNodes + footprints on current lines
+      const hotNodes  = EC_FieldSolver._buildHotNodes(lines);
+      const buildings = EC_FieldSolver._buildFootprints(hotNodes, opts.cellSize || 10);
+      const payload = {
+        buildings,
+        hotNodes,
+        fieldLines: lines.map(l => ({ pts: l.pts, seedPressure: l.seedPressure })),
+        log,
+        saturatedAt: saturated ? pass + 1 : null,
+        ts: Date.now(),
+        opts,
+        partial: !saturated,
+      };
+      // Write crash-safe checkpoint — overwrites previous partial
+      try { localStorage.setItem('ec-solver-result', JSON.stringify(payload)); } catch(_) {}
+      // Post partial result so UI can show buildings as they accumulate
+      self.postMessage({ type: 'checkpoint', pass, buildings: buildings.length, hotNodes: hotNodes.length });
+    } catch(_) {}
+  }
+
   let result;
   try {
-    // Patch: intercept per-pass progress via opts.onPass
     result = EC_FieldSolver.solve(parcels, proj, MAP, derivedG, {
       ...opts,
-      onPass: (pass, delta, saturated) => {
+      onPass: (pass, delta, saturated, lines, log) => {
         self.postMessage({ type: 'progress', pass, delta: delta?.toFixed(5), saturated });
+        checkpoint(pass, lines, log, saturated, opts);
       },
     });
   } catch(err) {

@@ -6140,7 +6140,7 @@ async function triggerPipeline() {
 
     // ── Field Solver via Web Worker ─────────────────────────────────────────
     if (statusText) statusText.textContent = 'Field solver: starting worker…';
-    if (btn) { btn.disabled = true; btn.textContent = '⟳ Running…'; }
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ 0/' + (params.ps_recurse || 16); }
 
     // Terminate any existing worker
     if (window._solverWorker) { window._solverWorker.terminate(); window._solverWorker = null; }
@@ -6152,11 +6152,33 @@ async function triggerPipeline() {
       const { type, msg, pass, delta, saturated, payload } = e.data;
       if (type === 'status') {
         if (statusText) statusText.textContent = msg;
+      } else if (type === 'checkpoint') {
+        // Partial result — update button count, render cached buildings if any
+        if (btn) btn.textContent = `⟳ ${pass + 1}p · ${buildings}b`;
+        // Render the latest partial result from localStorage immediately
+        try {
+          const raw = localStorage.getItem('ec-solver-result');
+          if (raw) {
+            const p = JSON.parse(raw);
+            if (p.partial && p.buildings?.length) {
+              const partial = {
+                buildings: p.buildings, hotNodes: p.hotNodes || [],
+                fieldLines: p.fieldLines || [],
+                sceneGraph: { instances: p.hotNodes||[], buildings: p.buildings, buildingPoints: p.hotNodes||[] },
+              };
+              renderPlanBuildings(partial.sceneGraph);
+            }
+          }
+        } catch(_) {}
       } else if (type === 'progress') {
         const maxP = params.ps_recurse || 16;
         const pct = Math.round((pass + 1) / maxP * 100);
+        const label = saturated
+          ? `✓ sat · ${pass + 1}p`
+          : `⟳ ${pass + 1}/${maxP} · ${pct}%`;
+        if (btn) btn.textContent = label;
         if (statusText) statusText.textContent =
-          `Pass ${pass + 1}/${maxP} · Δ=${delta}${saturated ? ' · ✓sat' : ''} · ${pct}%`;
+          `Pass ${pass + 1}/${maxP} · Δ=${delta}${saturated ? ' · ✓sat' : ''}`;
       } else if (type === 'error') {
         if (statusText) statusText.textContent = '✗ ' + msg;
         if (btn) { btn.disabled = false; btn.textContent = '▶ SOLVE'; }
@@ -9888,10 +9910,6 @@ window.EC_FieldSolver = (function() {
           log.push(`  ✓ Saturated at pass ${saturatedAt} (Δ=${delta.toFixed(5)} < ε=${EPSILON})`);
           // Still trace lines for this final pass, then break
         }
-        // Progress callback (used by Web Worker to ping main thread)
-        if (typeof opts.onPass === 'function') {
-          try { opts.onPass(pass, delta, !!saturatedAt); } catch(_) {}
-        }
       }
       prevCombined = combined.slice();
 
@@ -9913,6 +9931,11 @@ window.EC_FieldSolver = (function() {
       log.push(`  ${lines.length} field lines`);
 
       allFieldLines = lines;
+
+      // Progress callback — fires after lines are updated so worker can checkpoint
+      if (typeof opts.onPass === 'function') {
+        try { opts.onPass(pass, delta, !!saturatedAt, allFieldLines, log); } catch(_) {}
+      }
 
       snapshots.push({
         pass, combined: combined.slice(), fieldMap, lines,
