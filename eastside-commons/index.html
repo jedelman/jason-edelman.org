@@ -5994,14 +5994,99 @@ function initPipeline(parcels, proj, MAP, derivedG) {
   _pipelineParcels = parcels; _pipelineProj = proj; _pipelineMAP = MAP;
   window._derivedG = derivedG;
   window._pipelineReady = true;
-  // Auto-run field solver on first load
+  // Try resuming cached result first; fall back to fresh solve
   setTimeout(() => {
-    if (typeof triggerPipeline === 'function') triggerPipeline();
+    if (!resumeFromCache()) {
+      if (typeof triggerPipeline === 'function') triggerPipeline();
+    }
   }, 300);
 }
 
 // Debounced wrapper — sliders call this so rapid drags don't spam the EA
 let _pipelineRegenTimer = null;
+// ── Apply field solver result to the map (worker callback + resume) ─────────
+function applyFieldResult(psResult, params, t1) {
+  const svg = document.getElementById('site-plan');
+  const statusText = document.getElementById('map-status');
+  const btn = document.getElementById('run-btn');
+
+  if (svg) {
+    svg.querySelectorAll('[data-t7],[data-plan-layer]').forEach(e => e.remove());
+    svg.querySelector('#pattern-overlay')?.remove();
+    renderPlanBuildings(psResult.sceneGraph);
+    if (window.EC_PanZoom && _pipelineParcels) {
+      const edaPts = _pipelineParcels
+        .filter(p => p.is_eda && p.rings?.[0])
+        .flatMap(p => p.rings[0].map(([lon,lat]) => _pipelineProj(lon,lat)));
+      if (edaPts.length) {
+        const xs = edaPts.map(([x]) => x), ys = edaPts.map(([,y]) => y);
+        window.EC_PanZoom.fitBBox(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
+      }
+    }
+  }
+
+  const emptyT1 = { scale:{ft_per_px_ew:1,ft_per_px_ns:1}, MAP:{x0:0,y0:0,x1:4200,y1:3700}, setbacks:[], edaParcels:[] };
+  const zones = patternInstancesToZones(psResult.sceneGraph, t1 || emptyT1);
+  window._lastPipelineZones = zones;
+  window._lastParams = params;
+
+  let total_units = 0, affordable = 0, green_ac = 0;
+  for (const b of (psResult.buildings || [])) {
+    const lots = Math.max(1, Math.round(b.w / 25));
+    const units = lots * 15;
+    total_units += units;
+    affordable  += Math.round(units * 0.96);
+  }
+  for (const z of (zones || [])) {
+    if (z.use?.startsWith('GREEN')) green_ac += z.area_ac;
+  }
+  const setEl = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setEl('res-units', total_units.toLocaleString());
+  setEl('res-affordable', total_units > 0 ? `${((affordable/total_units)*100).toFixed(0)}%` : '—');
+  setEl('res-green', (green_ac/73.4*100).toFixed(1)+'%');
+  const bN = (psResult.buildings||[]).length, nN = (psResult.hotNodes||[]).length;
+  setEl('res-patterns', `${bN} bldgs · ${nN} nodes` + (psResult.saturatedAt ? ` · ✓sat@${psResult.saturatedAt}` : ''));
+  if (statusText) statusText.textContent =
+    `✓ ${bN} bldgs · ${nN} nodes` + (psResult.saturatedAt ? ` · sat@pass ${psResult.saturatedAt}` : '');
+  if (btn) { btn.disabled = false; btn.textContent = '▶ SOLVE'; }
+
+  renderLegendChips();
+  updateAnalysisViews();
+  try {
+    localStorage.setItem('ec-state', JSON.stringify({
+      zones, parcels: (_pipelineParcels||[]).filter(p=>p.is_eda),
+      seed: window._lastSeed, params, ts: Date.now(),
+    }));
+  } catch(_) {}
+}
+
+// ── Resume from localStorage cache on load ───────────────────────────────────
+function resumeFromCache() {
+  try {
+    const raw = localStorage.getItem('ec-solver-result');
+    if (!raw) return false;
+    const payload = JSON.parse(raw);
+    if (!payload.ts || Date.now() - payload.ts > 7 * 86400e3) return false;
+    if (!payload.buildings?.length) return false;
+    const psResult = {
+      buildings: payload.buildings, hotNodes: payload.hotNodes || [],
+      fieldLines: payload.fieldLines || [], log: payload.log || [],
+      saturatedAt: payload.saturatedAt,
+      sceneGraph: {
+        instances: payload.hotNodes || [], buildings: payload.buildings,
+        buildingPoints: payload.hotNodes || [],
+      },
+    };
+    window._patternSolverResult = psResult;
+    window._lastPatternResult   = psResult;
+    const ageMins = Math.round((Date.now() - payload.ts) / 60000);
+    const statusEl = document.getElementById('map-status');
+    if (statusEl) statusEl.textContent = `Cached result (${ageMins}m ago) — ${payload.buildings.length} bldgs`;
+    applyFieldResult(psResult, payload.opts || {}, null);
+    return true;
+  } catch(e) { console.warn('[Resume]', e); return false; }
+}
+
 function schedulePipelineRegen(delayMs = 600) {
   clearTimeout(_pipelineRegenTimer);
   _pipelineRegenTimer = setTimeout(() => triggerPipeline(), delayMs);
@@ -6053,94 +6138,65 @@ async function triggerPipeline() {
       }
     }
 
-    // ── Field Solver (Gaussian pressure field → field lines → buildings) ─────
-    if (statusText) statusText.textContent = 'Field solver: running…';
-    if (!window.EC_FieldSolver) throw new Error('EC_FieldSolver not loaded');
+    // ── Field Solver via Web Worker ─────────────────────────────────────────
+    if (statusText) statusText.textContent = 'Field solver: starting worker…';
+    if (btn) { btn.disabled = true; btn.textContent = '⟳ Running…'; }
 
-    const psResult = window.EC_FieldSolver.solve(
-      parcels, proj, MAP, window._derivedG, {
+    // Terminate any existing worker
+    if (window._solverWorker) { window._solverWorker.terminate(); window._solverWorker = null; }
+
+    const worker = new Worker('/eastside-commons/ec-solver-worker.js');
+    window._solverWorker = worker;
+
+    worker.onmessage = (e) => {
+      const { type, msg, pass, delta, saturated, payload } = e.data;
+      if (type === 'status') {
+        if (statusText) statusText.textContent = msg;
+      } else if (type === 'progress') {
+        const maxP = params.ps_recurse || 16;
+        const pct = Math.round((pass + 1) / maxP * 100);
+        if (statusText) statusText.textContent =
+          `Pass ${pass + 1}/${maxP} · Δ=${delta}${saturated ? ' · ✓sat' : ''} · ${pct}%`;
+      } else if (type === 'error') {
+        if (statusText) statusText.textContent = '✗ ' + msg;
+        if (btn) { btn.disabled = false; btn.textContent = '▶ SOLVE'; }
+        window._solverWorker = null;
+      } else if (type === 'result') {
+        // Persist crash-safe copy
+        try { localStorage.setItem('ec-solver-result', JSON.stringify(payload)); } catch(_) {}
+        const psResult = {
+          buildings: payload.buildings, hotNodes: payload.hotNodes,
+          fieldLines: payload.fieldLines, log: payload.log,
+          saturatedAt: payload.saturatedAt,
+          sceneGraph: {
+            instances: payload.hotNodes || [], buildings: payload.buildings || [],
+            buildingPoints: payload.hotNodes || [],
+          },
+        };
+        window._patternSolverResult = psResult;
+        window._lastPatternResult   = psResult;
+        window._solverWorker = null;
+        applyFieldResult(psResult, params, t1);
+      }
+    };
+
+    worker.onerror = (e) => {
+      if (statusText) statusText.textContent = '✗ Worker error: ' + (e.message || 'unknown');
+      if (btn) { btn.disabled = false; btn.textContent = '▶ SOLVE'; }
+      window._solverWorker = null;
+    };
+
+    worker.postMessage({
+      parcels, derivedG: window._derivedG || {}, MAP,
+      opts: {
         passes:    params.ps_recurse || 16,
         eps:       params.ps_eps     || 0.008,
-        cellSize:  params.ps_res     || 3,
+        cellSize:  params.ps_res     || 10,
         threshold: params.ps_thresh  || 0.2,
-      }
-    );
-    // Normalize shape for downstream consumers
-    psResult.sceneGraph = {
-      instances:      psResult.hotNodes   || [],
-      buildings:      psResult.buildings  || [],
-      buildingPoints: psResult.hotNodes   || [],
-    };
-    window._patternSolverResult = psResult;
-    window._lastPatternResult   = psResult;
-    console.group('[FieldSolver]');
-    (psResult.log || []).forEach(l => console.log(l));
-    console.log('buildings:', psResult.buildings?.length, '| hotNodes:', psResult.hotNodes?.length);
-    console.groupEnd();
+      },
+    });
 
-    if (statusText) statusText.textContent =
-      `${psResult.buildings?.length || 0} bldgs · ${psResult.hotNodes?.length || 0} nodes` +
-      (psResult.saturatedAt ? ` · ✓sat@${psResult.saturatedAt}` : '');
-
-    // ── Render plan ───────────────────────────────────────────────────────
-    if (statusText) statusText.textContent = (statusText.textContent || '') + ' · rendering…';
-    if (svg) {
-      svg.querySelectorAll('[data-t7],[data-plan-layer]').forEach(e => e.remove());
-      svg.querySelector('#pattern-overlay')?.remove();
-      renderPlanBuildings(psResult.sceneGraph);
-      // Auto-fit to EDA parcel extent after first render
-      if (window.EC_PanZoom && _pipelineParcels) {
-        const edaPts = _pipelineParcels
-          .filter(p => p.is_eda && p.rings?.[0])
-          .flatMap(p => p.rings[0].map(([lon,lat]) => _pipelineProj(lon,lat)));
-        if (edaPts.length) {
-          const xs = edaPts.map(([x]) => x), ys = edaPts.map(([,y]) => y);
-          window.EC_PanZoom.fitBBox(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
-        }
-      }
-    }
-
-    // ── Summary ───────────────────────────────────────────────────────────
-    const zones = patternInstancesToZones(psResult.sceneGraph, t1);
-    window._lastPipelineZones = zones;
-    window._lastSeed   = getCurrentSeed();
-    window._lastParams = params;
-
-    // Field solver buildings: {x,y,w,h,pts,domPid,avgStrong}
-    // Estimate units: 25ft lots × depth/125ft × 5 floors × 15 units/bldg
-    let total_units = 0, affordable = 0, green_ac = 0;
-    for (const b of (psResult.buildings || [])) {
-      const lots = Math.max(1, Math.round(b.w / 25));
-      const units = lots * 15;
-      total_units += units;
-      affordable  += Math.round(units * 0.96);
-    }
-    for (const z of zones) {
-      if (z.use.startsWith('GREEN')) green_ac += z.area_ac;
-    }
-    document.getElementById('res-units').textContent = total_units.toLocaleString();
-    document.getElementById('res-affordable').textContent =
-      total_units > 0 ? `${((affordable/total_units)*100).toFixed(0)}%` : '—';
-    document.getElementById('res-green').textContent = (green_ac/73.4*100).toFixed(1)+'%';
-    const patEl = document.getElementById('res-patterns');
-    if (patEl) patEl.textContent =
-      `${psResult.sceneGraph.instances.length} inst · ${psResult.sceneGraph.buildings.length} bldgs`;
-
-
-    if (progSection) progSection.style.display = 'none';
-    if (statusText) statusText.textContent = '✓ Complete';
-    if (btn) { btn.disabled=false; btn.textContent='▶ SOLVE'; }
-
-    renderLegendChips();
-    updateAnalysisViews();
-
-    // Persist for 3D view
-    try {
-      localStorage.setItem('ec-state', JSON.stringify({
-        zones, parcels: parcels.filter(p=>p.is_eda),
-        seed: window._lastSeed, params, ts: Date.now(),
-      }));
-    } catch(e) { /* storage full */ }
+    return;  // rendering happens async in worker.onmessage
 
   } catch(e) {
     const msg = e?.message || String(e);
@@ -9831,6 +9887,10 @@ window.EC_FieldSolver = (function() {
           saturatedAt = pass+1;
           log.push(`  ✓ Saturated at pass ${saturatedAt} (Δ=${delta.toFixed(5)} < ε=${EPSILON})`);
           // Still trace lines for this final pass, then break
+        }
+        // Progress callback (used by Web Worker to ping main thread)
+        if (typeof opts.onPass === 'function') {
+          try { opts.onPass(pass, delta, !!saturatedAt); } catch(_) {}
         }
       }
       prevCombined = combined.slice();
