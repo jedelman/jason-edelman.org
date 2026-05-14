@@ -885,6 +885,7 @@ details[open] summary::before { content: '▼  '; }
         <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
         <button class="overlay-btn on" data-overlay="streets" onclick="toggleOverlay(this)">Streets</button>
         <button class="overlay-btn on" data-overlay="edges" onclick="toggleEdges(this)">Edges</button>
+        <button class="overlay-btn" id="btn-patterns" onclick="togglePatternOverlay(this)">Patterns</button>
       </div>
 
       <!-- SVG map + 3D canvas (toggled) -->
@@ -5880,11 +5881,6 @@ async function triggerPipeline() {
             };
             localStorage.setItem('ec-state', JSON.stringify(payload));
           } catch(e) { /* storage full or private mode */ }
-
-          // Render pattern instances as 2D SVG overlay
-          if (window._lastPatternResult) {
-            renderPatternOverlay2D(window._lastPatternResult.sceneGraph);
-          }
         },
       }
     );
@@ -7966,6 +7962,19 @@ function ptsToSvgD(pts) {
   if (!pts || pts.length < 2) return '';
   const [first, ...rest] = pts;
   return `M${first.x},${first.y}` + rest.map(p => `L${p.x},${p.y}`).join('') + 'Z';
+}
+
+let _patternOverlayOn = false;
+function togglePatternOverlay(btn) {
+  _patternOverlayOn = !_patternOverlayOn;
+  btn.classList.toggle('on', _patternOverlayOn);
+  const existing = document.getElementById('pattern-overlay');
+  if (!_patternOverlayOn) {
+    if (existing) existing.remove();
+    return;
+  }
+  const sg = window._lastPatternResult?.sceneGraph;
+  if (sg) renderPatternOverlay2D(sg);
 }
 
 function renderPatternOverlay2D(sg) {
