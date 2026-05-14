@@ -8864,6 +8864,75 @@ function renderPlanBuildings(sg) {
   }
   g.appendChild(gNodes);
 
+  // ── Green-fill rule: EDA area not covered by buildings → park/wetland ───
+  // Compute a coarse grid of the EDA footprint and subtract building bboxes.
+  // Any EDA cell not covered gets a green ellipse (park/wetland fill).
+  if (_pipelineParcels && _pipelineProj && buildings.length > 0) {
+    const CELL = 120; // ft — grid resolution for gap detection
+    const MAP = _pipelineMAP;
+    const COLS = Math.ceil((MAP.x1-MAP.x0)/CELL);
+    const ROWS = Math.ceil((MAP.y1-MAP.y0)/CELL);
+    // EDA mask (reuse existing _edaMask from window or build inline)
+    const occupied = new Uint8Array(COLS*ROWS);
+    // Mark building footprints as occupied
+    for (const b of buildings) {
+      if (GREEN_PIDS.has(Number(b.domPid))) continue; // green buildings are themselves green
+      const cx0 = Math.max(0, Math.floor((b.x-MAP.x0)/CELL));
+      const cx1 = Math.min(COLS-1, Math.ceil((b.x+b.w-MAP.x0)/CELL));
+      const cy0 = Math.max(0, Math.floor((b.y-MAP.y0)/CELL));
+      const cy1 = Math.min(ROWS-1, Math.ceil((b.y+b.h-MAP.y0)/CELL));
+      for (let cy=cy0; cy<=cy1; cy++) for (let cx=cx0; cx<=cx1; cx++)
+        occupied[cy*COLS+cx] = 1;
+    }
+    // Build EDA polygon list for point-in-polygon test
+    const edaPolys = (_pipelineParcels||[])
+      .filter(p => p.is_eda && p.rings?.[0])
+      .map(p => p.rings[0].map(([lon,lat]) => {
+        const r = _pipelineProj(lon,lat);
+        return Array.isArray(r) ? r : [r.x, r.y];
+      }));
+    function pip(px, py, poly) {
+      let inside=false;
+      for (let i=0,j=poly.length-1; i<poly.length; j=i++) {
+        const [xi,yi]=poly[i],[xj,yj]=poly[j];
+        if(((yi>py)!==(yj>py))&&(px<(xj-xi)*(py-yi)/(yj-yi)+xi)) inside=!inside;
+      }
+      return inside;
+    }
+    // Collect unoccupied EDA cells and cluster adjacent ones into green patches
+    const gGreen = document.createElementNS(ns, 'g');
+    gGreen.setAttribute('data-plan-sub', 'green-fill');
+    gGreen.setAttribute('pointer-events', 'none');
+    let patchCount = 0;
+    for (let cy=0; cy<ROWS; cy++) {
+      for (let cx=0; cx<COLS; cx++) {
+        if (occupied[cy*COLS+cx]) continue;
+        const px = MAP.x0 + cx*CELL + CELL/2;
+        const py = MAP.y0 + cy*CELL + CELL/2;
+        if (!edaPolys.some(poly => pip(px, py, poly))) continue;
+        // Unoccupied EDA cell → place a small green ellipse
+        // Use varied sizes to create organic texture, not a grid
+        const seed = (cx*31+cy*17)&0xff;
+        const rx = CELL*0.42 + (seed&0xf)*2;
+        const ry = CELL*0.38 + ((seed>>4)&0xf)*2;
+        const e = document.createElementNS(ns, 'ellipse');
+        e.setAttribute('cx', px.toFixed(1));
+        e.setAttribute('cy', py.toFixed(1));
+        e.setAttribute('rx', rx.toFixed(1));
+        e.setAttribute('ry', ry.toFixed(1));
+        e.setAttribute('fill', 'url(#pat-green-passive)');
+        e.setAttribute('fill-opacity', '0.72');
+        e.setAttribute('stroke', '#1a4020');
+        e.setAttribute('stroke-width', '0.6');
+        e.setAttribute('stroke-opacity', '0.4');
+        gGreen.appendChild(e);
+        patchCount++;
+      }
+    }
+    // Insert green fill BEFORE buildings (under them)
+    g.insertBefore(gGreen, g.firstChild);
+  }
+
   svg.appendChild(g);
   if (window.EC_PanZoom) window.EC_PanZoom.reinit();
 }
