@@ -1114,7 +1114,7 @@ self.onmessage = function(e) {
       },
     });
   } catch(err) {
-    self.postMessage({ type: 'error', msg: err.message || String(err) });
+    self.postMessage({ type: 'error', msg: (err.message || String(err)) + (err.stack ? '\n' + err.stack.split('\n').slice(1,3).join('\n') : '') });
     return;
   }
 

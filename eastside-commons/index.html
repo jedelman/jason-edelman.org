@@ -6265,10 +6265,23 @@ async function triggerPipeline() {
     };
 
     worker.onerror = (e) => {
-      if (statusText) statusText.textContent = '✗ Worker error: ' + (e.message || 'unknown');
+      const loc = e.filename ? `${e.filename.split('/').pop()}:${e.lineno}:${e.colno}` : '';
+      const msg = [e.message, loc].filter(Boolean).join(' @ ') || 'unknown error';
+      if (statusText) statusText.textContent = '✗ ' + msg;
       if (btn) { btn.disabled = false; btn.textContent = '▶ SOLVE'; }
+      mapLog('✗ worker: ' + msg, 'error');
+      console.error('[Worker error]', e);
       window._solverWorker = null;
     };
+
+    worker.addEventListener('messageerror', (e) => {
+      const msg = 'structured clone failed — non-transferable data';
+      if (statusText) statusText.textContent = '✗ ' + msg;
+      if (btn) { btn.disabled = false; btn.textContent = '▶ SOLVE'; }
+      mapLog('✗ ' + msg, 'error');
+      console.error('[Worker messageerror]', e);
+      window._solverWorker = null;
+    });
 
     worker.postMessage({
       parcels, derivedG: window._derivedG || {}, MAP,
