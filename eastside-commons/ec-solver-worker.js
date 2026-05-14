@@ -925,8 +925,9 @@ self.EC_FieldSolver = (function() {
       normalizeField(combined);
 
       // Convergence check: mean absolute change vs previous pass
+      let delta = null;
       if (prevCombined) {
-        let delta = 0;
+        delta = 0;
         for (let i=0;i<combined.length;i++) delta += Math.abs(combined[i]-prevCombined[i]);
         delta /= combined.length;
         log.push(`  Δ=${delta.toFixed(5)}`);

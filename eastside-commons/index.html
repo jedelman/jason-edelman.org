@@ -887,6 +887,20 @@ details[open] summary::before { content: '▼  '; }
       </details>
 
       <!-- Error overlay -->
+      <!-- Ephemeral console overlay — messages fade out -->
+      <div id="map-console" style="
+        position:absolute; bottom:3.5rem; left:50%; transform:translateX(-50%);
+        display:flex; flex-direction:column; align-items:center; gap:0.25rem;
+        z-index:50; pointer-events:none; width:90%; max-width:480px;
+      "></div>
+
+      <!-- Git hash / version chip — bottom center -->
+      <div id="map-version" style="
+        position:absolute; bottom:0.4rem; left:50%; transform:translateX(-50%);
+        font-family:var(--font-mono); font-size:0.5rem; color:var(--muted);
+        letter-spacing:0.08em; pointer-events:none; opacity:0.5;
+      ">—</div>
+
       <div id="map-error-overlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);color:#e06060;font-family:monospace;font-size:0.7rem;padding:2rem;white-space:pre-wrap;z-index:200;pointer-events:none;"></div>
     </div>
 
@@ -6082,10 +6096,55 @@ function resumeFromCache() {
     const ageMins = Math.round((Date.now() - payload.ts) / 60000);
     const statusEl = document.getElementById('map-status');
     if (statusEl) statusEl.textContent = `Cached result (${ageMins}m ago) — ${payload.buildings.length} bldgs`;
+    mapLog(`resumed from cache (${ageMins}m ago) · ${payload.buildings.length} bldgs`, 'ok');
     applyFieldResult(psResult, payload.opts || {}, null);
     return true;
   } catch(e) { console.warn('[Resume]', e); return false; }
 }
+
+// ── Map console overlay — ephemeral per-message fade-out ─────────────────────
+function mapLog(msg, type = 'info') {
+  const container = document.getElementById('map-console');
+  if (!container) return;
+
+  const el = document.createElement('div');
+  const colors = { info: '#9ab', warn: '#c87818', error: '#e06060', ok: '#48c860' };
+  el.style.cssText = `
+    font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.05em;
+    color: ${colors[type] || colors.info}; background: rgba(4,4,2,0.82);
+    padding: 0.2rem 0.55rem; border-left: 2px solid ${colors[type] || colors.info};
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    transition: opacity 0.6s ease;
+  `;
+  el.textContent = msg;
+  container.appendChild(el);
+
+  // Keep last 6 messages, fade out older ones
+  const msgs = container.children;
+  while (msgs.length > 6) container.removeChild(msgs[0]);
+  Array.from(msgs).forEach((m, i, a) => {
+    m.style.opacity = String(0.35 + 0.65 * (i / Math.max(1, a.length - 1)));
+  });
+
+  // Fade out and remove after 4s
+  setTimeout(() => { el.style.opacity = '0'; }, 3500);
+  setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, 4200);
+}
+
+// ── Git hash version display ──────────────────────────────────────────────────
+(async () => {
+  try {
+    // _build-manifest.json is written by the build script and includes git sha
+    const res = await fetch('/_build-manifest.json');
+    if (res.ok) {
+      const m = await res.json();
+      const sha = m.git_sha || m.commit_sha || '';
+      const built = m.built_at ? new Date(m.built_at).toISOString().slice(0,16).replace('T',' ') : '';
+      const el = document.getElementById('map-version');
+      if (el && sha) el.textContent = `${sha.slice(0,7)} · ${built}`;
+    }
+  } catch(_) {}
+})();
 
 function schedulePipelineRegen(delayMs = 600) {
   clearTimeout(_pipelineRegenTimer);
@@ -6141,6 +6200,7 @@ async function triggerPipeline() {
     // ── Field Solver via Web Worker ─────────────────────────────────────────
     if (statusText) statusText.textContent = 'Field solver: starting worker…';
     if (btn) { btn.disabled = true; btn.textContent = '⟳ 0/' + (params.ps_recurse || 16); }
+    mapLog(`starting · grid ${params.ps_res || 10}ft · ${params.ps_recurse || 16} passes max`);
 
     // Terminate any existing worker
     if (window._solverWorker) { window._solverWorker.terminate(); window._solverWorker = null; }
@@ -6149,13 +6209,13 @@ async function triggerPipeline() {
     window._solverWorker = worker;
 
     worker.onmessage = (e) => {
-      const { type, msg, pass, delta, saturated, payload } = e.data;
+      const { type, msg, pass, delta, saturated, payload, buildings, hotNodes } = e.data;
       if (type === 'status') {
         if (statusText) statusText.textContent = msg;
+        mapLog(msg);
       } else if (type === 'checkpoint') {
-        // Partial result — update button count, render cached buildings if any
         if (btn) btn.textContent = `⟳ ${pass + 1}p · ${buildings}b`;
-        // Render the latest partial result from localStorage immediately
+        mapLog(`pass ${pass + 1} → ${buildings} bldgs · ${hotNodes} nodes`, 'ok');
         try {
           const raw = localStorage.getItem('ec-solver-result');
           if (raw) {
@@ -6177,11 +6237,13 @@ async function triggerPipeline() {
           ? `✓ sat · ${pass + 1}p`
           : `⟳ ${pass + 1}/${maxP} · ${pct}%`;
         if (btn) btn.textContent = label;
-        if (statusText) statusText.textContent =
-          `Pass ${pass + 1}/${maxP} · Δ=${delta}${saturated ? ' · ✓sat' : ''}`;
+        const deltaStr = delta != null ? `Δ=${delta}` : 'pass 0';
+        if (statusText) statusText.textContent = `Pass ${pass + 1}/${maxP} · ${deltaStr}${saturated ? ' · ✓sat' : ''}`;
+        mapLog(`pass ${pass + 1}/${maxP} · ${deltaStr}${saturated ? ' ✓' : ''}`, saturated ? 'ok' : 'info');
       } else if (type === 'error') {
         if (statusText) statusText.textContent = '✗ ' + msg;
         if (btn) { btn.disabled = false; btn.textContent = '▶ SOLVE'; }
+        mapLog('✗ ' + msg, 'error');
         window._solverWorker = null;
       } else if (type === 'result') {
         // Persist crash-safe copy
@@ -9900,8 +9962,9 @@ window.EC_FieldSolver = (function() {
       normalizeField(combined);
 
       // Convergence check: mean absolute change vs previous pass
+      let delta = null;
       if (prevCombined) {
-        let delta = 0;
+        delta = 0;
         for (let i=0;i<combined.length;i++) delta += Math.abs(combined[i]-prevCombined[i]);
         delta /= combined.length;
         log.push(`  Δ=${delta.toFixed(5)}`);

@@ -131,8 +131,11 @@ for (const project of SUBPROJECTS) {
 
 // ── Build manifest ────────────────────────────────────────────────────────────
 const builtProjects = SUBPROJECTS.filter(p => existsSync(resolve(PUBLIC, p.name)));
+let gitSha = '';
+try { gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim(); } catch(_) {}
 const manifest = {
   built_at:    new Date().toISOString(),
+  git_sha:     gitSha,
   total_files: 0,  // filled in after sitemap
   sources: {
     static_files: STATIC.filter(f => existsSync(resolve(PUBLIC, f))).join(', '),
