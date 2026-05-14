@@ -880,8 +880,7 @@ details[open] summary::before { content: '▼  '; }
         <button class="tool-btn active" id="btn-select" onclick="setTool('select')">↖ Select</button>
         <button class="tool-btn" id="btn-section" onclick="setTool('section')">⊸ Section</button>
         <button class="tool-btn" onclick="if(window.EC_PanZoom)window.EC_PanZoom.reset()" title="Reset zoom (or double-click map)">⊡ Reset view</button>
-        <button class="tool-btn" id="btn-3d" onclick="toggle3D()" title="Toggle 3D view">⬡ 3D</button>
-        <a class="tool-btn" href="patterns-3d.html" title="Pattern Solver 3D — open in new tab" target="_blank" style="text-decoration:none">✦ Pattern 3D ↗</a>
+        <a class="tool-btn" href="view-3d.html" title="3D view — opens in new tab" target="_blank" style="text-decoration:none">⬡ 3D View ↗</a>
         <span style="flex:1"></span>
         <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
         <button class="overlay-btn on" data-overlay="streets" onclick="toggleOverlay(this)">Streets</button>
@@ -898,9 +897,7 @@ details[open] summary::before { content: '▼  '; }
           <text x="480" y="380" font-family="monospace" font-size="14" fill="#2a2820" text-anchor="middle">Loading GIS data…</text>
         </svg>
       </div>
-      <div class="map-wrap" id="map-wrap-3d" style="display:none;">
-        <canvas id="canvas-3d" style="display:block;width:100%;height:100%;"></canvas>
-      </div>
+
 
     </div><!-- /map-col -->
 
@@ -989,7 +986,6 @@ details[open] summary::before { content: '▼  '; }
 
 <div id="tooltip"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
 <script>
 // Global error handler — surfaces JS errors on the map for mobile debugging
@@ -5804,6 +5800,8 @@ async function triggerPipeline() {
         },
         onComplete: ({ zones, score }) => {
           window._lastPipelineZones = zones;  // for GeoJSON export
+          window._lastSeed   = getCurrentSeed();
+          window._lastParams = params;
           let total_units=0, affordable=0, green_ac=0;
           for (const z of zones) {
             if (z.units && z.use.startsWith('RESIDENTIAL') && !z.district?.includes('COURTYARD')) {
@@ -5831,6 +5829,7 @@ async function triggerPipeline() {
                 window._derivedG, { recurse:3, cluster_k:40 }
               );
               window._patternSolverResult = psResult;
+              window._lastPatternResult    = psResult;
               const patEl = document.getElementById('res-patterns');
               if (patEl) patEl.textContent =
                 psResult.sceneGraph.instances.length + ' inst / ' + psResult.buildings.length + ' bldgs';
@@ -5848,30 +5847,24 @@ async function triggerPipeline() {
           // Update legend chips
           renderLegendChips();
           updateAnalysisViews();
-          // Rebuild 3D if active, or auto-activate 3D on first run
-          const st = window._getPipelineState?.() || {};
-          if (!_3dActive) {
-            // Auto-switch to 3D as primary view on pipeline complete
-            _3dActive = true;
-            const btn3d = document.getElementById('btn-3d');
-            const wrap2d = document.getElementById('map-wrap-2d');
-            const wrap3d = document.getElementById('map-wrap-3d');
-            if (wrap2d) wrap2d.style.display = 'none';
-            if (wrap3d) wrap3d.style.display = '';
-            if (btn3d) btn3d.classList.add('on');
-            // Delay so browser paints the canvas at full size before Three.js reads offsetWidth
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-              const canvas = document.getElementById('canvas-3d');
-              if (canvas && typeof THREE !== 'undefined') {
-                if (!window.EC3D.renderer) window.EC3D.init(canvas);
-                else window.EC3D.resize();
-                window.EC3D.buildScene(window._lastPipelineZones, st.parcels?.filter(p=>p.is_eda), st.proj);
-                window.EC3D.buildEdgeFurniture(window._lastPipelineZones);
-              }
-            }));
-          } else if (window.EC3D && window._lastPipelineZones) {
-            window.EC3D.buildScene(window._lastPipelineZones, st.parcels?.filter(p=>p.is_eda), st.proj);
-            window.EC3D.buildEdgeFurniture(window._lastPipelineZones);
+
+          // Persist state for 3D view (view-3d.html reads this)
+          try {
+            const st = window._getPipelineState?.() || {};
+            const payload = {
+              zones:    window._lastPipelineZones || [],
+              parcels:  (st.parcels || []).filter(p => p.is_eda),
+              proj:     null,   // proj fn not serializable — view-3d re-derives from seed
+              seed:     window._lastSeed,
+              params:   window._lastParams,
+              ts:       Date.now(),
+            };
+            localStorage.setItem('ec-state', JSON.stringify(payload));
+          } catch(e) { /* storage full or private mode */ }
+
+          // Render pattern instances as 2D SVG overlay
+          if (window._lastPatternResult) {
+            renderPatternOverlay2D(window._lastPatternResult.sceneGraph);
           }
         },
       }
@@ -5904,1424 +5897,6 @@ function toggleEdges(btn) {
     window.EC_Edges.renderEdges(edges, svg, {opacity:'0.8'});
   }
 }
-
-// ── 3D VIEW TOGGLE ──────────────────────────────────────────────────────────────
-let _3dActive = false;
-function toggle3D() {
-  _3dActive = !_3dActive;
-  const btn = document.getElementById('btn-3d');
-  const wrap2d = document.getElementById('map-wrap-2d');
-  const wrap3d = document.getElementById('map-wrap-3d');
-  if (!wrap2d || !wrap3d) return;
-
-  if (_3dActive) {
-    wrap2d.style.display = 'none';
-    wrap3d.style.display = '';
-    if (btn) btn.classList.add('on');
-
-    // Init Three.js if not already done
-    const canvas = document.getElementById('canvas-3d');
-    if (canvas && typeof THREE !== 'undefined') {
-      if (!window.EC3D.renderer) {
-        window.EC3D.init(canvas);
-      } else {
-        window.EC3D.resize();
-      }
-      // Build scene from current pipeline zones
-      if (window._lastPipelineZones) {
-        const state = window._getPipelineState?.() || {};
-        window.EC3D.buildScene(window._lastPipelineZones, state.parcels?.filter(p=>p.is_eda), state.proj);
-      }
-    } else if (typeof THREE === 'undefined') {
-      alert('Three.js not loaded. Check network connection.');
-      _3dActive = false;
-      wrap2d.style.display = ''; wrap3d.style.display = 'none';
-    }
-  } else {
-    wrap2d.style.display = '';
-    wrap3d.style.display = 'none';
-    if (btn) btn.classList.remove('on');
-  }
-}
-
-// ── AUTO-REGEN on slider change ──────────────────────────────────────────────
-let _regenTimer = null;
-function schedulePipelineRegen() {
-  clearTimeout(_regenTimer);
-  _regenTimer = setTimeout(() => {
-    if (typeof triggerPipeline !== 'undefined') triggerPipeline();
-  }, 300);  // 300ms after last slider move
-}
-
-// ── LEGEND CHIPS ─────────────────────────────────────────────────────────────
-function renderLegendChips() {
-  const container = document.getElementById('legend-chips');
-  if (!container || !window.EC_Pipeline) return;
-  container.innerHTML = Object.entries(window.EC_Pipeline.USES).map(([key, def]) =>
-    `<span class="legend-chip">
-      <span class="legend-swatch" style="background:${def.color}"></span>
-      ${def.id} ${def.label}
-    </span>`
-  ).join('');
-  // Edge legend
-  const edgeContainer = document.getElementById('edge-legend-chips');
-  if (edgeContainer && window.EC_Edges) {
-    edgeContainer.innerHTML = window.EC_Edges.edgeLegendHTML();
-  }
-}
-
-// ── SVG PAN / ZOOM ───────────────────────────────────────────────────────────
-// State
-const PZ = {
-  scale: 1, tx: 0, ty: 0,
-  dragging: false, lastX: 0, lastY: 0,
-  MIN: 0.3, MAX: 12,
-};
-
-function pzApply() {
-  const vp = document.getElementById('svg-viewport');
-  if (vp) vp.setAttribute('transform', `translate(${PZ.tx},${PZ.ty}) scale(${PZ.scale})`);
-}
-
-function pzReset() {
-  PZ.scale = 1; PZ.tx = 0; PZ.ty = 0;
-  pzApply();
-}
-
-function initPanZoom() {
-  const svg = document.getElementById('site-plan');
-  if (!svg) return;
-
-  // Wrap existing content in a viewport group
-  // (Only do this once — check if already wrapped)
-  if (document.getElementById('svg-viewport')) return;
-  const vp = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-  vp.setAttribute('id', 'svg-viewport');
-  // Move all children into the viewport group
-  while (svg.firstChild) vp.appendChild(svg.firstChild);
-  svg.appendChild(vp);
-
-  // ── WHEEL: zoom toward cursor ──
-  svg.addEventListener('wheel', e => {
-    e.preventDefault();
-    const rect = svg.getBoundingClientRect();
-    // Cursor in SVG viewBox coords (before transform)
-    const vbW = 960, vbH = 760;
-    const mx = (e.clientX - rect.left) / rect.width  * vbW;
-    const my = (e.clientY - rect.top)  / rect.height * vbH;
-    // Point in world coords (before zoom)
-    const wx = (mx - PZ.tx) / PZ.scale;
-    const wy = (my - PZ.ty) / PZ.scale;
-    // New scale
-    const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
-    PZ.scale = Math.min(PZ.MAX, Math.max(PZ.MIN, PZ.scale * factor));
-    // Recompute translation so wx,wy stays under cursor
-    PZ.tx = mx - wx * PZ.scale;
-    PZ.ty = my - wy * PZ.scale;
-    pzApply();
-  }, {passive: false});
-
-  // ── UNIFIED POINTER EVENTS (mouse + touch + stylus) ──
-  // Touch-action: pan-y allows page scroll; none enables all gestures on the element
-  svg.style.touchAction = 'none';
-
-  // Active pointers map: pointerId → {x, y}
-  const activePointers = new Map();
-  let lastPinchDist = null;
-
-  svg.addEventListener('pointerdown', e => {
-    activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
-    svg.setPointerCapture(e.pointerId);
-    if (activePointers.size === 1) {
-      PZ.dragging = true;
-      PZ.lastX = e.clientX;
-      PZ.lastY = e.clientY;
-      svg.style.cursor = 'grabbing';
-    } else if (activePointers.size === 2) {
-      // Pinch starting
-      const pts = [...activePointers.values()];
-      lastPinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      PZ.dragging = false;  // switch to pinch mode
-    }
-    e.preventDefault();
-  });
-
-  svg.addEventListener('pointermove', e => {
-    if (!activePointers.has(e.pointerId)) return;
-    activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
-
-    if (activePointers.size === 2) {
-      // ── Pinch zoom ──
-      const pts = [...activePointers.values()];
-      const newDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
-      if (lastPinchDist) {
-        const midX = (pts[0].x + pts[1].x) / 2;
-        const midY = (pts[0].y + pts[1].y) / 2;
-        const rect = svg.getBoundingClientRect();
-        const vbW = 960, vbH = 760;
-        const mx = (midX - rect.left) / rect.width  * vbW;
-        const my = (midY - rect.top)  / rect.height * vbH;
-        const wx = (mx - PZ.tx) / PZ.scale;
-        const wy = (my - PZ.ty) / PZ.scale;
-        const factor = newDist / lastPinchDist;
-        PZ.scale = Math.min(PZ.MAX, Math.max(PZ.MIN, PZ.scale * factor));
-        PZ.tx = mx - wx * PZ.scale;
-        PZ.ty = my - wy * PZ.scale;
-        pzApply();
-      }
-      lastPinchDist = newDist;
-      // Also pan with pinch midpoint delta
-    } else if (activePointers.size === 1 && PZ.dragging) {
-      // ── Single-finger pan ──
-      const rect = svg.getBoundingClientRect();
-      const scaleX = 960 / rect.width;
-      const scaleY = 760 / rect.height;
-      PZ.tx += (e.clientX - PZ.lastX) * scaleX;
-      PZ.ty += (e.clientY - PZ.lastY) * scaleY;
-      PZ.lastX = e.clientX;
-      PZ.lastY = e.clientY;
-      pzApply();
-    }
-  });
-
-  svg.addEventListener('pointerup', e => {
-    activePointers.delete(e.pointerId);
-    if (activePointers.size < 2) lastPinchDist = null;
-    if (activePointers.size === 0) {
-      PZ.dragging = false;
-      svg.style.cursor = CURRENT_TOOL === 'select' ? 'grab' : 'crosshair';
-    }
-  });
-
-  svg.addEventListener('pointercancel', e => {
-    activePointers.delete(e.pointerId);
-    if (activePointers.size === 0) { PZ.dragging = false; lastPinchDist = null; }
-  });
-
-  // ── DOUBLE-CLICK: reset view ──
-  svg.addEventListener('dblclick', e => {
-    if (e.target === svg || e.target === vp) pzReset();
-  });
-
-  // Initial cursor
-  svg.style.cursor = 'grab';
-  console.log('Pan/zoom initialized');
-}
-
-// Re-wrap after pipeline re-renders (pipeline clears SVG children)
-function reinitPanZoom() {
-  // After pipeline renders, the viewport group was cleared.
-  // Re-init wraps the new content.
-  const vp = document.getElementById('svg-viewport');
-  if (vp) vp.remove();  // remove old wrapper — children already moved to svg
-  initPanZoom();
-  pzApply();  // restore zoom state
-}
-
-window.EC_PanZoom = { init: initPanZoom, reinit: reinitPanZoom, reset: pzReset, state: PZ };
-
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  EASTSIDE COMMONS — 3D VIEW
-//  Extrudes zone polygons by floor count using Three.js.
-//  Renders into a <canvas> that overlays the SVG map.
-//
-//  Coordinate system:
-//    SVG: x[139,841], y[163,653] → site is 702×490px
-//    3D:  SVG coords mapped to world XZ plane (Y is up)
-//         X = (svg_x - 490) * 0.5   (centered, scaled)
-//         Z = (svg_y - 408) * 0.5
-//         Y = height_units (extruded upward)
-//
-//  Camera: perspective, slight isometric tilt, orbitable
-//  Lighting: ambient + directional from NW
-// ═══════════════════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  EASTSIDE COMMONS — 3D VIEW v2
-//  Three.js r128. No external assets — all geometry is procedural.
-//
-//  Features:
-//    - Ghost site layer (existing parcel outlines, semi-transparent)
-//    - Sky gradient via HemisphereLight + background color
-//    - Raycaster tooltips on hover
-//    - Procedural surface treatments per use type:
-//        Residential: window grid on facades
-//        Retail: shop window band at base
-//        Civic: pilasters + roof overhang
-//        Green: sine-displaced ground mesh
-//        Plaza: paver grid (alternating squares)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const EC3D = {
-  renderer: null, scene: null, camera: null, raycaster: null,
-  animFrame: null, canvas: null, tooltip3d: null,
-  pickables: [],   // meshes that trigger tooltips
-  orbitState: {
-    dragging: false, lastX: 0, lastY: 0,
-    theta: Math.PI / 5, phi: Math.PI / 4, dist: 380,
-    MIN_DIST: 60, MAX_DIST: 1000,
-  },
-
-  // ── Coordinate helpers ────────────────────────────────────────────────────
-  svgTo3D(x, y) {
-    const S = 0.45;
-    return [(x - 490) * S, (y - 408) * S];
-  },
-
-  hexToInt(hex) {
-    return parseInt((hex || '#888888').replace('#', ''), 16);
-  },
-
-  // Build THREE.Shape from outer pts (with optional holes)
-  makeShape(outerPts, holePtsList) {
-    if (!outerPts || outerPts.length < 3) return null;
-    const shape = new THREE.Shape();
-    let [x0, z0] = this.svgTo3D(outerPts[0][0], outerPts[0][1]);
-    shape.moveTo(x0, -z0);
-    for (let i = 1; i < outerPts.length; i++) {
-      const [xi, zi] = this.svgTo3D(outerPts[i][0], outerPts[i][1]);
-      shape.lineTo(xi, -zi);
-    }
-    shape.closePath();
-    for (const hole of (holePtsList || [])) {
-      if (!hole || hole.length < 3) continue;
-      const hp = new THREE.Path();
-      const [hx0, hz0] = this.svgTo3D(hole[0][0], hole[0][1]);
-      hp.moveTo(hx0, -hz0);
-      for (let i = 1; i < hole.length; i++) {
-        const [hxi, hzi] = this.svgTo3D(hole[i][0], hole[i][1]);
-        hp.lineTo(hxi, -hzi);
-      }
-      hp.closePath();
-      shape.holes.push(hp);
-    }
-    return shape;
-  },
-
-  // Polygon bounding box in world coords
-  worldBounds(outerPts) {
-    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-    for (const pt of outerPts) {
-      const [wx, wz] = this.svgTo3D(pt[0], pt[1]);
-      if (wx < minX) minX = wx; if (wx > maxX) maxX = wx;
-      if (-wz < minZ) minZ = -wz; if (-wz > maxZ) maxZ = -wz;
-    }
-    return { minX, maxX, minZ, maxZ, w: maxX - minX, d: maxZ - minZ, cx: (minX+maxX)/2, cz: (minZ+maxZ)/2 };
-  },
-
-  // Inset a polygon (array of [x,z] world coords) by `dist` units
-  insetPoly(pts, dist) {
-    if (!pts || pts.length < 3) return pts;
-    // Simple centroid-based shrink — works for convex/near-convex zones
-    let cx = 0, cz = 0;
-    for (const [x, z] of pts) { cx += x; cz += z; }
-    cx /= pts.length; cz /= pts.length;
-    return pts.map(([x, z]) => {
-      const dx = x - cx, dz = z - cz;
-      const len = Math.hypot(dx, dz);
-      if (len < 0.001) return [x, z];
-      const scale = Math.max(0, (len - dist) / len);
-      return [cx + dx * scale, cz + dz * scale];
-    });
-  },
-
-  // Build a THREE.Shape from inset world-space points
-  makeShapeFromWorld(worldPts) {
-    if (!worldPts || worldPts.length < 3) return null;
-    const shape = new THREE.Shape();
-    shape.moveTo(worldPts[0][0], worldPts[0][1]);
-    for (let i = 1; i < worldPts.length; i++) shape.lineTo(worldPts[i][0], worldPts[i][1]);
-    shape.closePath();
-    return shape;
-  },
-
-  // ── Initialise ────────────────────────────────────────────────────────────
-  init(canvasEl) {
-    this.canvas = canvasEl;
-    const W = canvasEl.offsetWidth  > 10 ? canvasEl.offsetWidth  : (canvasEl.parentElement?.offsetWidth  || 800);
-    const H = canvasEl.offsetHeight > 10 ? canvasEl.offsetHeight : (canvasEl.parentElement?.offsetHeight || 600);
-
-    // Renderer
-    this.renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias: true });
-    this.renderer.setSize(W, H);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
-
-    // Scene + sky
-    this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x7aa8c8);  // horizon sky blue
-    this.scene.fog = new THREE.FogExp2(0xb0c8d8, 0.0010);
-
-    // Camera
-    this.camera = new THREE.PerspectiveCamera(42, W / H, 1, 2000);
-    this.raycaster = new THREE.Raycaster();
-    this.updateCamera();
-
-    // ── Lighting: hemisphere (sky/ground) + key sun + fill ──
-    const hemi = new THREE.HemisphereLight(
-      0xb8d4f0,  // sky colour (cool blue)
-      0x3a3020,  // ground colour (warm dark)
-      0.7
-    );
-    this.scene.add(hemi);
-
-    const sun = new THREE.DirectionalLight(0xfff4d0, 1.8);
-    sun.position.set(-220, 480, -80);
-    sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
-    sun.shadow.camera.near = 1;
-    sun.shadow.camera.far = 1400;
-    sun.shadow.camera.left = sun.shadow.camera.bottom = -450;
-    sun.shadow.camera.right = sun.shadow.camera.top = 450;
-    this.scene.add(sun);
-
-    const fill = new THREE.DirectionalLight(0xa0b8d8, 0.35);
-    fill.position.set(180, 160, 180);
-    this.scene.add(fill);
-
-    // ── Ground plane (asphalt/earth) ──
-    const gGeo = new THREE.PlaneGeometry(1600, 1600);
-    const soilTex = this.tex ? this.tex('soil', 100, 100) : null;
-    const gMat = new THREE.MeshLambertMaterial({
-      color: soilTex ? 0xffffff : 0x1a1710,
-      map: soilTex || null,
-    });
-    const ground = new THREE.Mesh(gGeo, gMat);
-    ground.name = 'ground';
-    ground.rotation.x = -Math.PI / 2;
-    ground.receiveShadow = true;
-    this.scene.add(ground);
-
-    // Tooltip div
-    this.tooltip3d = document.getElementById('tooltip3d');
-    if (!this.tooltip3d) {
-      this.tooltip3d = document.createElement('div');
-      this.tooltip3d.id = 'tooltip3d';
-      this.tooltip3d.style.cssText =
-        'position:fixed;background:rgba(12,10,6,0.92);border:1px solid #3a5828;' +
-        'padding:0.4rem 0.7rem;font-family:"DM Mono",monospace;font-size:0.62rem;' +
-        'color:#e0dcd0;pointer-events:none;opacity:0;z-index:500;line-height:1.6;' +
-        'transition:opacity 0.12s;max-width:240px;';
-      document.body.appendChild(this.tooltip3d);
-    }
-
-    this.initOrbit(canvasEl);
-    this.initTooltipPicking(canvasEl);
-
-    const ro = new ResizeObserver(() => this.resize());
-    ro.observe(canvasEl);
-
-    // ── Texture library ─────────────────────────────────────────────────────
-    this.textures = {};
-    const TL = new THREE.TextureLoader();
-    const texDefs = [
-      ['brick',          'textures/brick-residential.jpg'],
-      ['brick-market',   'textures/brick-market.png'],
-      ['stone',          'textures/stone-civic.png'],
-      ['granite',        'textures/granite-ashlar.png'],
-      ['concrete-block', 'textures/concrete-block.png'],
-      ['concrete-rib',   'textures/concrete-ribbed.png'],
-      ['concrete',       'textures/concrete-weathered.png'],
-      ['slate',          'textures/slate-tile.png'],
-      ['grass',          'textures/grass-active.png'],
-      ['scrub',          'textures/scrub-wetland.png'],
-      ['soil',           'textures/soil-bare.png'],
-      ['aggregate',      'textures/aggregate-path.png'],
-      ['herringbone',    'textures/herringbone-stone.png'],
-      ['cobble',         'textures/cobble-plaza.png'],
-      ['terrazzo-warm',  'textures/terrazzo-warm.png'],
-      ['terrazzo-dark',  'textures/terrazzo-dark.png'],
-      ['paving',         'textures/paving-grass.png'],
-      ['asphalt',        'textures/asphalt.png'],
-    ];
-    for (const [key, path] of texDefs) {
-      TL.load(path, (tex) => {
-        tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-        this.textures[key] = tex;
-        if (Object.keys(this.textures).length === texDefs.length) {
-          // All textures loaded — rebuild scene
-          if (window._lastPipelineZones) {
-            const st = window._lastPipelineState || {};
-            this.buildScene(window._lastPipelineZones,
-              st.parcels?.filter(p => p.is_eda), st.proj);
-          }
-        }
-      }, undefined, () => console.warn('EC3D texture failed:', path));
-    }
-
-    this.animate();
-    console.log('EC3D v2: initialized');
-  },
-
-  // Clone texture with repeat for a world-space surface
-  tex(key, ru, rv) {
-    const t = this.textures?.[key];
-    if (!t) return null;
-    const c = t.clone();
-    c.wrapS = c.wrapT = THREE.RepeatWrapping;
-    c.repeat.set(ru || 1, rv || 1);
-    c.needsUpdate = true;
-    return c;
-  },
-
-  // ── Ghost site layer ──────────────────────────────────────────────────────
-  buildGhostLayer(edaParcels, proj) {
-    if (!edaParcels || !proj) return;
-
-    const GHOST_H = 1.2;
-    const mat = new THREE.MeshLambertMaterial({
-      color: 0x7a6a50, transparent: true, opacity: 0.35,
-    });
-    const edgeMat = new THREE.LineBasicMaterial({
-      color: 0xb0956a, transparent: true, opacity: 0.6,
-    });
-
-    for (const p of edaParcels) {
-      if (!p.rings || !p.rings[0]) continue;
-      // Project GIS rings to SVG px first, then to world
-      const outerSVG = p.rings[0].map(([lon, lat]) => proj(lon, lat));
-      const holes = p.rings.slice(1).map(ring => ring.map(([lon, lat]) => proj(lon, lat)));
-
-      const shape = this.makeShape(outerSVG, holes);
-      if (!shape) continue;
-
-      const geo = new THREE.ExtrudeGeometry(shape, {
-        depth: GHOST_H, bevelEnabled: false,
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.rotation.x = -Math.PI / 2;
-      mesh.receiveShadow = true;
-      this.scene.add(mesh);
-
-      // Outline
-      const edgesGeo = new THREE.EdgesGeometry(geo, 10);
-      const lines = new THREE.LineSegments(edgesGeo, edgeMat);
-      lines.rotation.x = -Math.PI / 2;
-      this.scene.add(lines);
-    }
-  },
-
-  // ── Procedural surface treatments ─────────────────────────────────────────
-
-  // Window grid on a rectangular face
-  // face: {x, y, w, h} in world space on an XZ-plane building
-  // Returns array of meshes to add to scene
-  makeWindowGrid(bds, height, use) {
-    const meshes = [];
-    const { minX, maxX, minZ, maxZ } = bds;
-    const REVEAL = 0.15;  // depth of window reveal
-
-    // Window parameters by use
-    const params = use === 'RETAIL_GROUND' ? {
-      cols: Math.max(1, Math.floor((maxX - minX) / 4)),
-      rows: 1,
-      winH: height * 0.65,   // tall shop windows
-      winFill: 0xd0e8f8,     // glass blue-white
-      winFrame: 0x484030,
-      baseY: height * 0.05,
-    } : use === 'CIVIC' ? {
-      cols: Math.max(2, Math.floor((maxX - minX) / 6)),
-      rows: Math.max(2, Math.floor(height / 5.5) - 1),
-      winH: 3.5,
-      winFill: 0xc8ddf0,
-      winFrame: 0x5a5040,
-      baseY: 2.5,
-    } : {   // residential
-      cols: Math.max(2, Math.floor((maxX - minX) / 3.5)),
-      rows: Math.max(1, Math.floor(height / 4.5) - 1),
-      winH: 1.8,
-      winFill: 0xd8eaf8,
-      winFrame: 0x383020,
-      baseY: 1.8,
-    };
-
-    const { cols, rows, winH, winFill, winFrame, baseY } = params;
-    const W = maxX - minX;
-    const colStep = W / (cols + 1);
-    const rowStep = (height - baseY - 1) / rows;
-
-    const fillMat = new THREE.MeshLambertMaterial({ color: winFill, emissive: new THREE.Color(winFill).multiplyScalar(0.12) });
-    const frameMat = new THREE.MeshLambertMaterial({ color: winFrame });
-
-    for (let r = 0; r < rows; r++) {
-      const wy = baseY + r * rowStep;
-      for (let col = 0; col < cols; col++) {
-        const wx = minX + colStep * (col + 1);
-        const winW = colStep * 0.52;
-
-        // For each of the 4 faces (N, S, E, W) place windows
-        // N face (minZ)
-        for (const [faceX, faceZ, axisX] of [
-          [wx, minZ, true],   // N face
-          [wx, maxZ, true],   // S face
-          [minX, minZ + (maxZ-minZ) * (col+1)/(cols+1), false],  // W face
-          [maxX, minZ + (maxZ-minZ) * (col+1)/(cols+1), false],  // E face
-        ]) {
-          const wGeo = new THREE.BoxGeometry(
-            axisX ? winW : REVEAL,
-            winH,
-            axisX ? REVEAL : winW
-          );
-          const wMesh = new THREE.Mesh(wGeo, fillMat);
-          wMesh.position.set(faceX, wy + winH / 2, -faceZ);
-          meshes.push(wMesh);
-        }
-      }
-    }
-    return meshes;
-  },
-
-  // Green zone: sine-displaced ground mesh
-  makeGreenSurface(bds, use) {
-    const { minX, maxX, minZ, maxZ } = bds;
-    const W = maxX - minX, D = maxZ - minZ;
-    const cx = (minX + maxX) / 2, cz = -(minZ + maxZ) / 2;
-    const segs = Math.max(4, Math.min(20, Math.floor(Math.max(W, D) / 3)));
-
-    // Ground plane with gentle undulation
-    const geo = new THREE.PlaneGeometry(W, D, segs, segs);
-    const pos = geo.attributes.position;
-    const AMP = use === 'GREEN_PASSIVE' ? 0.5 : 0.2;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), z = pos.getZ(i);
-      pos.setY(i, Math.sin(x * 0.6) * Math.cos(z * 0.6) * AMP);
-    }
-    geo.computeVertexNormals();
-
-    const groundColor = use === 'GREEN_PASSIVE' ? 0x1a6828 : 0x2a9840;
-    const gRepeat = Math.max(2, Math.round(Math.max(W, D) / 8));
-    const gTex = this.tex(use === 'GREEN_PASSIVE' ? 'scrub' : 'grass', gRepeat, gRepeat);
-    const mat = new THREE.MeshLambertMaterial({
-      color: gTex ? 0xffffff : groundColor,
-      map: gTex || null,
-      side: THREE.DoubleSide,
-    });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.set(cx, 0.08, cz);
-    mesh.receiveShadow = true;
-
-    const meshes = [mesh];
-    const rng = (seed) => {
-      let s = seed;
-      return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
-    };
-    const rand = rng(Math.round(minX * 100 + minZ * 100));
-
-    // Shared materials (reused across all trees in this zone)
-    const barkTex = this.tex ? this.tex('bark', 1, 2) : null;
-    const trunkMat = new THREE.MeshLambertMaterial({ color: barkTex ? 0xffffff : 0x5a3a20, map: barkTex || null });
-    const canopyMat = new THREE.MeshLambertMaterial({
-      color: use === 'GREEN_PASSIVE' ? 0x1e6830 : 0x2e8c40,
-      transparent: true, opacity: 0.88,
-    });
-    const shrubMat = new THREE.MeshLambertMaterial({
-      color: use === 'GREEN_PASSIVE' ? 0x145a22 : 0x22903a,
-    });
-
-    if (use === 'GREEN_ACTIVE') {
-      // ── Park trees: grid pattern with jitter, El Born style ──────────────
-      // Larger spacing = more open park feel; smaller = dense grove
-      const TREE_SPACING = 8;  // tighter = denser canopy, overlapping at edges
-      const colCount = Math.max(1, Math.floor(W / TREE_SPACING));
-      const rowCount = Math.max(1, Math.floor(D / TREE_SPACING));
-
-      for (let r = 0; r < rowCount; r++) {
-        for (let c = 0; c < colCount; c++) {
-          // Grid position with jitter so it reads as natural, not planted
-          const jx = (rand() - 0.5) * TREE_SPACING * 0.35;
-          const jz = (rand() - 0.5) * TREE_SPACING * 0.35;
-          const tx = minX + (c + 0.5) * (W / colCount) + jx;
-          const tz = -(minZ + (r + 0.5) * (D / rowCount) + jz);
-
-          // Trunk: tapered cylinder, slight random height variation
-          const trunkH = 3.5 + rand() * 2.0;
-          const trunkGeo = new THREE.CylinderGeometry(0.18, 0.28, trunkH, 7);
-          const trunk = new THREE.Mesh(trunkGeo, trunkMat);
-          trunk.position.set(tx, trunkH / 2 + 0.1, tz);
-          trunk.castShadow = true;
-          meshes.push(trunk);
-
-          // Canopy: two overlapping spheres for organic shape
-          const canR = 3.2 + rand() * 1.8;
-          const canGeo = new THREE.SphereGeometry(canR, 8, 6);
-          const canopy = new THREE.Mesh(canGeo, canopyMat);
-          canopy.position.set(tx + (rand()-0.5)*0.4, trunkH + canR * 0.55, tz + (rand()-0.5)*0.4);
-          canopy.scale.y = 0.75 + rand() * 0.2;  // slightly flattened
-          canopy.castShadow = true;
-          meshes.push(canopy);
-
-          // Second canopy lobe for variety
-          if (rand() > 0.15) {  // most trees get a second canopy lobe
-            const can2R = canR * 0.7;
-            const can2Geo = new THREE.SphereGeometry(can2R, 7, 5);
-            const canopy2 = new THREE.Mesh(can2Geo, canopyMat);
-            canopy2.position.set(
-              tx + (rand()-0.5)*canR*0.8,
-              trunkH + can2R * 0.5 + rand() * 1.5,
-              tz + (rand()-0.5)*canR*0.8
-            );
-            canopy2.scale.y = 0.7;
-            meshes.push(canopy2);
-          }
-        }
-      }
-
-      // Scattered understory shrubs between trees
-      const shrubCount = Math.min(40, Math.floor(W * D / 40));
-      for (let i = 0; i < shrubCount; i++) {
-        const sx = minX + rand() * W;
-        const sz = -(minZ + rand() * D);
-        const sr = 0.6 + rand() * 0.8;
-        const sg = new THREE.SphereGeometry(sr, 6, 5);
-        const sm = new THREE.Mesh(sg, shrubMat);
-        sm.position.set(sx, sr * 0.55 + 0.1, sz);
-        sm.scale.y = 0.65;
-        meshes.push(sm);
-      }
-
-    } else {
-      // ── Wetland: irregular scattered trees + reed clumps ─────────────────
-      const treeCount = Math.min(20, Math.max(4, Math.floor(W * D / 120)));
-      for (let i = 0; i < treeCount; i++) {
-        const tx = minX + 0.1 * W + rand() * W * 0.8;
-        const tz = -(minZ + 0.1 * D + rand() * D * 0.8);
-        const trunkH = 4.0 + rand() * 3.0;
-
-        // Wetland trees: more slender, vertical (baldcypress / river birch form)
-        const trTapered = new THREE.CylinderGeometry(0.12, 0.22, trunkH, 6);
-        const tr = new THREE.Mesh(trTapered, trunkMat);
-        tr.position.set(tx, trunkH / 2 + 0.1, tz);
-        tr.castShadow = true;
-        meshes.push(tr);
-
-        // Narrower, taller canopy for wetland species
-        const canR = 2.0 + rand() * 2.0;
-        const canGeo = new THREE.SphereGeometry(canR, 7, 6);
-        const can = new THREE.Mesh(canGeo, canopyMat);
-        can.position.set(tx, trunkH + canR * 0.6, tz);
-        can.scale.set(0.7, 1.1, 0.7);  // taller than wide (cypress form)
-        can.castShadow = true;
-        meshes.push(can);
-      }
-
-      // Reed / sedge clumps: vertical thin cylinders in groups
-      const clumpCount = Math.min(60, Math.floor(W * D / 20));
-      const reedMat = new THREE.MeshLambertMaterial({ color: 0x4a7838 });
-      for (let i = 0; i < clumpCount; i++) {
-        const cx2 = minX + rand() * W;
-        const cz2 = -(minZ + rand() * D);
-        const reedH = 0.8 + rand() * 1.4;
-        for (let j = 0; j < 4 + Math.floor(rand() * 4); j++) {
-          const rg = new THREE.CylinderGeometry(0.04, 0.06, reedH, 4);
-          const rm = new THREE.Mesh(rg, reedMat);
-          rm.position.set(cx2 + (rand()-0.5)*1.0, reedH/2+0.05, cz2 + (rand()-0.5)*1.0);
-          rm.rotation.z = (rand()-0.5)*0.2;
-          meshes.push(rm);
-        }
-      }
-    }
-
-    return meshes;
-  },
-
-  // Plaza: paver grid (alternating light/dark squares)
-  makePlazaSurface(bds) {
-    const { minX, maxX, minZ, maxZ } = bds;
-    const W = maxX - minX, D = maxZ - minZ;
-    const PAVER = 2.5;
-    const cols = Math.max(1, Math.floor(W / PAVER));
-    const rows = Math.max(1, Math.floor(D / PAVER));
-    const meshes = [];
-
-    const herTex = this.tex('herringbone', 4, 4);
-    const cobTex = this.tex('cobble', 3, 3);
-    const matA = new THREE.MeshLambertMaterial({ color: herTex ? 0xffffff : 0x8a8270, map: herTex || null });
-    const matB = new THREE.MeshLambertMaterial({ color: cobTex ? 0xffffff : 0x6a6255, map: cobTex || null });
-
-    for (let r = 0; r < rows; r++) {
-      for (let col = 0; col < cols; col++) {
-        const geo = new THREE.BoxGeometry(PAVER * 0.9, 0.12, PAVER * 0.9);
-        const mesh = new THREE.Mesh(geo, (r + col) % 2 === 0 ? matA : matB);
-        mesh.position.set(
-          minX + col * PAVER + PAVER / 2,
-          1.6,
-          -(minZ + r * PAVER + PAVER / 2)
-        );
-        mesh.receiveShadow = true;
-        meshes.push(mesh);
-      }
-    }
-    return meshes;
-  },
-
-  // Civic pilasters (vertical ribs on the long faces)
-  makeCivicPilasters(bds, height) {
-    const { minX, maxX, minZ, maxZ } = bds;
-    const W = maxX - minX;
-    const PILW = 0.6, PILD = 0.5;
-    const count = Math.max(2, Math.floor(W / 7));
-    const mat = new THREE.MeshLambertMaterial({ color: 0x7a7060 });
-    const meshes = [];
-
-    for (let i = 0; i <= count; i++) {
-      const px = minX + (W / count) * i;
-      for (const pz of [minZ, maxZ]) {
-        const geo = new THREE.BoxGeometry(PILW, height + 0.5, PILD);
-        const mesh = new THREE.Mesh(geo, mat);
-        mesh.position.set(px, height / 2, -pz);
-        mesh.castShadow = true;
-        meshes.push(mesh);
-      }
-    }
-
-    // Roof overhang slab
-    const roofGeo = new THREE.BoxGeometry(W + 1.2, 0.4, (maxZ - minZ) + 1.2);
-    const roofMesh = new THREE.Mesh(roofGeo, mat);
-    roofMesh.position.set((minX + maxX) / 2, height + 0.4, -(minZ + maxZ) / 2);
-    roofMesh.castShadow = true;
-    meshes.push(roofMesh);
-
-    return meshes;
-  },
-
-  // ── Build full scene ───────────────────────────────────────────────────────
-  buildScene(zones, edaParcels, proj) {
-    // Clear previous zone meshes (keep ground, ghost layer)
-    const toRemove = [];
-    this.scene.traverse(obj => {
-      if ((obj.isMesh || obj.isLineSegments) &&
-          obj.name !== 'ground' && !obj.userData.ghost) {
-        toRemove.push(obj);
-      }
-    });
-    toRemove.forEach(obj => {
-      obj.geometry?.dispose();
-      if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
-      else obj.material?.dispose();
-      this.scene.remove(obj);
-    });
-    this.pickables = [];
-
-    // Build ghost layer once
-    const hasGhost = this.scene.children.some(c => c.userData?.ghost);
-    if (!hasGhost && edaParcels && proj) {
-      this.buildGhostLayer(edaParcels, proj);
-      // Mark ghost children
-      this.scene.traverse(obj => {
-        if (!obj.userData.ghost && obj.name !== 'ground' && obj.isMesh) {
-          obj.userData.ghost = true;
-        }
-      });
-    }
-
-    const FLOOR_H  = 5.5;
-    const MIN_H    = 0.4;
-    const MAX_H    = 8 * FLOOR_H;
-
-    const validZones = zones.filter(z =>
-      z.poly?.outer && z.poly.outer.length >= 3 && z.area_ac >= 0.10
-    );
-
-    for (const zone of validZones) {
-      const usedef = window.EC_Pipeline?.USES[zone.use];
-      const color  = this.hexToInt(usedef?.color);
-      const use    = zone.use;
-      const bds    = this.worldBounds(zone.poly.outer);
-
-      // ── Height ──
-      let height;
-      if (use === 'GREEN_ACTIVE' || use === 'GREEN_PASSIVE') {
-        height = MIN_H;
-      } else if (use === 'PLAZA') {
-        height = MIN_H * 2;
-      } else if (use === 'TRANSIT') {
-        height = FLOOR_H * 1.2;
-      } else if (use === 'INFRASTRUCTURE') {
-        height = MIN_H;
-      } else if (use === 'RETAIL_GROUND') {
-        height = FLOOR_H * 1.6;
-      } else if (use === 'RESEARCH') {
-        height = FLOOR_H * 2.5;
-      } else if (use === 'MIXED_USE_5OVER1') {
-        height = FLOOR_H * 6;  // 1 commercial podium + 5 residential (Type V over Type I)
-      } else {
-        const far = zone.units?.realized_far || 0;
-        height = far > 0
-          ? Math.max(FLOOR_H, Math.min(MAX_H, far * FLOOR_H * 0.8))
-          : Math.max(FLOOR_H, Math.min(MAX_H, (zone.units?.floors || 3) * FLOOR_H));
-      }
-
-      // ── Green zones: skip extrusion, use surface mesh only ──
-      if (use === 'GREEN_ACTIVE' || use === 'GREEN_PASSIVE') {
-        const surfaceMeshes = this.makeGreenSurface(bds, use);
-        for (const sm of surfaceMeshes) {
-          sm.userData = { zone, height: 0, usedef };
-          this.scene.add(sm);
-        }
-        // Still make pickable via a flat ShapeGeometry at ground
-        const holes = (zone.poly.holes || []).filter(h => h && h.length >= 3);
-        const shape = this.makeShape(zone.poly.outer, holes);
-        if (shape) {
-          const pickGeo = new THREE.ShapeGeometry(shape);
-          const pickMat = new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide });
-          const pickMesh = new THREE.Mesh(pickGeo, pickMat);
-          pickMesh.rotation.x = -Math.PI / 2;
-          pickMesh.position.y = 0.5;
-          pickMesh.userData = { zone, height: 0, usedef };
-          this.scene.add(pickMesh);
-          this.pickables.push(pickMesh);
-        }
-        continue;
-      }
-
-      // ── Ground plane at full zone footprint (shows walkway/setback) ──
-      const gndHoles = (zone.poly.holes || []).filter(h => h && h.length >= 3);
-      const gndShape = this.makeShape(zone.poly.outer, gndHoles);
-      if (gndShape) {
-        const gndGeo = new THREE.ShapeGeometry(gndShape);
-        const gndTexKey = use === 'RETAIL_GROUND' ? 'herringbone'
-          : use === 'TRANSIT' ? 'aggregate'
-          : use === 'WORKSHOP_FABRICATION' || use === 'DEPOT_YARD' ? 'soil'
-          : 'aggregate';
-        const gndTex = this.tex(gndTexKey, 6, 6);
-        const gndMat = new THREE.MeshLambertMaterial({
-          color: gndTex ? 0xffffff : 0x2a2210,
-          map: gndTex || null,
-        });
-        const gndMesh = new THREE.Mesh(gndGeo, gndMat);
-        gndMesh.rotation.x = -Math.PI / 2;
-        gndMesh.position.y = 0.05;
-        gndMesh.receiveShadow = true;
-        this.scene.add(gndMesh);
-      }
-
-      // ── Base building extrusion — inset from zone edge for visible setback ──
-      // Setback is the street-level gap between building face and zone boundary.
-      // Needs to be large enough to read as alley/sidewalk at scene scale.
-      // Scale: 1 world unit ≈ 2.2ft at this projection. So 4.5wu ≈ 10ft alley.
-      const BLDG_SETBACK = (use === 'CIVIC' || use === 'RESEARCH') ? 5.0
-        : (use === 'RETAIL_GROUND' || use === 'MARKET_HALL') ? 2.5
-        : (use === 'MIXED_USE_5OVER1') ? 4.0   // street-to-building gap
-        : 4.5;  // residential — wide enough to read as alley
-
-      const outerW = zone.poly.outer.map(([sx, sy]) => {
-        const [wx, wz] = this.svgTo3D(sx, sy);
-        return [wx, -wz];
-      });
-      const insetW = this.insetPoly(outerW, BLDG_SETBACK);
-      if (!insetW || insetW.length < 3) continue;
-
-      // ── Courtyard holes: punch interior void into the building extrusion ──
-      // The 2D solver computes courtyard as zone.units.courtyard {x,y,w,h} in SVG px.
-      // Convert to world space and add as a Shape hole so the courtyard is literally
-      // open air — not a filled block.
-      const holes = (zone.poly.holes || []).filter(h => h && h.length >= 3);
-
-      // For MIXED_USE_5OVER1: synthesize a courtyard hole from the zone's inset poly
-      // (the courtyard is the inner ~40% of the buildable area after setback)
-      let courtyard3D = null;
-      if (use === 'MIXED_USE_5OVER1' && insetW.length >= 4) {
-        const COURTYARD_INSET = 5.5;  // additional inset from building wall to courtyard void
-        const cInset = this.insetPoly(insetW, COURTYARD_INSET);
-        if (cInset && cInset.length >= 3) courtyard3D = cInset;
-      } else if (zone.units?.courtyard && zone.poly?.outer) {
-        // Convert T4 courtyard rect (SVG px) to world space
-        const cy = zone.units.courtyard;
-        if (cy.w > 8 && cy.h > 8) {
-          const cPts = [
-            [cy.x,        cy.y       ],
-            [cy.x + cy.w, cy.y       ],
-            [cy.x + cy.w, cy.y + cy.h],
-            [cy.x,        cy.y + cy.h],
-          ].map(([sx, sy]) => {
-            const [wx, wz] = this.svgTo3D(sx, sy);
-            return [wx, -wz];
-          });
-          courtyard3D = cPts;
-        }
-      }
-
-      const shape = this.makeShapeFromWorld(insetW);
-      if (!shape) continue;
-
-      // Punch courtyard hole
-      if (courtyard3D && courtyard3D.length >= 3) {
-        const holePath = new THREE.Path();
-        holePath.moveTo(courtyard3D[0][0], courtyard3D[0][1]);
-        for (let i = 1; i < courtyard3D.length; i++) {
-          holePath.lineTo(courtyard3D[i][0], courtyard3D[i][1]);
-        }
-        holePath.closePath();
-        shape.holes.push(holePath);
-      }
-
-      // Also add any polygon holes from the 2D pipeline
-      for (const hole of holes) {
-        const holeW = hole.map(([sx, sy]) => {
-          const [wx, wz] = this.svgTo3D(sx, sy);
-          return [wx, -wz];
-        });
-        const holePath = new THREE.Path();
-        holePath.moveTo(holeW[0][0], holeW[0][1]);
-        for (let i = 1; i < holeW.length; i++) holePath.lineTo(holeW[i][0], holeW[i][1]);
-        holePath.closePath();
-        shape.holes.push(holePath);
-      }
-
-      const bevel = height > FLOOR_H;
-      const geo = new THREE.ExtrudeGeometry(shape, {
-        depth: height,
-        bevelEnabled: bevel,
-        bevelThickness: bevel ? 0.25 : 0.05,
-        bevelSize:      bevel ? 0.15 : 0.03,
-        bevelSegments:  1,
-      });
-
-      // ── For MIXED_USE_5OVER1: add a separate lower podium slab (ground floor commercial) ──
-      // The main extrusion is the full 6-story mass with courtyard void.
-      // Add a thin podium slab at ground level to show the commercial floor plate.
-      if (use === 'MIXED_USE_5OVER1') {
-        const podiumShape = this.makeShapeFromWorld(insetW);
-        if (podiumShape && courtyard3D) {
-          // Podium has no hole — it's a solid slab at ground level
-          const podiumGeo = new THREE.ExtrudeGeometry(podiumShape, {
-            depth: FLOOR_H * 1.4,  // ~14ft ground floor commercial height
-            bevelEnabled: false,
-          });
-          const podiumTex = this.tex('concrete', 3, 2);
-          const podiumMat = new THREE.MeshPhongMaterial({
-            color: podiumTex ? 0xffffff : 0x5a4a38,
-            map: podiumTex || null,
-            specular: 0x181410,
-            shininess: 5,
-          });
-          const podiumMesh = new THREE.Mesh(podiumGeo, podiumMat);
-          podiumMesh.rotation.x = -Math.PI / 2;
-          podiumMesh.position.y = 0.1;
-          podiumMesh.castShadow = true;
-          podiumMesh.userData = { zone, height: FLOOR_H * 1.4, usedef };
-          this.scene.add(podiumMesh);
-        }
-
-        // Courtyard ground plane (grass/permeable paving in the open void)
-        if (courtyard3D && courtyard3D.length >= 3) {
-          const cyShape = new THREE.Shape();
-          cyShape.moveTo(courtyard3D[0][0], courtyard3D[0][1]);
-          for (let i = 1; i < courtyard3D.length; i++) cyShape.lineTo(courtyard3D[i][0], courtyard3D[i][1]);
-          cyShape.closePath();
-          const cyGeo = new THREE.ShapeGeometry(cyShape);
-          const cyTex = this.tex('grass', 4, 4);
-          const cyMat = new THREE.MeshLambertMaterial({
-            color: cyTex ? 0xffffff : 0x3a5a28,
-            map: cyTex || null,
-          });
-          const cyMesh = new THREE.Mesh(cyGeo, cyMat);
-          cyMesh.rotation.x = -Math.PI / 2;
-          cyMesh.position.y = 0.2;
-          cyMesh.receiveShadow = true;
-          this.scene.add(cyMesh);
-        }
-      }
-
-      // Wall texture by use type
-      const W3 = bds.maxX - bds.minX;
-      const ru = Math.max(1, Math.round(W3 / 5));
-      const rv = Math.max(1, Math.round(height / 3.5));
-      let wallTex = null;
-      if (use === 'RESIDENTIAL_CLT_OWN' || use === 'RESIDENTIAL_AFFORDABLE') {
-        wallTex = this.tex('brick', ru, rv);
-      } else if (use === 'RESIDENTIAL_MARKET') {
-        wallTex = this.tex('brick-market', ru, rv);
-      } else if (use === 'LIVE_WORK') {
-        wallTex = this.tex('timber', ru, rv);  // timber cladding — craft character
-      } else if (use === 'WORKSHOP_FABRICATION') {
-        wallTex = this.tex('concrete-rib', ru, rv);
-      } else if (use === 'DEPOT_YARD' || use === 'INFRASTRUCTURE') {
-        wallTex = this.tex('granite', ru, rv);
-      } else if (use === 'CIVIC') {
-        wallTex = this.tex('stone', ru, rv);
-      } else if (use === 'RESEARCH' || use === 'COOP_INCUBATOR') {
-        wallTex = this.tex('slate', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/4)));
-      } else if (use === 'TRANSIT') {
-        wallTex = this.tex('slate', ru, rv);
-      } else if (use === 'MARKET_HALL') {
-        wallTex = this.tex('timber', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/3)));
-      } else if (use === 'RETAIL_GROUND') {
-        wallTex = this.tex('concrete', Math.max(1, Math.round(W3/6)), Math.max(1, Math.round(height/4)));
-      } else if (use === 'MIXED_USE_5OVER1') {
-        // 5-over-1: brick upper residential, concrete podium handled separately
-        wallTex = this.tex('brick', Math.max(1, Math.round(W3/5)), Math.max(1, Math.round(height/3.5)));
-      }
-
-      // Material: MeshPhongMaterial for specular highlight on buildings
-      const usePhong = !use.startsWith('GREEN') && use !== 'PLAZA' && use !== 'INFRASTRUCTURE';
-      const mat = usePhong
-        ? new THREE.MeshPhongMaterial({
-            color: wallTex ? 0xffffff : new THREE.Color(color),
-            map: wallTex || null,
-            specular: new THREE.Color(0x222018),
-            shininess: wallTex ? 8 : 15,
-            transparent: true,
-            opacity: 0.92,
-          })
-        : new THREE.MeshLambertMaterial({
-            color: new THREE.Color(color),
-            transparent: true,
-            opacity: use.startsWith('GREEN') ? 0.85 : 0.75,
-          });
-
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.rotation.x = -Math.PI / 2;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      mesh.userData = { zone, height, usedef };
-      this.scene.add(mesh);
-      if (!use.startsWith('GREEN') && use !== 'INFRASTRUCTURE') {
-        this.pickables.push(mesh);
-      }
-
-      // ── Top cap (lighter) ──
-      if (height > MIN_H * 3) {
-        const topGeo = new THREE.ShapeGeometry(shape);
-        const topColor = new THREE.Color(color).lerp(new THREE.Color(0xffffff), 0.22);
-        const useTerr = use === 'CIVIC' || use === 'RESEARCH' || use === 'MARKET_HALL';
-        const topTex = useTerr ? this.tex('terrazzo-warm', 3, 3) : null;
-        const darkTopTex = use === 'TRANSIT' ? this.tex('terrazzo-dark', 3, 3) : null;
-        const topMat = new THREE.MeshPhongMaterial({
-          color: (topTex || darkTopTex) ? 0xffffff : topColor,
-          map: darkTopTex || topTex || null,
-          specular: 0x181410,
-          shininess: (topTex || darkTopTex) ? 40 : 20,
-        });
-        const topMesh = new THREE.Mesh(topGeo, topMat);
-        topMesh.rotation.x = -Math.PI / 2;
-        topMesh.position.y = height + 0.02;
-        topMesh.userData = { zone, height, usedef };
-        this.scene.add(topMesh);
-        this.pickables.push(topMesh);
-      }
-
-      // ── Wireframe edges (buildings only) ──
-      if (height > FLOOR_H) {
-        const edgeColor = new THREE.Color(color).lerp(new THREE.Color(0x000000), 0.55);
-        const eGeo = new THREE.EdgesGeometry(geo, 22);
-        const eMat = new THREE.LineBasicMaterial({ color: edgeColor, transparent: true, opacity: 0.35 });
-        const eLines = new THREE.LineSegments(eGeo, eMat);
-        eLines.rotation.x = -Math.PI / 2;
-        this.scene.add(eLines);
-      }
-
-      // ── Procedural surface treatments ──
-      let surfaceMeshes = [];
-
-      if (use.startsWith('GREEN')) {
-        surfaceMeshes = this.makeGreenSurface(bds, use);
-      } else if (use === 'PLAZA') {
-        surfaceMeshes = this.makePlazaSurface(bds);
-      } else if (use === 'CIVIC') {
-        surfaceMeshes = [
-          ...this.makeCivicPilasters(bds, height),
-          ...this.makeWindowGrid(bds, height, use),
-        ];
-      } else if (use === 'RETAIL_GROUND') {
-        surfaceMeshes = this.makeWindowGrid(bds, height, use);
-      } else if (use === 'MIXED_USE_5OVER1') {
-        surfaceMeshes = this.makeWindowGrid(bds, height, use);
-      } else if (use.startsWith('RESIDENTIAL')) {
-        surfaceMeshes = this.makeWindowGrid(bds, height, use);
-      }
-
-      for (const sm of surfaceMeshes) {
-        sm.castShadow = false;
-        sm.receiveShadow = false;
-        this.scene.add(sm);
-      }
-    }
-
-    console.log(`EC3D v2: ${validZones.length} zones, ${this.pickables.length} pickable`);
-  },
-
-  // ── Raycaster tooltip ─────────────────────────────────────────────────────
-  _lastPickTime: 0,
-
-  initTooltipPicking(canvas) {
-    canvas.addEventListener('pointermove', e => {
-      const now = performance.now();
-      if (now - this._lastPickTime < 60) return;  // 60ms throttle
-      this._lastPickTime = now;
-
-      const rect = canvas.getBoundingClientRect();
-      const ndcX =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-      const ndcY = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-
-      this.raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), this.camera);
-      const hits = this.raycaster.intersectObjects(this.pickables, false);
-
-      const tt = this.tooltip3d;
-      if (!tt) return;
-
-      if (hits.length > 0) {
-        const { zone, usedef, height } = hits[0].object.userData;
-        if (!zone) { tt.style.opacity = 0; return; }
-
-        const units = zone.units?.unit_count || 0;
-        const floors = zone.units?.floors || 0;
-        const far = zone.units?.realized_far;
-        const affordable = zone.units?.affordable_units || 0;
-        const afPct = units > 0 ? Math.round(affordable / units * 100) : 0;
-        const AMI = typeof NORFOLK_AMI !== 'undefined' ? NORFOLK_AMI : null;
-        const rentLine = AMI && units > 0
-          ? `<br><span style="color:#22a838">≤$${AMI.brackets[2].monthly.toLocaleString()}/mo (60% AMI)</span>`
-          : '';
-
-        tt.innerHTML =
-          `<span style="color:${usedef?.color||'#aaa'};font-weight:500">${usedef?.id||'?'} — ${usedef?.label||zone.use}</span>` +
-          `<br>${zone.district || zone.id}` +
-          `<br>${zone.area_ac.toFixed(2)}ac` +
-          (units > 0 ? `<br>${units.toLocaleString()} units · ${floors}F${far ? ` · FAR ${far}` : ''}` : '') +
-          (units > 0 && afPct > 0 ? `<br>${afPct}% affordable${rentLine}` : '') +
-          (zone.edge_mutations?.length ? `<br><span style="opacity:0.5;font-size:0.55rem">${zone.edge_mutations.map(m=>m.type).join(' · ')}</span>` : '');
-
-        tt.style.left  = (e.clientX + 16) + 'px';
-        tt.style.top   = (e.clientY - 8)  + 'px';
-        tt.style.opacity = 1;
-      } else {
-        tt.style.opacity = 0;
-      }
-    });
-
-    canvas.addEventListener('pointerleave', () => {
-      if (this.tooltip3d) this.tooltip3d.style.opacity = 0;
-    });
-  },
-
-  // ── Camera / orbit ────────────────────────────────────────────────────────
-  updateCamera() {
-    const { theta, phi, dist } = this.orbitState;
-    this.camera.position.set(
-      dist * Math.sin(phi) * Math.sin(theta),
-      dist * Math.cos(phi),
-      dist * Math.sin(phi) * Math.cos(theta)
-    );
-    this.camera.lookAt(0, 0, 0);
-    this.camera.up.set(0, 1, 0);
-  },
-
-  initOrbit(canvas) {
-    const s = this.orbitState;
-    canvas.style.touchAction = 'none';
-    const ptrs = new Map();
-    let lastPinch = null;
-
-    canvas.addEventListener('pointerdown', e => {
-      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      canvas.setPointerCapture(e.pointerId);
-      s.dragging = true;
-      s.lastX = e.clientX; s.lastY = e.clientY;
-    });
-
-    canvas.addEventListener('pointermove', e => {
-      if (!ptrs.has(e.pointerId)) return;
-      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (ptrs.size === 2) {
-        const [a, b] = [...ptrs.values()];
-        const d = Math.hypot(a.x - b.x, a.y - b.y);
-        if (lastPinch) s.dist = Math.max(s.MIN_DIST, Math.min(s.MAX_DIST, s.dist * (lastPinch / d)));
-        lastPinch = d;
-      } else if (ptrs.size === 1 && s.dragging) {
-        s.theta += (e.clientX - s.lastX) * 0.008;
-        s.phi = Math.max(0.12, Math.min(Math.PI / 2 - 0.04, s.phi - (e.clientY - s.lastY) * 0.008));
-        s.lastX = e.clientX; s.lastY = e.clientY;
-      }
-      this.updateCamera();
-    });
-
-    const end = e => {
-      ptrs.delete(e.pointerId);
-      if (ptrs.size < 2) lastPinch = null;
-      if (ptrs.size === 0) s.dragging = false;
-    };
-    canvas.addEventListener('pointerup', end);
-    canvas.addEventListener('pointercancel', end);
-
-    canvas.addEventListener('wheel', e => {
-      e.preventDefault();
-      s.dist = Math.max(s.MIN_DIST, Math.min(s.MAX_DIST, s.dist * (e.deltaY > 0 ? 1.1 : 0.9)));
-      this.updateCamera();
-    }, { passive: false });
-  },
-
-  // ── Edge furniture: street elements per edge type ─────────────────────────
-  buildEdgeFurniture(zones) {
-    if (!zones || !window.EC_Edges) return;
-
-    // Remove existing furniture
-    const toRemove = [];
-    this.scene.traverse(obj => { if (obj.userData?.furniture) toRemove.push(obj); });
-    toRemove.forEach(obj => this.scene.remove(obj));
-
-    const edges = window.EC_Edges.buildEdges(zones, { bufferPx: 5 });
-    if (!edges || !edges.length) return;
-
-    const S = 0.45;
-    const svgToW = (x, y) => [(x - 490) * S, -(y - 408) * S];
-
-    const sampleEdge = (pts, spacingW) => {
-      const samples = [];
-      for (let i = 0; i < pts.length - 1; i++) {
-        const [ax, az] = svgToW(pts[i][0], pts[i][1]);
-        const [bx, bz] = svgToW(pts[i+1][0], pts[i+1][1]);
-        const dx = bx - ax, dz = bz - az;
-        const len = Math.hypot(dx, dz);
-        if (len < 0.1) continue;
-        const ux = dx / len, uz = dz / len;
-        const nx = -uz, nz = ux;
-        let dist = spacingW / 2;
-        while (dist < len - spacingW / 2) {
-          samples.push({ x: ax + ux * dist, z: az + uz * dist, nx, nz });
-          dist += spacingW;
-        }
-      }
-      return samples;
-    };
-
-    const addF = (mesh) => {
-      mesh.userData.furniture = true;
-      mesh.castShadow = false;
-      mesh.receiveShadow = true;
-      this.scene.add(mesh);
-    };
-
-    const mBench   = new THREE.MeshLambertMaterial({ color: 0x8a7050 });
-    const mBollard = new THREE.MeshLambertMaterial({ color: 0x404848 });
-    const mRack    = new THREE.MeshLambertMaterial({ color: 0x506878 });
-    const mAwning  = new THREE.MeshLambertMaterial({ color: 0xc04818, transparent: true, opacity: 0.88 });
-    const edgeBarkTex = this.tex ? this.tex('bark', 1, 2) : null;
-    const mTreeTrk = new THREE.MeshLambertMaterial({ color: edgeBarkTex ? 0xffffff : 0x5a3a20, map: edgeBarkTex || null });
-    const mTreeCan = new THREE.MeshLambertMaterial({ color: 0x2a6828, transparent: true, opacity: 0.82 });
-    const mPlanter = new THREE.MeshLambertMaterial({ color: 0x486040 });
-
-    for (const edge of edges) {
-      const outer = edge.poly?.outer;
-      if (!outer || outer.length < 3) continue;
-      const type = edge.type;
-
-      if (type === 'ACTIVATED') {
-        const samples = sampleEdge(outer, 8);
-        for (const { x, z, nx, nz } of samples) {
-          const b = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 1.1, 6), mBollard);
-          b.position.set(x + nx * 0.6, 0.55, z + nz * 0.6);
-          addF(b);
-          const a = new THREE.Mesh(new THREE.BoxGeometry(4, 0.12, 1.4), mAwning);
-          a.position.set(x, 3.8, z);
-          a.rotation.y = Math.atan2(nx, nz);
-          addF(a);
-        }
-
-      } else if (type === 'GREEN_EDGE' || type === 'SPONGE_EDGE') {
-        const samples = sampleEdge(outer, 10);
-        for (const { x, z, nx, nz } of samples) {
-          const bk = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.45, 0.7), mBench);
-          bk.position.set(x + nx * 0.8, 0.225, z + nz * 0.8);
-          bk.rotation.y = Math.atan2(nx, nz);
-          addF(bk);
-          const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 0.12), mBench);
-          back.position.set(x + nx * 0.8, 0.68, z + nz * 0.8 + nz * 0.3);
-          back.rotation.y = Math.atan2(nx, nz);
-          addF(back);
-          const pl = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.6, 1.0), mPlanter);
-          pl.position.set(x - nx * 1.5, 0.3, z - nz * 1.5);
-          addF(pl);
-        }
-        const treeSamples = sampleEdge(outer, 18);
-        for (const { x, z } of treeSamples) {
-          const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.28, 2.4, 6), mTreeTrk);
-          tr.position.set(x, 1.2, z);
-          addF(tr);
-          const can = new THREE.Mesh(new THREE.SphereGeometry(2.8, 7, 5), mTreeCan);
-          can.position.set(x, 4.8, z);
-          addF(can);
-        }
-
-      } else if (type === 'STREET' || type === 'RESIDENTIAL_EDGE' || type === 'CIVIC_EDGE') {
-        // Street trees: double row, one each side, El Born spacing
-        const samples = sampleEdge(outer, 14);
-        for (const { x, z, nx, nz } of samples) {
-          for (const side of [1, -1]) {
-            const ox = x + nx * side * 2.5;
-            const oz = z + nz * side * 2.5;
-            const trunkH = 4.5 + (Math.sin(ox * 0.3 + oz * 0.3) + 1) * 1.5;
-            const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, trunkH, 7), mTreeTrk);
-            tr.position.set(ox, trunkH / 2 + 0.1, oz);
-            tr.castShadow = true;
-            addF(tr);
-            const canR = 2.8 + Math.abs(Math.sin(ox * 0.5)) * 1.4;
-            const can = new THREE.Mesh(new THREE.SphereGeometry(canR, 8, 6), mTreeCan);
-            can.position.set(ox, trunkH + canR * 0.52, oz);
-            can.scale.y = 0.72;
-            can.castShadow = true;
-            addF(can);
-          }
-        }
-
-      } else if (type === 'TRANSIT_ACT') {
-        const samples = sampleEdge(outer, 9);
-        for (const { x, z, nx, nz } of samples) {
-          for (const side of [-0.5, 0, 0.5]) {
-            const r = new THREE.Mesh(new THREE.BoxGeometry(0.1, 1.0, 0.1), mRack);
-            r.position.set(x + nx * 0.4 + side, 0.5, z + nz * 0.4);
-            addF(r);
-          }
-          const top = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.1, 0.1), mRack);
-          top.position.set(x + nx * 0.4, 1.05, z + nz * 0.4);
-          addF(top);
-        }
-
-      } else if (type === 'STREET') {
-        const samples = sampleEdge(outer, 14);
-        for (const { x, z } of samples) {
-          const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 2.8, 6), mTreeTrk);
-          tr.position.set(x, 1.4, z);
-          addF(tr);
-          const can = new THREE.Mesh(new THREE.SphereGeometry(3.2, 7, 5), mTreeCan);
-          can.position.set(x, 5.0, z);
-          addF(can);
-        }
-      }
-    }
-  },
-
-  // ── Lifecycle ─────────────────────────────────────────────────────────────
-  animate() {
-    this.animFrame = requestAnimationFrame(() => this.animate());
-    this.renderer.render(this.scene, this.camera);
-  },
-
-  resize() {
-    if (!this.canvas || !this.renderer || !this.camera) return;
-    const W = this.canvas.offsetWidth, H = this.canvas.offsetHeight;
-    if (W < 10 || H < 10) return;
-    this.renderer.setSize(W, H);
-    this.camera.aspect = W / H;
-    this.camera.updateProjectionMatrix();
-  },
-
-  destroy() {
-    if (this.animFrame) cancelAnimationFrame(this.animFrame);
-    this.renderer?.dispose();
-    this.renderer = null; this.scene = null; this.camera = null;
-    if (this.tooltip3d) this.tooltip3d.style.opacity = 0;
-  },
-};
-
-window.EC3D = EC3D;
-
-
 
 // ── SAVE / RESTORE STATE ─────────────────────────────────────────────────────
 // State = { seed, params, uses } where uses = {[zone_id]: use_string}
@@ -9732,6 +8307,194 @@ function updateAnalysisViews() {
   renderAccessView(zones);
   renderFinancialsView(zones);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  PATTERN OVERLAY — 2D flat renderer for EC_PatternSolver scene graph
+//
+//  Draws pattern instances directly onto the SVG plan as a named layer.
+//  One <g id="pattern-overlay"> group, cleared and redrawn on every solve.
+//
+//  Visual language by scale:
+//    DISTRICT (1): large translucent halos, dashed outlines
+//    BLOCK    (2): semi-opaque filled polygons, thin stroke
+//    GROUP    (3): hatched fill + solid outline
+//    BUILDING (4): solid fill with courtyard voids
+//    EDGE     (5): bright accent strokes, dot markers
+// ═══════════════════════════════════════════════════════════════════════════
+
+const PATTERN_COLORS = {
+  // DISTRICT
+  29: { fill:'#c85018', stroke:'#e87038', label:'Density Rings' },
+  30: { fill:'#2070a0', stroke:'#40a0d0', label:'Activity Nodes' },
+  31: { fill:'#2878a0', stroke:'#48a8d8', label:'Promenade' },
+  36: { fill:'#8050c0', stroke:'#a070e0', label:'Degrees of Publicness' },
+  53: { fill:'#c88020', stroke:'#e8a040', label:'Main Gateways' },
+  // BLOCK
+  60: { fill:'#308038', stroke:'#50c058', label:'Accessible Green' },
+  67: { fill:'#28a050', stroke:'#48d070', label:'Common Land' },
+  71: { fill:'#3888a8', stroke:'#58b8d8', label:'Still Water' },
+  37: { fill:'#c88020', stroke:'#e8a040', label:'House Cluster' },
+  // GROUP
+  95: { fill:'#c85018', stroke:'#e87038', label:'Building Complex' },
+  104:{ fill:'#a03020', stroke:'#c05040', label:'Site Repair' },
+  105:{ fill:'#806018', stroke:'#a08030', label:'South Facing' },
+  106:{ fill:'#506888', stroke:'#7098b8', label:'Positive Outdoor' },
+  109:{ fill:'#a05810', stroke:'#c07830', label:'Long Thin House' },
+  114:{ fill:'#486050', stroke:'#688070', label:'Open Space Hierarchy' },
+  // BUILDING
+  115:{ fill:'#204858', stroke:'#407888', label:'Courtyards Which Live' },
+  122:{ fill:'#282060', stroke:'#483890', label:'Building Fronts' },
+  127:{ fill:'#503850', stroke:'#805880', label:'Intimacy Gradient' },
+  // EDGE
+  87: { fill:'#c87818', stroke:'#e8a838', label:'Individually Owned Shops' },
+  88: { fill:'#a86018', stroke:'#c88038', label:'Street Cafe' },
+  46: { fill:'#c85018', stroke:'#e87038', label:'Market of Many Shops' },
+};
+
+// Scale → base opacity for fill and stroke
+const SCALE_OPACITY = { 1: 0.10, 2: 0.18, 3: 0.25, 4: 0.35, 5: 0.70 };
+
+function ptsToSvgD(pts) {
+  if (!pts || pts.length < 2) return '';
+  const [first, ...rest] = pts;
+  return `M${first.x},${first.y}` + rest.map(p => `L${p.x},${p.y}`).join('') + 'Z';
+}
+
+function renderPatternOverlay2D(sg) {
+  const svg = document.getElementById('site-plan');
+  if (!svg) return;
+
+  // Remove old overlay
+  const old = svg.querySelector('#pattern-overlay');
+  if (old) old.remove();
+
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('id', 'pattern-overlay');
+  g.setAttribute('pointer-events', 'none');
+
+  const PATTERNS_META = window.EC_PatternSolver?.PATTERNS || {};
+
+  for (const inst of (sg.instances || [])) {
+    const pid   = inst.patternId;
+    const pat   = PATTERNS_META[pid];
+    const col   = PATTERN_COLORS[pid] || { fill:'#888', stroke:'#aaa', label:'?' };
+    const scale = pat?.scale || 3;
+    const fOpacity = SCALE_OPACITY[scale] ?? 0.2;
+    const sOpacity = Math.min(1, fOpacity * 3.5);
+
+    const geoms = inst.geomType === 'polygon_array'
+      ? inst.geom
+      : inst.geomType === 'polygon' || inst.geomType === 'point' || inst.geomType === 'spline' || inst.geomType === 'point_cloud'
+        ? [inst.geom]
+        : null;
+
+    if (!geoms) continue;
+
+    for (const geom of geoms) {
+      const pts = Array.isArray(geom) ? geom : (geom?.pts || (geom?.type === 'point' ? [geom] : null));
+      if (!pts || pts.length === 0) continue;
+
+      // Polygon / multi-point — draw filled shape
+      if (pts.length >= 3) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', ptsToSvgD(pts));
+        path.setAttribute('fill', col.fill);
+        path.setAttribute('fill-opacity', fOpacity);
+        path.setAttribute('stroke', col.stroke);
+        path.setAttribute('stroke-width', scale <= 2 ? '1' : '0.6');
+        path.setAttribute('stroke-opacity', sOpacity);
+        // EDGE scale: dashed for splines
+        if (scale === 5 || inst.geomType === 'spline') {
+          path.setAttribute('stroke-dasharray', '4,3');
+        }
+        // DISTRICT scale: dashed boundary
+        if (scale === 1) {
+          path.setAttribute('stroke-dasharray', '6,4');
+          path.setAttribute('stroke-width', '1.2');
+        }
+        g.appendChild(path);
+      }
+
+      // Point or 2-point: draw marker / line
+      if (pts.length === 1) {
+        const p = pts[0];
+        const r = scale === 1 ? 10 : scale === 5 ? 4 : 6;
+        const circ = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circ.setAttribute('cx', p.x || 0);
+        circ.setAttribute('cy', p.y || 0);
+        circ.setAttribute('r', r);
+        circ.setAttribute('fill', col.fill);
+        circ.setAttribute('fill-opacity', fOpacity * 2);
+        circ.setAttribute('stroke', col.stroke);
+        circ.setAttribute('stroke-width', '1');
+        circ.setAttribute('stroke-opacity', sOpacity);
+        g.appendChild(circ);
+      } else if (pts.length === 2) {
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', pts[0].x); line.setAttribute('y1', pts[0].y);
+        line.setAttribute('x2', pts[1].x); line.setAttribute('y2', pts[1].y);
+        line.setAttribute('stroke', col.stroke);
+        line.setAttribute('stroke-width', '2');
+        line.setAttribute('stroke-opacity', sOpacity);
+        line.setAttribute('stroke-dasharray', '8,4');
+        g.appendChild(line);
+      }
+    }
+
+    // Centroid label for district-scale patterns
+    if (scale <= 2) {
+      const allPts = geoms.flat().filter(p => p && typeof p.x === 'number');
+      if (allPts.length > 0) {
+        const cx = allPts.reduce((s, p) => s + p.x, 0) / allPts.length;
+        const cy = allPts.reduce((s, p) => s + p.y, 0) / allPts.length;
+        const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        label.setAttribute('x', cx);
+        label.setAttribute('y', cy);
+        label.setAttribute('text-anchor', 'middle');
+        label.setAttribute('dominant-baseline', 'middle');
+        label.setAttribute('font-family', 'monospace');
+        label.setAttribute('font-size', scale === 1 ? '7' : '5.5');
+        label.setAttribute('fill', col.stroke);
+        label.setAttribute('fill-opacity', '0.85');
+        label.textContent = `P${pid}`;
+        g.appendChild(label);
+      }
+    }
+  }
+
+  // Render promenade spine as a thick highlighted spline
+  const promenade = (sg.instances || []).find(i => i.patternId === 31);
+  if (promenade && promenade.geom?.length >= 2) {
+    const pts = promenade.geom;
+    const spline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+    spline.setAttribute('points', pts.map(p => `${p.x},${p.y}`).join(' '));
+    spline.setAttribute('fill', 'none');
+    spline.setAttribute('stroke', '#48a8d8');
+    spline.setAttribute('stroke-width', '3');
+    spline.setAttribute('stroke-opacity', '0.55');
+    spline.setAttribute('stroke-linecap', 'round');
+    g.appendChild(spline);
+  }
+
+  svg.appendChild(g);
+
+  // Update pattern count readout
+  const patEl = document.getElementById('res-patterns');
+  if (patEl) {
+    const instCount  = sg.instances?.length || 0;
+    const scaleCount = {};
+    for (const inst of (sg.instances || [])) {
+      const s = (window.EC_PatternSolver?.PATTERNS?.[inst.patternId]?.scale) || 0;
+      scaleCount[s] = (scaleCount[s] || 0) + 1;
+    }
+    const summary = Object.entries(scaleCount)
+      .sort(([a],[b]) => a-b)
+      .map(([s,c]) => `S${s}:${c}`)
+      .join(' ');
+    patEl.textContent = `${instCount} inst — ${summary}`;
+  }
+}
+
 </script>
 
 </body>
