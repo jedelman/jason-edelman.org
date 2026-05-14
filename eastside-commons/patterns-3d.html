@@ -2177,10 +2177,13 @@ function clusterUrbanBlocks(hotNodes, derived) {
   }
 
   // Parcel config: spec prefix → {fw, fh, stepX, stepY, floorsFn, typology}
+  // stepX/stepY must give gaps ≥ 35ft for walkability: gap = step - fw
   function parcelConfig(spec) {
-    if (spec === 'SPONGE_PARCEL' || spec === 'CIVIC_ROW') return null; // open space / too small
+    if (spec === 'SPONGE_PARCEL') return null; // rendered as park by buildGround
+    if (spec === 'CIVIC_ROW') return null;     // too small
     if (spec.startsWith('MALL_CORE')) return {
-      fw:85, fh:65, stepX:115, stepY:95,
+      fw:80, fh:60, stepX:130, stepY:110,   // 50ft gap
+      func: 'mixed',
       floorsFn: (cx) => Math.max(3, Math.round(7 - Math.abs(cx-spineX)/180)),
       typFn: (cx,cy,fw,fh) => {
         if (isExclusion({cx,cy,fw,fh},derived)) return 'exclusion';
@@ -2191,23 +2194,27 @@ function clusterUrbanBlocks(hotNodes, derived) {
       }
     };
     if (spec.startsWith('CLT')) return {
-      fw:70, fh:55, stepX:100, stepY:85,
+      fw:60, fh:50, stepX:105, stepY:95,    // 45ft gap
+      func: 'residential',
       floorsFn: () => Math.round(3 + Math.random() * 2),
       typFn: (cx,cy,fw,fh) => isExclusion({cx,cy,fw,fh},derived) ? 'exclusion' :
         isCourtyardTypology({cx,cy,fw,fh,count:4},derived) ? 'courtyard' : 'solid'
     };
     if (spec.startsWith('HOUSING')) return {
-      fw:65, fh:55, stepX:95, stepY:80,
+      fw:58, fh:48, stepX:100, stepY:90,    // 42ft gap
+      func: 'residential',
       floorsFn: () => Math.round(3 + Math.random() * 2),
       typFn: (cx,cy,fw,fh) => isExclusion({cx,cy,fw,fh},derived) ? 'exclusion' : 'solid'
     };
     if (spec.startsWith('MAIN_ST')) return {
-      fw:55, fh:45, stepX:80, stepY:65,
-      floorsFn: () => Math.round(2 + Math.random() * 2),
+      fw:50, fh:40, stepX:95, stepY:80,     // 45ft gap
+      func: 'retail',
+      floorsFn: () => 1,                    // always 1-story retail
       typFn: () => 'arcade'
     };
     if (spec.startsWith('CIVIC')) return {
-      fw:55, fh:45, stepX:80, stepY:70,
+      fw:55, fh:45, stepX:110, stepY:95,    // 55ft gap
+      func: 'civic',
       floorsFn: () => Math.round(1 + Math.random() * 2),
       typFn: () => 'solid'
     };
@@ -2217,7 +2224,7 @@ function clusterUrbanBlocks(hotNodes, derived) {
   for (const [spec, zone] of Object.entries(parcelBboxes)) {
     const cfg = parcelConfig(spec);
     if (!cfg) continue;
-    const {fw, fh, stepX, stepY, floorsFn, typFn} = cfg;
+    const {fw, fh, stepX, stepY, floorsFn, typFn, func='mixed'} = cfg;
     const margin = Math.max(fw, fh) * 0.6;
     const x0 = zone.x + margin, x1 = zone.x + zone.w - margin;
     const y0 = zone.y + margin, y1 = zone.y + zone.h - margin;
@@ -2261,7 +2268,7 @@ function clusterUrbanBlocks(hotNodes, derived) {
           openDir = Math.abs(dx)>Math.abs(dy) ? (dx>0?'E':'W') : (dy>0?'N':'S');
         }
         blocks.push({cx,cy,fw:blockW,fh:blockH,floors,domPid,
-                     avgStrong:3,count:4,typology,openDir,exclusion:excl||null});
+                     avgStrong:3,count:4,typology,openDir,exclusion:excl||null,func});
       }
     }
   }
@@ -2294,60 +2301,52 @@ function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
   const blocks = clusterUrbanBlocks(hotNodes, derived);
   if (!blocks.length) return;
 
-  // Zone-semantic color: typology + position drive hue family.
-  // Pattern ID gives a subtle secondary shift; floors control value.
-  // This keeps the field information without full-saturation chaos.
+  // Function-driven color. Each use category has a distinct hue family.
+  // Floor count drives value (taller = slightly lighter).
+  // Pattern ID gives a small ±10° hue nudge for field-information texture.
   function blockColor(blk, floors, derived) {
-    const { cx, cy, typology } = blk;
-    const sp = derived.SPINE;
-    const spineX = sp ? sp.x + sp.w / 2 : 0;
-    const distFromSpine = Math.abs(cx - spineX);
-    const spineW = sp ? sp.w : 120;
-    const bandTop = derived.BAND ? derived.BAND.y + derived.BAND.h : 0;
-    const sponge = derived.SPONGE;
+    const func = blk.func || 'mixed';
+    const typology = blk.typology;
+    const v = Math.min(0.78, 0.52 + (floors - 1) * 0.05);
 
-    // Value: taller = slightly lighter (but never washed out)
-    const v = 0.55 + (floors - 3) * 0.06; // 0.55–0.79
+    let h, s;
+    switch(func) {
+      case 'residential':
+        // Warm terracotta/brick — feels like home
+        h = 18 + (Math.random() * 10 - 5); s = 0.48; break;
+      case 'retail':
+        // Ochre/amber — active commercial ground floor
+        h = 38; s = 0.62; break;
+      case 'civic':
+        // Cool stone — public institution, neutral authority
+        h = 210; s = 0.22; break;
+      case 'mixed':
+      default:
+        // Spine mixed-use: warm amber-gold for tall, cooler for low
+        if (floors >= 6) { h = 32; s = 0.55; }
+        else if (floors >= 4) { h = 28; s = 0.45; }
+        else { h = 200; s = 0.32; }
+        break;
+    }
+    // Courtyard typology gets a slightly greener tint — signals semi-public interior
+    if (typology === 'courtyard') { h = (h + 15) % 360; s = Math.max(s - 0.08, 0.15); }
+    // Arcade gets a warm highlight — ground-level activity
+    if (typology === 'arcade') { h = 40; s = 0.65; }
 
-    let h, s; // HSL hue (0-360), saturation (0-1)
-
-    // Spine zone (within 1.5× spine width)
-    if (distFromSpine < spineW * 1.5) {
-      h = 34; s = 0.52; // warm stone amber
-    }
-    // Park-adjacent (near sponge)
-    else if (sponge && Math.hypot(cx - sponge.cx, cy - sponge.cy) < Math.max(sponge.rx, sponge.ry) + 200) {
-      h = 145; s = 0.28; // desaturated sage — recedes, doesn't fight park
-    }
-    // Main street / band edge (south)
-    else if (cy < bandTop + 120) {
-      h = 38; s = 0.60; // ochre commercial
-    }
-    // Housing zone (north of sponge, far from spine)
-    else if (distFromSpine > spineW * 2) {
-      h = 230; s = 0.30; // cool slate — residential, quiet
-    }
-    // Mid zone — mixed use
-    else {
-      h = 200; s = 0.32; // muted steel blue-grey
-    }
-
-    // Pattern ID gives ±15° hue shift — preserves field info without dominating
+    // Pattern ID: small ±10° nudge
     const pid = parseInt(blk.domPid) || 0;
-    const hueShift = ((pid * 37) % 30) - 15;
-    h = (h + hueShift + 360) % 360;
+    h = (h + ((pid * 37) % 20) - 10 + 360) % 360;
 
-    // Convert HSL → RGB
-    const c = (1 - Math.abs(2 * v - 1)) * s;
-    const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-    const m = v - c / 2;
+    const c = (1 - Math.abs(2*v - 1)) * s;
+    const x2 = c * (1 - Math.abs((h/60) % 2 - 1));
+    const m = v - c/2;
     let rr, gg, bb;
-    if      (h < 60)  { rr=c; gg=x; bb=0; }
-    else if (h < 120) { rr=x; gg=c; bb=0; }
-    else if (h < 180) { rr=0; gg=c; bb=x; }
-    else if (h < 240) { rr=0; gg=x; bb=c; }
-    else if (h < 300) { rr=x; gg=0; bb=c; }
-    else              { rr=c; gg=0; bb=x; }
+    if      (h < 60)  { rr=c;  gg=x2; bb=0;  }
+    else if (h < 120) { rr=x2; gg=c;  bb=0;  }
+    else if (h < 180) { rr=0;  gg=c;  bb=x2; }
+    else if (h < 240) { rr=0;  gg=x2; bb=c;  }
+    else if (h < 300) { rr=x2; gg=0;  bb=c;  }
+    else              { rr=c;  gg=0;  bb=x2; }
     return new THREE.Color(rr+m, gg+m, bb+m);
   }
 
@@ -2401,12 +2400,13 @@ function buildBuildings(buildings, derived, PATTERNS, hotNodes) {
     // Register AABB for collision detection (skip open exclusion zones)
     if (blk.typology !== 'exclusion') {
       const p3 = ftTo3(blk.cx, blk.cy, 0);
-      const halfW = (blk.fw / 2) * HT_SCALE;
-      const halfD = (blk.fh / 2) * HT_SCALE;
+      // No padding — use exact building footprint so gaps are walkable
+      const halfW = blk.fw / 2;
+      const halfD = blk.fh / 2;
       _collisionBoxes.push({
-        minX: p3.x - halfW - 2, maxX: p3.x + halfW + 2,
-        minY: 0,                 maxY: heightFt + 10,
-        minZ: p3.z - halfD - 2, maxZ: p3.z + halfD + 2,
+        minX: p3.x - halfW, maxX: p3.x + halfW,
+        minY: 0,            maxY: heightFt + 5,
+        minZ: p3.z - halfD, maxZ: p3.z + halfD,
       });
     }
   }
@@ -2552,38 +2552,47 @@ function buildSiteFacts3D(derived) {
     gGround.add(groundMesh);
   }
 
-  // ── Sponge Park: elliptical green void ───────────────────────────────────
+  // ── Sponge Park: vivid grass fill + water basin ───────────────────────────
   if (derived.SPONGE) {
     const sp = derived.SPONGE;
-    // Elliptical disc at grade
-    const segs = 32;
+    const segs = 48;
+
+    // Outer rim path
     const pts = [];
     for (let i = 0; i <= segs; i++) {
       const a = (i / segs) * Math.PI * 2;
-      pts.push(ftTo3(sp.cx + Math.cos(a)*sp.rx, sp.cy + Math.sin(a)*sp.ry, 1));
+      pts.push(ftTo3(sp.cx + Math.cos(a)*sp.rx, sp.cy + Math.sin(a)*sp.ry, 1.5));
     }
-    const ringMat = new THREE.LineBasicMaterial({ color: 0x40a860, opacity: 0.5, transparent: true });
-    gGround.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), ringMat));
+    const rimMat = new THREE.LineBasicMaterial({ color: 0x60c070, opacity: 0.9, transparent: true });
+    gGround.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), rimMat));
 
-    // Filled disc — very dark green
+    // Grass fill — bright green disc
     const discGeo = new THREE.CircleGeometry(1, segs);
     discGeo.scale(sp.rx, sp.ry, 1);
     discGeo.rotateX(-Math.PI/2);
-    const discMat = new THREE.MeshBasicMaterial({ color: 0x0e2a18, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+    const discMat = new THREE.MeshLambertMaterial({ color: 0x2d6e3a, transparent: false, side: THREE.DoubleSide });
     const disc = new THREE.Mesh(discGeo, discMat);
-    disc.position.copy(ftTo3(sp.cx, sp.cy, 0.3));
+    disc.position.copy(ftTo3(sp.cx, sp.cy, 0.5));
     gGround.add(disc);
 
-    // Inner basin ring
+    // Inner basin — water blue
     if (derived.BASIN) {
       const ba = derived.BASIN;
-      const bpts = [];
+      const basinGeo = new THREE.CircleGeometry(1, segs);
+      basinGeo.scale(ba.rx, ba.ry, 1);
+      basinGeo.rotateX(-Math.PI/2);
+      const basinMat = new THREE.MeshLambertMaterial({ color: 0x3a8ab8, transparent: true, opacity: 0.85 });
+      const basin = new THREE.Mesh(basinGeo, basinMat);
+      basin.position.copy(ftTo3(ba.cx, ba.cy, 1.2));
+      gGround.add(basin);
+      // Water ring
+      const wpts = [];
       for (let i = 0; i <= segs; i++) {
         const a = (i / segs) * Math.PI * 2;
-        bpts.push(ftTo3(ba.cx + Math.cos(a)*ba.rx, ba.cy + Math.sin(a)*ba.ry, 2));
+        wpts.push(ftTo3(ba.cx + Math.cos(a)*ba.rx, ba.cy + Math.sin(a)*ba.ry, 2));
       }
-      const bMat = new THREE.LineBasicMaterial({ color: 0x2890d0, opacity: 0.6, transparent: true });
-      gGround.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(bpts), bMat));
+      gGround.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(wpts),
+        new THREE.LineBasicMaterial({ color: 0x70c8f0, opacity: 0.9, transparent: true })));
     }
   }
 }
@@ -2905,8 +2914,6 @@ document.addEventListener('keyup', e => { _keys[e.code] = false; });
 
 function _applyWASD() {
   if (_flyActive) return;
-  // Fixed walk speed: ~8ft per frame at 60fps ≈ comfortable walk pace
-  // Scale up if camera is high (orbit mode) so it doesn't feel glacial
   const camY = camera.position.y;
   const speed = camY < 50 ? 8 : camY * 0.012;
   const left  = _keys['KeyA'] || _keys['ArrowLeft'];
@@ -2915,8 +2922,6 @@ function _applyWASD() {
   const back  = _keys['KeyS'] || _keys['ArrowDown'];
   if (!left && !right && !fwd && !back) return;
 
-  // Pan in camera-local XZ plane (no vertical drift)
-  const panVec = new THREE.Vector3();
   const camRight = new THREE.Vector3();
   camRight.setFromMatrixColumn(camera.matrix, 0);
   camRight.y = 0; camRight.normalize();
@@ -2924,29 +2929,43 @@ function _applyWASD() {
   camFwd.setFromMatrixColumn(camera.matrix, 2);
   camFwd.y = 0; camFwd.normalize();
 
-  if (left)  panVec.addScaledVector(camRight, -speed);
-  if (right) panVec.addScaledVector(camRight,  speed);
-  if (fwd)   panVec.addScaledVector(camFwd,   -speed);
-  if (back)  panVec.addScaledVector(camFwd,    speed);
+  const move = new THREE.Vector3();
+  if (left)  move.addScaledVector(camRight, -speed);
+  if (right) move.addScaledVector(camRight,  speed);
+  if (fwd)   move.addScaledVector(camFwd,   -speed);
+  if (back)  move.addScaledVector(camFwd,    speed);
 
-  const nextPos = camera.position.clone().add(panVec);
+  // Wall-sliding: try full move, then X-only, then Z-only
+  const RADIUS = 2; // ft — tight so gaps are passable
+  const cur = camera.position;
 
-  // Collision: AABB test against registered building boxes
-  // Use a capsule radius of 4ft
-  const RADIUS = 4;
-  let blocked = false;
-  for (const box of _collisionBoxes) {
-    if (nextPos.x + RADIUS > box.minX && nextPos.x - RADIUS < box.maxX &&
-        nextPos.y        > box.minY && nextPos.y        < box.maxY &&
-        nextPos.z + RADIUS > box.minZ && nextPos.z - RADIUS < box.maxZ) {
-      blocked = true;
-      break;
+  function blocked(pos) {
+    for (const box of _collisionBoxes) {
+      if (pos.x + RADIUS > box.minX && pos.x - RADIUS < box.maxX &&
+          pos.y          > box.minY && pos.y          < box.maxY &&
+          pos.z + RADIUS > box.minZ && pos.z - RADIUS < box.maxZ) return true;
     }
+    return false;
   }
 
-  if (!blocked) {
-    camera.position.copy(nextPos);
-    controls.target.add(panVec);
+  const next = cur.clone().add(move);
+  if (!blocked(next)) {
+    camera.position.copy(next);
+    controls.target.add(move);
+  } else {
+    // Try sliding along X
+    const nx = new THREE.Vector3(cur.x + move.x, cur.y, cur.z);
+    const nz = new THREE.Vector3(cur.x, cur.y, cur.z + move.z);
+    if (!blocked(nx)) {
+      const dx = new THREE.Vector3(move.x, 0, 0);
+      camera.position.copy(nx);
+      controls.target.add(dx);
+    } else if (!blocked(nz)) {
+      const dz = new THREE.Vector3(0, 0, move.z);
+      camera.position.copy(nz);
+      controls.target.add(dz);
+    }
+    // both blocked = corner, don't move
   }
 }
 
@@ -2965,10 +2984,12 @@ const _mouse2 = new THREE.Vector2();
 const _tooltip = document.getElementById('tooltip');
 
 function _showTooltip(x, y, blk, patName) {
-  const typLabels = { solid: 'Solid', courtyard: 'Courtyard', arcade: 'Arcade', p105: 'South-Notch', exclusion: 'Exclusion' };
-  const typLabel = typLabels[blk.typology] || blk.typology;
+  const funcLabels = { residential:'Residential', retail:'Retail Arcade', civic:'Civic', mixed:'Mixed-Use' };
+  const typLabels = { solid:'', courtyard:' · Courtyard', arcade:' · Arcade', p105:' · Tower', exclusion:' · Open' };
+  const funcLabel = funcLabels[blk.func] || 'Mixed-Use';
+  const typSuffix = typLabels[blk.typology] || '';
   _tooltip.innerHTML =
-    `<div class="tt-typology">${typLabel}</div>` +
+    `<div class="tt-typology">${funcLabel}${typSuffix}</div>` +
     `<div class="tt-pattern">P${blk.domPid} · ${patName}</div>` +
     `<div class="tt-floors">${blk.floors}F · ${blk.count} nodes · ` +
     `${Math.round(blk.fw)}×${Math.round(blk.fh)}ft</div>`;
