@@ -149,16 +149,20 @@ body {
 }
 .map-wrap {
   width: 100%;
-  overflow-x: auto;
+  overflow: hidden;
   background: #040402;
   border: 1px solid var(--border);
+  position: relative;
 }
 #site-plan {
   display: block;
-  min-width: 640px;
   width: 100%;
-  height: auto;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
 }
+#site-plan:active { cursor: grabbing; }
 
 /* ── Legend ── */
 .legend {
@@ -797,6 +801,8 @@ details[open] summary::before { content: '▼  '; }
         <button class="tool-btn active" id="btn-select" onclick="setTool('select')">↖ Select</button>
         <button class="tool-btn" id="btn-section" onclick="setTool('section')">⊸ Section</button>
         <button class="tool-btn" onclick="if(window.EC_PanZoom)window.EC_PanZoom.reset()" title="Reset zoom (or double-click map)">⊡ Reset view</button>
+        <button class="tool-btn" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('block')" title="Zoom to block scale">⊟ Block</button>
+        <button class="tool-btn" onclick="if(window.EC_PanZoom)window.EC_PanZoom.zoomTo('parcel')" title="Zoom to parcel scale">⊞ Parcel</button>
         <a class="tool-btn" href="view-3d.html" title="3D view — opens in new tab" target="_blank" style="text-decoration:none">⬡ 3D View ↗</a>
         <span style="flex:1"></span>
         <button class="overlay-btn on" data-overlay="walkability" onclick="toggleOverlay(this)">Walkability</button>
@@ -812,7 +818,7 @@ details[open] summary::before { content: '▼  '; }
         <div id="map-error-overlay" style="display:none;position:absolute;inset:0;z-index:100;
           background:rgba(4,4,2,0.92);color:#e8784a;font-family:var(--font-mono);font-size:0.7rem;
           padding:1.5rem;line-height:1.8;overflow-y:auto;white-space:pre-wrap;word-break:break-all;"></div>
-        <svg id="site-plan" viewBox="0 0 960 760" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+        <svg id="site-plan" viewBox="0 0 4200 3700" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
           <text x="480" y="380" font-family="monospace" font-size="14" fill="#2a2820" text-anchor="middle">Loading GIS data…</text>
         </svg>
       </div>
@@ -951,15 +957,15 @@ function buildProjection(parcels) {
   const padLat = (maxLat-minLat)*0.20;
   minLon-=padLon; maxLon+=padLon; minLat-=padLat; maxLat+=padLat;
 
-  // SVG canvas: 960×760, road bands use outer 60-80px
-  // Map area: x[139,841] y[163,653] — preserved from GIS work
-  const MAP = {x0:139, y0:163, x1:841, y1:653};
-  const mapW = MAP.x1-MAP.x0, mapH = MAP.y1-MAP.y0;
+  // Coordinate space: 1 SVG unit = 1 ft. Site fits in 4200×3700ft canvas.
+  // MAP in feet — proj() returns [ft_x, ft_y] directly.
+  const CANVAS_W_FT = 4200, CANVAS_H_FT = 3700;
+  const MAP = {x0:0, y0:0, x1:CANVAS_W_FT, y1:CANVAS_H_FT};
 
   function proj(lon, lat) {
     return [
-      MAP.x0 + (lon-minLon)/(maxLon-minLon)*mapW,
-      MAP.y1 - (lat-minLat)/(maxLat-minLat)*mapH
+      (lon-minLon)/(maxLon-minLon)*CANVAS_W_FT,
+      CANVAS_H_FT - (lat-minLat)/(maxLat-minLat)*CANVAS_H_FT
     ];
   }
 
@@ -1305,8 +1311,8 @@ function buildSVG(parcels, P, G, derived, MAP, proj) {
   svg.appendChild(defs);
 
   // Background
-  svg.appendChild(el('rect',{width:'960',height:'760',fill:'#040402'}));
-  svg.appendChild(el('rect',{width:'960',height:'760',fill:'url(#grid)'}));
+  svg.appendChild(el('rect',{width:'4200',height:'3700',fill:'#040402'}));
+  svg.appendChild(el('rect',{width:'4200',height:'3700',fill:'url(#grid)'}));
 
   // Road bands
   for (const [x,y,w,h] of [
@@ -6251,9 +6257,9 @@ window.EC_PatternSolver = (() => {
     },
     instantiate(cand, sg) {
       const { x, y } = cand.geom;
-      const r_inner  = 120;  // px — high density core
-      const r_mid    = 240;  // px — medium density
-      const r_outer  = 400;  // px — low density edge
+      const r_inner  = 600;   // ft — high density core
+      const r_mid    = 1200;  // ft — medium density
+      const r_outer  = 2000;  // ft — low density edge
       return mkInstance(29, 'rings', [
         { x, y, r: r_inner,  density: 'HIGH',   far_target: 1.4 },
         { x, y, r: r_mid,    density: 'MEDIUM', far_target: 1.0 },
@@ -6330,7 +6336,7 @@ window.EC_PatternSolver = (() => {
       for (const zone of (sg.zones || [])) {
         if (!zone.centroid) continue;
         const d = spine ? ptDist(zone.centroid, splineMidpoint(spine)) : 999;
-        const exposure = d < 80 ? 'PUBLIC' : d < 180 ? 'SEMI' : 'QUIET';
+        const exposure = d < 400 ? 'PUBLIC' : d < 900 ? 'SEMI' : 'QUIET';
         pts.push({ ...zone.centroid, exposure, zone_id: zone.id });
       }
       return mkInstance(36, 'point_cloud', pts, { type:'exposure_map' });
@@ -6343,16 +6349,16 @@ window.EC_PatternSolver = (() => {
     // Also one per site boundary entry point (4 cardinal entries, singletons).
     detect(sg, proj, MAP) {
       const fromNodes = sg_query.missingChild(30, 53).map(node => ({
-        geom: { type:'point', x: node.geom[0]?.x || 490, y: node.geom[0]?.y || 400 },
+        geom: { type:'point', x: node.geom[0]?.x || 2100, y: node.geom[0]?.y || 1850 },
         context: { edge: 'node', parent: node },
       }));
       // Site boundary entries — only if none exist yet
       const existing = sg_query.ofPattern(53);
       const boundaryEntries = existing.length === 0 ? [
-        { geom:{ type:'point', x: MAP.x0+20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'west',  parent:null } },
-        { geom:{ type:'point', x: MAP.x1-20, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'east',  parent:null } },
-        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y0+20 }, context:{ edge:'north', parent:null } },
-        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y1-20 }, context:{ edge:'south', parent:null } },
+        { geom:{ type:'point', x: MAP.x0+100, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'west',  parent:null } },
+        { geom:{ type:'point', x: MAP.x1-100, y:(MAP.y0+MAP.y1)/2 }, context:{ edge:'east',  parent:null } },
+        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y0+100 }, context:{ edge:'north', parent:null } },
+        { geom:{ type:'point', x:(MAP.x0+MAP.x1)/2, y: MAP.y1-100 }, context:{ edge:'south', parent:null } },
       ] : [];
       return [...fromNodes, ...boundaryEntries];
     },
@@ -6376,12 +6382,12 @@ window.EC_PatternSolver = (() => {
       const fromClusters = sg_query.missingChild(37, 60).map(cluster => {
         const b = instanceBounds(cluster);
         return {
-          geom: { type:'polygon', pts: rectPts(b.x - 20, b.y + b.h + 10, b.w + 40, 45) },
+          geom: { type:'polygon', pts: rectPts(b.x - 100, b.y + b.h + 50, b.w + 200, 200) },
           context: { parent: cluster, gap: false },
         };
       });
       // Mode B: gap scan (only if building points exist)
-      const WALK_PX = 264;
+      const WALK_PX = 1250;  // ft — 5-minute walk radius at 250ft/min
       const resPts = buildingPointsByPattern(sg, [79, 87, 37, 95]);
       const greenInsts = sg_query.ofPattern(60).concat(sg_query.ofPattern(67)).concat(sg_query.ofPattern(71));
       const gaps = resPts.filter(bp => {
@@ -6411,7 +6417,7 @@ window.EC_PatternSolver = (() => {
     // Detect: P37 instances that don't yet have a P67 child.
     detect(sg) {
       return sg_query.missingChild(37, 67).map(cluster => ({
-        geom: southOf(cluster, 40),
+        geom: southOf(cluster, 200),
         context: { cluster },
       }));
     },
@@ -6458,9 +6464,9 @@ window.EC_PatternSolver = (() => {
       if (!rings) return [];
       // Sample points in the buildable zone, away from water and setbacks
       const candidates = [];
-      const step = 80;
-      for (let x = MAP.x0 + 40; x < MAP.x1 - 40; x += step) {
-        for (let y = MAP.y0 + 40; y < MAP.y1 - 40; y += step) {
+      const step = 400;  // ft — block grid spacing
+      for (let x = MAP.x0 + 200; x < MAP.x1 - 200; x += step) {
+        for (let y = MAP.y0 + 200; y < MAP.y1 - 200; y += step) {
           if (!inEDA(x, y)) continue;
           if (inSetback(x, y, MAP)) continue;
           // Avoid water
@@ -6475,7 +6481,7 @@ window.EC_PatternSolver = (() => {
         .map(cluster => ({ geom:{ type:'point', ...centroidOf(cluster) }, context:{ pts: cluster } }));
     },
     instantiate(cand) {
-      return mkInstance(37, 'polygon', rectAround(cand.geom, 60, 60),
+      return mkInstance(37, 'polygon', rectAround(cand.geom, 600, 600),
         { unit_count: 10, radius_ft: 100 });
     },
     forces(inst, neighbors) {
@@ -6500,16 +6506,15 @@ window.EC_PatternSolver = (() => {
     },
     instantiate(cand) {
       const { x, y, w, h } = cand.geom;
-      const PARCEL_W_PX = 25 / 8.5;   // 25ft at 8.5ft/px ≈ 2.9px — use world ft directly
-      const FT_PER_PX = 8.5;
-      const parcel_w_px = 25 / FT_PER_PX;
-      const parcel_d_px = 125 / FT_PER_PX;
+      // Coordinates are in ft — use planning constants directly
+      const parcel_w = PLANNING.PARCEL_W_FT;   // 25ft
+      const parcel_d = Math.min(PLANNING.PARCEL_D_FT, h);  // 125ft or cluster depth
       const parcels = [];
-      for (let px = x; px + parcel_w_px <= x + w; px += parcel_w_px) {
-        parcels.push(rectPts(px, y, parcel_w_px, Math.min(parcel_d_px, h)));
+      for (let px = x; px + parcel_w <= x + w + 1; px += parcel_w) {
+        parcels.push(rectPts(px, y, Math.min(parcel_w, x + w - px), parcel_d));
       }
       return mkInstance(95, 'polygon_array', parcels,
-        { parcel_w_ft: 25, parcel_d_ft: 125, parent_cluster: cand.context.cluster.id });
+        { parcel_w_ft: parcel_w, parcel_d_ft: parcel_d, parent_cluster: cand.context.cluster.id });
     },
     forces() { return []; },
   });
@@ -6568,7 +6573,7 @@ window.EC_PatternSolver = (() => {
       for (let i = 0; i < bldgs.length; i++) {
         for (let j = i+1; j < bldgs.length; j++) {
           const gap = gapPolygon(bldgs[i], bldgs[j]);
-          if (gap && polygonArea(gap) > 400) gaps.push({ geom:{ type:'polygon', pts:gap }, context:{} });
+          if (gap && polygonArea(gap) > 8000) gaps.push({ geom:{ type:'polygon', pts:gap }, context:{} });
         }
       }
       return gaps;
@@ -6591,18 +6596,18 @@ window.EC_PatternSolver = (() => {
       return (sg.instances||[]).filter(i => i.patternId === 95)
         .filter(i => {
           const b = instanceBounds(i);
-          return b.w / (25/8.5) > 1.5;  // wider than 1.5 parcel widths
+          return b.w > PLANNING.PARCEL_W_FT * 1.5;  // wider than 1.5 parcel widths
         })
         .map(i => ({ geom: instanceBounds(i), context:{ inst:i } }));
     },
     instantiate(cand) {
       // Split wide parcels into 25ft strips
       const { x, y, w, h } = cand.geom;
-      const pw = 25 / 8.5;
+      const pw = PLANNING.PARCEL_W_FT;  // 25ft
       const strips = [];
       for (let px = x; px + pw <= x + w + 1; px += pw)
         strips.push(rectPts(px, y, Math.min(pw, x+w-px), h));
-      return mkInstance(109, 'polygon_array', strips, { parcel_w_ft:25 });
+      return mkInstance(109, 'polygon_array', strips, { parcel_w_ft: pw });
     },
     forces() { return []; },
   });
@@ -6617,7 +6622,7 @@ window.EC_PatternSolver = (() => {
     instantiate(cand) {
       // Tag the outdoor space with its hierarchy level (pocket→courtyard→square→park)
       const area = polygonArea(rectToPts(cand.geom));
-      const level = area < 800 ? 'pocket' : area < 4000 ? 'courtyard' : area < 16000 ? 'square' : 'park';
+      const level = area < 4000 ? 'pocket' : area < 20000 ? 'courtyard' : area < 80000 ? 'square' : 'park';
       return mkInstance(114, 'polygon', rectToPts(cand.geom), { level, area });
     },
     forces(inst, neighbors) {
@@ -6796,24 +6801,24 @@ window.EC_PatternSolver = (() => {
   // Dedup radius per pattern (px): how close must an existing same-type instance
   // be before we treat it as "already handled" and skip/mutate instead of creating new
   const DEDUP_R = {
-    29: 9999,  // DensityRings: singleton
-    31: 9999,  // Promenade: singleton
-    53:  80,   // Gateways: one per entry point (~80px apart)
-    30:  60,   // ActivityNodes: one per node
-    37: 100,   // HouseCluster: one per cluster location
-    67:  80,   // CommonLand: one per cluster
-    71: 9999,  // StillWater: singleton
-    46: 9999,  // Market: singleton
-    95:  30,   // BuildingComplex: per parcel strip
-    104: 40,
-    105: 40,
-    106: 40,
-    109: 30,   // LongThinHouse: per parcel
-    115: 30,   // Courtyard: per building
-    122: 30,
-    127: 30,
-    87:  25,   // Shop: per bay
-    88:  50,   // Cafe: every ~3rd shop
+    29: 99999, // DensityRings: singleton
+    31: 99999, // Promenade: singleton
+    53:  400,  // Gateways: one per entry point
+    30:  300,  // ActivityNodes: one per node
+    37:  500,  // HouseCluster: one per cluster location
+    67:  400,  // CommonLand: one per cluster
+    71: 99999, // StillWater: singleton
+    46: 99999, // Market: singleton
+    95:   30,  // BuildingComplex: per 25ft parcel strip
+    104: 200,
+    105: 200,
+    106: 200,
+    109:  30,  // LongThinHouse: per 25ft strip
+    115: 150,  // Courtyard: per building
+    122: 150,
+    127: 150,
+    87:   30,  // Shop: per 25ft bay
+    88:  200,  // Cafe: every ~3 shops
   };
 
   function mkInstance(patternId, geomType, geom, data) {
@@ -6946,7 +6951,7 @@ window.EC_PatternSolver = (() => {
       const pattern = PATTERNS[inst.patternId];
       if (!pattern?.forces) continue;
       const neighbors = instances.filter(n => n.id !== inst.id &&
-        instanceDist(inst, n) < 300);
+        instanceDist(inst, n) < 1500);
       const forces = pattern.forces(inst, neighbors);
       for (const { target, vec, weight } of forces) {
         if (!target) continue;
@@ -7065,7 +7070,7 @@ window.EC_PatternSolver = (() => {
           // Priority conflict: different pattern owns this location at higher priority
           const conflict = _sg.instances.find(i =>
             i.id !== inst.id && i.patternId !== inst.patternId &&
-            instanceDist(i, inst) < 20 &&
+            instanceDist(i, inst) < 100 &&
             PATTERNS[i.patternId]?.priority < pattern.priority);
           if (conflict) continue;
 
@@ -8407,6 +8412,305 @@ function renderPatternOverlay2D(sg) {
     patEl.textContent = `${instCount} inst — ${summary}`;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EC_PanZoom — Touch-friendly pan/zoom with level-of-detail
+//
+//  Works on the SVG element directly via a <g id="pz-root"> transform.
+//  1 SVG unit = 1 ft. Canvas 4200×3700ft.
+//
+//  LOD thresholds (zoom = ft-per-viewport-width / canvas-ft):
+//    z < 0.35  SITE   — full site, district labels only
+//    z < 0.8   BLOCK  — building hulls + pattern labels
+//    z < 2.0   PARCEL — individual parcels, floor counts
+//    z ≥ 2.0   UNIT   — units, bay widths, courtyard dims
+// ═══════════════════════════════════════════════════════════════════════════
+(function() {
+  const CANVAS_W = 4200, CANVAS_H = 3700;
+  const MIN_ZOOM = 0.18;  // whole site + margin
+  const MAX_ZOOM = 12;    // single parcel fills screen
+
+  let zoom = MIN_ZOOM;          // current scale (svg units per css pixel … inverted: px per ft)
+  let tx = 0, ty = 0;          // translate in SVG ft units
+  let svg, pzRoot, vpW, vpH;
+  let dragging = false, lastX = 0, lastY = 0;
+  let touches = [];
+  let lastPinchDist = 0;
+  let animFrame = null;
+  let _lodLevel = 'site';
+
+  // Current LOD level based on zoom
+  function lodLevel(z) {
+    if (z < 0.35) return 'site';
+    if (z < 0.8)  return 'block';
+    if (z < 2.0)  return 'parcel';
+    return 'unit';
+  }
+
+  function applyTransform() {
+    if (!pzRoot) return;
+    // Center the view: translate so viewport center maps to (cx,cy) in ft space
+    pzRoot.setAttribute('transform', `scale(${zoom}) translate(${tx},${ty})`);
+
+    // LOD: update detail visibility
+    const lod = lodLevel(zoom);
+    if (lod !== _lodLevel) {
+      _lodLevel = lod;
+      updateLOD(lod);
+    }
+  }
+
+  function updateLOD(lod) {
+    if (!svg) return;
+    // Building hulls always visible. Labels and detail layers shown/hidden by LOD.
+    const detailEls  = svg.querySelectorAll('[data-lod="parcel"],[data-lod="unit"]');
+    const blockEls   = svg.querySelectorAll('[data-lod="block"]');
+    const labelEls   = svg.querySelectorAll('[data-lod-label]');
+    const siteLabels = svg.querySelectorAll('[data-lod-label="site"]');
+
+    detailEls.forEach(e => e.style.display  = (lod === 'parcel' || lod === 'unit') ? '' : 'none');
+    blockEls.forEach(e  => e.style.display  = (lod !== 'site') ? '' : 'none');
+    labelEls.forEach(e  => e.style.display  = 'none');
+    siteLabels.forEach(e=> e.style.display  = '');
+
+    // Scale-invariant stroke widths and text sizes
+    const invZ = 1 / zoom;
+    svg.querySelectorAll('[data-plan-layer="buildings"] path, [data-plan-layer="buildings"] circle')
+       .forEach(e => e.setAttribute('stroke-width', (1.5 * invZ).toFixed(2)));
+    svg.querySelectorAll('[data-plan-layer="buildings"] text')
+       .forEach(e => e.setAttribute('font-size', (7 * invZ).toFixed(2)));
+    // EDA parcel outlines
+    svg.querySelectorAll('.eda-outline')
+       .forEach(e => e.setAttribute('stroke-width', (0.8 * invZ).toFixed(2)));
+  }
+
+  // Clamp translate so we can't pan off the canvas entirely
+  function clampTranslate() {
+    const visW = vpW / zoom;
+    const visH = vpH / zoom;
+    const margin = 200;  // ft of bleed allowed outside canvas
+    tx = Math.min(margin, Math.max(-(CANVAS_W - visW + margin), tx));
+    ty = Math.min(margin, Math.max(-(CANVAS_H - visH + margin), ty));
+  }
+
+  // Zoom around a point (svgX, svgY) in ft
+  function zoomAround(svgX, svgY, factor) {
+    const newZoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+    if (newZoom === zoom) return;
+    // Keep svgX,svgY fixed on screen:
+    // screen_x = (svgX + tx) * zoom  →  tx_new = screen_x/newZoom - svgX
+    const screenX = (svgX + tx) * zoom;
+    const screenY = (svgY + ty) * zoom;
+    tx = screenX / newZoom - svgX;
+    ty = screenY / newZoom - svgY;
+    zoom = newZoom;
+    clampTranslate();
+    scheduleApply();
+  }
+
+  function scheduleApply() {
+    if (animFrame) cancelAnimationFrame(animFrame);
+    animFrame = requestAnimationFrame(applyTransform);
+  }
+
+  // Screen px → SVG ft
+  function screenToSVG(sx, sy) {
+    const rect = svg.getBoundingClientRect();
+    const svgScale = rect.width / CANVAS_W;  // css px per SVG unit (ft)
+    return {
+      x: (sx - rect.left) / svgScale / zoom - tx,
+      y: (sy - rect.top)  / svgScale / zoom - ty,
+    };
+  }
+
+  // ── Mouse events ──────────────────────────────────────────────────────────
+  function onMouseDown(e) {
+    if (e.button !== 0) return;
+    dragging = true;
+    lastX = e.clientX; lastY = e.clientY;
+    svg.style.cursor = 'grabbing';
+    e.preventDefault();
+  }
+
+  function onMouseMove(e) {
+    if (!dragging) return;
+    const rect = svg.getBoundingClientRect();
+    const svgScale = rect.width / CANVAS_W;
+    tx += (e.clientX - lastX) / svgScale / zoom;
+    ty += (e.clientY - lastY) / svgScale / zoom;
+    lastX = e.clientX; lastY = e.clientY;
+    clampTranslate();
+    scheduleApply();
+  }
+
+  function onMouseUp() { dragging = false; svg.style.cursor = 'grab'; }
+
+  function onWheel(e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const pt = screenToSVG(e.clientX, e.clientY);
+    zoomAround(pt.x - tx, pt.y - ty, factor);  // pivot in local space
+  }
+
+  function onDblClick(e) {
+    const pt = screenToSVG(e.clientX, e.clientY);
+    zoomAround(pt.x - tx, pt.y - ty, 2.5);
+  }
+
+  // ── Touch events ──────────────────────────────────────────────────────────
+  function touchDist(t1, t2) {
+    return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+  }
+  function touchMid(t1, t2) {
+    return { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
+  }
+
+  function onTouchStart(e) {
+    e.preventDefault();
+    touches = Array.from(e.touches);
+    if (touches.length === 1) {
+      dragging = true;
+      lastX = touches[0].clientX; lastY = touches[0].clientY;
+    } else if (touches.length === 2) {
+      dragging = false;
+      lastPinchDist = touchDist(touches[0], touches[1]);
+    }
+  }
+
+  function onTouchMove(e) {
+    e.preventDefault();
+    const t = Array.from(e.touches);
+    if (t.length === 1 && dragging) {
+      const rect = svg.getBoundingClientRect();
+      const svgScale = rect.width / CANVAS_W;
+      tx += (t[0].clientX - lastX) / svgScale / zoom;
+      ty += (t[0].clientY - lastY) / svgScale / zoom;
+      lastX = t[0].clientX; lastY = t[0].clientY;
+      clampTranslate();
+      scheduleApply();
+    } else if (t.length === 2) {
+      const dist = touchDist(t[0], t[1]);
+      const factor = dist / Math.max(1, lastPinchDist);
+      const mid = touchMid(t[0], t[1]);
+      const pt = screenToSVG(mid.x, mid.y);
+      zoomAround(pt.x - tx, pt.y - ty, factor);
+      lastPinchDist = dist;
+      touches = t;
+    }
+  }
+
+  function onTouchEnd(e) {
+    touches = Array.from(e.touches);
+    if (touches.length < 2) dragging = touches.length === 1;
+    if (touches.length === 0) dragging = false;
+  }
+
+  // ── Public API ────────────────────────────────────────────────────────────
+  window.EC_PanZoom = {
+    init() {
+      svg = document.getElementById('site-plan');
+      if (!svg) return;
+
+      // Wrap all SVG children in a <g> transform root
+      pzRoot = svg.querySelector('#pz-root');
+      if (!pzRoot) {
+        pzRoot = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        pzRoot.setAttribute('id', 'pz-root');
+        while (svg.firstChild) pzRoot.appendChild(svg.firstChild);
+        svg.appendChild(pzRoot);
+      }
+
+      // Initial zoom: fit the whole canvas
+      this.reinit();
+
+      svg.style.cursor = 'grab';
+      svg.style.touchAction = 'none';
+      svg.style.userSelect = 'none';
+
+      svg.addEventListener('mousedown', onMouseDown);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+      svg.addEventListener('wheel', onWheel, { passive: false });
+      svg.addEventListener('dblclick', onDblClick);
+      svg.addEventListener('touchstart', onTouchStart, { passive: false });
+      svg.addEventListener('touchmove', onTouchMove, { passive: false });
+      svg.addEventListener('touchend', onTouchEnd);
+    },
+
+    reinit() {
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      vpW = rect.width || 800;
+      vpH = rect.height || 600;
+      // Compute pzRoot wrapping after any re-render
+      pzRoot = svg.querySelector('#pz-root');
+      if (!pzRoot) { this.init(); return; }
+      // Keep current zoom/translate if already set, otherwise fit to canvas
+      if (zoom === MIN_ZOOM && tx === 0 && ty === 0) this.reset();
+      else applyTransform();
+    },
+
+    reset() {
+      if (!svg) return;
+      const rect = svg.getBoundingClientRect();
+      vpW = rect.width || 800;
+      vpH = rect.height || 600;
+      zoom = MIN_ZOOM;
+      tx = 0; ty = 0;
+      applyTransform();
+    },
+
+    zoomTo(level) {
+      // level: 'site'|'block'|'parcel'|'unit'
+      const targets = { site: MIN_ZOOM, block: 0.5, parcel: 1.2, unit: 3.0 };
+      const target = targets[level] || MIN_ZOOM;
+      const cx = CANVAS_W / 2, cy = CANVAS_H / 2;
+      const steps = 12;
+      let step = 0;
+      const animate = () => {
+        step++;
+        const t = step / steps;
+        const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+        zoom = zoom + (target - zoom) * ease * 0.15;
+        clampTranslate();
+        applyTransform();
+        if (step < steps) requestAnimationFrame(animate);
+      };
+      animate();
+    },
+
+    getLOD() { return _lodLevel; },
+    getZoom() { return zoom; },
+  };
+
+  // Boot after DOM ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => window.EC_PanZoom.init());
+  } else {
+    window.EC_PanZoom.init();
+  }
+
+  // After re-renders, rewrap new children into pz-root
+  // (renderPlanBuildings appends directly to svg — need to adopt)
+  const _origRender = window.renderPlanBuildings;
+  // Patch renderPlanBuildings to adopt new children into pz-root post-render
+  // Done via MutationObserver on the svg instead (non-invasive)
+  const obs = new MutationObserver(() => {
+    const root = document.querySelector('#site-plan #pz-root');
+    if (!root) return;
+    const svg2 = document.getElementById('site-plan');
+    if (!svg2) return;
+    // Move any direct children of svg that aren't pz-root into pz-root
+    Array.from(svg2.children).forEach(child => {
+      if (child.id !== 'pz-root') root.appendChild(child);
+    });
+    applyTransform();
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    const s = document.getElementById('site-plan');
+    if (s) obs.observe(s, { childList: true });
+  });
+})();
 
 </script>
 
