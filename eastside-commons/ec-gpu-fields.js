@@ -128,6 +128,18 @@ class ECGpuFields {
     this._swap();
   }
 
+  // ── Diffuse: Gaussian spread of fields, respects EDA mask, swap ───────
+  runDiffuse() {
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos['MRT']);
+    gl.viewport(0, 0, this.W, this.H);
+    gl.useProgram(this.progs['diffuse']);
+    this._bindAll(this.progs['diffuse'], {}, null);
+    gl.disable(gl.BLEND);
+    this._quad();
+    this._swap();
+  }
+
   // ── Wall-distance: 7×7 kernel scan from current WALL channel ──────────
   runWallDistance(uniforms = {}) {
     const gl = this.gl;
@@ -292,6 +304,7 @@ class ECGpuFields {
     this.progs['invariant'] = this._compile(S.VERT, S.INVARIANT_FRAG);
     this.progs['wall_dist'] = this._compile(S.VERT, S.WALL_DIST_FRAG);
     this.progs['copy']      = this._compile(S.VERT, S.COPY_FRAG);
+    this.progs['diffuse']   = this._compile(S.VERT, S.DIFFUSE_FRAG);
   }
 
   _getProgram(key, fragSrc) {

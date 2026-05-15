@@ -196,6 +196,10 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
       gpu.runInvariant(invariantU);
     }
 
+    // Diffuse fields once per pass — spreads social/wild/movement from seeds
+    // so patterns in later passes have non-zero fields to detect against
+    gpu.runDiffuse();
+
     // Convergence: read back all fields
     const fields = gpu.readback();
 

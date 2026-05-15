@@ -269,6 +269,72 @@ void main() {
   outPID = texture(uPID, vUV).r;
 }`;
 
+// ── Diffusion shader ───────────────────────────────────────────────────────
+// Gaussian neighbourhood average per field channel.
+// Per-channel diffusion rates:
+//   social (F0.r)      : 0.35  — spreads far, creates gradient from nodes
+//   comfort (F0.g)     : 0.25  — moderate
+//   wild (F0.b)        : 0.30  — spreads from sponge/edge
+//   built_height (F0.a): 0.05  — almost no diffusion, buildings stay local
+//   movement (F1.rg)   : 0.40  — flows freely
+//   wall (F1.b)        : 0.08  — stays at edges
+//   interest_z (F2.b)  : 0.20  — moderate landmark spread
+// Runs after invariant each pass. EDA mask enforced — no bleed outside site.
+const DIFFUSE_FRAG = STDLIB + `
+uniform sampler2D uPID;
+layout(location=0) out vec4 outF0;
+layout(location=1) out vec4 outF1;
+layout(location=2) out vec4 outF2;
+layout(location=3) out float outPID;
+
+vec4 gaussBlur4(sampler2D tex, vec2 uv, float r) {
+  vec2 d = r / uResolution;
+  // 5-tap cross kernel
+  vec4 c = texture(tex, uv)           * 0.40;
+  c += texture(tex, uv+vec2( d.x, 0)) * 0.15;
+  c += texture(tex, uv-vec2( d.x, 0)) * 0.15;
+  c += texture(tex, uv+vec2(0,  d.y)) * 0.15;
+  c += texture(tex, uv-vec2(0,  d.y)) * 0.15;
+  return c;
+}
+
+void main() {
+  if (!IN_EDA(vUV)) {
+    outF0 = vec4(0.0); outF1 = vec4(0.0); outF2 = vec4(0.0); outPID = 0.0;
+    return;
+  }
+
+  vec4 f0 = texture(uF0, vUV);
+  vec4 f1 = texture(uF1, vUV);
+  vec4 f2 = texture(uF2, vUV);
+
+  vec4 b0 = gaussBlur4(uF0, vUV, 2.5);
+  vec4 b1 = gaussBlur4(uF1, vUV, 2.5);
+  vec4 b2 = gaussBlur4(uF2, vUV, 2.5);
+
+  // Blend: mix(original, blurred, rate) — keeps peaks while spreading tails
+  outF0 = vec4(
+    mix(f0.r, b0.r, 0.35),  // social
+    mix(f0.g, b0.g, 0.25),  // comfort
+    mix(f0.b, b0.b, 0.30),  // wild
+    mix(f0.a, b0.a, 0.05)   // built_height
+  );
+  outF1 = vec4(
+    mix(f1.r, b1.r, 0.40),  // movement x
+    mix(f1.g, b1.g, 0.40),  // movement y
+    mix(f1.b, b1.b, 0.08),  // wall
+    f1.a
+  );
+  outF2 = vec4(
+    mix(f2.r, b2.r, 0.20),  // interest x
+    mix(f2.g, b2.g, 0.20),  // interest y
+    mix(f2.b, b2.b, 0.20),  // interest z
+    f2.a
+  );
+  outPID = texture(uPID, vUV).r;
+}`;
+
+
 // ── Pattern shaders ────────────────────────────────────────────────────────
 // Each pattern has:
 //   DETECT_P{id}: reads fields → writes float to pattern buffer
@@ -1473,7 +1539,7 @@ void main() {
 // ─────────────────────────────────────────────────────────────────
 const EC_GPU_SHADERS = {
   VERT, STDLIB, PAT_STDLIB,
-  IC_FRAG, INVARIANT_FRAG, WALL_DIST_FRAG, COPY_FRAG,
+  IC_FRAG, INVARIANT_FRAG, WALL_DIST_FRAG, COPY_FRAG, DIFFUSE_FRAG,
   // Pattern shaders keyed by id, descending order
   patterns: {
     176: { detect: DETECT_P176, modulate: MODULATE_P176, nbhdR: 3.0, uniforms: {} },
