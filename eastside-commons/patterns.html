@@ -863,49 +863,48 @@ function renderFieldOverlay(fields, gw, gh, MAP) {
   tctx.putImageData(img, 0, 0);
 
   // Map field grid → canvas pixels.
-  // Use SVGElement.getScreenCTM() on a known SVG element to get the exact
-  // current transform (accounts for viewBox, preserveAspectRatio, pan/zoom).
-  const toSvg = window._ftToSvg || ((x,y)=>[x,y]);
-  const svgEl = document.getElementById('main-svg');
+  // ftToSvg → SVG user space → apply pz-root transform → apply SVG→screen → subtract canvas rect
+  // We decompose: svgEl.getScreenCTM() gives SVG user→screen (viewBox scaling only).
+  // Then we manually apply the pz-root translate/scale on top, since pz-root sits
+  // between SVG user space and the content layers.
+  const toSvg  = window._ftToSvg || ((x,y)=>[x,y]);
+  const svgEl  = document.getElementById('main-svg');
   const fcRect = fc.getBoundingClientRect();
-
-  // Get screen→SVG transform from any SVG element that's in the scene
-  const refEl = document.getElementById('layer-eda')?.firstChild || svgEl;
-  const ctm = svgEl.getScreenCTM?.();
+  const baseCTM = svgEl?.getScreenCTM?.();
 
   let dx, dy, dw, dh;
-  if (ctm) {
-    // ctm transforms SVG user coords → screen pixels
-    // We need ft → SVG user coords (via ftToSvg), then SVG user → screen,
-    // then screen → canvas (subtract canvas bounding rect offset).
-    const svgPt = (fx, fy) => {
+  if (baseCTM) {
+    // Apply pz-root pan/zoom on top of ftToSvg coords, then baseCTM to screen
+    const s  = _panScale, ptx = _panTx, pty = _panTy;
+    const pt = (fx, fy) => {
       const [sx, sy] = toSvg(fx, fy);
+      // pz-root: translate(ptx,pty) scale(s) applied to SVG coords
+      const px = sx * s + ptx;
+      const py = sy * s + pty;
       return {
-        x: ctm.a * sx + ctm.c * sy + ctm.e - fcRect.left,
-        y: ctm.b * sx + ctm.d * sy + ctm.f - fcRect.top,
+        x: baseCTM.a*px + baseCTM.c*py + baseCTM.e - fcRect.left,
+        y: baseCTM.b*px + baseCTM.d*py + baseCTM.f - fcRect.top,
       };
     };
-    const nw = svgPt(MAP.x0, MAP.y1);
-    const se = svgPt(MAP.x1, MAP.y0);
+    const nw = pt(MAP.x0, MAP.y1);
+    const se = pt(MAP.x1, MAP.y0);
     dx = nw.x; dy = nw.y;
     dw = se.x - nw.x;
     dh = se.y - nw.y;
   } else {
-    // Fallback: assume viewBox fills canvas (no letterboxing)
-    const vb = svgEl?.viewBox?.baseVal || {x:0,y:0,width:980,height:816};
-    const [sx0, sy0] = toSvg(MAP.x0, MAP.y1);
-    const [sx1, sy1] = toSvg(MAP.x1, MAP.y0);
-    dx = (sx0 - vb.x) / vb.width  * fc.width;
-    dy = (sy0 - vb.y) / vb.height * fc.height;
-    dw = (sx1 - sx0)  / vb.width  * fc.width;
-    dh = (sy1 - sy0)  / vb.height * fc.height;
+    const vb = svgEl?.viewBox?.baseVal || {x:0,y:0,width:1000,height:800};
+    const [sx0,sy0] = toSvg(MAP.x0, MAP.y1);
+    const [sx1,sy1] = toSvg(MAP.x1, MAP.y0);
+    dx = (sx0-vb.x)/vb.width  * fc.width;
+    dy = (sy0-vb.y)/vb.height * fc.height;
+    dw = (sx1-sx0) /vb.width  * fc.width;
+    dh = (sy1-sy0) /vb.height * fc.height;
   }
 
   ctx.globalAlpha = 0.82;
   ctx.drawImage(tmp, dx, dy, dw, dh);
   ctx.globalAlpha = 1;
 }
-
 function clearFieldOverlay() {
   const fc = document.getElementById('field-canvas');
   if (fc) fc.style.display = 'none';
