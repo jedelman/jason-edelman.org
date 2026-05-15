@@ -192,8 +192,12 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   // Sanity: read back social immediately after IC to verify it wrote values
   {
     const icCheck = gpu.readback();
-    const socialNZ = icCheck.social.filter(v=>v>0.001).length;
-    const socialMax = Math.max(...icCheck.social);
+    let socialNZ = 0, socialMax = 0;
+    for (let i = 0; i < icCheck.social.length; i++) {
+      const v = icCheck.social[i];
+      if (v > 0.001) socialNZ++;
+      if (v > socialMax) socialMax = v;
+    }
     log.push(`  Post-IC check: social nz=${socialNZ}/${GW*GH} max=${socialMax.toFixed(4)}`);
   }
 
