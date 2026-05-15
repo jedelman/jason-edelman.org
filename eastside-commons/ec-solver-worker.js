@@ -268,7 +268,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     allFieldLines = []; // field lines derived from MOVEMENT field (future pass)
 
     if (typeof onPass === 'function') {
-      onPass(pass, delta, !!saturatedAt, allFieldLines, log);
+      onPass(pass, deltaS, !!saturatedAt, allFieldLines, log);
     }
 
     if (saturatedAt) break;
