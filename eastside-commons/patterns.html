@@ -47,17 +47,15 @@
   #body {
     display: grid;
     grid-template-columns: 1fr 320px;
-    grid-template-rows: 1fr;
-    flex: 1; overflow: hidden; min-height: 0;
-    /* Grid children must not exceed their track size */
-    align-items: stretch;
+    grid-template-columns: minmax(0,1fr) 320px;
+    grid-template-rows: minmax(0,1fr);
+    flex: 1; min-height: 0; overflow: hidden;
   }
 
   /* ── CANVAS ── */
   #canvas-wrap {
     position: relative; overflow: hidden; background: var(--bg);
-    min-width: 0; min-height: 0;  /* allow grid shrinking */
-    height: 100%;
+    min-width: 0; min-height: 0;
   }
   #main-svg { width: 100%; height: 100%; display: block; }
   #field-canvas {
@@ -89,7 +87,7 @@
   #sidebar {
     display: flex; flex-direction: column;
     border-left: 1px solid var(--border); background: var(--surface); overflow: hidden;
-    min-width: 0; min-height: 0; height: 100%;
+    min-width: 0; min-height: 0;
   }
   #body.sidebar-collapsed { grid-template-columns: 1fr 0px; }
   #body.sidebar-collapsed #sidebar { border-left: none; overflow: hidden; }
