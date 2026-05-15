@@ -967,57 +967,9 @@ function renderHeatMap(snapshot, patternColors) {
   const el = document.getElementById('layer-heat');
   if (el) el.innerHTML = '';
 }
-function renderFieldLines(lines, patternColors, view, ftToSvg) {
-  const el = document.getElementById('layer-lines');
-  if (!el || !lines?.length) return;
-  const ns = 'http://www.w3.org/2000/svg';
-  el.innerHTML = '';
-  const toSvg = ftToSvg || ((x,y)=>[x,y]);
-  for (const line of lines) {
-    if (!line.pts?.length) continue;
-    const pts = line.pts.map(p => toSvg(p.x,p.y).join(',')).join(' ');
-    const poly = document.createElementNS(ns,'polyline');
-    poly.setAttribute('points',pts); poly.setAttribute('fill','none');
-    poly.setAttribute('stroke', patternColors?.[line.pid]||'#c87818');
-    poly.setAttribute('stroke-width','0.8'); poly.setAttribute('opacity','0.6');
-    el.appendChild(poly);
-  }
-}
-function renderHotNodes(nodes, patternColors) {
-  const el = document.getElementById('layer-nodes');
-  if (!el || !nodes?.length) return;
-  const ns = 'http://www.w3.org/2000/svg';
-  el.innerHTML = '';
-  const toSvg = window._ftToSvg || ((x,y)=>[x,y]);
-  for (const n of nodes) {
-    const [sx,sy] = toSvg(n.x,n.y);
-    const c = document.createElementNS(ns,'circle');
-    c.setAttribute('cx',sx); c.setAttribute('cy',sy);
-    c.setAttribute('r', Math.min(4, 1 + (n.nStrong||0)*0.3));
-    c.setAttribute('fill','#c87818'); c.setAttribute('opacity','0.7');
-    el.appendChild(c);
-  }
-}
-function renderBuildings(buildings, patternColors, patternNames) {
-  const el = document.getElementById('layer-buildings');
-  if (!el || !buildings?.length) return;
-  const ns = 'http://www.w3.org/2000/svg';
-  el.innerHTML = '';
-  const toSvg = window._ftToSvg || ((x,y)=>[x,y]);
-  for (const b of buildings) {
-    const [sx,sy] = toSvg(b.x, b.y + b.h);
-    const [x1]   = toSvg(b.x + b.w, b.y);
-    const [,y1]  = toSvg(b.x, b.y);
-    const color  = patternColors?.[b.domPid] || '#c87818';
-    const rect   = document.createElementNS(ns,'rect');
-    rect.setAttribute('x',sx); rect.setAttribute('y',sy);
-    rect.setAttribute('width', Math.abs(x1-sx));
-    rect.setAttribute('height',Math.abs(y1-sy));
-    rect.setAttribute('fill',color); rect.setAttribute('opacity','0.55');
-    rect.setAttribute('stroke',color); rect.setAttribute('stroke-width','0.5');
-    el.appendChild(rect);
-  }
-}
+
+
+
 
 function renderSnapshot(snapshot, result) {
   if(!snapshot||!result) return;
@@ -1206,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.time('constraints'); ({derived} = solveConstraintsMin(G, MAP)); window._derivedG = derived; console.timeEnd('constraints');
 
       setStatus('Rendering…'); await tick();
-      drawEDA(parcels, proj, ftToCanvas);
+      drawEDA(parcels, proj, _ftToCx);
       _derivedForDraw = derived; redrawCanvas();
 
       setStatus('Ready'); await tick();
