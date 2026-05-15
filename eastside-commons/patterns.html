@@ -209,25 +209,7 @@
   <div id="err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#8b0000;color:#fff;font-family:monospace;font-size:0.7rem;padding:0.5rem 1rem;white-space:pre-wrap;max-height:40vh;overflow-y:auto;"></div>
   <div id="canvas-wrap">
     <button id="sidebar-toggle" title="Toggle panel">PANEL ›</button>
-    <svg id="main-svg" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;">
-      <defs>
-        <filter id="blur-sm"><feGaussianBlur stdDeviation="2"/></filter>
-        <filter id="blur-md"><feGaussianBlur stdDeviation="5"/></filter>
-        <clipPath id="site-clip">
-          <rect id="site-clip-rect" x="0" y="0" width="1000" height="800"/>
-        </clipPath>
-      </defs>
-      <g id="pz-root" clip-path="url(#site-clip)">
-        <g id="layer-eda"></g>
-        <g id="layer-site-facts"></g>
-        <g id="layer-heat"></g>
-        <g id="layer-lines"></g>
-        <g id="layer-nodes"></g>
-        <g id="layer-buildings"></g>
-        <g id="layer-labels"></g>
-      </g>
-    </svg>
-    <canvas id="field-canvas"></canvas>
+    <canvas id="main-canvas" style="width:100%;height:100%;display:block;"></canvas>
     <div id="canvas-label">Military Circle · 73.4 ac · Norfolk VA · field model · ft</div>
 
     <!-- ── Touch-friendly sticky tooltip panel ─────────────────────────────── -->
@@ -427,12 +409,7 @@ function buildProjection(parcels) {
   const SVG_H = Math.round(SVG_W * ftH_total / ftW_total);
 
   // Set SVG viewBox dynamically to match
-  const svgEl = document.getElementById('main-svg');
-  if (svgEl) {
-    svgEl.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
-    const cr = svgEl.getElementById ? svgEl.getElementById('site-clip-rect') : document.getElementById('site-clip-rect');
-    if (cr) { cr.setAttribute('width', SVG_W); cr.setAttribute('height', SVG_H); }
-  }
+  // Canvas-only: no SVG viewBox to set
 
   const MAP = {
     x0: -padX,        y0: -padY,
@@ -449,17 +426,28 @@ function buildProjection(parcels) {
     return [fx, fy];
   }
 
-  // ftToSvg(fx, fy) → [svgX, svgY]  (flip y for SVG)
-  const svgW = MAP.svgX1-MAP.svgX0, svgH = MAP.svgY1-MAP.svgY0;
-  const ftW  = MAP.x1-MAP.x0,       ftH  = MAP.y1-MAP.y0;
-  function ftToSvg(fx, fy) {
+  const ftW = MAP.x1-MAP.x0, ftH = MAP.y1-MAP.y0;
+
+  // ftToCanvas(fx, fy) → [cx, cy] in canvas pixel space
+  // Recomputed each render call so it always matches current canvas size + pan/zoom.
+  function ftToCanvas(fx, fy) {
+    const canvas = document.getElementById('main-canvas');
+    if (!canvas) return [0,0];
+    const W = canvas.clientWidth, H = canvas.clientHeight;
+    const u = (fx - MAP.x0) / ftW;
+    const v = 1 - (fy - MAP.y0) / ftH;  // flip y
+    // Apply pan/zoom
+    const bx = u * W, by = v * H;
     return [
-      MAP.svgX0 + (fx-MAP.x0)/ftW * svgW,
-      MAP.svgY1 - (fy-MAP.y0)/ftH * svgH,   // flip: north (+fy) → top (−svgY)
+      _panTx + bx * _panScale,
+      _panTy + by * _panScale,
     ];
   }
+  window._ftToCanvas = ftToCanvas;
+  // Legacy alias for any code still referencing _ftToSvg
+  window._ftToSvg = ftToCanvas;
 
-  return {proj, MAP, ftToSvg};
+  return {proj, MAP, ftToSvg: ftToCanvas};
 }
 
 function buildParcelGeometry(parcels,proj) {
@@ -548,106 +536,16 @@ function solveConstraintsMin(G, MAP) {
 // [removed: // ── FIELD LINE TRACER ────────────────]
 // [removed: // ── MAIN SOLVE ───────────────────────]
 // ── DRAW FUNCTIONS ────────────────────────────────────────────────────────────
-function drawEDA(parcels, proj, ftToSvg) {
-  const ns='http://www.w3.org/2000/svg';
-  const layer=document.getElementById('layer-eda');
-  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
-  for (const p of parcels) {
-    if (!p.is_eda || !p.rings?.[0]) continue;
-    const svgPts = p.rings[0].map(([lon,lat])=>ftToSvg(...proj(lon,lat)));
-    for (const [sx,sy] of svgPts) {
-      if(sx<minX)minX=sx; if(sx>maxX)maxX=sx;
-      if(sy<minY)minY=sy; if(sy>maxY)maxY=sy;
-    }
-    const pts=svgPts.map(p=>p.join(',')).join(' ');
-    const poly=document.createElementNS(ns,'polygon');
-    poly.setAttribute('points',pts);
-    poly.setAttribute('fill','rgba(40,120,40,0.08)');
-    poly.setAttribute('stroke','rgba(80,220,80,0.7)');
-    poly.setAttribute('stroke-width','2');
-    layer.appendChild(poly);
-  }
-  const svgEl=document.getElementById('main-svg');
-  const vb=svgEl?.viewBox?.baseVal;
-  console.log(`drawEDA: bbox x=${minX.toFixed(0)}..${maxX.toFixed(0)} y=${minY.toFixed(0)}..${maxY.toFixed(0)} | viewBox 0 0 ${vb?.width} ${vb?.height} | canvas ${svgEl?.clientWidth}x${svgEl?.clientHeight}`);
+// Store parcel data for canvas redraws
+let _edaParcels = [], _siteProj = null, _derivedForDraw = null;
+
+function drawEDA(parcels, proj, ftToCanvas) {
+  _edaParcels = parcels; _siteProj = proj;
+  redrawCanvas();
 }
 
-function drawSiteFacts(derived, ftToSvg) {
-  const ns='http://www.w3.org/2000/svg';
-  const layer=document.getElementById('layer-site-facts');
-  layer.innerHTML='';
-  // ft→svg conversion helpers for site facts
-  const fs=(fx,fy)=>ftToSvg(fx,fy);  // [svgX, svgY]
-  const fsW=(fw)=>{const [x0]=ftToSvg(0,0),[x1]=ftToSvg(fw,0);return Math.abs(x1-x0);};
-  const fsH=(fh)=>{const [,y0]=ftToSvg(0,0),[,y1]=ftToSvg(0,fh);return Math.abs(y1-y0);};
-  const R=(x,y,w,h,fill,stroke,sw,da)=>{
-    const [sx,sy]=fs(x,y+h); // flip: feet-y is north-up, SVG-y is south-down; bottom-left→SVG top-left
-    const r=document.createElementNS(ns,'rect');
-    r.setAttribute('x',sx);r.setAttribute('y',sy);r.setAttribute('width',fsW(w));r.setAttribute('height',fsH(h));
-    r.setAttribute('fill',fill);r.setAttribute('stroke',stroke);r.setAttribute('stroke-width',sw||'1');
-    if(da)r.setAttribute('stroke-dasharray',da);r.setAttribute('pointer-events','none');return r;
-  };
-  const T=(x,y,txt,fill,size,anchor)=>{
-    const [sx,sy]=fs(x,y);
-    const t=document.createElementNS(ns,'text');
-    t.setAttribute('x',sx);t.setAttribute('y',sy);t.setAttribute('text-anchor',anchor||'middle');
-    t.setAttribute('fill',fill);t.setAttribute('font-size',size||'6');
-    t.setAttribute('font-family','monospace');t.setAttribute('letter-spacing','1');
-    t.setAttribute('pointer-events','none');t.textContent=txt;return t;
-  };
-  const L=(x1,y1,x2,y2,stroke,sw,da)=>{
-    const [sx1,sy1]=fs(x1,y1),[sx2,sy2]=fs(x2,y2);
-    const l=document.createElementNS(ns,'line');
-    l.setAttribute('x1',sx1);l.setAttribute('y1',sy1);l.setAttribute('x2',sx2);l.setAttribute('y2',sy2);
-    l.setAttribute('stroke',stroke);l.setAttribute('stroke-width',sw||'1');
-    if(da)l.setAttribute('stroke-dasharray',da);l.setAttribute('pointer-events','none');return l;
-  };
-  if(derived.SPINE){
-    const s=derived.SPINE;
-    layer.appendChild(R(s.x,s.y,s.w,s.h,'rgba(200,120,24,0.07)','rgba(200,120,24,0.6)','1.2'));
-    layer.appendChild(L(s.x+s.w/2,s.y,s.x+s.w/2,s.y+s.h,'rgba(200,120,24,0.2)','0.5','5,5'));
-    layer.appendChild(T(s.x+s.w/2,s.y+13,'SPINE','rgba(200,120,24,0.8)','5.5'));
-  }
-  if(derived.BAND){
-    const b=derived.BAND;
-    layer.appendChild(L(b.x, b.y+b.h, b.x+b.w, b.y+b.h,'rgba(200,120,24,0.35)','1','8,5'));
-    layer.appendChild(T(b.x+66, b.y+b.h-16,'VA BEACH BLVD','rgba(200,120,24,0.5)','5','start'));
-  }
-  if(derived.SPONGE){
-    const sg=derived.SPONGE;
-    const e=document.createElementNS(ns,'ellipse');
-    const [secx,secy]=fs(sg.cx,sg.cy);
-    e.setAttribute('cx',secx);e.setAttribute('cy',secy);
-    e.setAttribute('rx',fsW(sg.rx));e.setAttribute('ry',fsH(sg.ry));
-    e.setAttribute('fill','rgba(40,180,80,0.08)');e.setAttribute('stroke','rgba(40,180,80,0.55)');
-    e.setAttribute('stroke-width','1.2');e.setAttribute('stroke-dasharray','4,3');
-    e.setAttribute('pointer-events','none');layer.appendChild(e);
-    const ib=document.createElementNS(ns,'ellipse');
-    ib.setAttribute('cx',secx);ib.setAttribute('cy',secy);
-    ib.setAttribute('rx',fsW(sg.rx*0.38));ib.setAttribute('ry',fsH(sg.ry*0.38));
-    ib.setAttribute('fill','rgba(40,180,80,0.12)');ib.setAttribute('stroke','rgba(40,180,80,0.28)');
-    ib.setAttribute('stroke-width','0.5');ib.setAttribute('pointer-events','none');layer.appendChild(ib);
-    layer.appendChild(T(sg.cx,sg.cy,'SPONGE','rgba(40,180,80,0.72)','6'));
-  }
-  if(derived.ROSS){
-    const ro=derived.ROSS;
-    layer.appendChild(R(ro.x,ro.y,ro.w,ro.h,'rgba(120,60,200,0.06)','rgba(120,60,200,0.5)','1','5,3'));
-    layer.appendChild(T(ro.x+ro.w/2,ro.y+ro.h/2+3,'ROSS→2036','rgba(120,60,200,0.65)','5.5'));
-  }
-  if(derived.TIDE){
-    const ti=derived.TIDE;
-    layer.appendChild(R(ti.x,ti.y,ti.w,ti.h,'rgba(8,88,184,0.10)','rgba(8,88,184,0.6)','1.2'));
-    layer.appendChild(T(ti.x+ti.w/2,ti.y+ti.h/2-3,'TIDE','rgba(8,88,184,0.8)','6'));
-    layer.appendChild(T(ti.x+ti.w/2,ti.y+ti.h+10,'↑ I-264','rgba(8,88,184,0.35)','6'));
-  }
-  if(derived.RESEARCH){
-    const rs=derived.RESEARCH;
-    layer.appendChild(R(rs.x,rs.y,rs.w,rs.h,'rgba(24,160,200,0.06)','rgba(24,160,200,0.38)','0.8','3,4'));
-    layer.appendChild(T(rs.x+rs.w/2,rs.y+rs.h/2+3,'RESEARCH','rgba(24,160,200,0.45)','4.5'));
-  }
-}
+// drawSiteFacts replaced by _drawSiteFacts in canvas engine
 
-// ── RENDER FIELD LINES ────────────────────────────────────────────────────────
 function hexToRgb(hex) {
   const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
   return [r,g,b];
@@ -673,36 +571,24 @@ let _panScale = 1, _panTx = 0, _panTy = 0;
 const MIN_SCALE = 0.5, MAX_SCALE = 20;
 
 function applyTransform() {
-  const root = document.getElementById('pz-root');
-  if (root) root.setAttribute('transform', `translate(${_panTx},${_panTy}) scale(${_panScale})`);
-  if (_result) {
-    const fd = _result.fields || _result._jsFields;
-    if (fd) renderFieldOverlay(fd, _result.gw, _result.gh, _result.MAP);
-  }
+  redrawCanvas();
 }
 
 function _svgScale() {
-  // Returns screen px per SVG user unit (accounts for viewBox + CSS size)
-  const svgEl = document.getElementById('main-svg');
-  if (!svgEl) return 1;
-  const rect = svgEl.getBoundingClientRect();
-  const vb   = svgEl.viewBox.baseVal;
-  return rect.width / (vb.width || 1);
+  // For canvas: scale = 1 (canvas pixels are screen pixels)
+  return 1;
 }
 
 (function() {
-  const svgEl = document.getElementById('main-svg');
+  const svgEl = document.getElementById('main-canvas');
   if (!svgEl) return;
 
-  // Wheel zoom — pivot on cursor position in SVG user space
+  // Wheel zoom — pivot on cursor position in canvas pixel space
   svgEl.addEventListener('wheel', e => {
     e.preventDefault();
     const rect = svgEl.getBoundingClientRect();
-    const vb   = svgEl.viewBox.baseVal;
-    // Cursor in SVG user space (pre-transform)
-    const mx = (e.clientX - rect.left) / rect.width  * vb.width;
-    const my = (e.clientY - rect.top)  / rect.height * vb.height;
-    // Cursor in pz-root local space (where content lives)
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
     const lx = (mx - _panTx) / _panScale;
     const ly = (my - _panTy) / _panScale;
 
@@ -720,67 +606,53 @@ function _svgScale() {
   svgEl.addEventListener('touchstart', e => {
     _touches = Array.from(e.touches);
     if (_touches.length === 2) {
-      const dx = _touches[1].clientX - _touches[0].clientX;
-      const dy = _touches[1].clientY - _touches[0].clientY;
-      _lastDist = Math.hypot(dx, dy);
-      _lastMid  = { x: (_touches[0].clientX+_touches[1].clientX)/2,
-                    y: (_touches[0].clientY+_touches[1].clientY)/2 };
+      _lastDist = Math.hypot(_touches[1].clientX-_touches[0].clientX, _touches[1].clientY-_touches[0].clientY);
     }
   }, { passive: true });
   svgEl.addEventListener('touchmove', e => {
     e.preventDefault();
     const ts = Array.from(e.touches);
     const rect = svgEl.getBoundingClientRect();
-    const vb   = svgEl.viewBox.baseVal;
-    const toSvg = (cx, cy) => ({
-      x: (cx - rect.left) / rect.width  * vb.width,
-      y: (cy - rect.top)  / rect.height * vb.height,
-    });
     if (ts.length === 2) {
-      const dx = ts[1].clientX - ts[0].clientX;
-      const dy = ts[1].clientY - ts[0].clientY;
+      const dx = ts[1].clientX - ts[0].clientX, dy = ts[1].clientY - ts[0].clientY;
       const dist = Math.hypot(dx, dy);
-      const mid  = { x:(ts[0].clientX+ts[1].clientX)/2, y:(ts[0].clientY+ts[1].clientY)/2 };
-      const svgMid = toSvg(mid.x, mid.y);
-      const lx = (svgMid.x - _panTx) / _panScale;
-      const ly = (svgMid.y - _panTy) / _panScale;
+      const mx = (ts[0].clientX+ts[1].clientX)/2 - rect.left;
+      const my = (ts[0].clientY+ts[1].clientY)/2 - rect.top;
+      const lx = (mx - _panTx) / _panScale, ly = (my - _panTy) / _panScale;
       if (_lastDist) {
-        _panScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, _panScale * (dist/_lastDist)));
-        _panTx = svgMid.x - lx * _panScale;
-        _panTy = svgMid.y - ly * _panScale;
+        _panScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, _panScale*(dist/_lastDist)));
+        _panTx = mx - lx*_panScale; _panTy = my - ly*_panScale;
       }
-      _lastDist = dist; _lastMid = mid;
-      applyTransform();
-    } else if (ts.length === 1 && _lastMid && _touches.length === 1) {
-      const s = _svgScale();
-      _panTx += (ts[0].clientX - _touches[0].clientX) / s;
-      _panTy += (ts[0].clientY - _touches[0].clientY) / s;
-      _touches = ts;
+      _lastDist = dist; applyTransform();
+    } else if (ts.length === 1 && _touches.length === 1) {
+      _panTx += ts[0].clientX - _touches[0].clientX;
+      _panTy += ts[0].clientY - _touches[0].clientY;
       applyTransform();
     }
     _touches = ts;
   }, { passive: false });
   svgEl.addEventListener('touchend', e => { _touches = Array.from(e.touches); _lastDist=0; });
 
-  // Mouse drag pan
+  // Mouse drag pan (when not in paint mode)
   let dragging=false, dragX=0, dragY=0;
   svgEl.addEventListener('mousedown', e => {
+    if (_painting) return;
     if (e.button !== 0) return;
     dragging=true; dragX=e.clientX; dragY=e.clientY;
     svgEl.style.cursor='grabbing';
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const s = _svgScale();
-    _panTx += (e.clientX-dragX) / s;
-    _panTy += (e.clientY-dragY) / s;
+    _panTx += (e.clientX-dragX);
+    _panTy += (e.clientY-dragY);
     dragX=e.clientX; dragY=e.clientY;
     applyTransform();
   });
   window.addEventListener('mouseup', () => { dragging=false; svgEl.style.cursor=''; });
 
   // Double-click to reset
-  svgEl.addEventListener('dblclick', () => {
+  svgEl.addEventListener('dblclick', e => {
+    if (_painting) return;
     _panScale=1; _panTx=0; _panTy=0; applyTransform();
   });
 
@@ -857,104 +729,238 @@ const FIELD_COLORS = {
   built_height:[ 60, 120, 255],
 };
 
-function renderFieldOverlay(fields, gw, gh, MAP) {
-  const fc = document.getElementById('field-canvas');
-  if (!fc || !fields || !gw || !gh || !MAP) return;
 
-  const show = document.getElementById('ctrl-fields')?.checked !== false;
-  if (!show) { fc.style.display = 'none'; return; }
 
+// ── CANVAS RENDER ENGINE ──────────────────────────────────────────────────────
+// Single canvas (#main-canvas) renders all layers in z-order.
+// Called on: init, post-solve, pan/zoom, resize, field overlay toggle.
+
+function getCanvas() { return document.getElementById('main-canvas'); }
+
+function _resizeCanvas() {
+  const c = getCanvas(); if (!c) return;
   const wrap = document.getElementById('canvas-wrap');
-  fc.width  = wrap.clientWidth  || gw;
-  fc.height = wrap.clientHeight || gh;
-  fc.style.display = 'block';
+  if (c.width !== wrap.clientWidth || c.height !== wrap.clientHeight) {
+    c.width  = wrap.clientWidth;
+    c.height = wrap.clientHeight;
+  }
+}
 
-  const ctx = fc.getContext('2d');
-  ctx.clearRect(0, 0, fc.width, fc.height);
+// ft → canvas pixel (includes pan/zoom)
+function _ftToCx(fx, fy) {
+  const c = getCanvas(); if (!c) return [0,0];
+  const W = c.width, H = c.height;
+  const u = (fx - _MAP.x0) / (_MAP.x1 - _MAP.x0);
+  const v = 1 - (fy - _MAP.y0) / (_MAP.y1 - _MAP.y0);
+  return [_panTx + u * W * _panScale, _panTy + v * H * _panScale];
+}
+let _MAP = { x0:0, x1:1000, y0:0, y1:1000 };
 
-  // Paint at field resolution into a temp canvas, then scale onto fc
+function redrawCanvas() {
+  const c = getCanvas(); if (!c) return;
+  _resizeCanvas();
+  const ctx = c.getContext('2d');
+  ctx.clearRect(0, 0, c.width, c.height);
+
+  // ── Layer 1: field overlay ──────────────────────────────────────────
+  const fd = _result?.fields || _result?._jsFields;
+  if (fd && document.getElementById('ctrl-fields')?.checked !== false) {
+    _drawFieldLayer(ctx, fd, _result.gw, _result.gh, _result.MAP);
+  }
+
+  // ── Layer 2: EDA outlines ───────────────────────────────────────────
+  if (_edaParcels?.length && _siteProj) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(80,220,80,0.55)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 6]);
+    ctx.fillStyle = 'rgba(40,120,40,0.06)';
+    for (const p of _edaParcels) {
+      if (!p.is_eda || !p.rings?.[0]) continue;
+      const pts = p.rings[0].map(([lon,lat]) => _ftToCx(..._siteProj(lon,lat)));
+      if (!pts.length) continue;
+      ctx.beginPath();
+      ctx.moveTo(pts[0][0], pts[0][1]);
+      for (let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // ── Layer 3: site facts (derived geometry) ──────────────────────────
+  if (_derivedForDraw) _drawSiteFacts(ctx, _derivedForDraw);
+
+  // ── Layer 4: field lines ────────────────────────────────────────────
+  const snap = _result?.snapshots?.[_currentSnap];
+  const view = document.getElementById('ctrl-view')?.value || 'lines';
+  if (snap?.lines?.length && view !== 'buildings') {
+    ctx.save();
+    ctx.lineWidth = 0.8; ctx.globalAlpha = 0.55;
+    for (const line of snap.lines) {
+      if (!line.pts?.length) continue;
+      const color = _result.patternColors?.[line.pid] || '#c87818';
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      let first = true;
+      for (const p of line.pts) {
+        const [cx,cy] = _ftToCx(p.x, p.y);
+        if (first) { ctx.moveTo(cx,cy); first=false; } else ctx.lineTo(cx,cy);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+  }
+
+  // ── Layer 5: hot nodes ──────────────────────────────────────────────
+  if (_result?.hotNodes?.length && view !== 'buildings') {
+    ctx.save(); ctx.globalAlpha = 0.7;
+    for (const n of _result.hotNodes) {
+      const [cx,cy] = _ftToCx(n.x, n.y);
+      const r = Math.max(2, Math.min(5, 1 + (n.nStrong||0)*0.4)) * _panScale;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+      ctx.fillStyle = '#c87818'; ctx.fill();
+    }
+    ctx.globalAlpha = 1; ctx.restore();
+  }
+
+  // ── Layer 6: buildings ──────────────────────────────────────────────
+  if (_result?.buildings?.length && view === 'buildings') {
+    ctx.save();
+    for (const b of _result.buildings) {
+      const [x0,y0] = _ftToCx(b.x, b.y + b.h);
+      const [x1,y1] = _ftToCx(b.x + b.w, b.y);
+      const color = _result.patternColors?.[b.domPid] || '#c87818';
+      ctx.fillStyle = color + '99';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 0.5;
+      ctx.fillRect(x0, y0, x1-x0, y1-y0);
+      ctx.strokeRect(x0, y0, x1-x0, y1-y0);
+    }
+    ctx.restore();
+  }
+
+  // ── Layer 7: canvas label ───────────────────────────────────────────
+  ctx.save();
+  ctx.font = '10px var(--font-mono, monospace)';
+  ctx.fillStyle = 'rgba(106,96,80,0.7)';
+  ctx.fillText('Military Circle · 73.4 ac · Norfolk VA · field model · ft', 10, c.height - 8);
+  ctx.restore();
+}
+
+function _drawFieldLayer(ctx, fields, gw, gh, MAP) {
+  if (!fields || !gw || !gh || !MAP) return;
+  const FIELD_COLORS = {
+    social:      [255,  60,  30],
+    wild:        [ 40, 200,  80],
+    comfort:     [240, 200,  40],
+    wall:        [160,  80,  20],
+    interest_z:  [255, 150,   0],
+    built_height:[ 60, 120, 255],
+  };
   const tmp = document.createElement('canvas');
   tmp.width = gw; tmp.height = gh;
   const tctx = tmp.getContext('2d');
   const img = tctx.createImageData(gw, gh);
-  const px  = img.data;
-
+  const px = img.data;
   const acc = new Float32Array(gw * gh * 4);
   for (const [fname, rgb] of Object.entries(FIELD_COLORS)) {
-    const buf = fields[fname];
-    if (!buf) continue;
+    const buf = fields[fname]; if (!buf) continue;
     const scale = fname === 'built_height' ? 1/96 : 1;
-    for (let i = 0; i < gw * gh; i++) {
-      const v = Math.min(1, (buf[i] || 0) * scale);
+    for (let i=0; i<gw*gh; i++) {
+      const v = Math.min(1, (buf[i]||0) * scale);
       if (v < 0.01) continue;
       const a = v * 0.6;
-      acc[i*4+0] += rgb[0] * a;
-      acc[i*4+1] += rgb[1] * a;
-      acc[i*4+2] += rgb[2] * a;
-      acc[i*4+3] += a * 255;
+      acc[i*4+0] += rgb[0]*a; acc[i*4+1] += rgb[1]*a;
+      acc[i*4+2] += rgb[2]*a; acc[i*4+3] += a*255;
     }
   }
-
-  // Flip Y: field y=0=south → canvas y=0=top
-  for (let cy = 0; cy < gh; cy++) {
-    for (let cx = 0; cx < gw; cx++) {
-      const src = cy * gw + cx;
-      const dst = ((gh - 1 - cy) * gw + cx) * 4;
-      px[dst+0] = Math.min(255, acc[src*4+0]);
+  for (let cy=0; cy<gh; cy++) {
+    for (let cx=0; cx<gw; cx++) {
+      const src = cy*gw+cx, dst = ((gh-1-cy)*gw+cx)*4;
+      px[dst]   = Math.min(255, acc[src*4]);
       px[dst+1] = Math.min(255, acc[src*4+1]);
       px[dst+2] = Math.min(255, acc[src*4+2]);
       px[dst+3] = Math.min(210, acc[src*4+3]);
     }
   }
   tctx.putImageData(img, 0, 0);
-
-  // Map field grid → canvas pixels.
-  // ftToSvg → SVG user space → apply pz-root transform → apply SVG→screen → subtract canvas rect
-  // We decompose: svgEl.getScreenCTM() gives SVG user→screen (viewBox scaling only).
-  // Then we manually apply the pz-root translate/scale on top, since pz-root sits
-  // between SVG user space and the content layers.
-  const toSvg  = window._ftToSvg || ((x,y)=>[x,y]);
-  const svgEl  = document.getElementById('main-svg');
-  const fcRect = fc.getBoundingClientRect();
-  const baseCTM = svgEl?.getScreenCTM?.();
-
-  let dx, dy, dw, dh;
-  if (baseCTM) {
-    // Apply pz-root pan/zoom on top of ftToSvg coords, then baseCTM to screen
-    const s  = _panScale, ptx = _panTx, pty = _panTy;
-    const pt = (fx, fy) => {
-      const [sx, sy] = toSvg(fx, fy);
-      // pz-root: translate(ptx,pty) scale(s) applied to SVG coords
-      const px = sx * s + ptx;
-      const py = sy * s + pty;
-      return {
-        x: baseCTM.a*px + baseCTM.c*py + baseCTM.e - fcRect.left,
-        y: baseCTM.b*px + baseCTM.d*py + baseCTM.f - fcRect.top,
-      };
-    };
-    const nw = pt(MAP.x0, MAP.y1);
-    const se = pt(MAP.x1, MAP.y0);
-    dx = nw.x; dy = nw.y;
-    dw = se.x - nw.x;
-    dh = se.y - nw.y;
-  } else {
-    const vb = svgEl?.viewBox?.baseVal || {x:0,y:0,width:1000,height:800};
-    const [sx0,sy0] = toSvg(MAP.x0, MAP.y1);
-    const [sx1,sy1] = toSvg(MAP.x1, MAP.y0);
-    dx = (sx0-vb.x)/vb.width  * fc.width;
-    dy = (sy0-vb.y)/vb.height * fc.height;
-    dw = (sx1-sx0) /vb.width  * fc.width;
-    dh = (sy1-sy0) /vb.height * fc.height;
-  }
-
+  // Map field grid to canvas coords
+  const c = getCanvas();
+  const W = c.width, H = c.height;
+  const [dx, dy] = _ftToCx(MAP.x0, MAP.y1);
+  const [dx2,dy2] = _ftToCx(MAP.x1, MAP.y0);
   ctx.globalAlpha = 0.82;
-  ctx.drawImage(tmp, dx, dy, dw, dh);
+  ctx.drawImage(tmp, dx, dy, dx2-dx, dy2-dy);
   ctx.globalAlpha = 1;
 }
-function clearFieldOverlay() {
-  const fc = document.getElementById('field-canvas');
-  if (fc) fc.style.display = 'none';
+
+function _drawSiteFacts(ctx, derived) {
+  if (!derived) return;
+  ctx.save();
+  ctx.font = `${Math.max(8, 9*_panScale)}px var(--font-mono, monospace)`;
+
+  const label = (fx, fy, text, color='rgba(200,120,24,0.7)') => {
+    const [cx,cy] = _ftToCx(fx, fy);
+    ctx.fillStyle = color; ctx.fillText(text, cx, cy);
+  };
+  const box = (x,y,w,h, stroke, fill='none', dash=[]) => {
+    const [x0,y0] = _ftToCx(x, y+h);
+    const [x1,y1] = _ftToCx(x+w, y);
+    ctx.setLineDash(dash);
+    ctx.strokeStyle = stroke; ctx.lineWidth = 1;
+    if (fill !== 'none') { ctx.fillStyle = fill; ctx.fillRect(x0,y0,x1-x0,y1-y0); }
+    ctx.strokeRect(x0, y0, x1-x0, y1-y0);
+    ctx.setLineDash([]);
+  };
+  const ellipse = (cx,cy,rx,ry, stroke, fill='none') => {
+    const [scx,scy] = _ftToCx(cx, cy);
+    const [srx] = _ftToCx(cx+rx, cy); const srxPx = Math.abs(srx - scx);
+    const [,sry] = _ftToCx(cx, cy+ry); const sryPx = Math.abs(sry - scy);
+    ctx.beginPath(); ctx.ellipse(scx, scy, srxPx, sryPx, 0, 0, Math.PI*2);
+    ctx.strokeStyle = stroke; ctx.lineWidth = 1.2;
+    if (fill !== 'none') { ctx.fillStyle = fill; ctx.fill(); }
+    ctx.stroke();
+  };
+
+  if (derived.SPINE) {
+    const s = derived.SPINE;
+    box(s.x, s.y, s.w, s.h, 'rgba(200,120,24,0.3)', 'rgba(200,120,24,0.04)', [4,8]);
+    label(s.x+s.w/2, s.y+s.h/2, 'SPINE', 'rgba(200,120,24,0.5)');
+  }
+  if (derived.SPONGE) {
+    const sg = derived.SPONGE;
+    ellipse(sg.cx, sg.cy, sg.rx, sg.ry, 'rgba(40,200,80,0.5)', 'rgba(40,200,80,0.04)');
+    label(sg.cx, sg.cy, 'SPONGE', 'rgba(40,200,80,0.6)');
+  }
+  if (derived.TIDE) {
+    const t = derived.TIDE;
+    box(t.x, t.y, t.w, t.h, 'rgba(24,160,200,0.5)', 'rgba(24,160,200,0.06)');
+    label(t.x+t.w/2, t.y+t.h/2, 'TIDE', 'rgba(24,160,200,0.7)');
+  }
+  if (derived.RESEARCH) {
+    const r = derived.RESEARCH;
+    box(r.x, r.y, r.w, r.h, 'rgba(24,160,200,0.4)', 'none', [2,4]);
+    label(r.x+r.w/2, r.y+r.h/2, 'RESEARCH', 'rgba(24,160,200,0.5)');
+  }
+  ctx.restore();
 }
+
+// Expose for field overlay toggle and pan/zoom
+function renderFieldOverlay(fields, gw, gh, MAP) {
+  if (MAP) _MAP = MAP;
+  redrawCanvas();
+}
+function clearFieldOverlay() { redrawCanvas(); }
+
+function renderHeatMap() {}  // no-op — field overlay handles this
+function renderFieldLines(lines, patternColors, view, ftToCanvas) { redrawCanvas(); }
+function renderHotNodes()   { redrawCanvas(); }
+function renderBuildings()  { redrawCanvas(); }
+
+// Redraws on window resize
+window.addEventListener('resize', () => { _resizeCanvas(); redrawCanvas(); });
 
 // ── RENDER STUBS ─────────────────────────────────────────────────────────────
 function renderHeatMap(snapshot, patternColors) {
@@ -1027,22 +1033,22 @@ function renderSnapshot(snapshot, result) {
   // Heat map
   if((view==='heat'||view==='both')&&!isBuildings) {
     renderHeatMap({...snapshot, MAP:result.MAP, cellSize:result.cellSize}, result.patternColors);
-  } else { document.getElementById('layer-heat').innerHTML=''; }
+  } else {  }
 
   // Field lines
   if((view==='lines'||view==='both')&&!isBuildings) {
     renderFieldLines(snapshot.lines, result.patternColors, view, result.ftToSvg);
     renderHotNodes(result.hotNodes, result.patternColors);
   } else {
-    document.getElementById('layer-lines').innerHTML='';
-    document.getElementById('layer-nodes').innerHTML='';
+    
+    
   }
 
   // Buildings
   if(isBuildings) {
     renderBuildings(result.buildings, result.patternColors, result.patternNames);
   } else {
-    document.getElementById('layer-buildings').innerHTML='';
+    
   }
 
   // Pass label
@@ -1200,16 +1206,15 @@ document.addEventListener('DOMContentLoaded', () => {
       console.time('constraints'); ({derived} = solveConstraintsMin(G, MAP)); window._derivedG = derived; console.timeEnd('constraints');
 
       setStatus('Rendering…'); await tick();
-      console.time('drawEDA'); drawEDA(parcels, proj, ftToSvg); console.timeEnd('drawEDA');
-      console.time('drawSiteFacts'); drawSiteFacts(derived, ftToSvg); console.timeEnd('drawSiteFacts');
+      drawEDA(parcels, proj, ftToCanvas);
+      _derivedForDraw = derived; redrawCanvas();
 
       setStatus('Ready'); await tick();
 
-      // Auto-fit: reset pan/zoom so site fills the canvas
-      _panScale=1; _panTx=0; _panTy=0; applyTransform();
-      document.getElementById('btn-fit')?.addEventListener('click', () => {
-        _panScale=1; _panTx=0; _panTy=0; applyTransform();
-      });
+      _panScale=1; _panTx=0; _panTy=0;
+      const _mc=document.getElementById('main-canvas'), _cw=document.getElementById('canvas-wrap');
+      if (_mc) { _mc.width=_cw.clientWidth; _mc.height=_cw.clientHeight; }
+      document.getElementById('btn-fit')?.addEventListener('click',()=>{ _panScale=1;_panTx=0;_panTy=0;redrawCanvas(); });
 
       // Pre-populate pattern count from EC_PATTERN_DEFS (available before solve)
       const patDefs = window.EC_PATTERN_DEFS || [];
@@ -1289,22 +1294,21 @@ document.addEventListener('DOMContentLoaded', () => {
     _painting = !_painting;
     _paintBtn.style.color = _painting ? 'var(--amber)' : 'var(--muted)';
     _paintBtn.style.borderColor = _painting ? 'var(--amber)' : 'var(--border)';
-    document.getElementById('main-svg').style.cursor = _painting ? 'crosshair' : '';
+    document.getElementById('main-canvas').style.cursor = _painting ? 'crosshair' : '';
   });
 
-  function _sendPaint(svgX, svgY, strength=0.4) {
+  function _sendPaint(cx, cy, strength=0.4) {
     if (!_result?.MAP) return;
     const ch = document.getElementById('paint-channel')?.value || 'interest_z';
-    const svgEl = document.getElementById('main-svg');
-    const vb = svgEl.viewBox.baseVal;
-    const pzRoot = document.getElementById('pz-root');
-    const m = pzRoot?.transform?.baseVal?.[0]?.matrix;
-    const svgXu = m ? (svgX - m.e) / m.a : svgX;
-    const svgYu = m ? (svgY - m.f) / m.d : svgY;
+    const canvas = document.getElementById('main-canvas');
     const MAP = _result.MAP;
-    const ftX = MAP.x0 + (svgXu / vb.width)  * (MAP.x1 - MAP.x0);
-    const ftY = MAP.y0 + (1 - svgYu / vb.height) * (MAP.y1 - MAP.y0);
-    const radiusFt = 60 * (MAP.x1-MAP.x0) / vb.width * (1/_panScale);
+    const W = canvas.width, H = canvas.height;
+    // canvas px → ft (inverse of _ftToCx)
+    const u = (cx - _panTx) / (_panScale * W);
+    const v = (cy - _panTy) / (_panScale * H);
+    const ftX = MAP.x0 + u * (MAP.x1 - MAP.x0);
+    const ftY = MAP.y0 + (1 - v) * (MAP.y1 - MAP.y0);
+    const radiusFt = 80 * (MAP.x1-MAP.x0) / W / _panScale;
 
     // Apply locally to _result fields for immediate overlay feedback
     const fd = _result.fields || _result._jsFields;
@@ -1327,17 +1331,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  document.getElementById('main-svg').addEventListener('mousedown', e => {
+  document.getElementById('main-canvas').addEventListener('mousedown', e => {
     if (!_painting) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const vb = e.currentTarget.viewBox.baseVal;
-    _sendPaint((e.clientX-rect.left)/rect.width*vb.width, (e.clientY-rect.top)/rect.height*vb.height, 0.5);
+    _sendPaint(e.clientX-rect.left, e.clientY-rect.top, 0.5);
   });
-  document.getElementById('main-svg').addEventListener('mousemove', e => {
+  document.getElementById('main-canvas').addEventListener('mousemove', e => {
     if (!_painting || !(e.buttons&1)) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const vb = e.currentTarget.viewBox.baseVal;
-    _sendPaint((e.clientX-rect.left)/rect.width*vb.width, (e.clientY-rect.top)/rect.height*vb.height, 0.2);
+    _sendPaint(e.clientX-rect.left, e.clientY-rect.top, 0.2);
   });
 
   // ── Export ────────────────────────────────────────────────────────────────
@@ -1346,13 +1348,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const snap = { ts: new Date().toISOString(), noise: _result.noiseSeed,
       pass: _currentSnap, buildings: _result.buildings?.length??0,
       hotNodes: _result.hotNodes?.length??0, saturatedAt: _result.saturatedAt, log: _result.log };
-    const svgEl = document.getElementById('main-svg');
-    const svgStr = new XMLSerializer().serializeToString(svgEl);
+    const mc = document.getElementById('main-canvas');
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([svgStr],{type:'image/svg+xml'}));
-    a.download = `eastside-commons-${snap.ts.slice(0,16).replace(/[T:]/g,'-')}.svg`;
+    a.href = mc.toDataURL('image/png');
+    a.download = `eastside-commons-${snap.ts.slice(0,16).replace(/[T:]/g,'-')}.png`;
     a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     const b = document.createElement('a');
     b.href = URL.createObjectURL(new Blob([JSON.stringify(snap,null,2)],{type:'application/json'}));
     b.download = a.download.replace('.svg','-stats.json');
@@ -1463,53 +1463,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Event delegation — hot nodes
-  document.getElementById('layer-nodes').addEventListener('click', e => {
-    const c = e.target.closest('circle[data-tip]');
-    if (!c) return;
-    e.stopPropagation();
-    try {
-      const d = JSON.parse(c.dataset.tip);
-      showTip(
-        `Hot Node · ${d.nStrong} patterns`,
-        `Field pressure: <strong>${(d.v*100).toFixed(0)}%</strong><br>Pattern co-occurrence peak — multiple design forces converging.`,
-        d.weights, _result?.patternColors, _result?.patternNames
-      );
-    } catch(_) {}
-  });
-  document.getElementById('layer-nodes').addEventListener('touchstart', e => {
-    const c = e.target.closest('circle[data-tip]');
-    if (!c) return;
-    e.preventDefault(); e.stopPropagation();
-    c.dispatchEvent(new MouseEvent('click', {bubbles:true}));
-  }, {passive:false});
-
-  // Event delegation — buildings
-  document.getElementById('layer-buildings').addEventListener('click', e => {
-    const r = e.target.closest('rect[data-tip]');
-    if (!r) return;
-    e.stopPropagation();
-    try {
-      const d = JSON.parse(r.dataset.tip);
-      const name = (_result?.patternNames?.[d.domPid]) || `P${d.domPid}`;
-      showTip(
-        `Building · ${name}`,
-        `Footprint <strong>${Math.round(d.w)}×${Math.round(d.h)} ft</strong> · ${d.pts} nodes · avg <strong>${d.avgStrong?.toFixed(1)}</strong> simultaneous patterns`,
-        null, _result?.patternColors, _result?.patternNames
-      );
-    } catch(_) {}
-  });
-  document.getElementById('layer-buildings').addEventListener('touchstart', e => {
-    const r = e.target.closest('rect[data-tip]');
-    if (!r) return;
-    e.preventDefault(); e.stopPropagation();
-    r.dispatchEvent(new MouseEvent('click', {bubbles:true}));
-  }, {passive:false});
-
-  // Tap empty SVG → dismiss
-  document.getElementById('main-svg').addEventListener('click', e => {
-    if (!e.target.closest('[data-tip]')) tipPanel.style.display = 'none';
-  });
-
+      
   // Run — Worker path (GPU-first, JS fallback)
   document.getElementById('btn-run').addEventListener('click', async () => {
     const btn    = document.getElementById('btn-run');
@@ -1593,6 +1547,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const ms = Math.round(performance.now() - t0);
       _result = payload;
+      if (payload.MAP) _MAP = payload.MAP;
 
       // GPU buffer viewer
       if (payload.fields) {
