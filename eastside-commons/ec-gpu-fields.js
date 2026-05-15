@@ -438,6 +438,35 @@ class ECGpuFields {
     this._quad();
     this._swap();
   }
+  // ── Inject painted values additively into a field channel ─────────────
+  // channel: 'social'|'wild'|'comfort'|'interest_z'|'built_height'
+  // data: Float32Array gw*gh of values to ADD (clamped to [0,1])
+  injectChannel(channel, data) {
+    const gl = this.gl;
+    const channelMap = {
+      social:       { tex: 'F0_A', comp: 0 },
+      comfort:      { tex: 'F0_A', comp: 1 },
+      wild:         { tex: 'F0_A', comp: 2 },
+      built_height: { tex: 'F0_A', comp: 3 },
+      interest_z:   { tex: 'F2_A', comp: 2 },
+    };
+    const cm = channelMap[channel];
+    if (!cm) return;
+    // Read current RGBA, add data to component, re-upload
+    const readFbo = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, readFbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.textures[cm.tex], 0);
+    const fullBuf = new Float32Array(this.W * this.H * 4);
+    gl.readPixels(0, 0, this.W, this.H, gl.RGBA, gl.FLOAT, fullBuf);
+    gl.deleteFramebuffer(readFbo);
+    for (let i = 0; i < this.W * this.H; i++) {
+      fullBuf[i*4 + cm.comp] = Math.min(1, fullBuf[i*4 + cm.comp] + (data[i]||0));
+    }
+    gl.bindTexture(gl.TEXTURE_2D, this.textures[cm.tex]);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.W, this.H, 0, gl.RGBA, gl.FLOAT, fullBuf);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
   _paintIC(u) {
     const gl = this.gl;
     // Clear _B to zero

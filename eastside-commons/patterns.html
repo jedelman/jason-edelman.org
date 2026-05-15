@@ -1274,8 +1274,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── Paint mode ────────────────────────────────────────────────────────────
-  // Click/drag on canvas to inject field values. Works on current _result fields.
   let _painting = false;
+  let _activeWorker = null; // kept alive between passes
   const _paintBtn = document.getElementById('btn-paint');
   _paintBtn?.addEventListener('click', () => {
     _painting = !_painting;
@@ -1284,85 +1284,71 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('main-svg').style.cursor = _painting ? 'crosshair' : '';
   });
 
-  function _paintAtSvgPoint(svgX, svgY, radius=40, strength=0.4) {
-    if (!_result) return;
-    const fd = _result.fields || _result._jsFields;
-    if (!fd) return;
+  function _sendPaint(svgX, svgY, strength=0.4) {
+    if (!_result?.MAP) return;
     const ch = document.getElementById('paint-channel')?.value || 'interest_z';
-    const buf = fd[ch];
-    if (!buf) return;
-    const { gw, gh, MAP } = _result;
-    if (!MAP) return;
-    // SVG coords → ft via inverse ftToSvg
-    const vb = document.getElementById('main-svg').viewBox.baseVal;
+    const svgEl = document.getElementById('main-svg');
+    const vb = svgEl.viewBox.baseVal;
     const pzRoot = document.getElementById('pz-root');
-    // Account for pz-root transform
-    const t = pzRoot?.transform?.baseVal?.[0]?.matrix;
-    const svgXu = t ? (svgX - t.e) / t.a : svgX;
-    const svgYu = t ? (svgY - t.f) / t.d : svgY;
-    // ft from SVG user coords
+    const m = pzRoot?.transform?.baseVal?.[0]?.matrix;
+    const svgXu = m ? (svgX - m.e) / m.a : svgX;
+    const svgYu = m ? (svgY - m.f) / m.d : svgY;
+    const MAP = _result.MAP;
     const ftX = MAP.x0 + (svgXu / vb.width)  * (MAP.x1 - MAP.x0);
     const ftY = MAP.y0 + (1 - svgYu / vb.height) * (MAP.y1 - MAP.y0);
-    // Paint gaussian into field buffer
-    const radiusFt = radius * (MAP.x1-MAP.x0) / vb.width;
-    for (let cy=0; cy<gh; cy++) {
-      for (let cx=0; cx<gw; cx++) {
+    const radiusFt = 60 * (MAP.x1-MAP.x0) / vb.width * (1/_panScale);
+
+    // Apply locally to _result fields for immediate overlay feedback
+    const fd = _result.fields || _result._jsFields;
+    if (fd?.[ch]) {
+      const { gw, gh } = _result;
+      for (let cy=0; cy<gh; cy++) for (let cx=0; cx<gw; cx++) {
         const px = MAP.x0 + cx*(MAP.x1-MAP.x0)/gw;
         const py = MAP.y0 + cy*(MAP.y1-MAP.y0)/gh;
-        const d2 = (px-ftX)**2 + (py-ftY)**2;
+        const d2 = (px-ftX)**2+(py-ftY)**2;
         const g = strength * Math.exp(-3*d2/(radiusFt**2));
-        if (g > 0.001) buf[cy*gw+cx] = Math.min(1, buf[cy*gw+cx] + g);
+        if (g>0.001) fd[ch][cy*gw+cx] = Math.min(1, fd[ch][cy*gw+cx]+g);
       }
+      renderFieldOverlay(fd, gw, gh, MAP);
     }
-    renderFieldOverlay(fd, gw, gh, MAP);
+
+    // Also send to worker to inject into GPU texture for next pass
+    if (_activeWorker) {
+      _activeWorker.postMessage({ type:'paint', channel:ch, ftX, ftY, radiusFt, strength,
+        _GW:_result.gw, _GH:_result.gh, _MAP:MAP });
+    }
   }
 
   document.getElementById('main-svg').addEventListener('mousedown', e => {
     if (!_painting) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const vb = e.currentTarget.viewBox.baseVal;
-    const sx = (e.clientX-rect.left)/rect.width*vb.width;
-    const sy = (e.clientY-rect.top)/rect.height*vb.height;
-    _paintAtSvgPoint(sx, sy);
+    _sendPaint((e.clientX-rect.left)/rect.width*vb.width, (e.clientY-rect.top)/rect.height*vb.height, 0.5);
   });
   document.getElementById('main-svg').addEventListener('mousemove', e => {
-    if (!_painting || !(e.buttons & 1)) return;
+    if (!_painting || !(e.buttons&1)) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const vb = e.currentTarget.viewBox.baseVal;
-    const sx = (e.clientX-rect.left)/rect.width*vb.width;
-    const sy = (e.clientY-rect.top)/rect.height*vb.height;
-    _paintAtSvgPoint(sx, sy, 40, 0.15);
+    _sendPaint((e.clientX-rect.left)/rect.width*vb.width, (e.clientY-rect.top)/rect.height*vb.height, 0.2);
   });
 
   // ── Export ────────────────────────────────────────────────────────────────
   document.getElementById('btn-export')?.addEventListener('click', () => {
     if (!_result) return;
-    const snap = {
-      ts: new Date().toISOString(),
-      noise: _result.noiseSeed,
-      pass: _currentSnap,
-      buildings: _result.buildings?.length ?? 0,
-      hotNodes: _result.hotNodes?.length ?? 0,
-      saturatedAt: _result.saturatedAt,
-      log: _result.log,
-    };
-    // SVG export
+    const snap = { ts: new Date().toISOString(), noise: _result.noiseSeed,
+      pass: _currentSnap, buildings: _result.buildings?.length??0,
+      hotNodes: _result.hotNodes?.length??0, saturatedAt: _result.saturatedAt, log: _result.log };
     const svgEl = document.getElementById('main-svg');
     const svgStr = new XMLSerializer().serializeToString(svgEl);
-    const svgBlob = new Blob([svgStr], {type:'image/svg+xml'});
-    const svgUrl = URL.createObjectURL(svgBlob);
     const a = document.createElement('a');
-    a.href = svgUrl;
+    a.href = URL.createObjectURL(new Blob([svgStr],{type:'image/svg+xml'}));
     a.download = `eastside-commons-${snap.ts.slice(0,16).replace(/[T:]/g,'-')}.svg`;
     a.click();
-    URL.revokeObjectURL(svgUrl);
-    // JSON stats
-    const jsonBlob = new Blob([JSON.stringify(snap, null, 2)], {type:'application/json'});
-    const jsonUrl = URL.createObjectURL(jsonBlob);
+    setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     const b = document.createElement('a');
-    b.href = jsonUrl;
+    b.href = URL.createObjectURL(new Blob([JSON.stringify(snap,null,2)],{type:'application/json'}));
     b.download = a.download.replace('.svg','-stats.json');
-    setTimeout(() => { b.click(); URL.revokeObjectURL(jsonUrl); }, 300);
+    setTimeout(()=>{ b.click(); URL.revokeObjectURL(b.href); }, 300);
   });
 
   // Sidebar toggle
@@ -1520,7 +1506,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const t0     = performance.now();
 
     // Launch Worker (supports GPU path)
+    // Stop any running solve before starting a new one
+    if (_activeWorker) { _activeWorker.postMessage({ type: 'stop' }); }
     const worker = new Worker('/eastside-commons/ec-solver-worker.js');
+    _activeWorker = worker;
       const diffSocial = +document.getElementById('ctrl-diff-social').value;
       const diffWild   = +document.getElementById('ctrl-diff-wild').value;
       const diffBuilt  = +document.getElementById('ctrl-diff-built').value;

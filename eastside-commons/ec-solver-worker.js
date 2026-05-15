@@ -201,16 +201,20 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     log.push(`  Post-IC check: social nz=${socialNZ}/${GW*GH} max=${socialMax.toFixed(4)}`);
   }
 
-  // ── Main solve loop ──────────────────────────────────────────────────────
+  // ── Keep gpu alive for interactive painting ──────────────────────────────
+  _activeGpu = gpu;
+  _solveRunning = true;
+
+  // ── Main solve loop (async — yields between passes for paint injection) ──
   const MAX_PASSES = opts.passes || 8;
-  const patternOrder = S.PATTERN_ORDER; // descending by id
+  const patternOrder = S.PATTERN_ORDER;
 
   let snapshots = [];
   let allFieldLines = [];
   let prevSocialSum = null;
   let prevEntropy   = null;
   let prevBuiltStd  = null;
-  let prevFields    = null;  // prior-pass readback for gain computation
+  let prevFields    = null;
   let saturatedAt = null;
 
   const invariantU = {
@@ -218,7 +222,37 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     uNodeHeightFt: 96.0,
   };
 
+  // _flushPaintQueue: inject painted field values into GPU texture
+  function _flushPaintQueue(g, gw, gh, map, ema) {
+    while (_paintQueue.length) {
+      const { channel, ftX, ftY, radiusFt, strength } = _paintQueue.shift();
+      // Build a Float32Array patch and upload to the GPU F0/F1/F2 texture
+      // via a temporary readback→modify→re-upload cycle
+      const buf = new Float32Array(gw * gh);
+      const r2 = radiusFt * radiusFt;
+      for (let cy = 0; cy < gh; cy++) {
+        for (let cx = 0; cx < gw; cx++) {
+          const px = map.x0 + cx*(map.x1-map.x0)/gw;
+          const py = map.y0 + cy*(map.y1-map.y0)/gh;
+          const d2 = (px-ftX)**2+(py-ftY)**2;
+          buf[cy*gw+cx] = strength * Math.exp(-3*d2/r2);
+        }
+      }
+      g.injectChannel(channel, buf);
+    }
+  }
+
+  const _yield = () => new Promise(r => setTimeout(r, 0));
+
+  const _doSolve = async () => {
   for (let pass = 0; pass < MAX_PASSES; pass++) {
+    // Yield between passes — allows paint messages to be processed
+    await _yield();
+    if (_stopFlag) { log.push('Stopped by user.'); break; }
+
+    // Flush any painted field values into GPU textures
+    if (_paintQueue.length) _flushPaintQueue(gpu, GW, GH, MAP, edaMask);
+
     log.push(`Pass ${pass+1}/${MAX_PASSES}`);
 
     // Recompute wall-distance texture
@@ -387,6 +421,11 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     if (buf) patternFields[pid] = buf;
   }
 
+  const lastSnap = snapshots[snapshots.length-1];
+  const buildings = lastSnap?.buildings || [];
+  const hotNodes  = lastSnap?.hotNodes  || [];
+  const fields    = lastSnap?.fields    || gpu.readback();
+
   log.push(`Done: ${buildings.length} buildings, ${hotNodes.length} hot nodes`);
   if (!saturatedAt) log.push('Max passes reached without saturation');
 
@@ -402,6 +441,9 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
       (self.EC_PATTERN_DEFS||[]).map(d=>[d.id, d.name])
     ),
   };
+  }; // end _doSolve
+
+  return _doSolve();
 }
 
 // ── Extract buildings from GPU field readback ─────────────────────────────
@@ -1280,8 +1322,31 @@ self.EC_FieldSolver = (function() {
 })();
 
 // ── Message handler ───────────────────────────────────────────────────────
-self.onmessage = function(e) {
-  // Immediate ping — confirms worker loaded and message handler fired
+// ── Interactive worker state ─────────────────────────────────────────────
+// Kept at module scope so paint/stop messages can reach the active solve.
+let _activeGpu   = null;   // ECGpuFields instance kept alive between passes
+let _paintQueue  = [];     // [{channel, x, y, r, strength}] from main thread
+let _stopFlag    = false;
+let _solveRunning = false;
+
+self.onmessage = async function(e) {
+  const { type } = e.data;
+
+  // ── Paint injection (mid-solve or post-solve) ─────────────────────────
+  if (type === 'paint') {
+    _paintQueue.push(e.data);
+    // If not currently solving, apply immediately and re-post overlay
+    if (!_solveRunning && _activeGpu) {
+      _flushPaintQueue(_activeGpu, e.data._GW, e.data._GH, e.data._MAP, e.data._edaMask);
+    }
+    return;
+  }
+
+  // ── Stop ──────────────────────────────────────────────────────────────
+  if (type === 'stop') { _stopFlag = true; return; }
+
+  // ── Solve ─────────────────────────────────────────────────────────────
+  _stopFlag = false;
   self.postMessage({ type: 'status', msg: 'Worker loaded OK' });
 
   const { parcels, derivedG, opts, MAP } = e.data;
@@ -1346,16 +1411,18 @@ self.onmessage = function(e) {
     if (gpuAvailable && opts.useGPU !== false) {
       self.postMessage({ type: 'status', msg: 'GPU path: initialising WebGL2…' });
       try {
-        result = solveGPU(parcels, proj, MAP, derivedG, opts,
+        result = await solveGPU(parcels, proj, MAP, derivedG, opts,
           (pass, delta, saturated, lines, log) => {
             self.postMessage({ type: 'progress', pass, delta: delta?.toFixed(5), saturated, path: 'gpu' });
           }
         );
+        _solveRunning = false;
         self.postMessage({ type: 'status', msg: `GPU solve: ${result.buildings.length} buildings` });
       } catch (gpuErr) {
         // GPU failed — log it prominently and fall through to JS
         const gpuMsg = (gpuErr.message || String(gpuErr)) +
           (gpuErr.stack ? '\n' + gpuErr.stack.split('\n').slice(1, 5).join('\n') : '');
+        _solveRunning = false;
         self.postMessage({ type: 'status',    msg: '⚠ GPU failed → JS fallback: ' + gpuErr.message });
         self.postMessage({ type: 'gpu_error', msg: gpuMsg });
         result = null;
