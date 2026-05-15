@@ -24,6 +24,13 @@ try { importScripts('/eastside-commons/ec-gpu-fields.js'); } catch(e) {
 function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   const log = [];
 
+  // Diagnose derivedG
+  const _dKeys = Object.keys(derivedG||{});
+  log.push(`derivedG: ${_dKeys.join(', ')}`);
+  if (derivedG?.TIDE)  log.push(`  TIDE:  x=${derivedG.TIDE.x?.toFixed(0)} y=${derivedG.TIDE.y?.toFixed(0)} w=${derivedG.TIDE.w?.toFixed(0)} h=${derivedG.TIDE.h?.toFixed(0)}`);
+  if (derivedG?.SPINE) log.push(`  SPINE: x=${derivedG.SPINE.x?.toFixed(0)} cx=${(derivedG.SPINE.x+derivedG.SPINE.w/2)?.toFixed(0)}`);
+  log.push(`  MAP:   x0=${MAP.x0?.toFixed(0)} x1=${MAP.x1?.toFixed(0)} y0=${MAP.y0?.toFixed(0)} y1=${MAP.y1?.toFixed(0)}`);
+
   // Grid dimensions (same as JS path)
   const CELL_SIZE = opts.cellSize || 10;
   const GW = Math.ceil((MAP.x1 - MAP.x0) / CELL_SIZE) + 1;
@@ -159,11 +166,13 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   const maxSeeds = Math.min(seeds.length, 16);
   const _noiseSeed = Math.random() * 1000;
   log.push(`IC: ${seeds.length} seeds (using ${maxSeeds})`);
-  if (seeds.length > 0) {
-    const s0 = seeds[0];
-    const cx = Math.round(s0.x * GW), cy = Math.round(s0.y * GH);
-    const maskVal = edaMask[cy*GW+cx];
-    log.push(`  seed[0] UV=(${s0.x.toFixed(3)},${s0.y.toFixed(3)}) r=${s0.r.toFixed(1)}cells social=${s0.social} → cell(${cx},${cy}) mask=${maskVal}`);
+  for (let i = 0; i < Math.min(seeds.length, maxSeeds); i++) {
+    const s = seeds[i];
+    const cx = Math.round(s.x * GW), cy = Math.round(s.y * GH);
+    const inBounds = cx>=0&&cx<GW&&cy>=0&&cy<GH;
+    const maskVal = inBounds ? edaMask[cy*GW+cx] : '?';
+    if (s.social > 0 || s.wild > 0 || s.built > 0)
+      log.push(`  s${i} UV=(${s.x.toFixed(2)},${s.y.toFixed(2)}) r=${s.r.toFixed(0)}c soc=${s.social.toFixed(1)} wild=${s.wild.toFixed(1)} blt=${s.built.toFixed(0)} mask=${maskVal}${!inBounds?' OOB':''}`);
   }
   const icU = {
     uNumSeeds:   maxSeeds,
