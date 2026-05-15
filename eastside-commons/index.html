@@ -774,6 +774,15 @@ details[open] summary::before { content: '▼  '; }
 </head>
 
 <body>
+<div id="ec-loading" style="
+  position:fixed;inset:0;background:#0f0f0f;color:#c87818;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-family:system-ui,sans-serif;font-size:14px;z-index:9999;
+  transition:opacity .3s ease;
+">
+  <div style="font-size:22px;font-weight:600;margin-bottom:8px;letter-spacing:.04em;">Eastside Commons</div>
+  <div id="ec-loading-msg" style="color:#888;font-size:12px;">Initialising…</div>
+</div>
 <div class="page">
 
   <nav class="breadcrumb">
@@ -1789,55 +1798,75 @@ function initTooltip() {
 
 // ── MAIN ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function main() {
-  const parcels = PARCEL_DATA.parcels;
+  // Yield helper — lets the browser paint and process events between phases
+  const tick = () => new Promise(r => setTimeout(r, 0));
+  const setMsg = msg => {
+    const el = document.getElementById('ec-loading-msg');
+    if (el) el.textContent = msg;
+  };
+  const hideLoader = () => {
+    const el = document.getElementById('ec-loading');
+    if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 350); }
+  };
 
-  // Build projection from real parcel extents
-  const {proj, MAP} = buildProjection(parcels);
+  (async () => {
+    try {
+      setMsg('Loading parcel data…');
+      await tick();
 
-  // Build parcel geometry (bbox, centroid in SVG space)
-  const G = buildParcelGeometry(parcels, proj);
+      const parcels = PARCEL_DATA.parcels;
 
-  // Solve all constraints
-  const {derived, log} = solveConstraints(G, MAP);
+      setMsg('Building projection…');
+      await tick();
+      const {proj, MAP} = buildProjection(parcels);
 
-  // Render SVG
-  buildSVG(parcels, G, G, derived, MAP, proj);
+      setMsg('Computing geometry…');
+      await tick();
+      const G = buildParcelGeometry(parcels, proj);
 
-  // Render legend
-  buildLegend();
+      setMsg('Solving constraints…');
+      await tick();
+      const {derived, log} = solveConstraints(G, MAP);
 
-  // Render constraint log
-  renderLog(log);
+      setMsg('Rendering plan…');
+      await tick();
+      buildSVG(parcels, G, G, derived, MAP, proj);
 
-  // Tooltip
-  initTooltip();
+      // Page is now interactive — hide loader before the rest
+      hideLoader();
+      await tick();
 
-  console.log('Eastside Commons: constraint solver complete.');
-  console.log(`Parcels: ${parcels.length} (${parcels.filter(p=>p.is_eda).length} EDA-owned)`);
-  console.log(`Constraints: ${log.filter(l=>l.ok).length} pass, ${log.filter(l=>!l.ok).length} fail`);
+      buildLegend();
+      renderLog(log);
+      initTooltip();
 
-  // Export solved geometry to interactive layer + init pipeline
-  setTimeout(() => {
-    if (window.EC_Interactive) {
-      window.EC_Interactive.exportDerived(derived, MAP);
-      window.EC_Interactive.initInteractiveLayer();
-      setTimeout(() => window.EC_Interactive.renderOverlays(), 50);
-    }
-    // Wire pipeline to this solve's outputs
-    initPipeline(parcels, proj, MAP, derived);
-    // Auto-run pipeline after page paints
-    setTimeout(() => {
-      if (typeof triggerPipeline === 'undefined') return;
-      // Load from URL hash if present, otherwise run canonical seed
-      const loaded = window.EC_Save ? window.EC_Save.loadFromHash() : loadFromHash?.();
-      if (!loaded) {
-        // No hash — start with canonical seed (already set as default)
-        setSeed(CANONICAL_SEED);
-        triggerPipeline();
+      console.log('Eastside Commons: constraint solver complete.');
+      console.log(`Parcels: ${parcels.length} (${parcels.filter(p=>p.is_eda).length} EDA-owned)`);
+      console.log(`Constraints: ${log.filter(l=>l.ok).length} pass, ${log.filter(l=>!l.ok).length} fail`);
+
+      // Deferred: interactive layer + pipeline (non-blocking)
+      await tick();
+      if (window.EC_Interactive) {
+        window.EC_Interactive.exportDerived(derived, MAP);
+        window.EC_Interactive.initInteractiveLayer();
+        setTimeout(() => window.EC_Interactive.renderOverlays(), 50);
       }
-      // If hash loaded, restoreState() already called triggerPipeline()
-    }, 600);
-  }, 0);
+      initPipeline(parcels, proj, MAP, derived);
+      setTimeout(() => {
+        if (typeof triggerPipeline === 'undefined') return;
+        const loaded = window.EC_Save ? window.EC_Save.loadFromHash() : loadFromHash?.();
+        if (!loaded) {
+          setSeed(CANONICAL_SEED);
+          triggerPipeline();
+        }
+      }, 600);
+
+    } catch(err) {
+      const el = document.getElementById('ec-loading-msg');
+      if (el) el.textContent = '⚠ ' + err.message;
+      console.error(err);
+    }
+  })();
 });
 
 

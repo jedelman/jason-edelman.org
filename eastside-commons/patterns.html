@@ -1755,30 +1755,46 @@ function renderSnapshot(snapshot, result) {
 let _result=null, _currentSnap=0, _playTimer=null;
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Step-by-step init with explicit error surfacing at each stage.
-  // Any failure here would otherwise be silent on mobile.
-  let parcels, proj, MAP, ftToSvg, G, derived;
+  const tick = () => new Promise(r => setTimeout(r, 0));
   const status = document.getElementById('status');
-  function step(label, fn) {
-    try { fn(); }
-    catch(e) {
-      const msg = label + ': ' + e.message;
+  const setStatus = msg => { if (status) status.textContent = msg; };
+
+  let parcels, proj, MAP, ftToSvg, G, derived;
+
+  (async () => {
+    try {
+      setStatus('Loading parcel data…'); await tick();
+      parcels = PARCEL_DATA.parcels;
+
+      setStatus('Building projection…'); await tick();
+      ({proj, MAP, ftToSvg} = buildProjection(parcels));
+      window._ftToSvg = ftToSvg;
+
+      setStatus('Computing geometry…'); await tick();
+      G = buildParcelGeometry(parcels, proj);
+
+      setStatus('Solving constraints…'); await tick();
+      ({derived} = solveConstraintsMin(G, MAP));
+      window._derivedG = derived;
+
+      setStatus('Rendering…'); await tick();
+      drawEDA(parcels, proj, ftToSvg);
+      drawSiteFacts(derived, ftToSvg);
+
+      setStatus('Ready'); await tick();
+
+    } catch(e) {
+      const msg = 'Init error: ' + e.message;
       if (window._showErr) window._showErr(msg, '', '');
-      if (status) status.textContent = '⚠ Init failed at ' + label;
+      setStatus('⚠ ' + msg);
       const logEl = document.getElementById('log-content');
-      if (logEl) logEl.innerHTML = '<span style="color:#e05050">Init error at ' + label + ':\n' + e.message + '\n' + (e.stack||'').split('\n').slice(1,5).join('\n') + '</span>';
-      throw e; // stop further init
+      if (logEl) logEl.innerHTML = '<span style="color:#e05050">' + msg +
+        '\n' + (e.stack||'').split('\n').slice(1,5).join('\n') + '</span>';
+      console.error(e);
+      return;
     }
-  }
 
-  step('PARCEL_DATA',     () => { parcels = PARCEL_DATA.parcels; });
-  step('buildProjection', () => { ({proj, MAP, ftToSvg} = buildProjection(parcels)); window._ftToSvg = ftToSvg; });
-  step('buildParcelGeom', () => { G = buildParcelGeometry(parcels, proj); });
-  step('solveConstraints',() => { ({derived} = solveConstraintsMin(G, MAP)); window._derivedG = derived; });
-  step('drawEDA',         () => { drawEDA(parcels, proj, ftToSvg); });
-  step('drawSiteFacts',   () => { drawSiteFacts(derived, ftToSvg); });
-
-  // Controls
+    // Controls
   function bind(id,valId,fmt) {
     const el=document.getElementById(id), vl=document.getElementById(valId);
     el.addEventListener('input',()=>vl.textContent=fmt(el.value));
@@ -2161,6 +2177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Auto-run on load
   document.getElementById('btn-run').click();
+  })(); // end async init IIFE
 });
 </script>
 </body>
