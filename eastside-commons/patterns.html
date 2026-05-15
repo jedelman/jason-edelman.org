@@ -556,6 +556,11 @@ function applyTransform() {
   if (!_panSvg) return;
   const root = _panSvg.getElementById ? _panSvg.querySelector('#pz-root') : null;
   if (root) root.setAttribute('transform', `translate(${_panTx},${_panTy}) scale(${_panScale})`);
+  // Repaint field overlay to match new transform
+  if (_result) {
+    const fd = _result.fields || _result._jsFields;
+    if (fd) renderFieldOverlay(fd, _result.gw, _result.gh, _result.MAP);
+  }
 }
 // Alias used by event listeners below
 let svg, scale, tx, ty;
@@ -601,6 +606,14 @@ function _bindPanZoom(svgEl) {
     applyTransform();
   });
   window.addEventListener('mouseup', () => { dragging=false; svgEl.style.cursor=''; });
+
+  // Repaint field canvas on resize
+  window.addEventListener('resize', () => {
+    if (_result) {
+      const fd = _result.fields || _result._jsFields;
+      if (fd) renderFieldOverlay(fd, _result.gw, _result.gh, _result.MAP);
+    }
+  });
 })();
 function updateFieldList(result) {
   const el = document.getElementById('field-list');
@@ -718,18 +731,44 @@ function renderFieldOverlay(fields, gw, gh, MAP) {
   }
   tctx.putImageData(img, 0, 0);
 
-  // Map field grid → canvas via ftToSvg → SVG viewBox → canvas pixels
+  // Map field grid → canvas pixels.
+  // Use SVGElement.getScreenCTM() on a known SVG element to get the exact
+  // current transform (accounts for viewBox, preserveAspectRatio, pan/zoom).
   const toSvg = window._ftToSvg || ((x,y)=>[x,y]);
   const svgEl = document.getElementById('main-svg');
-  const vb = svgEl?.viewBox?.baseVal || {x:0,y:0,width:980,height:816};
-  const [sx0, sy0] = toSvg(MAP.x0, MAP.y1); // NW in SVG coords
-  const [sx1, sy1] = toSvg(MAP.x1, MAP.y0); // SE in SVG coords
-  const scaleX = fc.width  / vb.width;
-  const scaleY = fc.height / vb.height;
-  const dx = (sx0 - vb.x) * scaleX;
-  const dy = (sy0 - vb.y) * scaleY;
-  const dw = (sx1 - sx0)  * scaleX;
-  const dh = (sy1 - sy0)  * scaleY;
+  const fcRect = fc.getBoundingClientRect();
+
+  // Get screen→SVG transform from any SVG element that's in the scene
+  const refEl = document.getElementById('layer-eda')?.firstChild || svgEl;
+  const ctm = svgEl.getScreenCTM?.();
+
+  let dx, dy, dw, dh;
+  if (ctm) {
+    // ctm transforms SVG user coords → screen pixels
+    // We need ft → SVG user coords (via ftToSvg), then SVG user → screen,
+    // then screen → canvas (subtract canvas bounding rect offset).
+    const svgPt = (fx, fy) => {
+      const [sx, sy] = toSvg(fx, fy);
+      return {
+        x: ctm.a * sx + ctm.c * sy + ctm.e - fcRect.left,
+        y: ctm.b * sx + ctm.d * sy + ctm.f - fcRect.top,
+      };
+    };
+    const nw = svgPt(MAP.x0, MAP.y1);
+    const se = svgPt(MAP.x1, MAP.y0);
+    dx = nw.x; dy = nw.y;
+    dw = se.x - nw.x;
+    dh = se.y - nw.y;
+  } else {
+    // Fallback: assume viewBox fills canvas (no letterboxing)
+    const vb = svgEl?.viewBox?.baseVal || {x:0,y:0,width:980,height:816};
+    const [sx0, sy0] = toSvg(MAP.x0, MAP.y1);
+    const [sx1, sy1] = toSvg(MAP.x1, MAP.y0);
+    dx = (sx0 - vb.x) / vb.width  * fc.width;
+    dy = (sy0 - vb.y) / vb.height * fc.height;
+    dw = (sx1 - sx0)  / vb.width  * fc.width;
+    dh = (sy1 - sy0)  / vb.height * fc.height;
+  }
 
   ctx.globalAlpha = 0.82;
   ctx.drawImage(tmp, dx, dy, dw, dh);
