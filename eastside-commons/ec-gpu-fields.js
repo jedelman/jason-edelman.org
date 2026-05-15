@@ -305,6 +305,7 @@ class ECGpuFields {
     this.progs['wall_dist'] = this._compile(S.VERT, S.WALL_DIST_FRAG);
     this.progs['copy']      = this._compile(S.VERT, S.COPY_FRAG);
     this.progs['diffuse']   = this._compile(S.VERT, S.DIFFUSE_FRAG);
+    this.progs['gain']      = this._compile(S.VERT, S.GAIN_FRAG);
   }
 
   _getProgram(key, fragSrc) {
@@ -419,7 +420,17 @@ class ECGpuFields {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 
-  // ── Private: paint initial conditions ─────────────────────────────────
+  // ── Gain/compression: normalize fields by JS-computed p95 gain ────────
+  runGain(uniforms = {}) {
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos['MRT']);
+    gl.viewport(0, 0, this.W, this.H);
+    gl.useProgram(this.progs['gain']);
+    this._bindAll(this.progs['gain'], uniforms, null);
+    gl.disable(gl.BLEND);
+    this._quad();
+    this._swap();
+  }
   _paintIC(u) {
     const gl = this.gl;
     // Clear _B to zero

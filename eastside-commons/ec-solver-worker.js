@@ -194,6 +194,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   let prevSocialSum = null;
   let prevEntropy   = null;
   let prevBuiltStd  = null;
+  let prevFields    = null;  // prior-pass readback for gain computation
   let saturatedAt = null;
 
   const invariantU = {
@@ -235,6 +236,36 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
       uDiffWild:   opts.diffWild   ?? 0.30,
       uDiffBuilt:  opts.diffBuilt  ?? 0.05,
     });
+
+    // Gain/compression: compute p95 per channel over EDA cells, normalize
+    // First pass uses gain=1 (no-op) since readback not yet computed.
+    // Subsequent passes use gain from prior readback for stable normalization.
+    {
+      const CHANNELS = {
+        uGainSocial:   prevFields?.social,
+        uGainWild:     prevFields?.wild,
+        uGainComfort:  prevFields?.comfort,
+        uGainBuilt:    prevFields?.built_height,
+        uGainWall:     prevFields?.wall,
+        uGainInterestZ:prevFields?.interest_z,
+        uGainMvX:      prevFields?.movement_x,
+        uGainMvY:      prevFields?.movement_y,
+      };
+      const gainU = {};
+      for (const [uname, buf] of Object.entries(CHANNELS)) {
+        if (!buf) { gainU[uname] = 1.0; continue; }
+        // p95 over EDA cells only
+        const vals = [];
+        for (let i = 0; i < buf.length; i++) {
+          if (edaMask[i] && buf[i] > 0) vals.push(buf[i]);
+        }
+        if (!vals.length) { gainU[uname] = 1.0; continue; }
+        vals.sort((a,b) => a-b);
+        const p95 = vals[Math.floor(vals.length * 0.95)] || vals[vals.length-1];
+        gainU[uname] = p95 > 0.001 ? 1.0 / p95 : 1.0;
+      }
+      gpu.runGain(gainU);
+    }
 
     // Convergence: read back all fields
     const fields = gpu.readback();
@@ -304,6 +335,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     prevSocialSum = socialSum;
     prevEntropy   = meanEntropy;
     prevBuiltStd  = builtStd;
+    prevFields    = fields;
 
     // Extract buildings and hot nodes
     const buildings = extractBuildingsFromFields(fields, GW, GH, CELL_SIZE, MAP, edaMask);

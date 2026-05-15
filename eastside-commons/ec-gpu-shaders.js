@@ -383,7 +383,65 @@ void main() {
 }`;
 
 
-// ── Pattern shaders ────────────────────────────────────────────────────────
+// ── Gain / compression shader ──────────────────────────────────────────────
+// Normalizes each field channel by a JS-computed p95 gain value, then applies
+// a soft knee compressor so high outliers don't swamp the field.
+// Runs after diffuse each pass. Gain uniforms are computed CPU-side from
+// the prior readback — first pass uses gain=1 (no-op).
+//
+// Transfer function per channel:
+//   normalized = raw * uGain{Ch}          (scale so p95 → 1.0)
+//   compressed = atan(normalized * k) / atan(k)   (soft limiter, k=2.5)
+// Result is always [0,1] with gentle rolloff above 1.0 natural.
+const GAIN_FRAG = STDLIB + `
+uniform sampler2D uPID;
+uniform float uGainSocial;    // 1/p95_social
+uniform float uGainWild;
+uniform float uGainComfort;
+uniform float uGainBuilt;     // 1/p95_built (or 1/96 for ft units)
+uniform float uGainWall;
+uniform float uGainInterestZ;
+uniform float uGainMvX;
+uniform float uGainMvY;
+
+layout(location=0) out vec4 outF0;
+layout(location=1) out vec4 outF1;
+layout(location=2) out vec4 outF2;
+layout(location=3) out float outPID;
+
+// Soft knee: atan compressor, k controls knee tightness
+// k=0 → linear clamp, k=3 → aggressive
+float compress(float v, float gain, float k) {
+  float n = v * gain;
+  return atan(n * k) / atan(k);
+}
+
+void main() {
+  vec4 f0 = texture(uF0, vUV);
+  vec4 f1 = texture(uF1, vUV);
+  vec4 f2 = texture(uF2, vUV);
+
+  outF0 = vec4(
+    compress(f0.r, uGainSocial,   2.5),  // social
+    compress(f0.g, uGainComfort,  2.5),  // comfort
+    compress(f0.b, uGainWild,     2.5),  // wild
+    compress(f0.a, uGainBuilt,    1.5)   // built_height — softer knee
+  );
+  outF1 = vec4(
+    compress(abs(f1.r), uGainMvX, 2.0) * sign(f1.r),  // movement x (preserve sign)
+    compress(abs(f1.g), uGainMvY, 2.0) * sign(f1.g),  // movement y
+    compress(f1.b, uGainWall,     2.5),  // wall
+    f1.a
+  );
+  outF2 = vec4(
+    f2.r,  // interest xy — small values, leave raw
+    f2.g,
+    compress(f2.b, uGainInterestZ, 2.5),  // interest z
+    f2.a
+  );
+  outPID = texture(uPID, vUV).r;
+}`;
+
 // Each pattern has:
 //   DETECT_P{id}: reads fields → writes float to pattern buffer
 //   MODULATE_P{id}: reads fields + pattern buffer → writes delta to F0/F1/F2
@@ -1587,7 +1645,7 @@ void main() {
 // ─────────────────────────────────────────────────────────────────
 const EC_GPU_SHADERS = {
   VERT, STDLIB, PAT_STDLIB,
-  IC_FRAG, INVARIANT_FRAG, WALL_DIST_FRAG, COPY_FRAG, DIFFUSE_FRAG,
+  IC_FRAG, INVARIANT_FRAG, WALL_DIST_FRAG, COPY_FRAG, DIFFUSE_FRAG, GAIN_FRAG,
   // Pattern shaders keyed by id, descending order
   patterns: {
     176: { detect: DETECT_P176, modulate: MODULATE_P176, nbhdR: 3.0, uniforms: {} },
