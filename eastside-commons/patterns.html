@@ -529,17 +529,25 @@ function solveConstraintsMin(G, MAP) {
 function drawEDA(parcels, proj, ftToSvg) {
   const ns='http://www.w3.org/2000/svg';
   const layer=document.getElementById('layer-eda');
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
   for (const p of parcels) {
     if (!p.is_eda || !p.rings?.[0]) continue;
-    const pts=p.rings[0].map(([lon,lat])=>ftToSvg(...proj(lon,lat)).join(',')).join(' ');
+    const svgPts = p.rings[0].map(([lon,lat])=>ftToSvg(...proj(lon,lat)));
+    for (const [sx,sy] of svgPts) {
+      if(sx<minX)minX=sx; if(sx>maxX)maxX=sx;
+      if(sy<minY)minY=sy; if(sy>maxY)maxY=sy;
+    }
+    const pts=svgPts.map(p=>p.join(',')).join(' ');
     const poly=document.createElementNS(ns,'polygon');
     poly.setAttribute('points',pts);
-    poly.setAttribute('fill','rgba(40,120,40,0.04)');
-    poly.setAttribute('stroke','rgba(80,160,60,0.14)');
-    poly.setAttribute('stroke-width','0.6');
-    poly.setAttribute('stroke-dasharray','2,5');
+    poly.setAttribute('fill','rgba(40,120,40,0.08)');
+    poly.setAttribute('stroke','rgba(80,220,80,0.7)');
+    poly.setAttribute('stroke-width','2');
     layer.appendChild(poly);
   }
+  const svgEl=document.getElementById('main-svg');
+  const vb=svgEl?.viewBox?.baseVal;
+  console.log(`drawEDA: bbox x=${minX.toFixed(0)}..${maxX.toFixed(0)} y=${minY.toFixed(0)}..${maxY.toFixed(0)} | viewBox 0 0 ${vb?.width} ${vb?.height} | canvas ${svgEl?.clientWidth}x${svgEl?.clientHeight}`);
 }
 
 function drawSiteFacts(derived, ftToSvg) {
