@@ -178,6 +178,7 @@
     <span class="ctrl-val" id="val-diff-built">0.05</span>
   </div>
   <button id="btn-run">▶ Solve</button>
+  <button id="btn-fit" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.6rem;font-size:0.6rem;cursor:pointer;border-radius:2px;" title="Reset zoom (double-click canvas)">⊡ fit</button>
   <div class="ctrl-group">
     <span class="ctrl-label">Noise</span>
     <span class="ctrl-val" id="val-noise" style="min-width:3rem">—</span>
@@ -193,18 +194,20 @@
   <div id="err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#8b0000;color:#fff;font-family:monospace;font-size:0.7rem;padding:0.5rem 1rem;white-space:pre-wrap;max-height:40vh;overflow-y:auto;"></div>
   <div id="canvas-wrap">
     <button id="sidebar-toggle" title="Toggle panel">PANEL ›</button>
-    <svg id="main-svg" viewBox="0 0 980 816" preserveAspectRatio="xMidYMid meet">
+    <svg id="main-svg" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;">
       <defs>
         <filter id="blur-sm"><feGaussianBlur stdDeviation="2"/></filter>
         <filter id="blur-md"><feGaussianBlur stdDeviation="5"/></filter>
       </defs>
-      <g id="layer-eda"></g>
-      <g id="layer-site-facts"></g>
-      <g id="layer-heat"></g>
-      <g id="layer-lines"></g>
-      <g id="layer-nodes"></g>
-      <g id="layer-buildings"></g>
-      <g id="layer-labels"></g>
+      <g id="pz-root">
+        <g id="layer-eda"></g>
+        <g id="layer-site-facts"></g>
+        <g id="layer-heat"></g>
+        <g id="layer-lines"></g>
+        <g id="layer-nodes"></g>
+        <g id="layer-buildings"></g>
+        <g id="layer-labels"></g>
+      </g>
     </svg>
     <canvas id="field-canvas"></canvas>
     <div id="canvas-label">Military Circle · 73.4 ac · Norfolk VA · field model · ft</div>
@@ -379,17 +382,26 @@ function buildProjection(parcels) {
   const siteWft = (maxLon-minLon)*M_PER_DEG_LON*FT_PER_M;
   const siteHft = (maxLat-minLat)*M_PER_DEG_LAT*FT_PER_M;
 
-  // Pad 12% each side so EDA isn't clipped
-  const padX = siteWft*0.12, padY = siteHft*0.12;
-
   // Field-space MAP in feet (origin = SW corner of padded bbox)
+  const padX = siteWft*0.04, padY = siteHft*0.04;  // 4% padding
+  const ftW_total = siteWft + padX*2;
+  const ftH_total = siteHft + padY*2;
+
+  // SVG viewport: choose a canvas that matches site aspect ratio
+  // Use 1000 wide as base, height proportional
+  const SVG_W = 1000;
+  const SVG_H = Math.round(SVG_W * ftH_total / ftW_total);
+
+  // Set SVG viewBox dynamically to match
+  const svgEl = document.getElementById('main-svg');
+  if (svgEl) svgEl.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+
   const MAP = {
-    x0: -padX,       y0: -padY,
+    x0: -padX,        y0: -padY,
     x1: siteWft+padX, y1: siteHft+padY,
-    // Convenience
     siteWft, siteHft,
-    // SVG viewport (unchanged — only used for rendering)
-    svgX0:139, svgY0:163, svgX1:841, svgY1:653,
+    // SVG viewport — tight, computed from site bounds
+    svgX0: 0, svgY0: 0, svgX1: SVG_W, svgY1: SVG_H,
   };
 
   // proj(lon, lat) → [ft_x, ft_y]  (north = +y, south-west origin)
@@ -608,48 +620,103 @@ function blendColors(weights, patternColors) {
   return `rgb(${r},${g},${b})`;
 }
 
-// ── PAN / ZOOM STATE ─────────────────────────────────────────────────────────
-// Restored: was removed but event listeners below depend on these vars.
-// These are module-level so the event handlers can close over them.
-let _panSvg = null, _panScale = 1, _panTx = 0, _panTy = 0;
-const MIN_SCALE = 0.5, MAX_SCALE = 8;
+// ── PAN / ZOOM ───────────────────────────────────────────────────────────────
+// pz-root transform: translate(tx,ty) scale(s) in SVG user space.
+// Screen → SVG user space: divide screen delta by (rect.width / vb.width).
+let _panScale = 1, _panTx = 0, _panTy = 0;
+const MIN_SCALE = 0.5, MAX_SCALE = 20;
+
 function applyTransform() {
-  if (!_panSvg) return;
-  const root = _panSvg.getElementById ? _panSvg.querySelector('#pz-root') : null;
+  const root = document.getElementById('pz-root');
   if (root) root.setAttribute('transform', `translate(${_panTx},${_panTy}) scale(${_panScale})`);
-  // Repaint field overlay to match new transform
   if (_result) {
     const fd = _result.fields || _result._jsFields;
     if (fd) renderFieldOverlay(fd, _result.gw, _result.gh, _result.MAP);
   }
 }
-// Alias used by event listeners below
-let svg, scale, tx, ty;
-function _bindPanZoom(svgEl) {
-  svg = _panSvg = svgEl;
-  scale = _panScale; tx = _panTx; ty = _panTy;
+
+function _svgScale() {
+  // Returns screen px per SVG user unit (accounts for viewBox + CSS size)
+  const svgEl = document.getElementById('main-svg');
+  if (!svgEl) return 1;
+  const rect = svgEl.getBoundingClientRect();
+  const vb   = svgEl.viewBox.baseVal;
+  return rect.width / (vb.width || 1);
 }
 
-// ── Mouse wheel zoom ──────────────────────────────────────────────────────
 (function() {
   const svgEl = document.getElementById('main-svg');
   if (!svgEl) return;
-  _bindPanZoom(svgEl);
+
+  // Wheel zoom — pivot on cursor position in SVG user space
   svgEl.addEventListener('wheel', e => {
     e.preventDefault();
     const rect = svgEl.getBoundingClientRect();
     const vb   = svgEl.viewBox.baseVal;
+    // Cursor in SVG user space (pre-transform)
     const mx = (e.clientX - rect.left) / rect.width  * vb.width;
     const my = (e.clientY - rect.top)  / rect.height * vb.height;
-    const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
+    // Cursor in pz-root local space (where content lives)
+    const lx = (mx - _panTx) / _panScale;
+    const ly = (my - _panTy) / _panScale;
+
+    const factor = e.deltaY < 0 ? 1.15 : 1/1.15;
     _panScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, _panScale * factor));
-    _panTx = mx - (mx - _panTx) * (_panScale / (scale || 1));
-    _panTy = my - (my - _panTy) * (_panScale / (scale || 1));
-    scale = _panScale; tx = _panTx; ty = _panTy;
+
+    // Keep cursor point fixed: mx = lx*newScale + newTx
+    _panTx = mx - lx * _panScale;
+    _panTy = my - ly * _panScale;
     applyTransform();
   }, { passive: false });
 
-  // ── Mouse drag pan ──────────────────────────────────────────────────────
+  // Touch pinch + pan
+  let _touches = [], _lastDist = 0, _lastMid = null;
+  svgEl.addEventListener('touchstart', e => {
+    _touches = Array.from(e.touches);
+    if (_touches.length === 2) {
+      const dx = _touches[1].clientX - _touches[0].clientX;
+      const dy = _touches[1].clientY - _touches[0].clientY;
+      _lastDist = Math.hypot(dx, dy);
+      _lastMid  = { x: (_touches[0].clientX+_touches[1].clientX)/2,
+                    y: (_touches[0].clientY+_touches[1].clientY)/2 };
+    }
+  }, { passive: true });
+  svgEl.addEventListener('touchmove', e => {
+    e.preventDefault();
+    const ts = Array.from(e.touches);
+    const rect = svgEl.getBoundingClientRect();
+    const vb   = svgEl.viewBox.baseVal;
+    const toSvg = (cx, cy) => ({
+      x: (cx - rect.left) / rect.width  * vb.width,
+      y: (cy - rect.top)  / rect.height * vb.height,
+    });
+    if (ts.length === 2) {
+      const dx = ts[1].clientX - ts[0].clientX;
+      const dy = ts[1].clientY - ts[0].clientY;
+      const dist = Math.hypot(dx, dy);
+      const mid  = { x:(ts[0].clientX+ts[1].clientX)/2, y:(ts[0].clientY+ts[1].clientY)/2 };
+      const svgMid = toSvg(mid.x, mid.y);
+      const lx = (svgMid.x - _panTx) / _panScale;
+      const ly = (svgMid.y - _panTy) / _panScale;
+      if (_lastDist) {
+        _panScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, _panScale * (dist/_lastDist)));
+        _panTx = svgMid.x - lx * _panScale;
+        _panTy = svgMid.y - ly * _panScale;
+      }
+      _lastDist = dist; _lastMid = mid;
+      applyTransform();
+    } else if (ts.length === 1 && _lastMid && _touches.length === 1) {
+      const s = _svgScale();
+      _panTx += (ts[0].clientX - _touches[0].clientX) / s;
+      _panTy += (ts[0].clientY - _touches[0].clientY) / s;
+      _touches = ts;
+      applyTransform();
+    }
+    _touches = ts;
+  }, { passive: false });
+  svgEl.addEventListener('touchend', e => { _touches = Array.from(e.touches); _lastDist=0; });
+
+  // Mouse drag pan
   let dragging=false, dragX=0, dragY=0;
   svgEl.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
@@ -658,17 +725,20 @@ function _bindPanZoom(svgEl) {
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const rect=svgEl.getBoundingClientRect();
-    const vb=svgEl.viewBox.baseVal;
-    _panTx += (e.clientX-dragX)*(vb.width/rect.width);
-    _panTy += (e.clientY-dragY)*(vb.height/rect.height);
-    tx=_panTx; ty=_panTy;
+    const s = _svgScale();
+    _panTx += (e.clientX-dragX) / s;
+    _panTy += (e.clientY-dragY) / s;
     dragX=e.clientX; dragY=e.clientY;
     applyTransform();
   });
   window.addEventListener('mouseup', () => { dragging=false; svgEl.style.cursor=''; });
 
-  // Repaint field canvas on resize
+  // Double-click to reset
+  svgEl.addEventListener('dblclick', () => {
+    _panScale=1; _panTx=0; _panTy=0; applyTransform();
+  });
+
+  // Repaint on resize
   window.addEventListener('resize', () => {
     if (_result) {
       const fd = _result.fields || _result._jsFields;
@@ -1044,6 +1114,12 @@ document.addEventListener('DOMContentLoaded', () => {
       console.time('drawSiteFacts'); drawSiteFacts(derived, ftToSvg); console.timeEnd('drawSiteFacts');
 
       setStatus('Ready'); await tick();
+
+      // Auto-fit: reset pan/zoom so site fills the canvas
+      _panScale=1; _panTx=0; _panTy=0; applyTransform();
+      document.getElementById('btn-fit')?.addEventListener('click', () => {
+        _panScale=1; _panTx=0; _panTy=0; applyTransform();
+      });
 
       // Pre-populate pattern count from EC_PATTERN_DEFS (available before solve)
       const patDefs = window.EC_PATTERN_DEFS || [];
