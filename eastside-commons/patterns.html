@@ -601,29 +601,30 @@ let _result=null, _currentSnap=0, _playTimer=null;
 document.addEventListener('DOMContentLoaded', () => {
   const tick = (ms=16) => new Promise(r => setTimeout(r, ms));
   const status = document.getElementById('status');
-  const setStatus = msg => { if (status) status.textContent = msg; };
+  const setStatus = msg => {
+    console.log('[patterns init]', msg);
+    if (status) status.textContent = msg;
+  };
 
   let parcels, proj, MAP, ftToSvg, G, derived;
 
   (async () => {
     try {
       setStatus('Loading parcel data…'); await tick();
-      parcels = PARCEL_DATA.parcels;
+      console.time('parcels'); parcels = PARCEL_DATA.parcels; console.timeEnd('parcels');
 
       setStatus('Building projection…'); await tick();
-      ({proj, MAP, ftToSvg} = buildProjection(parcels));
-      window._ftToSvg = ftToSvg;
+      console.time('proj'); ({proj, MAP, ftToSvg} = buildProjection(parcels)); window._ftToSvg = ftToSvg; console.timeEnd('proj');
 
       setStatus('Computing geometry…'); await tick();
-      G = buildParcelGeometry(parcels, proj);
+      console.time('geom'); G = buildParcelGeometry(parcels, proj); console.timeEnd('geom');
 
       setStatus('Solving constraints…'); await tick();
-      ({derived} = solveConstraintsMin(G, MAP));
-      window._derivedG = derived;
+      console.time('constraints'); ({derived} = solveConstraintsMin(G, MAP)); window._derivedG = derived; console.timeEnd('constraints');
 
       setStatus('Rendering…'); await tick();
-      drawEDA(parcels, proj, ftToSvg);
-      drawSiteFacts(derived, ftToSvg);
+      console.time('drawEDA'); drawEDA(parcels, proj, ftToSvg); console.timeEnd('drawEDA');
+      console.time('drawSiteFacts'); drawSiteFacts(derived, ftToSvg); console.timeEnd('drawSiteFacts');
 
       setStatus('Ready'); await tick();
 
