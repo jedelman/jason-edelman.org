@@ -144,6 +144,10 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   gpu.uploadMask('SPONGE_MASK', spongeMask);
   gpu.uploadFloat('NODE_PROX',  nodeProx);
 
+  // Paint IC now that masks are uploaded (EDA_MASK needed by IC shader)
+  gpu.paintIC();
+  log.push('IC painted');
+
   // ── Main solve loop ──────────────────────────────────────────────────────
   const MAX_PASSES = opts.passes || 8;
   const patternOrder = S.PATTERN_ORDER; // descending by id

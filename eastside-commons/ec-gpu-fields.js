@@ -60,10 +60,17 @@ class ECGpuFields {
     this.fbos['WALL_DIST'] = this._makeFBO1(this.textures['WALL_DIST']);
 
     this._compileCore();
-    this._paintIC(icUniforms);
+    // NOTE: _paintIC is called separately after uploadMask/uploadFloat
+    // so that EDA_MASK/SPONGE_MASK/NODE_PROX are present when IC runs.
+    this._icUniforms = icUniforms; // stash for paintIC()
     this._ready = true;
-    this._log.push(`ECGpuFields ${this.W}×${this.H} ready`);
+    this._log.push(`ECGpuFields ${this.W}×${this.H} ready (IC pending)`);
     return this;
+  }
+
+  // Call after all uploadMask / uploadFloat calls.
+  paintIC() {
+    this._paintIC(this._icUniforms || {});
   }
 
   // ── Run one pattern: detector → modulator → (caller runs invariant) ───
