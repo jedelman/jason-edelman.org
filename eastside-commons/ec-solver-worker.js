@@ -183,6 +183,8 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 
   // Paint IC now that masks are uploaded (EDA_MASK needed by IC shader)
   gpu.paintIC();
+  for (const msg of gpu._log) log.push('  GPU: ' + msg);
+  gpu._log = [];
   log.push('IC painted');
 
   // ── Main solve loop ──────────────────────────────────────────────────────
@@ -240,7 +242,8 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     // Gain/compression: compute p95 per channel over EDA cells, normalize
     // First pass uses gain=1 (no-op) since readback not yet computed.
     // Subsequent passes use gain from prior readback for stable normalization.
-    {
+    // Gain/compression pass — skip if program failed to compile
+    if (gpu.progs?.['gain']) {
       const CHANNELS = {
         uGainSocial:   prevFields?.social,
         uGainWild:     prevFields?.wild,
@@ -265,7 +268,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
         gainU[uname] = p95 > 0.001 ? 1.0 / p95 : 1.0;
       }
       gpu.runGain(gainU);
-    }
+    } // end gain block
 
     // Convergence: read back all fields
     const fields = gpu.readback();

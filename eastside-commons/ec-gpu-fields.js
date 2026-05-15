@@ -305,7 +305,13 @@ class ECGpuFields {
     this.progs['wall_dist'] = this._compile(S.VERT, S.WALL_DIST_FRAG);
     this.progs['copy']      = this._compile(S.VERT, S.COPY_FRAG);
     this.progs['diffuse']   = this._compile(S.VERT, S.DIFFUSE_FRAG);
-    this.progs['gain']      = this._compile(S.VERT, S.GAIN_FRAG);
+    try {
+      this.progs['gain'] = this._compile(S.VERT, S.GAIN_FRAG);
+      this._log.push('gain shader: OK');
+    } catch(e) {
+      this._log.push('gain shader FAILED: ' + e.message);
+      this.progs['gain'] = null;
+    }
   }
 
   _getProgram(key, fragSrc) {
