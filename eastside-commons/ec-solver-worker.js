@@ -185,7 +185,17 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   gpu.paintIC();
   for (const msg of gpu._log) log.push('  GPU: ' + msg);
   gpu._log = [];
-  log.push('IC painted');
+  const edaCount = edaMask.reduce((s,v)=>s+(v?1:0), 0);
+  const spongeCount = spongeMask.reduce((s,v)=>s+(v?1:0), 0);
+  log.push(`IC painted | edaMask: ${edaCount}/${GW*GH} cells (${(edaCount/(GW*GH)*100).toFixed(1)}%) | sponge: ${spongeCount}`);
+
+  // Sanity: read back social immediately after IC to verify it wrote values
+  {
+    const icCheck = gpu.readback();
+    const socialNZ = icCheck.social.filter(v=>v>0.001).length;
+    const socialMax = Math.max(...icCheck.social);
+    log.push(`  Post-IC check: social nz=${socialNZ}/${GW*GH} max=${socialMax.toFixed(4)}`);
+  }
 
   // ── Main solve loop ──────────────────────────────────────────────────────
   const MAX_PASSES = opts.passes || 8;
