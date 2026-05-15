@@ -524,44 +524,61 @@ function blendColors(weights, patternColors) {
   return `rgb(${r},${g},${b})`;
 }
 
-// [removed: // ── PAN / ZOOM + VIEWPORT CULLING ────]
+// ── PAN / ZOOM STATE ─────────────────────────────────────────────────────────
+// Restored: was removed but event listeners below depend on these vars.
+// These are module-level so the event handlers can close over them.
+let _panSvg = null, _panScale = 1, _panTx = 0, _panTy = 0;
+const MIN_SCALE = 0.5, MAX_SCALE = 8;
+function applyTransform() {
+  if (!_panSvg) return;
+  const root = _panSvg.getElementById ? _panSvg.querySelector('#pz-root') : null;
+  if (root) root.setAttribute('transform', `translate(${_panTx},${_panTy}) scale(${_panScale})`);
+}
+// Alias used by event listeners below
+let svg, scale, tx, ty;
+function _bindPanZoom(svgEl) {
+  svg = _panSvg = svgEl;
+  scale = _panScale; tx = _panTx; ty = _panTy;
+}
+
 // ── Mouse wheel zoom ──────────────────────────────────────────────────────
-  svg.addEventListener('wheel', e => {
+(function() {
+  const svgEl = document.getElementById('main-svg');
+  if (!svgEl) return;
+  _bindPanZoom(svgEl);
+  svgEl.addEventListener('wheel', e => {
     e.preventDefault();
-    const rect = svg.getBoundingClientRect();
-    const vb   = svg.viewBox.baseVal;
-    // Mouse in SVG user-space (before our transform)
+    const rect = svgEl.getBoundingClientRect();
+    const vb   = svgEl.viewBox.baseVal;
     const mx = (e.clientX - rect.left) / rect.width  * vb.width;
     const my = (e.clientY - rect.top)  / rect.height * vb.height;
     const factor = e.deltaY < 0 ? 1.12 : 1/1.12;
-    const newScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
-    // Zoom toward mouse: keep mx,my fixed in wrapped space
-    tx = mx - (mx - tx) * (newScale / scale);
-    ty = my - (my - ty) * (newScale / scale);
-    scale = newScale;
+    _panScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, _panScale * factor));
+    _panTx = mx - (mx - _panTx) * (_panScale / (scale || 1));
+    _panTy = my - (my - _panTy) * (_panScale / (scale || 1));
+    scale = _panScale; tx = _panTx; ty = _panTy;
     applyTransform();
   }, { passive: false });
 
-  // ── Mouse drag pan ────────────────────────────────────────────────────────
+  // ── Mouse drag pan ──────────────────────────────────────────────────────
   let dragging=false, dragX=0, dragY=0;
-  svg.addEventListener('mousedown', e => {
+  svgEl.addEventListener('mousedown', e => {
     if (e.button !== 0) return;
     dragging=true; dragX=e.clientX; dragY=e.clientY;
-    svg.style.cursor='grabbing';
+    svgEl.style.cursor='grabbing';
   });
   window.addEventListener('mousemove', e => {
     if (!dragging) return;
-    const rect=svg.getBoundingClientRect();
-    const vb=svg.viewBox.baseVal;
-    const scaleX=vb.width/rect.width, scaleY=vb.height/rect.height;
-    tx += (e.clientX-dragX)*scaleX;
-    ty += (e.clientY-dragY)*scaleY;
+    const rect=svgEl.getBoundingClientRect();
+    const vb=svgEl.viewBox.baseVal;
+    _panTx += (e.clientX-dragX)*(vb.width/rect.width);
+    _panTy += (e.clientY-dragY)*(vb.height/rect.height);
+    tx=_panTx; ty=_panTy;
     dragX=e.clientX; dragY=e.clientY;
     applyTransform();
   });
-  window.addEventListener('mouseup', () => { dragging=false; svg.style.cursor=''; });
-
-  // [removed: // ── Touch pan/pinch ──────────────────]
+  window.addEventListener('mouseup', () => { dragging=false; svgEl.style.cursor=''; });
+})();
 // ── MAIN RENDER ───────────────────────────────────────────────────────────────
 function renderSnapshot(snapshot, result) {
   if(!snapshot||!result) return;
