@@ -62,8 +62,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
       if (spongePolys.some(poly=>pip(px,py,poly))) spongeMask[cy*GW+cx] = 255;
     }
   }
-  gpu.uploadMask('EDA_MASK', edaMask);
-  gpu.uploadMask('SPONGE_MASK', spongeMask);
+  // (masks uploaded after gpu.init() below)
 
   // Activity node proximity mask (for invariant height cap)
   // Gaussian falloff from TIDE and CIVIC_700 centroids
@@ -86,10 +85,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     }
     nodeProx[i]=Math.min(1,v);
   }
-  // Upload node prox as float texture
-  const gl = gpu.gl;
-  gl.bindTexture(gl.TEXTURE_2D, gpu.textures['NODE_PROX']);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, GW, GH, 0, gl.RED, gl.FLOAT, nodeProx);
+  // nodeProx uploaded after gpu.init() via gpu.uploadFloat()
 
   // ── Build IC uniforms from derivedG ─────────────────────────────────────
   // Encode all geometry as gaussian seeds (no named constants at shader time)
@@ -139,9 +135,14 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     uSeedIntZ:   seeds.slice(0,maxSeeds).map(s=>s.intZ),
   };
 
-  // ── Initialise GPU fields ────────────────────────────────────────────────
+  // ── Initialise GPU fields (creates WebGL2 context + compiles shaders) ───
   gpu.init(icU);
   log.push(`IC: ${maxSeeds} seeds`);
+
+  // ── Upload static masks (requires gl context from init()) ───────────────
+  gpu.uploadMask('EDA_MASK',    edaMask);
+  gpu.uploadMask('SPONGE_MASK', spongeMask);
+  gpu.uploadFloat('NODE_PROX',  nodeProx);
 
   // ── Main solve loop ──────────────────────────────────────────────────────
   const MAX_PASSES = opts.passes || 8;
