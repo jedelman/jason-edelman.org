@@ -246,6 +246,7 @@
 </div>
 
 <script src="/eastside-commons/ec-parcel-data.js" defer></script>
+<script src="/eastside-commons/ec-pattern-defs.js" defer></script>
 <script defer>
 // PARCEL_DATA loaded from ec-parcel-data.js
 
@@ -753,6 +754,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
       setStatus('Ready'); await tick();
 
+      // Pre-populate pattern count from EC_PATTERN_DEFS (available before solve)
+      const patDefs = window.EC_PATTERN_DEFS || [];
+      const activeDefs = patDefs.filter(d => d.enabled !== false && d.weight !== 0);
+      const sPatEl = document.getElementById('s-patterns');
+      if (sPatEl) sPatEl.textContent = activeDefs.length;
+
+      // Pre-populate GPU pattern selector with all patterns from defs
+      const gpuSel = document.getElementById('gpu-pattern-sel');
+      if (gpuSel && activeDefs.length) {
+        gpuSel.innerHTML = '<option value="">— select pattern —</option>';
+        const useColors = window.EC_USE_COLORS || {};
+        for (const def of activeDefs) {
+          const opt = document.createElement('option');
+          opt.value = def.id;
+          opt.textContent = `P${def.id} ${def.name} [${def.use}]`;
+          gpuSel.appendChild(opt);
+        }
+      }
+
+      // Pre-populate field legend with all active patterns (greyed out until solve)
+      const fieldListEl = document.getElementById('field-list');
+      if (fieldListEl && activeDefs.length) {
+        fieldListEl.innerHTML = '';
+        const useColors = window.EC_USE_COLORS || {};
+        for (const def of activeDefs) {
+          const row = document.createElement('div');
+          row.className = 'field-row';
+          row.style.opacity = '0.4';
+          row.innerHTML = `
+            <div class="field-swatch" style="background:${useColors[def.use]||'#c87818'}"></div>
+            <div class="field-name">P${def.id} ${def.name}</div>
+            <div class="field-peak" style="color:#444">—</div>`;
+          fieldListEl.appendChild(row);
+        }
+      }
+
     } catch(e) {
       const msg = 'Init error: ' + e.message;
       if (window._showErr) window._showErr(msg, '', '');
@@ -972,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const gpuTag = payload.fields ? ' [GPU]' : ' [JS]';
       document.getElementById('s-lines').textContent   = payload.fieldLines?.length ?? 0;
       document.getElementById('s-nodes').textContent   = `${payload.hotNodes?.length??0} / ${payload.buildings?.length??0}b`;
-      document.getElementById('s-patterns').textContent = Object.keys(window.EC_FieldSolver?.PATTERNS||{}).length;
+      document.getElementById('s-patterns').textContent = (window.EC_PATTERN_DEFS||[]).filter(d=>d.enabled!==false&&d.weight!==0).length;
       document.getElementById('s-ms').textContent       = ms + satMsg + gpuTag;
 
       const logEl = document.getElementById('log-content');

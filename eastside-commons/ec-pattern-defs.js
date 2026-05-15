@@ -314,5 +314,21 @@ const EC_PATTERN_DEFS = [
 
 ];
 
-if (typeof self    !== 'undefined') self.EC_PATTERN_DEFS    = EC_PATTERN_DEFS;
-if (typeof module  !== 'undefined') module.exports           = EC_PATTERN_DEFS;
+// ── Use-class color map ───────────────────────────────────────────────────
+const EC_USE_COLORS = {
+  RESIDENTIAL: '#6a9fd8',   // blue
+  COMMERCIAL:  '#c87818',   // amber
+  CIVIC:       '#b05090',   // plum
+  GREEN:       '#3aab60',   // green
+  MIXED:       '#d0c060',   // gold
+};
+
+if (typeof self    !== 'undefined') {
+  self.EC_PATTERN_DEFS = EC_PATTERN_DEFS;
+  self.EC_USE_COLORS   = EC_USE_COLORS;
+}
+if (typeof window  !== 'undefined') {
+  window.EC_PATTERN_DEFS = EC_PATTERN_DEFS;
+  window.EC_USE_COLORS   = EC_USE_COLORS;
+}
+if (typeof module  !== 'undefined') module.exports = { EC_PATTERN_DEFS, EC_USE_COLORS };

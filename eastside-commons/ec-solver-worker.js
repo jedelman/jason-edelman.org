@@ -235,7 +235,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     fields,         // raw field buffers for viewer
     patternFields,  // per-pattern detector buffers for debugging
     patternColors: Object.fromEntries(
-      (self.EC_PATTERN_DEFS||[]).map(d=>[d.id, '#c87818']) // colour by use class later
+      (self.EC_PATTERN_DEFS||[]).map(d=>[d.id, (self.EC_USE_COLORS||{})[d.use] || '#c87818'])
     ),
     patternNames: Object.fromEntries(
       (self.EC_PATTERN_DEFS||[]).map(d=>[d.id, d.name])
@@ -404,9 +404,9 @@ self.EC_FieldSolver = (function() {
   // Colors only used for rendering (index.html). Stub here so defPattern doesn't throw.
   const PATTERN_COLORS = {};
 
-  function defPattern(id, name, weight, senseFn) {
+  function defPattern(id, name, weight, senseFn, color) {
     PATTERNS[id] = { id, name, weight, sense: senseFn,
-      color: PATTERN_COLORS[id] || '#888888' };
+      color: color || PATTERN_COLORS[id] || '#888888' };
   }
 
   // ── FIELD PRIMITIVES ──────────────────────────────────────────────────────
@@ -777,13 +777,15 @@ self.EC_FieldSolver = (function() {
   // EC_PATTERN_DEFS is loaded from ec-pattern-defs.js (inlined below or via importScripts)
   (function registerPatterns() {
     const seen = new Set();
+    const useColors = self.EC_USE_COLORS || {};
     for (const def of (self.EC_PATTERN_DEFS || [])) {
       if (def.enabled === false || def.weight === 0) continue;
       if (seen.has(def.id)) continue;  // skip duplicates
       seen.add(def.id);
+      const color = useColors[def.use] || '#c87818';
       defPattern(def.id, def.name, def.weight, (field,gw,gh,cs,MAP,site) => {
         interpretOps(field, gw, gh, cs, MAP, site, def.ops || []);
-      });
+      }, color);
     }
   })();
 
