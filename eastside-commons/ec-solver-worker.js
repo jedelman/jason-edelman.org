@@ -98,10 +98,34 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   const sg = derivedG.SPONGE, ti = derivedG.TIDE, s = derivedG.SPINE;
   const rs = derivedG.RESEARCH;
 
-  // Transit node (TIDE) → social seed, movement inflow
-  // Large radius so social fills the spine corridor from the start
-  if (ti) addSeed(ti.x+ti.w/2, ti.y+ti.h/2, 600, 0.9, 0, 0, 0, 0.5, 0);
-  // Civic anchor → social + INTEREST.z — wide influence
+  // ── Existing built structure seeds ────────────────────────────────────
+  // The mall building and ring road are real existing structures that define
+  // built_height, wall, and movement initial conditions.
+
+  // Find MALL_CORE centroid and approximate building footprint
+  let mallCx = 0, mallCy = 0, mallRx = 0, mallRy = 0;
+  for (const p of parcels) {
+    if (p.spec === 'MALL_CORE' && p.centroid) {
+      [mallCx, mallCy] = proj(p.centroid.lon, p.centroid.lat);
+      // Mall building is roughly 800×500ft oval centered in MALL_CORE
+      mallRx = 400; mallRy = 250;
+    }
+  }
+
+  // Mall building → existing built_height (one-story mall = ~24ft)
+  // Seeds the BUILT_HEIGHT field so wall-distance fires immediately
+  if (mallCx) addSeed(mallCx, mallCy, 350, 0, 0, 24, 0, 0, 0);
+
+  // Ring road → 4 directional movement seeds around the oval perimeter
+  // Clockwise circulation: N→E→S→W
+  if (mallCx) {
+    addSeed(mallCx,         mallCy+mallRy+60, 120, 0, 0, 0,  0.6,  0,   0); // N: eastward
+    addSeed(mallCx+mallRx+60, mallCy,         120, 0, 0, 0,  0,   -0.6, 0); // E: southward
+    addSeed(mallCx,         mallCy-mallRy-60, 120, 0, 0, 0, -0.6,  0,   0); // S: westward
+    addSeed(mallCx-mallRx-60, mallCy,         120, 0, 0, 0,  0,    0.6, 0); // W: northward
+  }
+
+  // CIVIC_700 and HOUSING_A_530 → existing buildings, social + built
   for (const p of parcels) {
     if (p.spec==='CIVIC_700' && p.centroid) {
       const [cx,cy] = proj(p.centroid.lon, p.centroid.lat);
@@ -112,22 +136,29 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
       addSeed(cx, cy, 300, 0.2, 0, 100, 0, 0, 0);
     }
   }
-  // Sponge → wild seed covering the whole east zone
+
+  // Transit node (TIDE) → social seed, movement inflow
+  if (ti) addSeed(ti.x+ti.w/2, ti.y+ti.h/2, 600, 0.9, 0, 0, 0, 0.5, 0);
+
+  // Sponge → wild seed
   if (sg) addSeed(sg.cx, sg.cy, Math.max(sg.rx,sg.ry)*2.5, 0, 0.95, 0, 0, 0, 0);
-  // Road interfaces → movement seeds — wide strips along the edges
-  addSeed(MAP.x0+80, (MAP.y0+MAP.y1)/2, 400, 0.1, 0, 0, 0.7, 0, 0);  // N Military Hwy
-  addSeed(MAP.x1-80, (MAP.y0+MAP.y1)/2, 400, 0.1, 0, 0, -0.7, 0, 0); // Tidewater Dr
-  // Spine corridor → baseline social along N-S axis
+
+  // Road interfaces → movement inflow from N Military Hwy and Tidewater Dr
+  addSeed(MAP.x0+80, (MAP.y0+MAP.y1)/2, 400, 0.1, 0, 0,  0.7, 0, 0);
+  addSeed(MAP.x1-80, (MAP.y0+MAP.y1)/2, 400, 0.1, 0, 0, -0.7, 0, 0);
+
+  // Spine corridor → baseline social
   if (s) {
-    addSeed(s.x+s.w/2, (MAP.y0+MAP.y1)*0.35, 400, 0.6, 0, 0, 0, 0.3, 0.4);
-    addSeed(s.x+s.w/2, (MAP.y0+MAP.y1)*0.65, 400, 0.6, 0, 0, 0, 0.3, 0.4);
+    addSeed(s.x+s.w/2, (MAP.y0+MAP.y1)*0.4, 400, 0.6, 0, 0, 0, 0.3, 0.4);
   }
-  // Research zone → moderate social east side
+
+  // Research zone
   if (rs) addSeed(rs.x+rs.w/2, rs.y+rs.h/2, 350, 0.4, 0, 0, 0, 0, 0.3);
 
   // Pack seeds into parallel arrays (max 16)
   const maxSeeds = Math.min(seeds.length, 16);
   const _noiseSeed = Math.random() * 1000;
+  log.push(`IC: ${seeds.length} seeds (using ${maxSeeds})`);
   const icU = {
     uNumSeeds:   maxSeeds,
     uNoiseSeed:  _noiseSeed,   // different grain each run
