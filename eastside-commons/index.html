@@ -1799,7 +1799,7 @@ function initTooltip() {
 // ── MAIN ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function main() {
   // Yield helper — lets the browser paint and process events between phases
-  const tick = () => new Promise(r => setTimeout(r, 0));
+  const tick = (ms=16) => new Promise(r => setTimeout(r, ms));
   const setMsg = msg => {
     const el = document.getElementById('ec-loading-msg');
     if (el) el.textContent = msg;
