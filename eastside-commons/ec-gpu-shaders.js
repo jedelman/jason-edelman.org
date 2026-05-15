@@ -322,8 +322,14 @@ vec4 gaussBlur4(sampler2D tex, vec2 uv, float r) {
 }
 
 void main() {
+  // Outside EDA: passthrough without diffusion
+  // Using passthrough not zero-out so IC seed values survive even if
+  // EDA mask binding fails (diagnostic: if fields appear outside EDA, mask is unbound)
   if (!IN_EDA(vUV)) {
-    outF0 = vec4(0.0); outF1 = vec4(0.0); outF2 = vec4(0.0); outPID = 0.0;
+    outF0 = clamp(texture(uF0, vUV), vec4(0.0), vec4(1.0));
+    outF1 = texture(uF1, vUV);
+    outF2 = clamp(texture(uF2, vUV), vec4(0.0), vec4(1.0));
+    outPID = texture(uPID, vUV).r;
     return;
   }
 
