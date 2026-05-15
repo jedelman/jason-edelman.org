@@ -302,6 +302,9 @@ void main() {
 // Runs after invariant each pass. EDA mask enforced — no bleed outside site.
 const DIFFUSE_FRAG = STDLIB + `
 uniform sampler2D uPID;
+uniform float uDiffSocial;   // 0–0.6, default 0.35
+uniform float uDiffWild;     // 0–0.6, default 0.30
+uniform float uDiffBuilt;    // 0–0.3, default 0.05
 layout(location=0) out vec4 outF0;
 layout(location=1) out vec4 outF1;
 layout(location=2) out vec4 outF2;
@@ -342,10 +345,10 @@ void main() {
 
   // Blend: mix(original, blurred, rate) — keeps peaks while spreading tails
   outF0 = vec4(
-    clamp(mix(f0.r, b0.r, 0.35) + social_boost, 0.0, 1.0),  // social + convergence
-    mix(f0.g, b0.g, 0.25),  // comfort
-    mix(f0.b, b0.b, 0.30),  // wild
-    mix(f0.a, b0.a, 0.05)   // built_height
+    clamp(mix(f0.r, b0.r, uDiffSocial) + social_boost, 0.0, 1.0),  // social
+    mix(f0.g, b0.g, 0.25),       // comfort (fixed)
+    mix(f0.b, b0.b, uDiffWild),  // wild
+    mix(f0.a, b0.a, uDiffBuilt)  // built_height
   );
   outF1 = vec4(
     mix(f1.r, b1.r, 0.40),  // movement x

@@ -229,9 +229,12 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
       gpu.runInvariant(invariantU);
     }
 
-    // Diffuse fields once per pass — spreads social/wild/movement from seeds
-    // so patterns in later passes have non-zero fields to detect against
-    gpu.runDiffuse();
+    // Diffuse fields once per pass
+    gpu.runDiffuse({
+      uDiffSocial: opts.diffSocial ?? 0.35,
+      uDiffWild:   opts.diffWild   ?? 0.30,
+      uDiffBuilt:  opts.diffBuilt  ?? 0.05,
+    });
 
     // Convergence: read back all fields
     const fields = gpu.readback();
@@ -302,16 +305,16 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     prevEntropy   = meanEntropy;
     prevBuiltStd  = builtStd;
 
+    // Extract buildings and hot nodes
+    const buildings = extractBuildingsFromFields(fields, GW, GH, CELL_SIZE, MAP, edaMask);
+    const hotNodes  = extractHotNodesFromFields(fields, GW, GH, CELL_SIZE, MAP);
+
     // Post live fields to UI every pass for real-time overlay
     self.postMessage({ type: 'fields_live', pass, fields,
       gw: GW, gh: GH, MAP,
       stats: { pass, socialSum, meanEntropy, builtStd, builtMean,
                deltaS: deltaS??0, deltaE: deltaE??0, deltaDiff: deltaDiff??0,
                buildings: buildings.length, hotNodes: hotNodes.length } });
-
-    // Extract buildings from BUILT_HEIGHT + WALL fields (GPU readback)
-    const buildings = extractBuildingsFromFields(fields, GW, GH, CELL_SIZE, MAP, edaMask);
-    const hotNodes  = extractHotNodesFromFields(fields, GW, GH, CELL_SIZE, MAP);
 
     snapshots.push({ pass, buildings, hotNodes, saturated: !!saturatedAt });
     allFieldLines = []; // field lines derived from MOVEMENT field (future pass)
@@ -1066,20 +1069,36 @@ self.EC_FieldSolver = (function() {
       const combined = combineFields(fieldMap, gw, gh);
       normalizeField(combined);
 
-      // Convergence check: mean absolute change vs previous pass
+      // Convergence: same multi-condition gate as GPU path
       let delta = null;
       if (prevCombined) {
         delta = 0;
         for (let i=0;i<combined.length;i++) delta += Math.abs(combined[i]-prevCombined[i]);
         delta /= combined.length;
-        log.push(`  Δ=${delta.toFixed(5)}`);
-        if (delta < EPSILON && pass >= 2) {
-          saturatedAt = pass+1;
-          log.push(`  ✓ Saturated at pass ${saturatedAt} (Δ=${delta.toFixed(5)} < ε=${EPSILON})`);
-          // Still trace lines for this final pass, then break
-        }
       }
       prevCombined = combined.slice();
+      // Spatial entropy of combined field (proxy for territory differentiation)
+      let jsH = 0, jsEdaN = 0;
+      for (let i=0;i<combined.length;i++) {
+        const cx=i%gw, cy=Math.floor(i/gw);
+        if (!inEDA(cx,cy,gw,gh)) continue;
+        jsEdaN++;
+        const v = combined[i];
+        if (v > 1e-6) jsH -= v * Math.log(v);
+      }
+      jsH /= (jsEdaN || 1);
+      const minPasses = opts.minPasses || 6;
+      const minJsH    = opts.minH      || 0.4;
+      log.push(`  Δ=${(delta??0).toFixed(5)} H=${jsH.toFixed(3)}`);
+      if (pass >= minPasses-1 && jsH >= minJsH && delta !== null && delta < EPSILON) {
+        saturatedAt = pass+1;
+        log.push(`  ✓ Saturated at pass ${saturatedAt} (H=${jsH.toFixed(3)} Δ=${delta.toFixed(5)})`);
+      } else if (pass >= minPasses-1) {
+        const why=[];
+        if (jsH < minJsH)   why.push(`H=${jsH.toFixed(3)}<${minJsH}`);
+        if (delta >= EPSILON) why.push(`Δ=${delta.toFixed(5)}`);
+        log.push(`  not saturated: ${why.join(' ')}`);
+      }
 
       // Update site context for next pass
       site.fields = fieldMap;

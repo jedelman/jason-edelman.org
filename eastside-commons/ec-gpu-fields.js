@@ -129,12 +129,12 @@ class ECGpuFields {
   }
 
   // ── Diffuse: Gaussian spread of fields, respects EDA mask, swap ───────
-  runDiffuse() {
+  runDiffuse(uniforms = {}) {
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos['MRT']);
     gl.viewport(0, 0, this.W, this.H);
     gl.useProgram(this.progs['diffuse']);
-    this._bindAll(this.progs['diffuse'], {}, null);
+    this._bindAll(this.progs['diffuse'], uniforms, null);
     gl.disable(gl.BLEND);
     this._quad();
     this._swap();
