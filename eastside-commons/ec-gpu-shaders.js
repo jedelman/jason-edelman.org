@@ -121,15 +121,15 @@ const IC_FRAG = STDLIB + `
 // Gaussian seed arrays (up to 16 seeds per field)
 // Each seed: (cx, cy) in UV, r in cells, amplitude
 uniform int   uNumSeeds;
-uniform vec2  uSeedPos[16];   // UV position
-uniform float uSeedR[16];     // radius in cells
-// Per-field amplitudes for each seed
+uniform vec2  uSeedPos[16];
+uniform float uSeedR[16];
 uniform float uSeedSocial[16];
 uniform float uSeedWild[16];
 uniform float uSeedBuilt[16];
 uniform float uSeedMvX[16];
 uniform float uSeedMvY[16];
 uniform float uSeedIntZ[16];
+uniform float uNoiseSeed;   // randomized each run, controls spatial noise pattern
 
 layout(location=0) out vec4 outF0;
 layout(location=1) out vec4 outF1;
@@ -160,23 +160,43 @@ void main() {
   if (IN_SPONGE(vUV)) wild = max(wild, 0.9);
 
   // EDA boundary: wild pressure decays inward
-  // (approximated: use EDA mask edge — cells near mask=0 neighbors get wild)
   vec2 d = 1.0 / uResolution;
   float edge = 0.0;
   if (IN_EDA(vUV)) {
-    // Count EDA neighbors
     float n = texture(uEdaMask, vUV+vec2(d.x,0)).r
             + texture(uEdaMask, vUV-vec2(d.x,0)).r
             + texture(uEdaMask, vUV+vec2(0,d.y)).r
             + texture(uEdaMask, vUV-vec2(0,d.y)).r;
-    edge = 1.0 - n/4.0; // 1 at edge, 0 far inside
+    edge = 1.0 - n/4.0;
   }
   wild = max(wild, edge * 0.5);
+
+  // Spatial noise — low-frequency hash from UV + seed
+  // Gives each run a different grain while remaining deterministic per seed.
+  // Two octaves at different scales for natural-looking variation.
+  float nx = dot(vUV * uResolution + uNoiseSeed, vec2(127.1, 311.7));
+  float ny = dot(vUV * uResolution + uNoiseSeed, vec2(269.5, 183.3));
+  float n1 = fract(sin(nx) * 43758.5453);
+  float n2 = fract(sin(ny) * 43758.5453);
+  // Low-frequency: average 3×3 neighborhood of hash → smooth blobs
+  float nx2 = dot(floor(vUV * uResolution * 0.1) + uNoiseSeed, vec2(127.1, 311.7));
+  float n_low = fract(sin(nx2) * 43758.5453);
+
+  // Wild noise: fine grain (ecotone variation) + low-freq patches
+  // Only inside EDA, suppressed in sponge (already wild there)
+  float wild_noise = (n1 * 0.5 + n_low * 0.5) * 0.28 * (1.0 - wild);
+  wild = clamp(wild + wild_noise, 0.0, 1.0);
+
+  // Interest_z noise: low-frequency surprise landmark pressure
+  // Moderate amplitude — creates candidate locations that patterns then
+  // either confirm or suppress based on social/movement context.
+  float iz_noise = n_low * 0.35;
+  iz = clamp(iz + iz_noise, 0.0, 1.0);
 
   outF0 = vec4(social, comfort, clamp(wild,0.,1.), built);
   outF1 = vec4(mvx, mvy, 0.0, 0.0);
   outF2 = vec4(ix, iy, iz, 0.0);
-  outPID = 0.0; // ICs don't set a pattern
+  outPID = 0.0;
 }`;
 
 // ── Invariant constraints shader ───────────────────────────────────────────

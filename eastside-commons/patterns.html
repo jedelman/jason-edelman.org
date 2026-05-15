@@ -152,6 +152,10 @@
 
   <button id="btn-run">▶ Solve</button>
   <div class="ctrl-group">
+    <span class="ctrl-label">Noise</span>
+    <span class="ctrl-val" id="val-noise" style="min-width:3rem">—</span>
+  </div>
+  <div class="ctrl-group">
     <span class="ctrl-label">Fields</span>
     <input type="checkbox" id="ctrl-fields" checked style="accent-color:var(--amber);cursor:pointer;">
   </div>
@@ -1215,6 +1219,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('s-nodes').textContent   = `${payload.hotNodes?.length??0} / ${payload.buildings?.length??0}b`;
       document.getElementById('s-patterns').textContent = (window.EC_PATTERN_DEFS||[]).filter(d=>d.enabled!==false&&d.weight!==0).length;
       document.getElementById('s-ms').textContent       = ms + satMsg + gpuTag;
+      const noiseEl = document.getElementById('val-noise');
+      if (noiseEl && payload.noiseSeed != null) noiseEl.textContent = Math.round(payload.noiseSeed);
 
       const logEl = document.getElementById('log-content');
       if (logEl) logEl.innerHTML = (payload.log||[]).map(l => {

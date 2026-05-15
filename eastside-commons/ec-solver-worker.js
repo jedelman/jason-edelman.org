@@ -127,8 +127,10 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 
   // Pack seeds into parallel arrays (max 16)
   const maxSeeds = Math.min(seeds.length, 16);
+  const _noiseSeed = Math.random() * 1000;
   const icU = {
-    uNumSeeds: maxSeeds,
+    uNumSeeds:   maxSeeds,
+    uNoiseSeed:  _noiseSeed,   // different grain each run
     uSeedPos:    seeds.slice(0,maxSeeds).flatMap(s=>[s.x,s.y]),
     uSeedR:      seeds.slice(0,maxSeeds).map(s=>s.r),
     uSeedSocial: seeds.slice(0,maxSeeds).map(s=>s.social),
@@ -296,9 +298,8 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   return {
     snapshots, fieldLines: allFieldLines, hotNodes, buildings,
     log, gw: GW, gh: GH, cellSize: CELL_SIZE, MAP,
-    saturatedAt,
-    fields,         // raw field buffers for viewer
-    patternFields,  // per-pattern detector buffers for debugging
+    saturatedAt, noiseSeed: _noiseSeed,
+    fields, patternFields,
     patternColors: Object.fromEntries(
       (self.EC_PATTERN_DEFS||[]).map(d=>[d.id, (self.EC_USE_COLORS||{})[d.use] || '#c87818'])
     ),
@@ -1289,8 +1290,9 @@ self.onmessage = function(e) {
     snapshots:   result.snapshots,
     patternColors: result.patternColors,
     patternNames:  result.patternNames,
-    fields:      result.fields || null,  // GPU path: semantic fields; JS path: null
+    fields:      result.fields || null,
     patternFields: result.patternFields || null,
+    noiseSeed:   result.noiseSeed ?? null,
     // JS path: send last snapshot fieldMap for field overlay
     jsFieldMap:  (lastSnap?.fieldMap && !result.fields)
       ? Object.fromEntries(
