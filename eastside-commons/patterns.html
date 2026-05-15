@@ -579,7 +579,58 @@ function _bindPanZoom(svgEl) {
   });
   window.addEventListener('mouseup', () => { dragging=false; svgEl.style.cursor=''; });
 })();
-// ── MAIN RENDER ───────────────────────────────────────────────────────────────
+function updateFieldList(result) {
+  const el = document.getElementById('field-list');
+  if (!el) return;
+  el.innerHTML = '';
+
+  // GPU path: use patternFields (detector buffer peaks)
+  const pf = result.patternFields;
+  const pnames = result.patternNames || {};
+  const pcolors = result.patternColors || {};
+  const S = self?.EC_GPU_SHADERS || window?.EC_GPU_SHADERS;
+  const order = (S?.PATTERN_ORDER) || Object.keys(pf || {}).map(Number).sort((a,b)=>b-a);
+
+  if (pf && Object.keys(pf).length) {
+    const entries = order.map(pid => {
+      const buf = pf[pid];
+      let peak = 0;
+      if (buf) for (let i=0; i<buf.length; i++) if (buf[i]>peak) peak=buf[i];
+      return { pid, peak };
+    }).sort((a,b) => b.peak - a.peak);
+
+    for (const {pid, peak} of entries) {
+      const row = document.createElement('div');
+      row.className = 'field-row';
+      row.innerHTML = `
+        <div class="field-swatch" style="background:${pcolors[pid]||'#c87818'}"></div>
+        <div class="field-name">P${pid} ${pnames[pid]||''}</div>
+        <div class="field-peak">${(peak*100).toFixed(0)}%</div>`;
+      el.appendChild(row);
+    }
+    return;
+  }
+
+  // JS fallback path: use snapshot fieldMap
+  const snap = result.snapshots?.[result.snapshots.length - 1];
+  if (!snap?.fieldMap) return;
+  const entries2 = Object.entries(snap.fieldMap).map(([pid, f]) => {
+    let peak = 0;
+    if (f?.field) for (let i=0; i<f.field.length; i++) if (f.field[i]>peak) peak=f.field[i];
+    return { pid: Number(pid), peak };
+  }).sort((a,b) => b.peak - a.peak);
+  for (const {pid, peak} of entries2) {
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    row.innerHTML = `
+      <div class="field-swatch" style="background:${pcolors[pid]||'#c87818'}"></div>
+      <div class="field-name">P${pid} ${pnames[pid]||''}</div>
+      <div class="field-peak">${(peak*100).toFixed(0)}%</div>`;
+    el.appendChild(row);
+  }
+}
+
+
 function renderSnapshot(snapshot, result) {
   if(!snapshot||!result) return;
   const view=document.getElementById('ctrl-view').value;
