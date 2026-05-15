@@ -246,9 +246,10 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 
   const _doSolve = async () => {
   for (let pass = 0; pass < MAX_PASSES; pass++) {
-    // Yield between passes — allows paint messages to be processed
+    // Yield between passes — allows paint/stop/step messages to be processed
     await _yield();
     if (_stopFlag) { log.push('Stopped by user.'); break; }
+    await _checkPause();  // blocks here if paused until resume/step
 
     // Flush any painted field values into GPU textures
     if (_paintQueue.length) _flushPaintQueue(gpu, GW, GH, MAP, edaMask);
@@ -400,21 +401,20 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
                buildings: buildings.length, hotNodes: hotNodes.length } });
 
     snapshots.push({ pass, buildings, hotNodes, saturated: !!saturatedAt });
-    allFieldLines = []; // field lines derived from MOVEMENT field (future pass)
+    allFieldLines = [];
 
     if (typeof onPass === 'function') {
       onPass(pass, deltaS, !!saturatedAt, allFieldLines, log);
     }
 
+    // Post per-pass status for step mode UI
+    self.postMessage({ type: 'pass_done', pass, maxPasses: MAX_PASSES,
+      buildings: buildings.length, hotNodes: hotNodes.length, saturated: !!saturatedAt });
+
     if (saturatedAt) break;
   }
 
-  // Final field state
-  const fields = gpu.readback();
-  const buildings = extractBuildingsFromFields(fields, GW, GH, CELL_SIZE, MAP, edaMask);
-  const hotNodes  = extractHotNodesFromFields(fields, GW, GH, CELL_SIZE, MAP);
-
-  // Also export per-pattern buffers for debugging
+  // Final field state — use last snapshot's data (set inside loop each pass)
   const patternFields = {};
   for (const pid of patternOrder) {
     const buf = gpu.readbackPattern(pid);
@@ -1324,13 +1324,34 @@ self.EC_FieldSolver = (function() {
 // ── Message handler ───────────────────────────────────────────────────────
 // ── Interactive worker state ─────────────────────────────────────────────
 // Kept at module scope so paint/stop messages can reach the active solve.
-let _activeGpu   = null;   // ECGpuFields instance kept alive between passes
-let _paintQueue  = [];     // [{channel, x, y, r, strength}] from main thread
-let _stopFlag    = false;
-let _solveRunning = false;
+let _activeGpu     = null;
+let _paintQueue    = [];
+let _stopFlag      = false;
+let _solveRunning  = false;
+let _pauseFlag     = false;
+let _resumeResolve = null;
+
+// Awaited at top of each pass — blocks until resume/step if paused
+const _checkPause = () => {
+  if (!_pauseFlag) return Promise.resolve();
+  return new Promise(r => { _resumeResolve = r; });
+};
 
 self.onmessage = async function(e) {
   const { type } = e.data;
+
+  // ── Step / Resume / Pause ─────────────────────────────────────────────
+  if (type === 'step') {
+    _pauseFlag = true;
+    if (_resumeResolve) { const r=_resumeResolve; _resumeResolve=null; r(); }
+    return;
+  }
+  if (type === 'resume') {
+    _pauseFlag = false;
+    if (_resumeResolve) { const r=_resumeResolve; _resumeResolve=null; r(); }
+    return;
+  }
+  if (type === 'pause') { _pauseFlag = true; return; }
 
   // ── Paint injection (mid-solve or post-solve) ─────────────────────────
   if (type === 'paint') {

@@ -178,6 +178,8 @@
     <span class="ctrl-val" id="val-diff-built">0.05</span>
   </div>
   <button id="btn-run">▶ Solve</button>
+  <button id="btn-step" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.5rem;font-size:0.6rem;cursor:pointer;border-radius:2px;" title="Step one pass">⏭ step</button>
+  <button id="btn-pause" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.5rem;font-size:0.6rem;cursor:pointer;border-radius:2px;" title="Pause/resume">⏸</button>
   <button id="btn-fit" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.6rem;font-size:0.6rem;cursor:pointer;border-radius:2px;" title="Reset zoom (double-click canvas)">⊡ fit</button>
   <button id="btn-paint" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.6rem;font-size:0.6rem;cursor:pointer;border-radius:2px;" title="Paint interest field">✏ paint</button>
   <select id="paint-channel" style="background:#1a1a1a;color:var(--muted);border:1px solid var(--border);padding:0.2rem;font-size:0.6rem;border-radius:2px;">
@@ -1352,6 +1354,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Sidebar toggle
+  let _paused = false;
+  document.getElementById('btn-step')?.addEventListener('click', () => {
+    if (!_activeWorker) return;
+    _paused = true;
+    _activeWorker.postMessage({ type: 'step' });
+    document.getElementById('btn-pause').textContent = '▶';
+  });
+  document.getElementById('btn-pause')?.addEventListener('click', () => {
+    if (!_activeWorker) return;
+    _paused = !_paused;
+    _activeWorker.postMessage({ type: _paused ? 'pause' : 'resume' });
+    document.getElementById('btn-pause').textContent = _paused ? '▶' : '⏸';
+  });
+
+  // Sidebar toggle
   const _sidebar = document.getElementById('sidebar');
   const _toggleBtn = document.getElementById('sidebar-toggle');
   _toggleBtn?.addEventListener('click', () => {
@@ -1537,6 +1554,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (type === 'progress') { status.textContent = `Pass ${pass+1} (${path||'js'})…`; return; }
+      if (type === 'pass_done') {
+        const { pass: p, maxPasses, buildings: b, hotNodes: n, saturated } = ev.data;
+        status.textContent = `Pass ${p+1}/${maxPasses} · ${b}b · ${n}n${saturated?' ✓':''}`;
+        return;
+      }
       if (type === 'fields_live') {
         const { fields, gw, gh, MAP, stats } = ev.data;
         if (fields && gw && gh && MAP) {
