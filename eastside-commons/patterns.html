@@ -282,6 +282,22 @@
           <div class="stat-box"><div class="n" id="s-lines">—</div><div class="l">Lines</div></div>
         </div>
 
+        <!-- Field stats per channel -->
+        <div style="margin-bottom:0.5rem;">
+          <div style="font-size:0.52rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.2rem;">Field stats (current pass)</div>
+          <table id="field-stats-table" style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.48rem;color:var(--muted);">
+            <thead><tr style="color:var(--accent);border-bottom:1px solid var(--border);">
+              <th style="text-align:left;padding:0.1rem 0.25rem;">ch</th>
+              <th style="text-align:right;padding:0.1rem 0.25rem;">min</th>
+              <th style="text-align:right;padding:0.1rem 0.25rem;">mean</th>
+              <th style="text-align:right;padding:0.1rem 0.25rem;">p95</th>
+              <th style="text-align:right;padding:0.1rem 0.25rem;">max</th>
+              <th style="text-align:right;padding:0.1rem 0.25rem;">nz%</th>
+            </tr></thead>
+            <tbody id="field-stats-body"></tbody>
+          </table>
+        </div>
+
         <!-- Per-pass diagnostic table -->
         <div style="margin-bottom:0.5rem;">
           <div style="font-size:0.52rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.2rem;">Pass log</div>
@@ -1007,7 +1023,52 @@ function renderSnapshot(snapshot, result) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 let _result=null, _currentSnap=0, _playTimer=null;
+let _passFields = [];  // stores {fields, gw, gh, MAP, stats} per pass for scrubbing
 let _passHistory = []; // accumulates per-pass stats for diagnostic panel
+
+function renderFieldStats(fields, gw, gh, stats) {
+  const tbody = document.getElementById('field-stats-body');
+  if (!tbody || !fields) return;
+  const CHANNELS = [
+    ['social',      '#ff3c1e'],
+    ['wild',        '#28c850'],
+    ['comfort',     '#f0c828'],
+    ['wall',        '#a05014'],
+    ['interest_z',  '#ff9600'],
+    ['built_height','#3c78ff'],
+    ['movement_x',  '#888'],
+    ['movement_y',  '#888'],
+  ];
+  const n = gw * gh;
+  tbody.innerHTML = '';
+  for (const [ch, color] of CHANNELS) {
+    const buf = fields[ch];
+    if (!buf) continue;
+    let mn=Infinity, mx=-Infinity, sum=0, nz=0;
+    const vals = [];
+    for (let i=0;i<n;i++) {
+      const v = buf[i];
+      if (v < mn) mn=v; if (v > mx) mx=v;
+      sum += v;
+      if (Math.abs(v) > 0.001) { nz++; vals.push(Math.abs(v)); }
+    }
+    const mean = sum/n;
+    vals.sort((a,b)=>a-b);
+    const p95 = vals.length ? vals[Math.floor(vals.length*0.95)] : 0;
+    const nzPct = (nz/n*100).toFixed(1);
+    const fmt = v => Math.abs(v) < 0.001 ? '0' : v.toFixed(3);
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid rgba(34,48,26,0.3)';
+    tr.innerHTML = `
+      <td style="padding:0.1rem 0.25rem;"><span style="color:${color}">■</span> ${ch.replace('_',' ')}</td>
+      <td style="text-align:right;padding:0.1rem 0.25rem;">${fmt(mn)}</td>
+      <td style="text-align:right;padding:0.1rem 0.25rem;">${fmt(mean)}</td>
+      <td style="text-align:right;padding:0.1rem 0.25rem;">${fmt(p95)}</td>
+      <td style="text-align:right;padding:0.1rem 0.25rem;">${fmt(mx)}</td>
+      <td style="text-align:right;padding:0.1rem 0.25rem;${nz===0?'color:#e05050':''}">${nzPct}%</td>`;
+    tbody.appendChild(tr);
+  }
+}
 
 function _resetDiagnostics() {
   _passHistory = [];
@@ -1244,6 +1305,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if(!_result) return;
     _currentSnap=+slider.value;
     renderSnapshot(_result.snapshots[_currentSnap],_result);
+    // Also show stored fields for this pass if available
+    const pf = _passFields[_currentSnap];
+    if (pf) { renderFieldOverlay(pf.fields, pf.gw, pf.gh, pf.MAP); renderFieldStats(pf.fields, pf.gw, pf.gh, pf.stats); }
   });
   document.getElementById('btn-close').addEventListener('click',()=>{
     document.getElementById('pass-bar')?.style && (document.getElementById('pass-bar').style.display='none');
@@ -1330,6 +1394,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const status = document.getElementById('status');
     btn.disabled = true; btn.textContent = 'Solving…'; status.textContent = '…';
     _resetDiagnostics();
+    _passFields = [];
     await new Promise(r => setTimeout(r, 10));
 
     const passes = +document.getElementById('ctrl-passes').value;
@@ -1370,7 +1435,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (type === 'fields_live') {
         const { fields, gw, gh, MAP, stats } = ev.data;
         if (fields && gw && gh && MAP) {
+          _passFields.push({ fields, gw, gh, MAP, stats });
           renderFieldOverlay(fields, gw, gh, MAP);
+          renderFieldStats(fields, gw, gh, stats);
         }
         if (stats) {
           status.textContent = `Pass ${ev.data.pass+1} · H=${stats.meanEntropy?.toFixed(3)} · σ=${stats.builtStd?.toFixed(1)} · ${stats.buildings}b`;
