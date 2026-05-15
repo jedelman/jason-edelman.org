@@ -739,10 +739,13 @@ function getCanvas() { return document.getElementById('main-canvas'); }
 
 function _resizeCanvas() {
   const c = getCanvas(); if (!c) return;
-  const wrap = document.getElementById('canvas-wrap');
-  if (c.width !== wrap.clientWidth || c.height !== wrap.clientHeight) {
-    c.width  = wrap.clientWidth;
-    c.height = wrap.clientHeight;
+  // Use getBoundingClientRect for accurate size after CSS layout
+  const rect = c.getBoundingClientRect();
+  const W = Math.round(rect.width)  || c.offsetWidth  || 800;
+  const H = Math.round(rect.height) || c.offsetHeight || 600;
+  if (W > 0 && H > 0 && (c.width !== W || c.height !== H)) {
+    c.width  = W;
+    c.height = H;
   }
 }
 
@@ -1164,8 +1167,13 @@ document.addEventListener('DOMContentLoaded', () => {
       setStatus('Ready'); await tick();
 
       _panScale=1; _panTx=0; _panTy=0;
-      const _mc=document.getElementById('main-canvas'), _cw=document.getElementById('canvas-wrap');
-      if (_mc) { _mc.width=_cw.clientWidth; _mc.height=_cw.clientHeight; }
+      // ResizeObserver keeps canvas pixel dimensions in sync with CSS layout
+      const _mc = document.getElementById('main-canvas');
+      if (_mc && window.ResizeObserver) {
+        new ResizeObserver(() => { _resizeCanvas(); redrawCanvas(); }).observe(_mc);
+      }
+      // Initial draw on next frame after layout settles
+      requestAnimationFrame(() => { _resizeCanvas(); redrawCanvas(); });
       document.getElementById('btn-fit')?.addEventListener('click',()=>{ _panScale=1;_panTx=0;_panTy=0;redrawCanvas(); });
 
       // Pre-populate pattern count from EC_PATTERN_DEFS (available before solve)
