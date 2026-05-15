@@ -317,7 +317,8 @@ function extractBuildingsFromFields(fields, gw, gh, cellSize, MAP, edaMask) {
 }
 
 // ── Extract hot nodes from GPU field readback ─────────────────────────────
-// Hot nodes = local maxima of combined SOCIAL × |MOVEMENT|
+// Hot nodes = local maxima of combined SOCIAL × (|MOVEMENT| + INTEREST_Z)
+// social alone is sufficient if strong enough (civic anchors etc.)
 function extractHotNodesFromFields(fields, gw, gh, cellSize, MAP) {
   const social = fields.social;
   const mvx = fields.movement_x, mvy = fields.movement_y;
@@ -327,15 +328,18 @@ function extractHotNodesFromFields(fields, gw, gh, cellSize, MAP) {
   for (let cy=1; cy<gh-1; cy++) {
     for (let cx=1; cx<gw-1; cx++) {
       const i = cy*gw+cx;
-      const v = social[i] * (Math.sqrt(mvx[i]**2+mvy[i]**2)*0.5 + iz[i]*0.5);
-      if (v < 0.1) continue;
+      const mv = Math.sqrt(mvx[i]**2+mvy[i]**2);
+      // social dominates; movement and iz amplify but floor at 0.2 so social alone works
+      const v = social[i] * Math.max(0.2, mv*0.5 + iz[i]*0.5);
+      if (v < 0.04) continue;
       // Local maximum check (3×3)
       let isMax = true;
       for (let dy=-1; dy<=1 && isMax; dy++) {
         for (let dx=-1; dx<=1 && isMax; dx++) {
           if (!dx&&!dy) continue;
           const ni=(cy+dy)*gw+(cx+dx);
-          const nv=social[ni]*(Math.sqrt(mvx[ni]**2+mvy[ni]**2)*0.5+iz[ni]*0.5);
+          const nmv=Math.sqrt(mvx[ni]**2+mvy[ni]**2);
+          const nv=social[ni]*Math.max(0.2, nmv*0.5+iz[ni]*0.5);
           if (nv >= v) isMax=false;
         }
       }
@@ -344,7 +348,7 @@ function extractHotNodesFromFields(fields, gw, gh, cellSize, MAP) {
           x: MAP.x0+cx*cellSize,
           y: MAP.y0+cy*cellSize,
           v, nStrong: Math.round(v*10),
-          weights: { social: social[i], movement: Math.sqrt(mvx[i]**2+mvy[i]**2) },
+          weights: { social: social[i], movement: mv },
         });
       }
     }
@@ -1028,19 +1032,19 @@ self.EC_FieldSolver = (function() {
   }
 
   // Sparse hot nodes: local maxima of simultaneous pattern count along lines.
-  // One node per high-pressure peak, not every qualifying point.
+  // One node per high-pressure cluster, not every qualifying point.
   function buildHotNodes(lines) {
     const candidates = [];
     for (const line of lines) {
       // Count strong patterns at each point
       const scored = line.pts.map(pt => ({
         ...pt,
-        nStrong: Object.values(pt.weights||{}).filter(w=>w>0.28).length
+        nStrong: Object.values(pt.weights||{}).filter(w=>w>0.12).length
       }));
       // Find local maxima of nStrong along the line
       for (let i=1;i<scored.length-1;i++) {
         const p=scored[i];
-        if (p.nStrong < 3) continue;
+        if (p.nStrong < 2) continue;
         if (p.nStrong >= scored[i-1].nStrong && p.nStrong >= scored[i+1].nStrong) {
           candidates.push(p);
         }
