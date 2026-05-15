@@ -44,10 +44,15 @@
   #status { font-size: 0.62rem; color: var(--muted); font-family: var(--font-mono); white-space: nowrap; }
 
   /* ── BODY ── */
-  #body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
+  #body {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    grid-template-rows: 1fr;
+    flex: 1; overflow: hidden; min-height: 0;
+  }
 
   /* ── CANVAS ── */
-  #canvas-wrap { position: relative; flex: 1; overflow: hidden; background: var(--bg); }
+  #canvas-wrap { position: relative; overflow: hidden; background: var(--bg); min-width: 0; }
   #main-svg { width: 100%; height: 100%; display: block; }
   #field-canvas {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -76,21 +81,20 @@
 
   /* ── SIDEBAR ── */
   #sidebar {
-    width: 240px; flex-shrink: 0; display: flex; flex-direction: column;
+    display: flex; flex-direction: column;
     border-left: 1px solid var(--border); background: var(--surface); overflow: hidden;
-    transition: width 0.2s ease;
+    transition: grid-template-columns 0.2s ease;
+    min-width: 0;
   }
-  #sidebar.collapsed { width: 0; border-left: none; }
+  #body.sidebar-collapsed { grid-template-columns: 1fr 0px; }
+  #body.sidebar-collapsed #sidebar { border-left: none; overflow: hidden; }
   #sidebar-toggle {
     position: absolute; right: 0; top: 50%; transform: translateY(-50%);
     z-index: 20; background: var(--surface); border: 1px solid var(--border);
     border-right: none; color: var(--accent); cursor: pointer;
     padding: 0.5rem 0.3rem; font-size: 0.65rem; border-radius: 3px 0 0 3px;
     line-height: 1; writing-mode: vertical-rl; letter-spacing: 0.1em;
-    transition: right 0.2s ease;
   }
-  #sidebar.collapsed ~ * #sidebar-toggle,
-  #canvas-wrap #sidebar-toggle { right: 0; }
   .tab-bar { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .tab-btn {
     flex: 1; padding: 0.35rem; font-size: 0.58rem; letter-spacing: 0.08em;
@@ -1369,18 +1373,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Sidebar toggle
-  const _sidebar = document.getElementById('sidebar');
+  const _body = document.getElementById('body');
   const _toggleBtn = document.getElementById('sidebar-toggle');
   _toggleBtn?.addEventListener('click', () => {
-    const collapsed = _sidebar.classList.toggle('collapsed');
-    _toggleBtn.textContent = collapsed ? '‹ PANEL' : 'PANEL ›';
-    // Repaint field canvas after layout change
+    const collapsed = _body.classList.toggle('sidebar-collapsed');
+    _toggleBtn.textContent = collapsed ? '‹' : '›';
     setTimeout(() => {
       if (_result) {
         const fd = _result.fields || _result._jsFields;
         if (fd) renderFieldOverlay(fd, _result.gw, _result.gh, _result.MAP);
       }
-    }, 220); // after transition
+    }, 220);
   });
 
   // Tabs

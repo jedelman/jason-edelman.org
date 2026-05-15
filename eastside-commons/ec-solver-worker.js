@@ -159,6 +159,12 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   const maxSeeds = Math.min(seeds.length, 16);
   const _noiseSeed = Math.random() * 1000;
   log.push(`IC: ${seeds.length} seeds (using ${maxSeeds})`);
+  if (seeds.length > 0) {
+    const s0 = seeds[0];
+    const cx = Math.round(s0.x * GW), cy = Math.round(s0.y * GH);
+    const maskVal = edaMask[cy*GW+cx];
+    log.push(`  seed[0] UV=(${s0.x.toFixed(3)},${s0.y.toFixed(3)}) r=${s0.r.toFixed(1)}cells social=${s0.social} → cell(${cx},${cy}) mask=${maskVal}`);
+  }
   const icU = {
     uNumSeeds:   maxSeeds,
     uNoiseSeed:  _noiseSeed,   // different grain each run
