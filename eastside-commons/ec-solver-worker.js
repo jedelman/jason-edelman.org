@@ -1207,15 +1207,31 @@ self.onmessage = function(e) {
       (err.stack ? '\n' + err.stack.split('\n').slice(1,3).join('\n') : '') });
     return;
   }
-  // Serialise result — strip Float32Arrays (not structured-clone-able to localStorage)
+  // Serialise result
+  // Float32Arrays are structured-clone-able (transferable) — include field data for overlay
+  const lastSnap = result.snapshots?.[result.snapshots.length - 1];
   const payload = {
-    buildings:  result.buildings,
-    hotNodes:   result.hotNodes,
-    fieldLines: result.fieldLines.map(l => ({ pts: l.pts, seedPressure: l.seedPressure })),
-    log:        result.log,
+    buildings:   result.buildings,
+    hotNodes:    result.hotNodes,
+    fieldLines:  result.fieldLines.map(l => ({ pts: l.pts, seedPressure: l.seedPressure })),
+    log:         result.log,
     saturatedAt: result.saturatedAt,
-    ts: Date.now(),
+    ts:          Date.now(),
     opts,
+    gw:          result.gw,
+    gh:          result.gh,
+    MAP:         result.MAP,
+    snapshots:   result.snapshots,
+    patternColors: result.patternColors,
+    patternNames:  result.patternNames,
+    fields:      result.fields || null,  // GPU path: semantic fields; JS path: null
+    patternFields: result.patternFields || null,
+    // JS path: send last snapshot fieldMap for field overlay
+    jsFieldMap:  (lastSnap?.fieldMap && !result.fields)
+      ? Object.fromEntries(
+          Object.entries(lastSnap.fieldMap).map(([pid, {field, weight}]) => [pid, {field, weight}])
+        )
+      : null,
   };
 
   // Workers don't have localStorage — main thread writes it on receipt

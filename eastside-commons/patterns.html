@@ -147,6 +147,10 @@
   </div>
 
   <button id="btn-run">▶ Solve</button>
+  <div class="ctrl-group">
+    <span class="ctrl-label">Fields</span>
+    <input type="checkbox" id="ctrl-fields" checked style="accent-color:var(--amber);cursor:pointer;">
+  </div>
   <span id="status">—</span>
 </div>
 
@@ -160,6 +164,7 @@
       </defs>
       <g id="layer-eda"></g>
       <g id="layer-site-facts"></g>
+      <g id="layer-fields"></g>
       <g id="layer-heat"></g>
       <g id="layer-lines"></g>
       <g id="layer-nodes"></g>
@@ -234,6 +239,17 @@
           <div class="stat-box"><div class="n" id="s-nodes">—</div><div class="l">Nodes / Bldgs</div></div>
           <div class="stat-box"><div class="n" id="s-patterns">—</div><div class="l">Patterns</div></div>
           <div class="stat-box"><div class="n" id="s-ms">—</div><div class="l">ms</div></div>
+        </div>
+        <div style="margin-bottom:0.6rem;">
+          <div style="font-size:0.52rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.3rem;">Field overlay</div>
+          <div style="display:flex;flex-wrap:wrap;gap:0.3rem 0.6rem;">
+            <span class="field-row" style="border:none;padding:0;gap:0.3rem;"><span class="field-swatch" style="background:#ff3c1e"></span><span style="font-size:0.55rem;color:var(--text)">Social</span></span>
+            <span class="field-row" style="border:none;padding:0;gap:0.3rem;"><span class="field-swatch" style="background:#28c850"></span><span style="font-size:0.55rem;color:var(--text)">Wild</span></span>
+            <span class="field-row" style="border:none;padding:0;gap:0.3rem;"><span class="field-swatch" style="background:#f0c828"></span><span style="font-size:0.55rem;color:var(--text)">Comfort</span></span>
+            <span class="field-row" style="border:none;padding:0;gap:0.3rem;"><span class="field-swatch" style="background:#a05014"></span><span style="font-size:0.55rem;color:var(--text)">Wall</span></span>
+            <span class="field-row" style="border:none;padding:0;gap:0.3rem;"><span class="field-swatch" style="background:#ff9600"></span><span style="font-size:0.55rem;color:var(--text)">Interest</span></span>
+            <span class="field-row" style="border:none;padding:0;gap:0.3rem;"><span class="field-swatch" style="background:#3c78ff"></span><span style="font-size:0.55rem;color:var(--text)">Built ht</span></span>
+          </div>
         </div>
         <p><em>Field model:</em> each pattern deposits pressure across the site. A location matters because multiple patterns want it simultaneously — not because one pattern owns it.</p>
         <p><em>Max passes</em> caps the run. <em>Saturate ε</em>: if mean field change drops below ε, the solver stops early. With patterns in tension (P104 vs P60, P115 vs P122), the field may oscillate and never saturate — that's correct behaviour.</p>
@@ -632,6 +648,108 @@ function updateFieldList(result) {
 }
 
 
+// ── FIELD OVERLAY ─────────────────────────────────────────────────────────────
+// Renders semantic fields as additive RGBA tinted layers onto a hidden canvas,
+// then stamps it into the SVG as a <image> element.
+//
+// Color keys (additive, low opacity):
+//   social    → red   (255,  60,  30)
+//   wild      → green ( 40, 200,  80)
+//   comfort   → yellow(240, 200,  40)
+//   wall      → brown (160,  80,  20)
+//   interest_z→ orange(255, 150,   0)
+//   built_ht  → blue  ( 60, 120, 255)  — rescaled 0–96ft → 0–1
+
+const FIELD_COLORS = {
+  social:     [255,  60,  30],
+  wild:       [ 40, 200,  80],
+  comfort:    [240, 200,  40],
+  wall:       [160,  80,  20],
+  interest_z: [255, 150,   0],
+  built_height:[60, 120, 255],
+};
+
+let _fieldCanvas = null;
+let _lastFieldData = null;
+
+function renderFieldOverlay(fields, gw, gh, MAP) {
+  if (!fields || !gw || !gh || !MAP) return;
+  const show = document.getElementById('ctrl-fields')?.checked !== false;
+  const layer = document.getElementById('layer-fields');
+  if (!layer) return;
+  if (!show) { layer.innerHTML = ''; return; }
+
+  // Lazy-create hidden canvas
+  if (!_fieldCanvas) {
+    _fieldCanvas = document.createElement('canvas');
+    _fieldCanvas.style.display = 'none';
+    document.body.appendChild(_fieldCanvas);
+  }
+  _fieldCanvas.width  = gw;
+  _fieldCanvas.height = gh;
+  const ctx = _fieldCanvas.getContext('2d');
+  const img = ctx.createImageData(gw, gh);
+  const px  = img.data;
+
+  // Composite all fields additively into RGBA
+  // Each field [0,1] → tinted channel contribution
+  // Accumulate R,G,B,A per pixel, then clamp
+  const acc = new Float32Array(gw * gh * 4); // rgba accumulator
+
+  for (const [fname, rgb] of Object.entries(FIELD_COLORS)) {
+    const buf = fields[fname];
+    if (!buf) continue;
+    const maxVal = fname === 'built_height' ? 96 : 1;
+    for (let i = 0; i < gw * gh; i++) {
+      const v = Math.min(1, (buf[i] || 0) / maxVal);
+      if (v < 0.01) continue;
+      const a = v * 0.55;  // per-field opacity
+      acc[i*4+0] += rgb[0] * a;
+      acc[i*4+1] += rgb[1] * a;
+      acc[i*4+2] += rgb[2] * a;
+      acc[i*4+3] += a * 255;
+    }
+  }
+
+  // Write to ImageData, flip Y (field y=0 is south, SVG y=0 is north)
+  for (let cy = 0; cy < gh; cy++) {
+    for (let cx = 0; cx < gw; cx++) {
+      const src = cy * gw + cx;
+      const dst = ((gh - 1 - cy) * gw + cx) * 4;  // flip Y
+      px[dst+0] = Math.min(255, acc[src*4+0]);
+      px[dst+1] = Math.min(255, acc[src*4+1]);
+      px[dst+2] = Math.min(255, acc[src*4+2]);
+      px[dst+3] = Math.min(220, acc[src*4+3]);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  // Stamp into SVG layer as <image> element
+  const ns = 'http://www.w3.org/2000/svg';
+  layer.innerHTML = '';
+  const svgEl = document.getElementById('main-svg');
+  const vb = svgEl?.viewBox?.baseVal || { x:0, y:0, width:980, height:816 };
+
+  // MAP ft → SVG coords for the field grid bounding box
+  const toSvg = window._ftToSvg || ((x,y)=>[x,y]);
+  const [svgX0, svgY0] = toSvg(MAP.x0, MAP.y1); // NW corner (max ft y → min svg y)
+  const [svgX1, svgY1] = toSvg(MAP.x1, MAP.y0); // SE corner
+  const imgEl = document.createElementNS(ns, 'image');
+  imgEl.setAttribute('x',      svgX0);
+  imgEl.setAttribute('y',      svgY0);
+  imgEl.setAttribute('width',  svgX1 - svgX0);
+  imgEl.setAttribute('height', svgY1 - svgY0);
+  imgEl.setAttribute('href',   _fieldCanvas.toDataURL());
+  imgEl.setAttribute('preserveAspectRatio', 'none');
+  imgEl.setAttribute('opacity', '0.75');
+  layer.appendChild(imgEl);
+}
+
+function clearFieldOverlay() {
+  const layer = document.getElementById('layer-fields');
+  if (layer) layer.innerHTML = '';
+}
+
 // ── RENDER STUBS ─────────────────────────────────────────────────────────────
 function renderHeatMap(snapshot, patternColors) {
   const el = document.getElementById('layer-heat');
@@ -693,6 +811,12 @@ function renderSnapshot(snapshot, result) {
   if(!snapshot||!result) return;
   const view=document.getElementById('ctrl-view').value;
   const isBuildings = view==='buildings';
+
+  // Field overlay — always render if we have field data
+  const fd = result.fields || result._jsFields;
+  if (fd) {
+    renderFieldOverlay(fd, result.gw, result.gh, result.MAP);
+  }
 
   // Heat map
   if((view==='heat'||view==='both')&&!isBuildings) {
@@ -811,6 +935,15 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('ctrl-res','val-res',v=>`${v}ft`);
   bind('ctrl-thresh','val-thresh',v=>(+v).toFixed(2));
   bind('ctrl-eps','val-eps',v=>(+v).toFixed(3));
+
+  // Field overlay toggle
+  document.getElementById('ctrl-fields')?.addEventListener('change', () => {
+    if (_result) {
+      const fd = _result.fields || _result._jsFields;
+      if (fd) renderFieldOverlay(fd, _result.gw, _result.gh, _result.MAP);
+      else clearFieldOverlay();
+    }
+  });
 
   // Tabs
   document.querySelectorAll('.tab-btn').forEach(btn=>{
@@ -991,6 +1124,33 @@ document.addEventListener('DOMContentLoaded', () => {
           window._gpuViewedOnce = true;
           document.querySelector('.tab-btn[data-tab="gpu"]')?.click();
         }
+      }
+
+      // JS path: build pseudo-semantic fields from jsFieldMap sent by worker
+      if (!payload.fields && payload.jsFieldMap) {
+        const fm = payload.jsFieldMap;
+        const defs = window.EC_PATTERN_DEFS || [];
+        const useMap = {};
+        for (const d of defs) useMap[d.id] = d.use;
+        const n = (payload.gw||1) * (payload.gh||1);
+        const jsf = {
+          social:      new Float32Array(n),
+          wild:        new Float32Array(n),
+          comfort:     new Float32Array(n),
+          interest_z:  new Float32Array(n),
+          built_height:new Float32Array(n),
+        };
+        for (const [pid, {field, weight}] of Object.entries(fm)) {
+          if (!field) continue;
+          const use = useMap[+pid] || 'MIXED';
+          const dst = use === 'GREEN'       ? jsf.wild
+                    : use === 'COMMERCIAL'  ? jsf.social
+                    : use === 'CIVIC'       ? jsf.interest_z
+                    : use === 'RESIDENTIAL' ? jsf.comfort
+                    :                        jsf.built_height;
+          for (let i = 0; i < n; i++) dst[i] = Math.min(1, dst[i] + (field[i]||0) * weight);
+        }
+        _result._jsFields = jsf;
       }
 
       // Compat: ensure snapshots array exists for existing renderSnapshot
