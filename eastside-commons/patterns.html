@@ -179,6 +179,13 @@
   </div>
   <button id="btn-run">▶ Solve</button>
   <button id="btn-fit" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.6rem;font-size:0.6rem;cursor:pointer;border-radius:2px;" title="Reset zoom (double-click canvas)">⊡ fit</button>
+  <button id="btn-paint" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.6rem;font-size:0.6rem;cursor:pointer;border-radius:2px;" title="Paint interest field">✏ paint</button>
+  <select id="paint-channel" style="background:#1a1a1a;color:var(--muted);border:1px solid var(--border);padding:0.2rem;font-size:0.6rem;border-radius:2px;">
+    <option value="interest_z">interest</option>
+    <option value="social">social</option>
+    <option value="wild">wild</option>
+  </select>
+  <button id="btn-export" style="background:none;border:1px solid var(--border);color:var(--muted);padding:0.3rem 0.6rem;font-size:0.6rem;cursor:pointer;border-radius:2px;" title="Export current state">↓ export</button>
   <div class="ctrl-group">
     <span class="ctrl-label">Noise</span>
     <span class="ctrl-val" id="val-noise" style="min-width:3rem">—</span>
@@ -1266,6 +1273,98 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ── Paint mode ────────────────────────────────────────────────────────────
+  // Click/drag on canvas to inject field values. Works on current _result fields.
+  let _painting = false;
+  const _paintBtn = document.getElementById('btn-paint');
+  _paintBtn?.addEventListener('click', () => {
+    _painting = !_painting;
+    _paintBtn.style.color = _painting ? 'var(--amber)' : 'var(--muted)';
+    _paintBtn.style.borderColor = _painting ? 'var(--amber)' : 'var(--border)';
+    document.getElementById('main-svg').style.cursor = _painting ? 'crosshair' : '';
+  });
+
+  function _paintAtSvgPoint(svgX, svgY, radius=40, strength=0.4) {
+    if (!_result) return;
+    const fd = _result.fields || _result._jsFields;
+    if (!fd) return;
+    const ch = document.getElementById('paint-channel')?.value || 'interest_z';
+    const buf = fd[ch];
+    if (!buf) return;
+    const { gw, gh, MAP } = _result;
+    if (!MAP) return;
+    // SVG coords → ft via inverse ftToSvg
+    const vb = document.getElementById('main-svg').viewBox.baseVal;
+    const pzRoot = document.getElementById('pz-root');
+    // Account for pz-root transform
+    const t = pzRoot?.transform?.baseVal?.[0]?.matrix;
+    const svgXu = t ? (svgX - t.e) / t.a : svgX;
+    const svgYu = t ? (svgY - t.f) / t.d : svgY;
+    // ft from SVG user coords
+    const ftX = MAP.x0 + (svgXu / vb.width)  * (MAP.x1 - MAP.x0);
+    const ftY = MAP.y0 + (1 - svgYu / vb.height) * (MAP.y1 - MAP.y0);
+    // Paint gaussian into field buffer
+    const radiusFt = radius * (MAP.x1-MAP.x0) / vb.width;
+    for (let cy=0; cy<gh; cy++) {
+      for (let cx=0; cx<gw; cx++) {
+        const px = MAP.x0 + cx*(MAP.x1-MAP.x0)/gw;
+        const py = MAP.y0 + cy*(MAP.y1-MAP.y0)/gh;
+        const d2 = (px-ftX)**2 + (py-ftY)**2;
+        const g = strength * Math.exp(-3*d2/(radiusFt**2));
+        if (g > 0.001) buf[cy*gw+cx] = Math.min(1, buf[cy*gw+cx] + g);
+      }
+    }
+    renderFieldOverlay(fd, gw, gh, MAP);
+  }
+
+  document.getElementById('main-svg').addEventListener('mousedown', e => {
+    if (!_painting) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const vb = e.currentTarget.viewBox.baseVal;
+    const sx = (e.clientX-rect.left)/rect.width*vb.width;
+    const sy = (e.clientY-rect.top)/rect.height*vb.height;
+    _paintAtSvgPoint(sx, sy);
+  });
+  document.getElementById('main-svg').addEventListener('mousemove', e => {
+    if (!_painting || !(e.buttons & 1)) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const vb = e.currentTarget.viewBox.baseVal;
+    const sx = (e.clientX-rect.left)/rect.width*vb.width;
+    const sy = (e.clientY-rect.top)/rect.height*vb.height;
+    _paintAtSvgPoint(sx, sy, 40, 0.15);
+  });
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  document.getElementById('btn-export')?.addEventListener('click', () => {
+    if (!_result) return;
+    const snap = {
+      ts: new Date().toISOString(),
+      noise: _result.noiseSeed,
+      pass: _currentSnap,
+      buildings: _result.buildings?.length ?? 0,
+      hotNodes: _result.hotNodes?.length ?? 0,
+      saturatedAt: _result.saturatedAt,
+      log: _result.log,
+    };
+    // SVG export
+    const svgEl = document.getElementById('main-svg');
+    const svgStr = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([svgStr], {type:'image/svg+xml'});
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const a = document.createElement('a');
+    a.href = svgUrl;
+    a.download = `eastside-commons-${snap.ts.slice(0,16).replace(/[T:]/g,'-')}.svg`;
+    a.click();
+    URL.revokeObjectURL(svgUrl);
+    // JSON stats
+    const jsonBlob = new Blob([JSON.stringify(snap, null, 2)], {type:'application/json'});
+    const jsonUrl = URL.createObjectURL(jsonBlob);
+    const b = document.createElement('a');
+    b.href = jsonUrl;
+    b.download = a.download.replace('.svg','-stats.json');
+    setTimeout(() => { b.click(); URL.revokeObjectURL(jsonUrl); }, 300);
+  });
+
   // Sidebar toggle
   const _sidebar = document.getElementById('sidebar');
   const _toggleBtn = document.getElementById('sidebar-toggle');
@@ -1410,6 +1509,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.disabled = true; btn.textContent = 'Solving…'; status.textContent = '…';
     _resetDiagnostics();
     _passFields = [];
+    const logEl = document.getElementById('log-content');
+    if (logEl) logEl.innerHTML = '';
     await new Promise(r => setTimeout(r, 10));
 
     const passes = +document.getElementById('ctrl-passes').value;
@@ -1537,14 +1638,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (noiseEl && payload.noiseSeed != null) noiseEl.textContent = Math.round(payload.noiseSeed);
 
       const logEl = document.getElementById('log-content');
-      if (logEl) logEl.innerHTML = (payload.log||[]).map(l => {
-        const s = typeof l === 'string' ? l : JSON.stringify(l);
-        if (s.startsWith('Pass'))           return `<span class="log-pass">${s}</span>`;
-        if (s.includes('✓'))                return `<span class="log-new">${s}</span>`;
-        if (s.includes('error')||s.includes('Error')) return `<span class="log-err">${s}</span>`;
-        if (s.startsWith('GPU'))            return `<span style="color:#4af">${s}</span>`;
-        return s;
-      }).join('\n');
+      if (logEl) {
+        logEl.innerHTML += (logEl.innerHTML ? '\n' : '') +
+          (payload.log||[]).map(l => {
+            const s = typeof l === 'string' ? l : JSON.stringify(l);
+            if (s.startsWith('Pass'))                        return `<span class="log-pass">${s}</span>`;
+            if (s.includes('✓'))                             return `<span class="log-new">${s}</span>`;
+            if (s.includes('error')||s.includes('Error'))    return `<span class="log-err">${s}</span>`;
+            if (s.startsWith('  GPU:'))                      return `<span style="color:#4af">${s}</span>`;
+            if (s.startsWith('  not saturated'))             return `<span style="color:#888">${s}</span>`;
+            if (s.startsWith('  Post-IC'))                   return `<span style="color:#a8f">${s}</span>`;
+            return s;
+          }).join('\n');
+        logEl.scrollTop = logEl.scrollHeight;
+      }
 
       document.getElementById('pass-bar')?.style && (document.getElementById('pass-bar').style.display = 'flex');
       status.textContent = `✓ ${payload.buildings?.length??0} bldgs · ${payload.hotNodes?.length??0} nodes · ${ms}ms${gpuTag}`;

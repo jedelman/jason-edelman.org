@@ -378,7 +378,12 @@ class ECGpuFields {
       const loc = gl.getUniformLocation(prog, k);
       if (loc === null) continue;
       if (typeof v === 'number') {
-        gl.uniform1f(loc, v);
+        // Integer uniforms (uNumSeeds etc.) must use uniform1i
+        if (k === 'uNumSeeds' || k.startsWith('uNum') || k.startsWith('uInt')) {
+          gl.uniform1i(loc, Math.round(v));
+        } else {
+          gl.uniform1f(loc, v);
+        }
       } else if (typeof v === 'boolean') {
         gl.uniform1i(loc, v ? 1 : 0);
       } else if (typeof v === 'object' && v !== null) {
@@ -400,10 +405,6 @@ class ECGpuFields {
         }
       }
     }
-    // Handle integer uNumSeeds separately (it's passed as plain number)
-    const nsLoc = gl.getUniformLocation(prog, 'uNumSeeds');
-    if (nsLoc !== null && typeof extras['uNumSeeds'] === 'number')
-      gl.uniform1i(nsLoc, extras['uNumSeeds']);
   }
 
   // ── Private: fullscreen quad ───────────────────────────────────────────
