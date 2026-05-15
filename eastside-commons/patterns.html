@@ -243,12 +243,41 @@
     <div id="tab-info" class="tab-panel">
       <div id="info-content">
         <div class="stat-grid">
-          <div class="stat-box"><div class="n" id="s-lines">—</div><div class="l">Field Lines</div></div>
           <div class="stat-box"><div class="n" id="s-nodes">—</div><div class="l">Nodes / Bldgs</div></div>
-          <div class="stat-box"><div class="n" id="s-patterns">—</div><div class="l">Patterns</div></div>
-          <div class="stat-box"><div class="n" id="s-ms">—</div><div class="l">ms</div></div>
+          <div class="stat-box"><div class="n" id="s-ms">—</div><div class="l">ms [path]</div></div>
           <div class="stat-box"><div class="n" id="s-entropy">—</div><div class="l">Entropy H</div></div>
           <div class="stat-box"><div class="n" id="s-diff">—</div><div class="l">σ Built</div></div>
+          <div class="stat-box"><div class="n" id="s-patterns">—</div><div class="l">Patterns</div></div>
+          <div class="stat-box"><div class="n" id="s-lines">—</div><div class="l">Lines</div></div>
+        </div>
+
+        <!-- Per-pass diagnostic table -->
+        <div style="margin-bottom:0.5rem;">
+          <div style="font-size:0.52rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.2rem;">Pass log</div>
+          <div style="overflow-x:auto;">
+            <table id="pass-table" style="width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:0.5rem;color:var(--muted);">
+              <thead><tr style="color:var(--accent);border-bottom:1px solid var(--border);">
+                <th style="text-align:left;padding:0.15rem 0.3rem;">#</th>
+                <th style="text-align:right;padding:0.15rem 0.3rem;">H</th>
+                <th style="text-align:right;padding:0.15rem 0.3rem;">ΔH</th>
+                <th style="text-align:right;padding:0.15rem 0.3rem;">σblt</th>
+                <th style="text-align:right;padding:0.15rem 0.3rem;">Δσ</th>
+                <th style="text-align:right;padding:0.15rem 0.3rem;">blds</th>
+                <th style="text-align:right;padding:0.15rem 0.3rem;">nds</th>
+              </tr></thead>
+              <tbody id="pass-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sparklines -->
+        <div style="margin-bottom:0.5rem;">
+          <div style="font-size:0.5rem;color:var(--muted);margin-bottom:0.1rem;">H (entropy)  <span id="spark-entropy-val" style="color:var(--teal)"></span></div>
+          <canvas id="spark-entropy" width="200" height="28" style="width:100%;height:28px;display:block;border:1px solid var(--border);border-radius:2px;"></canvas>
+          <div style="font-size:0.5rem;color:var(--muted);margin:0.25rem 0 0.1rem;">σ built  <span id="spark-diff-val" style="color:var(--amber)"></span></div>
+          <canvas id="spark-diff" width="200" height="28" style="width:100%;height:28px;display:block;border:1px solid var(--border);border-radius:2px;"></canvas>
+          <div style="font-size:0.5rem;color:var(--muted);margin:0.25rem 0 0.1rem;">buildings  <span id="spark-blds-val" style="color:var(--green)"></span></div>
+          <canvas id="spark-blds" width="200" height="28" style="width:100%;height:28px;display:block;border:1px solid var(--border);border-radius:2px;"></canvas>
         </div>
         <div style="margin-bottom:0.6rem;">
           <div style="font-size:0.52rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.3rem;">Field overlay</div>
@@ -881,6 +910,82 @@ function renderSnapshot(snapshot, result) {
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 let _result=null, _currentSnap=0, _playTimer=null;
+let _passHistory = []; // accumulates per-pass stats for diagnostic panel
+
+function _resetDiagnostics() {
+  _passHistory = [];
+  const tb = document.getElementById('pass-table-body');
+  if (tb) tb.innerHTML = '';
+  for (const id of ['spark-entropy','spark-diff','spark-blds']) {
+    const c = document.getElementById(id);
+    if (c) { const ctx=c.getContext('2d'); ctx.clearRect(0,0,c.width,c.height); }
+  }
+}
+
+function _updateDiagnostics(stats) {
+  _passHistory.push(stats);
+  const p = stats.pass + 1;
+
+  // Table row
+  const tb = document.getElementById('pass-table-body');
+  if (tb) {
+    const sat = stats.saturated ? ' ✓' : '';
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid rgba(34,48,26,0.4)';
+    tr.style.color = stats.saturated ? 'var(--teal)' : 'var(--muted)';
+    tr.innerHTML = `
+      <td style="padding:0.12rem 0.3rem;">${p}${sat}</td>
+      <td style="text-align:right;padding:0.12rem 0.3rem;">${stats.meanEntropy?.toFixed(3)}</td>
+      <td style="text-align:right;padding:0.12rem 0.3rem;">${stats.deltaE?.toFixed(4)}</td>
+      <td style="text-align:right;padding:0.12rem 0.3rem;">${stats.builtStd?.toFixed(1)}</td>
+      <td style="text-align:right;padding:0.12rem 0.3rem;">${stats.deltaDiff?.toFixed(3)}</td>
+      <td style="text-align:right;padding:0.12rem 0.3rem;">${stats.buildings}</td>
+      <td style="text-align:right;padding:0.12rem 0.3rem;">${stats.hotNodes}</td>`;
+    tb.appendChild(tr);
+    tr.scrollIntoView?.({ block: 'nearest' });
+  }
+
+  // Sparklines
+  _drawSparkline('spark-entropy', _passHistory.map(s=>s.meanEntropy), '#28a888', 'spark-entropy-val');
+  _drawSparkline('spark-diff',    _passHistory.map(s=>s.builtStd),    '#c87818', 'spark-diff-val');
+  _drawSparkline('spark-blds',    _passHistory.map(s=>s.buildings),   '#28b848', 'spark-blds-val');
+}
+
+function _drawSparkline(canvasId, values, color, valId) {
+  const c = document.getElementById(canvasId);
+  if (!c || !values.length) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+  const lo = Math.min(...values), hi = Math.max(...values);
+  const range = hi - lo || 1;
+  const n = values.length;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = (i / Math.max(n-1, 1)) * (W-2) + 1;
+    const y = H - 2 - ((v-lo)/range) * (H-4);
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  // Fill area under line
+  ctx.lineTo((n-1)/(Math.max(n-1,1))*(W-2)+1, H-2);
+  ctx.lineTo(1, H-2);
+  ctx.closePath();
+  ctx.fillStyle = color + '22';
+  ctx.fill();
+  // Dot at last point
+  const lx = ((n-1)/Math.max(n-1,1))*(W-2)+1;
+  const ly = H - 2 - ((values[n-1]-lo)/range)*(H-4);
+  ctx.beginPath();
+  ctx.arc(lx, ly, 2.5, 0, Math.PI*2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  // Val label
+  const el = document.getElementById(valId);
+  if (el) el.textContent = typeof values[n-1]==='number' ? values[n-1].toFixed(values[n-1]<10?3:1) : '';
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   const tick = (ms=16) => new Promise(r => setTimeout(r, ms));
@@ -1103,6 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn    = document.getElementById('btn-run');
     const status = document.getElementById('status');
     btn.disabled = true; btn.textContent = 'Solving…'; status.textContent = '…';
+    _resetDiagnostics();
     await new Promise(r => setTimeout(r, 10));
 
     const passes = +document.getElementById('ctrl-passes').value;
@@ -1142,11 +1248,12 @@ document.addEventListener('DOMContentLoaded', () => {
           renderFieldOverlay(fields, gw, gh, MAP);
         }
         if (stats) {
-          status.textContent = `Pass ${ev.data.pass+1} H=${stats.meanEntropy?.toFixed(3)} σ=${stats.builtStd?.toFixed(1)}`;
+          status.textContent = `Pass ${ev.data.pass+1} · H=${stats.meanEntropy?.toFixed(3)} · σ=${stats.builtStd?.toFixed(1)} · ${stats.buildings}b`;
           const eEl = document.getElementById('s-entropy');
           const dEl = document.getElementById('s-diff');
           if (eEl) eEl.textContent = stats.meanEntropy?.toFixed(3) ?? '—';
           if (dEl) dEl.textContent = stats.builtStd?.toFixed(1)   ?? '—';
+          _updateDiagnostics(stats);
         }
         return;
       }

@@ -277,15 +277,25 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     log.push(`  Δsocial=${(deltaS??0).toFixed(5)} H=${meanEntropy.toFixed(3)} Δh=${(deltaE??0).toFixed(4)} σbuilt=${builtStd.toFixed(2)} Δσ=${(deltaDiff??0).toFixed(3)}`);
 
     // Saturate when ALL three conditions are met
-    const epsSocial = opts.eps    || 0.008;
-    const epsEntropy= opts.epsH   || 0.003;
-    const epsDiff   = opts.epsDiff|| 0.05;
-    if (pass >= 2 &&
+    const epsSocial = opts.eps    || 0.002;   // stricter social delta
+    const epsEntropy= opts.epsH   || 0.0015;  // stricter entropy delta
+    const epsDiff   = opts.epsDiff|| 0.03;    // stricter diff delta
+    const minH      = opts.minH   || 0.80;    // minimum entropy before considering saturated
+    const minPasses = opts.minPasses || 6;    // always run at least this many passes
+    if (pass >= minPasses - 1 &&
+        meanEntropy >= minH &&
         (deltaS   !== null && deltaS   < epsSocial)  &&
         (deltaE   !== null && deltaE   < epsEntropy)  &&
         (deltaDiff!== null && deltaDiff< epsDiff)) {
       saturatedAt = pass + 1;
-      log.push(`  ✓ Saturated at pass ${saturatedAt} (social+entropy+diff)`);
+      log.push(`  ✓ Saturated at pass ${saturatedAt} (H=${meanEntropy.toFixed(3)} ≥ ${minH})`);
+    } else if (pass >= minPasses - 1 && !saturatedAt) {
+      const why = [];
+      if (meanEntropy < minH)             why.push(`H=${meanEntropy.toFixed(3)}<${minH}`);
+      if (deltaS >= epsSocial)            why.push(`Δs=${deltaS?.toFixed(5)}`);
+      if (deltaE >= epsEntropy)           why.push(`Δh=${deltaE?.toFixed(4)}`);
+      if (deltaDiff >= epsDiff)           why.push(`Δσ=${deltaDiff?.toFixed(3)}`);
+      log.push(`  not saturated: ${why.join(' ')}`);
     }
 
     prevSocialSum = socialSum;
@@ -295,7 +305,9 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     // Post live fields to UI every pass for real-time overlay
     self.postMessage({ type: 'fields_live', pass, fields,
       gw: GW, gh: GH, MAP,
-      stats: { socialSum, meanEntropy, builtStd, builtMean } });
+      stats: { pass, socialSum, meanEntropy, builtStd, builtMean,
+               deltaS: deltaS??0, deltaE: deltaE??0, deltaDiff: deltaDiff??0,
+               buildings: buildings.length, hotNodes: hotNodes.length } });
 
     // Extract buildings from BUILT_HEIGHT + WALL fields (GPU readback)
     const buildings = extractBuildingsFromFields(fields, GW, GH, CELL_SIZE, MAP, edaMask);
