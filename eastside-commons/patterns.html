@@ -78,7 +78,19 @@
   #sidebar {
     width: 240px; flex-shrink: 0; display: flex; flex-direction: column;
     border-left: 1px solid var(--border); background: var(--surface); overflow: hidden;
+    transition: width 0.2s ease;
   }
+  #sidebar.collapsed { width: 0; border-left: none; }
+  #sidebar-toggle {
+    position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    z-index: 20; background: var(--surface); border: 1px solid var(--border);
+    border-right: none; color: var(--accent); cursor: pointer;
+    padding: 0.5rem 0.3rem; font-size: 0.65rem; border-radius: 3px 0 0 3px;
+    line-height: 1; writing-mode: vertical-rl; letter-spacing: 0.1em;
+    transition: right 0.2s ease;
+  }
+  #sidebar.collapsed ~ * #sidebar-toggle,
+  #canvas-wrap #sidebar-toggle { right: 0; }
   .tab-bar { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
   .tab-btn {
     flex: 1; padding: 0.35rem; font-size: 0.58rem; letter-spacing: 0.08em;
@@ -180,6 +192,7 @@
 <div id="body">
   <div id="err-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#8b0000;color:#fff;font-family:monospace;font-size:0.7rem;padding:0.5rem 1rem;white-space:pre-wrap;max-height:40vh;overflow-y:auto;"></div>
   <div id="canvas-wrap">
+    <button id="sidebar-toggle" title="Toggle panel">PANEL ›</button>
     <svg id="main-svg" viewBox="0 0 980 816" preserveAspectRatio="xMidYMid meet">
       <defs>
         <filter id="blur-sm"><feGaussianBlur stdDeviation="2"/></filter>
@@ -1100,6 +1113,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (fd) renderFieldOverlay(fd, _result.gw, _result.gh, _result.MAP);
       else clearFieldOverlay();
     }
+  });
+
+  // Sidebar toggle
+  const _sidebar = document.getElementById('sidebar');
+  const _toggleBtn = document.getElementById('sidebar-toggle');
+  _toggleBtn?.addEventListener('click', () => {
+    const collapsed = _sidebar.classList.toggle('collapsed');
+    _toggleBtn.textContent = collapsed ? '‹ PANEL' : 'PANEL ›';
+    // Repaint field canvas after layout change
+    setTimeout(() => {
+      if (_result) {
+        const fd = _result.fields || _result._jsFields;
+        if (fd) renderFieldOverlay(fd, _result.gw, _result.gh, _result.MAP);
+      }
+    }, 220); // after transition
   });
 
   // Tabs
