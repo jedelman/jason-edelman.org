@@ -312,9 +312,17 @@ void main() {
   vec4 b1 = gaussBlur4(uF1, vUV, 2.5);
   vec4 b2 = gaussBlur4(uF2, vUV, 2.5);
 
+  // Movement convergence (positive divergence) amplifies social
+  // Where flows meet, activity concentrates
+  vec2 dv = 1.0 / uResolution;
+  float dvx = texture(uF1, vUV+vec2(dv.x,0)).r - texture(uF1, vUV-vec2(dv.x,0)).r;
+  float dvy = texture(uF1, vUV+vec2(0,dv.y)).g - texture(uF1, vUV-vec2(0,dv.y)).g;
+  float convergence = clamp(-(dvx + dvy) * 0.5, 0.0, 1.0); // inflow = negative div
+  float social_boost = convergence * 0.3;
+
   // Blend: mix(original, blurred, rate) — keeps peaks while spreading tails
   outF0 = vec4(
-    mix(f0.r, b0.r, 0.35),  // social
+    clamp(mix(f0.r, b0.r, 0.35) + social_boost, 0.0, 1.0),  // social + convergence
     mix(f0.g, b0.g, 0.25),  // comfort
     mix(f0.b, b0.b, 0.30),  // wild
     mix(f0.a, b0.a, 0.05)   // built_height
@@ -325,10 +333,27 @@ void main() {
     mix(f1.b, b1.b, 0.08),  // wall
     f1.a
   );
+
+  // interest_z: diffuse existing + generate from social × |movement|
+  // High social and movement co-presence = emerging place of significance.
+  // Capped at 1.0; decays slightly each pass so it tracks current conditions.
+  float mv_mag   = length(f1.rg);
+  float iz_gen   = f0.r * mv_mag * 0.6;          // social × movement → interest
+  float iz_social= f0.r * f0.r   * 0.15;          // high social alone → mild interest
+  float iz_new   = min(1.0, mix(f2.b, b2.b, 0.20) * 0.92 + iz_gen + iz_social);
+
+  // interest_xy: pull toward social gradient (people orient toward activity)
+  vec2 d = 1.0 / uResolution;
+  float sx = texture(uF0, vUV+vec2(d.x,0)).r - texture(uF0, vUV-vec2(d.x,0)).r;
+  float sy = texture(uF0, vUV+vec2(0,d.y)).r - texture(uF0, vUV-vec2(0,d.y)).r;
+  vec2 social_grad = vec2(sx, sy) * 0.5 * uResolution.x;
+  float grad_mag = length(social_grad);
+  vec2 ixy_attract = (grad_mag > 0.001) ? normalize(social_grad) * f0.r * 0.25 : vec2(0.0);
+
   outF2 = vec4(
-    mix(f2.r, b2.r, 0.20),  // interest x
-    mix(f2.g, b2.g, 0.20),  // interest y
-    mix(f2.b, b2.b, 0.20),  // interest z
+    mix(f2.r, b2.r, 0.20) + ixy_attract.x,  // interest x
+    mix(f2.g, b2.g, 0.20) + ixy_attract.y,  // interest y
+    iz_new,                                   // interest z — generated + diffused
     f2.a
   );
   outPID = texture(uPID, vUV).r;
