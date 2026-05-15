@@ -816,7 +816,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderSnapshot(_result.snapshots[_currentSnap],_result);
   });
   document.getElementById('btn-close').addEventListener('click',()=>{
-    document.getElementById('pass-bar').style.display='none';
+    document.getElementById('pass-bar')?.style && (document.getElementById('pass-bar').style.display='none');
   });
 
   // ── Tooltip panel ──────────────────────────────────────────────────────────
@@ -985,7 +985,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return s;
       }).join('\n');
 
-      document.getElementById('pass-bar').style.display = 'flex';
+      document.getElementById('pass-bar')?.style && (document.getElementById('pass-bar').style.display = 'flex');
       status.textContent = `✓ ${payload.buildings?.length??0} bldgs · ${payload.hotNodes?.length??0} nodes · ${ms}ms${gpuTag}`;
       btn.disabled = false; btn.textContent = '↺ Re-run';
     };
