@@ -99,27 +99,31 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   const rs = derivedG.RESEARCH;
 
   // Transit node (TIDE) → social seed, movement inflow
-  if (ti) addSeed(ti.x+ti.w/2, ti.y+ti.h/2, 220, 0.8, 0, 0, 0, 0.4, 0);
-  // Civic anchor → social + INTEREST.z
+  // Large radius so social fills the spine corridor from the start
+  if (ti) addSeed(ti.x+ti.w/2, ti.y+ti.h/2, 600, 0.9, 0, 0, 0, 0.5, 0);
+  // Civic anchor → social + INTEREST.z — wide influence
   for (const p of parcels) {
     if (p.spec==='CIVIC_700' && p.centroid) {
       const [cx,cy] = proj(p.centroid.lon, p.centroid.lat);
-      addSeed(cx, cy, 180, 0.6, 0, 100, 0, 0, 1.2); // built=100 = existing building marker
+      addSeed(cx, cy, 500, 0.7, 0, 100, 0, 0, 1.2);
     }
     if (p.spec==='HOUSING_A_530' && p.centroid) {
       const [cx,cy] = proj(p.centroid.lon, p.centroid.lat);
-      addSeed(cx, cy, 100, 0, 0, 100, 0, 0, 0); // existing building marker
+      addSeed(cx, cy, 300, 0.2, 0, 100, 0, 0, 0);
     }
   }
-  // Sponge → wild seed (supplemented by sponge mask)
-  if (sg) addSeed(sg.cx, sg.cy, Math.max(sg.rx,sg.ry)*1.2, 0, 0.9, 0, 0, 0, 0);
-  // Road interfaces → movement seeds
-  // N Military Hwy (west edge, mid-height): eastward inflow
-  addSeed(MAP.x0+60, (MAP.y0+MAP.y1)/2, 120, 0, 0, 0, 0.6, 0, 0);
-  // Tidewater Dr (east edge, mid-height): westward inflow
-  addSeed(MAP.x1-60, (MAP.y0+MAP.y1)/2, 120, 0, 0, 0, -0.6, 0, 0);
+  // Sponge → wild seed covering the whole east zone
+  if (sg) addSeed(sg.cx, sg.cy, Math.max(sg.rx,sg.ry)*2.5, 0, 0.95, 0, 0, 0, 0);
+  // Road interfaces → movement seeds — wide strips along the edges
+  addSeed(MAP.x0+80, (MAP.y0+MAP.y1)/2, 400, 0.1, 0, 0, 0.7, 0, 0);  // N Military Hwy
+  addSeed(MAP.x1-80, (MAP.y0+MAP.y1)/2, 400, 0.1, 0, 0, -0.7, 0, 0); // Tidewater Dr
+  // Spine corridor → baseline social along N-S axis
+  if (s) {
+    addSeed(s.x+s.w/2, (MAP.y0+MAP.y1)*0.35, 400, 0.6, 0, 0, 0, 0.3, 0.4);
+    addSeed(s.x+s.w/2, (MAP.y0+MAP.y1)*0.65, 400, 0.6, 0, 0, 0, 0.3, 0.4);
+  }
   // Research zone → moderate social east side
-  if (rs) addSeed(rs.x+rs.w/2, rs.y+rs.h/2, 160, 0.4, 0, 0, 0, 0, 0.3);
+  if (rs) addSeed(rs.x+rs.w/2, rs.y+rs.h/2, 350, 0.4, 0, 0, 0, 0, 0.3);
 
   // Pack seeds into parallel arrays (max 16)
   const maxSeeds = Math.min(seeds.length, 16);
@@ -155,6 +159,8 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   let snapshots = [];
   let allFieldLines = [];
   let prevSocialSum = null;
+  let prevEntropy   = null;
+  let prevBuiltStd  = null;
   let saturatedAt = null;
 
   const invariantU = {
@@ -190,18 +196,69 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
       gpu.runInvariant(invariantU);
     }
 
-    // Convergence: read back SOCIAL channel, compare sum
+    // Convergence: read back all fields
     const fields = gpu.readback();
+
+    // ── Terminal condition 1: social sum delta (existing) ──────────────────
     const socialSum = fields.social.reduce((a,b)=>a+b, 0);
-    const delta = prevSocialSum !== null ? Math.abs(socialSum - prevSocialSum) / (GW*GH) : null;
-    if (delta !== null) {
-      log.push(`  Δ_social=${delta.toFixed(5)}`);
-      if (delta < (opts.eps || 0.008) && pass >= 2) {
-        saturatedAt = pass + 1;
-        log.push(`  ✓ Saturated at pass ${saturatedAt}`);
+    const deltaS = prevSocialSum !== null ? Math.abs(socialSum - prevSocialSum) / (GW*GH) : null;
+
+    // ── Terminal condition 2: spatial entropy ─────────────────────────────
+    // Per-cell Shannon entropy across the 5 scalar fields.
+    // When field mix stops changing, patterns have settled territory.
+    const CHANNELS = ['social','wild','comfort','wall','interest_z'];
+    let entropySum = 0;
+    for (let i = 0; i < GW*GH; i++) {
+      if (!edaMask[i]) continue;
+      let tot = 0;
+      for (const ch of CHANNELS) tot += fields[ch][i];
+      if (tot < 1e-6) continue;
+      let h = 0;
+      for (const ch of CHANNELS) {
+        const p = fields[ch][i] / tot;
+        if (p > 1e-9) h -= p * Math.log(p);
       }
+      entropySum += h;
     }
+    const edaCells = edaMask.reduce((s,v)=>s+(v?1:0), 0) || 1;
+    const meanEntropy = entropySum / edaCells;
+    const deltaE = prevEntropy !== null ? Math.abs(meanEntropy - prevEntropy) : null;
+
+    // ── Terminal condition 3: spatial differentiation ─────────────────────
+    // Std-dev of built_height across EDA cells. Low std = flat = undifferentiated.
+    // High and stable std = zones have crystallized.
+    let builtSum = 0, builtSumSq = 0, builtN = 0;
+    for (let i = 0; i < GW*GH; i++) {
+      if (!edaMask[i]) continue;
+      const v = fields.built_height[i];
+      builtSum += v; builtSumSq += v*v; builtN++;
+    }
+    const builtMean = builtSum / (builtN||1);
+    const builtStd  = Math.sqrt(Math.max(0, builtSumSq/(builtN||1) - builtMean*builtMean));
+    const deltaDiff = prevBuiltStd !== null ? Math.abs(builtStd - prevBuiltStd) : null;
+
+    log.push(`  Δsocial=${(deltaS??0).toFixed(5)} H=${meanEntropy.toFixed(3)} Δh=${(deltaE??0).toFixed(4)} σbuilt=${builtStd.toFixed(2)} Δσ=${(deltaDiff??0).toFixed(3)}`);
+
+    // Saturate when ALL three conditions are met
+    const epsSocial = opts.eps    || 0.008;
+    const epsEntropy= opts.epsH   || 0.003;
+    const epsDiff   = opts.epsDiff|| 0.05;
+    if (pass >= 2 &&
+        (deltaS   !== null && deltaS   < epsSocial)  &&
+        (deltaE   !== null && deltaE   < epsEntropy)  &&
+        (deltaDiff!== null && deltaDiff< epsDiff)) {
+      saturatedAt = pass + 1;
+      log.push(`  ✓ Saturated at pass ${saturatedAt} (social+entropy+diff)`);
+    }
+
     prevSocialSum = socialSum;
+    prevEntropy   = meanEntropy;
+    prevBuiltStd  = builtStd;
+
+    // Post live fields to UI every pass for real-time overlay
+    self.postMessage({ type: 'fields_live', pass, fields,
+      gw: GW, gh: GH, MAP,
+      stats: { socialSum, meanEntropy, builtStd, builtMean } });
 
     // Extract buildings from BUILT_HEIGHT + WALL fields (GPU readback)
     const buildings = extractBuildingsFromFields(fields, GW, GH, CELL_SIZE, MAP, edaMask);

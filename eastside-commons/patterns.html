@@ -243,6 +243,8 @@
           <div class="stat-box"><div class="n" id="s-nodes">—</div><div class="l">Nodes / Bldgs</div></div>
           <div class="stat-box"><div class="n" id="s-patterns">—</div><div class="l">Patterns</div></div>
           <div class="stat-box"><div class="n" id="s-ms">—</div><div class="l">ms</div></div>
+          <div class="stat-box"><div class="n" id="s-entropy">—</div><div class="l">Entropy H</div></div>
+          <div class="stat-box"><div class="n" id="s-diff">—</div><div class="l">σ Built</div></div>
         </div>
         <div style="margin-bottom:0.6rem;">
           <div style="font-size:0.52rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);margin-bottom:0.3rem;">Field overlay</div>
@@ -1091,6 +1093,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (type === 'progress') { status.textContent = `Pass ${pass+1} (${path||'js'})…`; return; }
+      if (type === 'fields_live') {
+        const { fields, gw, gh, MAP, stats } = ev.data;
+        if (fields && gw && gh && MAP) {
+          renderFieldOverlay(fields, gw, gh, MAP);
+        }
+        if (stats) {
+          status.textContent = `Pass ${ev.data.pass+1} H=${stats.meanEntropy?.toFixed(3)} σ=${stats.builtStd?.toFixed(1)}`;
+          const eEl = document.getElementById('s-entropy');
+          const dEl = document.getElementById('s-diff');
+          if (eEl) eEl.textContent = stats.meanEntropy?.toFixed(3) ?? '—';
+          if (dEl) dEl.textContent = stats.builtStd?.toFixed(1)   ?? '—';
+        }
+        return;
+      }
       if (type === 'error')    {
         status.textContent = '⚠ ' + msg;
         const logEl = document.getElementById('log-content');
