@@ -20,7 +20,7 @@
   #header {
     display: flex; align-items: center; gap: 1rem;
     padding: 0.5rem 1rem; background: var(--surface);
-    border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: nowrap; overflow: hidden;
   }
   #header h1 { font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--accent); font-weight: 600; white-space: nowrap; }
@@ -49,10 +49,16 @@
     grid-template-columns: 1fr 320px;
     grid-template-rows: 1fr;
     flex: 1; overflow: hidden; min-height: 0;
+    /* Grid children must not exceed their track size */
+    align-items: stretch;
   }
 
   /* ── CANVAS ── */
-  #canvas-wrap { position: relative; overflow: hidden; background: var(--bg); min-width: 0; }
+  #canvas-wrap {
+    position: relative; overflow: hidden; background: var(--bg);
+    min-width: 0; min-height: 0;  /* allow grid shrinking */
+    height: 100%;
+  }
   #main-svg { width: 100%; height: 100%; display: block; }
   #field-canvas {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -83,8 +89,7 @@
   #sidebar {
     display: flex; flex-direction: column;
     border-left: 1px solid var(--border); background: var(--surface); overflow: hidden;
-    transition: grid-template-columns 0.2s ease;
-    min-width: 0;
+    min-width: 0; min-height: 0; height: 100%;
   }
   #body.sidebar-collapsed { grid-template-columns: 1fr 0px; }
   #body.sidebar-collapsed #sidebar { border-left: none; overflow: hidden; }
@@ -200,6 +205,8 @@
     <span class="ctrl-label">Fields</span>
     <input type="checkbox" id="ctrl-fields" checked style="accent-color:var(--amber);cursor:pointer;">
   </div>
+</div>
+<div id="subbar" style="display:flex;align-items:center;gap:0.8rem;padding:0.2rem 0.8rem;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;font-family:var(--font-mono);font-size:0.58rem;color:var(--muted);min-height:1.4rem;overflow:hidden;">
   <span id="status">—</span>
 </div>
 
