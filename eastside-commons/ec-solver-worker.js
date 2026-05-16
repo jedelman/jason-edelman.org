@@ -345,6 +345,8 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     gpu.runWallDistance({ uWallThreshold: 0.2 });
 
     // Run each pattern: detector → modulator → invariant (interleaved)
+    // On pass 1: log first pattern's detector output to verify FBO write
+    let _patDiagDone = false;
     for (const pid of patternOrder) {
       const pdef = S.patterns[pid];
       if (!pdef) continue;
@@ -364,6 +366,22 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 
       gpu.runPattern(pid, pdef.detect, pdef.modulate, pu);
       gpu.runInvariant(invariantU);
+
+      // Pass 1 only: verify the first pattern detector actually wrote output
+      if (pass === 0 && !_patDiagDone) {
+        _patDiagDone = true;
+        const diagBuf = gpu.readbackPattern(pid);
+        if (diagBuf) {
+          let dmax = 0, dnz = 0;
+          for (let i = 0; i < diagBuf.length; i++) {
+            if (diagBuf[i] > dmax) dmax = diagBuf[i];
+            if (diagBuf[i] > 1e-6) dnz++;
+          }
+          log.push(`  [diag] P${pid} detector: max=${dmax.toFixed(6)} nz=${dnz} (0=broken FBO or shader)`);
+        } else {
+          log.push(`  [diag] P${pid} readbackPattern returned null`);
+        }
+      }
     }
 
     // Diffuse fields once per pass
