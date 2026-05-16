@@ -191,6 +191,27 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   gpu.init(icU);
   log.push(`IC: ${maxSeeds} seeds`);
 
+  // ── Sanity: verify RGBA32F write+readback works on this device ───────────
+  // Write a known pattern directly into F0_A via texImage2D, read it back.
+  // If this returns zero, float texture readback is broken (device limitation).
+  // If it returns the sentinel, the IC shader draw is the problem.
+  {
+    const gl = gpu.gl;
+    const sentinel = new Float32Array(GW * GH * 4).fill(0);
+    // Write 0.42 into red channel of first 4 cells
+    for (let i = 0; i < Math.min(4, GW*GH); i++) sentinel[i*4] = 0.42;
+    gl.bindTexture(gl.TEXTURE_2D, gpu.textures['F0_A']);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, GW, GH, 0, gl.RGBA, gl.FLOAT, sentinel);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    const check = gpu.readback();
+    const readVal = check.social[0];
+    log.push(`  F32 write+read sanity: wrote 0.42, read ${readVal.toFixed(4)} ${Math.abs(readVal-0.42)<0.01 ? '✓' : '✗ READBACK BROKEN'}`);
+    // Clear F0_A back to zero before mask upload
+    gl.bindTexture(gl.TEXTURE_2D, gpu.textures['F0_A']);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, GW, GH, 0, gl.RGBA, gl.FLOAT, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+  }
+
   // ── Upload static masks (requires gl context from init()) ───────────────
   gpu.uploadMask('EDA_MASK',    edaMask);
   gpu.uploadMask('SPONGE_MASK', spongeMask);
@@ -207,13 +228,25 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   // Sanity: read back social immediately after IC to verify it wrote values
   {
     const icCheck = gpu.readback();
-    let socialNZ = 0, socialMax = 0;
+    let socialNZ = 0, socialMax = 0, wildNZ = 0, wildMax = 0;
     for (let i = 0; i < icCheck.social.length; i++) {
-      const v = icCheck.social[i];
-      if (v > 0.001) socialNZ++;
-      if (v > socialMax) socialMax = v;
+      const sv = icCheck.social[i];
+      const wv = icCheck.wild[i];
+      if (sv > 0.001) socialNZ++;
+      if (sv > socialMax) socialMax = sv;
+      if (wv > 0.001) wildNZ++;
+      if (wv > wildMax) wildMax = wv;
     }
-    log.push(`  Post-IC check: social nz=${socialNZ}/${GW*GH} max=${socialMax.toFixed(4)}`);
+    log.push(`  Post-IC check: social nz=${socialNZ}/${GW*GH} max=${socialMax.toFixed(4)} | wild nz=${wildNZ} max=${wildMax.toFixed(4)}`);
+    // If everything is zero, the IC shader wrote nothing — diagnose
+    if (socialNZ === 0 && wildNZ === 0) {
+      // Check edaMask directly — is it populated?
+      const edaNZ = edaMask.reduce((s,v)=>s+(v?1:0), 0);
+      log.push(`  !! IC all-zero: edaMask has ${edaNZ} non-zero cells in JS`);
+      log.push(`  !! Check: EDA_MASK uploaded BEFORE paintIC? (should be true)`);
+      // Try a minimal readback of F0_B directly — maybe swap didn't happen?
+      log.push(`  !! Possible causes: (1) MRT FBO clear + no draw, (2) IN_EDA always false, (3) F32 readback unsupported`);
+    }
   }
 
   // ── Keep gpu alive for interactive painting ──────────────────────────────
