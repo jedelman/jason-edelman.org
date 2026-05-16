@@ -136,6 +136,22 @@ layout(location=1) out vec4 outF1;
 layout(location=2) out vec4 outF2;
 layout(location=3) out float outPID;
 
+// ── Smooth value noise helpers ─────────────────────────────────────────────
+// Three independent 2D hash streams → [0,1]
+float ic_hashA(vec2 p){return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453);}
+float ic_hashB(vec2 p){return fract(sin(dot(p,vec2(269.5,183.3)))*17391.3527);}
+float ic_hashC(vec2 p){return fract(sin(dot(p,vec2(419.2, 93.7)))*28547.8831);}
+// Smooth (smoothstep-interpolated) value noise at scale s (cells per period)
+float ic_vnoiseA(vec2 uv_c,float s,float off){
+  vec2 p=(uv_c+off)/s;vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
+  return mix(mix(ic_hashA(i),ic_hashA(i+vec2(1,0)),u.x),mix(ic_hashA(i+vec2(0,1)),ic_hashA(i+vec2(1,1)),u.x),u.y);}
+float ic_vnoiseB(vec2 uv_c,float s,float off){
+  vec2 p=(uv_c+off)/s;vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
+  return mix(mix(ic_hashB(i),ic_hashB(i+vec2(1,0)),u.x),mix(ic_hashB(i+vec2(0,1)),ic_hashB(i+vec2(1,1)),u.x),u.y);}
+float ic_vnoiseC(vec2 uv_c,float s,float off){
+  vec2 p=(uv_c+off)/s;vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
+  return mix(mix(ic_hashC(i),ic_hashC(i+vec2(1,0)),u.x),mix(ic_hashC(i+vec2(0,1)),ic_hashC(i+vec2(1,1)),u.x),u.y);}
+
 void main() {
   if (!IN_EDA(vUV)) {
     outF0 = vec4(0.0); outF1 = vec4(0.0); outF2 = vec4(0.0); outPID = 0.0;
@@ -171,31 +187,36 @@ void main() {
   }
   wild = max(wild, edge * 0.5);
 
-  // Spatial noise — low-frequency hash from UV + seed
-  // Gives each run a different grain while remaining deterministic per seed.
-  // Two octaves at different scales for natural-looking variation.
-  float nx = dot(vUV * uResolution + uNoiseSeed, vec2(127.1, 311.7));
-  float ny = dot(vUV * uResolution + uNoiseSeed, vec2(269.5, 183.3));
-  float n1 = fract(sin(nx) * 43758.5453);
-  float n2 = fract(sin(ny) * 43758.5453);
-  // Low-frequency: average 3×3 neighborhood of hash → smooth blobs
-  float nx2 = dot(floor(vUV * uResolution * 0.1) + uNoiseSeed, vec2(127.1, 311.7));
-  float n_low = fract(sin(nx2) * 43758.5453);
+  // ── Smooth fBm ICs for choice fields ──────────────────────────────────
+  // Social, movement, interest_z represent affordances people would choose:
+  // paths to walk, places to gather, goals to seek. They start with spatially
+  // varied latent potential clamped to [0.25, 0.75] — every cell is a plausible
+  // candidate; seeds and patterns differentiate from there.
+  // 2-octave fBm: large blob (60 cells) + medium texture (25 cells).
+  vec2 uv_cells = vUV * uResolution + uNoiseSeed;
 
-  // Wild noise: fine grain (ecotone variation) + low-freq patches
-  // Only inside EDA, suppressed in sponge (already wild there)
-  float wild_noise = (n1 * 0.5 + n_low * 0.5) * 0.28 * (1.0 - wild);
-  wild = clamp(wild + wild_noise, 0.0, 1.0);
+  float fbm_social = ic_vnoiseA(uv_cells, 60.0,  0.0)*0.6 + ic_vnoiseA(uv_cells, 25.0, 137.0)*0.4;
+  float fbm_mvx    = ic_vnoiseB(uv_cells, 55.0,  0.0)*0.6 + ic_vnoiseB(uv_cells, 22.0, 211.0)*0.4;
+  float fbm_mvy    = ic_vnoiseC(uv_cells, 50.0,  0.0)*0.6 + ic_vnoiseC(uv_cells, 20.0, 319.0)*0.4;
+  float fbm_iz     = ic_vnoiseB(uv_cells, 70.0, 500.0)*0.6 + ic_vnoiseA(uv_cells, 28.0, 430.0)*0.4;
 
-  // Interest_z noise: low-frequency surprise landmark pressure
-  // Moderate amplitude — creates candidate locations that patterns then
-  // either confirm or suppress based on social/movement context.
-  float iz_noise = n_low * 0.35;
-  iz = clamp(iz + iz_noise, 0.0, 1.0);
+  // Clamp to [0.25, 0.75]: latent potential, not dead zero or pre-saturated
+  fbm_social = clamp(fbm_social, 0.25, 0.75);
+  fbm_iz     = clamp(fbm_iz,     0.25, 0.75);
 
-  // Base social floor: uniform low-level activity across all EDA cells.
-  // Without this, detectors in low-seed areas return zero and nothing fires.
-  social = max(social, 0.15);
+  // Movement: center at 0 for directionality (±0.2 range from noise)
+  fbm_mvx = (clamp(fbm_mvx, 0.25, 0.75) - 0.5) * 0.4;
+  fbm_mvy = (clamp(fbm_mvy, 0.25, 0.75) - 0.5) * 0.4;
+
+  // Seeds ride on top: max for scalar fields, add for directional movement
+  social = max(social, fbm_social);
+  mvx   += fbm_mvx;
+  mvy   += fbm_mvy;
+  iz     = max(iz, fbm_iz);
+
+  // Ecotone noise for wild (structural, not choice — coarser, single octave)
+  float fbm_wild = ic_vnoiseA(uv_cells, 40.0, 999.0) * 0.28 * (1.0 - wild);
+  wild = clamp(wild + fbm_wild, 0.0, 1.0);
 
   outF0 = vec4(social, comfort, clamp(wild,0.,1.), built);
   outF1 = vec4(mvx, mvy, 0.0, 0.0);
