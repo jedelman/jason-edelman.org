@@ -287,13 +287,15 @@ class ECGpuFields {
       [this.textures[name+'_A'], this.textures[name+'_B']] =
       [this.textures[name+'_B'], this.textures[name+'_A']];
     }
-    // Re-attach MRT to the new _B textures
+    // Re-attach MRT to the new _B textures and re-declare draw buffers.
+    // drawBuffers() is FBO state and some drivers reset it on framebufferTexture2D.
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos['MRT']);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.textures['F0_B'],  0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.textures['F1_B'],  0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, this.textures['F2_B'],  0);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT3, gl.TEXTURE_2D, this.textures['PID_B'], 0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2, gl.COLOR_ATTACHMENT3]);
   }
 
   // ── Private: compile shaders ───────────────────────────────────────────
@@ -506,11 +508,21 @@ class ECGpuFields {
     gl.viewport(0, 0, this.W, this.H);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    // Verify FBO is complete before drawing
+    const fboStatus = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (fboStatus !== gl.FRAMEBUFFER_COMPLETE) {
+      this._log.push(`IC FBO incomplete before draw: 0x${fboStatus.toString(16)}`);
+    }
     // Run IC shader
     gl.useProgram(this.progs['ic']);
     this._bindAll(this.progs['ic'], u, null);
     gl.disable(gl.BLEND);
     this._quad();
+    // Check for WebGL errors immediately after draw
+    const err = gl.getError();
+    if (err !== gl.NO_ERROR) {
+      this._log.push(`IC draw gl.getError: 0x${err.toString(16)}`);
+    }
     this._swap(); // _B (IC result) → _A (read-ready for first pattern)
     this._log.push(`IC painted (${u.uNumSeeds ?? 0} seeds)`);
   }
