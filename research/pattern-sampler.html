@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alexander Grammar Sampler</title>
+<style>
+:root {
+  --ink: #080c06;
+  --paper: #e8e4d8;
+  --accent: #b8d820;
+  --dim: #4a5240;
+  --warn: #d04020;
+  --mono: 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--ink);
+  color: var(--paper);
+  font-family: var(--mono);
+  font-size: 11px;
+  min-height: 100vh;
+  padding: 12px;
+}
+header {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #1a2a10;
+}
+h1 { font-size: 13px; color: var(--accent); letter-spacing: 0.1em; }
+.sub { color: var(--dim); font-size: 9px; margin-left: 10px; }
+.controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+button {
+  font-family: var(--mono); font-size: 10px;
+  padding: 5px 14px; border: 1px solid #2a4010;
+  background: transparent; color: var(--paper); cursor: pointer;
+  letter-spacing: 0.06em; transition: all 0.1s;
+}
+button:hover { border-color: var(--accent); color: var(--accent); }
+button.primary { background: var(--accent); color: var(--ink); border-color: var(--accent); font-weight: bold; }
+button.primary:hover { background: #c8e830; }
+.seed-display { color: var(--dim); font-size: 9px; }
+
+/* Field grid */
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.field-card { }
+.field-label {
+  font-size: 8px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--dim); margin-bottom: 4px;
+  display: flex; justify-content: space-between;
+}
+.field-label .stats { color: #6a7a50; }
+canvas {
+  display: block; width: 100%; height: auto;
+  border: 1px solid #1a2a10;
+  image-rendering: pixelated;
+}
+
+/* Pattern signature */
+.sig-section { margin-bottom: 12px; }
+.sig-title { font-size: 9px; color: var(--dim); letter-spacing: 0.1em; margin-bottom: 6px; }
+.sig-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px;
+}
+.sig-item {
+  padding: 3px 5px;
+  border: 1px solid #1a2a10;
+  font-size: 8px;
+}
+.sig-item .pid { color: var(--dim); }
+.sig-item .pval {
+  display: inline-block; width: 40px; height: 4px;
+  background: #1a2a10; margin-top: 2px; position: relative;
+}
+.sig-item .pbar {
+  position: absolute; left: 0; top: 0; bottom: 0;
+  background: var(--accent); transition: width 0.3s;
+}
+
+/* Params panel */
+.params { margin-bottom: 12px; }
+.param-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.param-item { display: flex; flex-direction: column; gap: 2px; }
+.param-item label { font-size: 8px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; }
+.param-item input[type=range] { width: 80px; accent-color: var(--accent); }
+.param-item .val { font-size: 9px; color: var(--accent); }
+
+/* Log */
+.log-box {
+  background: #030604; border: 1px solid #1a2a10;
+  padding: 8px; font-size: 9px; line-height: 1.7;
+  max-height: 120px; overflow-y: auto; color: var(--dim);
+}
+.log-box .ok { color: var(--accent); }
+.log-box .hi { color: var(--paper); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>ALEXANDER GRAMMAR SAMPLER</h1>
+    <span class="sub">pattern language → synthetic neighborhood fields</span>
+  </div>
+  <div class="controls">
+    <span class="seed-display" id="seed-disp">seed: —</span>
+    <button onclick="sample()">⟳ RESAMPLE</button>
+    <button class="primary" onclick="sampleN(12)">⟳ × 12 BATCH</button>
+  </div>
+</header>
+
+<div class="params">
+  <div class="param-row">
+    <div class="param-item">
+      <label>Grid W</label>
+      <input type="range" id="p-gw" min="40" max="120" value="80" oninput="this.nextElementSibling.textContent=this.value">
+      <span class="val">80</span>
+    </div>
+    <div class="param-item">
+      <label>Grid H</label>
+      <input type="range" id="p-gh" min="40" max="120" value="70" oninput="this.nextElementSibling.textContent=this.value">
+      <span class="val">70</span>
+    </div>
+    <div class="param-item">
+      <label>Density peak</label>
+      <input type="range" id="p-dens" min="0.1" max="0.9" step="0.05" value="0.5" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(2)">
+      <span class="val">0.50</span>
+    </div>
+    <div class="param-item">
+      <label>Wild cover</label>
+      <input type="range" id="p-wild" min="0.05" max="0.5" step="0.05" value="0.2" oninput="this.nextElementSibling.textContent=parseFloat(this.value).toFixed(2)">
+      <span class="val">0.20</span>
+    </div>
+    <div class="param-item">
+      <label>Activity nodes</label>
+      <input type="range" id="p-nodes" min="1" max="8" step="1" value="3" oninput="this.nextElementSibling.textContent=this.value">
+      <span class="val">3</span>
+    </div>
+    <div class="param-item">
+      <label>Grain (Jane Jacobs)</label>
+      <input type="range" id="p-grain" min="3" max="12" step="1" value="6" oninput="this.nextElementSibling.textContent=this.value">
+      <span class="val">6</span>
+    </div>
+  </div>
+</div>
+
+<div class="field-grid" id="field-grid"></div>
+
+<div class="sig-section">
+  <div class="sig-title">PATTERN ACTIVATION SIGNATURE</div>
+  <div class="sig-grid" id="sig-grid"></div>
+</div>
+
+<div class="log-box" id="log"></div>
+
+<script>
+// ── Seeded PRNG (mulberry32) ──────────────────────────────────────────────
+function makePRNG(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s += 0x6D2B79F5;
+    let t = Math.imul(s ^ s >>> 15, 1 | s);
+    t ^= t + Math.imul(t ^ t >>> 7, 61 | t);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// ── Gaussian helper ───────────────────────────────────────────────────────
+function gauss2d(arr, W, H, cx, cy, rx, ry, amp) {
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = (x - cx) / rx, dy = (y - cy) / ry;
+      const v = amp * Math.exp(-(dx*dx + dy*dy));
+      arr[y*W+x] = Math.min(1, arr[y*W+x] + v);
+    }
+  }
+}
+
+// ── Smooth noise (value noise, 2 octaves) ─────────────────────────────────
+function valueNoise(W, H, scale1, scale2, rng) {
+  const out = new Float32Array(W * H);
+  // Lattice for two scales
+  const make = (sc) => {
+    const gw = Math.ceil(W/sc)+2, gh = Math.ceil(H/sc)+2;
+    const lat = new Float32Array(gw*gh);
+    for (let i = 0; i < lat.length; i++) lat[i] = rng();
+    return (x, y) => {
+      const px = x/sc, py = y/sc;
+      const ix = Math.floor(px), iy = Math.floor(py);
+      const fx = px-ix, fy = py-iy;
+      const ux = fx*fx*(3-2*fx), uy = fy*fy*(3-2*fy);
+      const sample = (dx, dy) => lat[Math.min(gh-1,iy+dy)*gw + Math.min(gw-1,ix+dx)];
+      return (sample(0,0)*(1-ux) + sample(1,0)*ux)*(1-uy)
+           + (sample(0,1)*(1-ux) + sample(1,1)*ux)*uy;
+    };
+  };
+  const n1 = make(scale1), n2 = make(scale2);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++)
+      out[y*W+x] = n1(x,y)*0.6 + n2(x,y)*0.4;
+  return out;
+}
+
+// ── Distance transform (approximate, radial) ──────────────────────────────
+function distFromPoints(W, H, pts) {
+  const out = new Float32Array(W * H).fill(1e9);
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      let mn = 1e9;
+      for (const [px, py] of pts) mn = Math.min(mn, Math.hypot(x-px, y-py));
+      out[y*W+x] = mn;
+    }
+  // normalize
+  let mx = 0; for (const v of out) if (v > mx) mx = v;
+  for (let i = 0; i < out.length; i++) out[i] = 1 - out[i]/mx;
+  return out;
+}
+
+// ── The sampler — Alexander's grammar top-down ────────────────────────────
+function sampleNeighborhood(params, rng) {
+  const { GW, GH, densePeak, wildCover, nNodes, grain } = params;
+  const N = GW * GH;
+  const log = [];
+
+  // ── Fields ─────────────────────────────────────────────────────────────
+  const social      = new Float32Array(N);
+  const comfort     = new Float32Array(N);
+  const wild        = new Float32Array(N);
+  const built       = new Float32Array(N);
+  const wall        = new Float32Array(N);
+  const interest_z  = new Float32Array(N);
+
+  // ── P29 — Density Rings ────────────────────────────────────────────────
+  // Social density falls off from a center point with a gradient.
+  // The center is sampled around densePeak with random offset.
+  const dcx = Math.round((densePeak + (rng()-0.5)*0.2) * GW);
+  const dcy = Math.round((0.3 + rng()*0.4) * GH);
+  const denseSigmaX = GW * (0.25 + rng()*0.2);
+  const denseSigmaY = GH * (0.20 + rng()*0.15);
+  gauss2d(social, GW, GH, dcx, dcy, denseSigmaX, denseSigmaY, 0.9);
+  // Secondary density ring at half amplitude
+  const dcx2 = dcx + (rng()-0.5)*GW*0.3;
+  const dcy2 = dcy + (rng()-0.5)*GH*0.3;
+  gauss2d(social, GW, GH, dcx2, dcy2, denseSigmaX*0.6, denseSigmaY*0.6, 0.5);
+  log.push(`P29 density centre: (${dcx},${dcy}) σ=(${denseSigmaX.toFixed(0)},${denseSigmaY.toFixed(0)})`);
+
+  // ── P30 — Activity Nodes ───────────────────────────────────────────────
+  // N peaks of concentrated social + interest_z. Placed near density high points
+  // with slight random scatter. Each node is a potential market/square/civic anchor.
+  const nodes = [];
+  for (let i = 0; i < nNodes; i++) {
+    // Sample near density centre, weighted by proximity
+    const angle = (i / nNodes) * Math.PI * 2 + rng() * 0.5;
+    const r = (0.15 + rng()*0.25) * Math.min(GW, GH);
+    const nx = Math.round(Math.min(GW-1, Math.max(0, dcx + Math.cos(angle)*r)));
+    const ny = Math.round(Math.min(GH-1, Math.max(0, dcy + Math.sin(angle)*r)));
+    nodes.push([nx, ny]);
+    gauss2d(social, GW, GH, nx, ny, grain*2.5, grain*2.5, 0.7);
+    gauss2d(interest_z, GW, GH, nx, ny, grain*3, grain*3, 0.8);
+    log.push(`P30 node ${i+1}: (${nx},${ny})`);
+  }
+
+  // ── P29 → built_height: taller near density centre ────────────────────
+  // Height gradient: tallest at nodes, intermediate along spines, low at edge
+  gauss2d(built, GW, GH, dcx, dcy, denseSigmaX*0.7, denseSigmaY*0.7, 0.85);
+  for (const [nx, ny] of nodes) {
+    gauss2d(built, GW, GH, nx, ny, grain*2, grain*2, 0.6);
+  }
+
+  // ── P31 — Promenade / P32 — Shopping Street ────────────────────────────
+  // A spine connects the density centre to the nearest site edge.
+  // The spine has high social, movement, and wall (shopfronts).
+  const spineDir = rng() > 0.5 ? 'NS' : 'EW';
+  const spineX = dcx + Math.round((rng()-0.5)*GW*0.1);
+  const spineW = Math.max(2, Math.round(grain * 0.8));
+  for (let y = 0; y < GH; y++) {
+    for (let x = Math.max(0, spineX-spineW); x < Math.min(GW, spineX+spineW); x++) {
+      const i = y*GW+x;
+      social[i]    = Math.min(1, social[i] + 0.5);
+      wall[i]      = Math.min(1, wall[i]   + 0.6);
+      interest_z[i]= Math.min(1, interest_z[i] + 0.4);
+    }
+  }
+  // Cross-street at density centre height
+  const crossY = dcy + Math.round((rng()-0.5)*GH*0.1);
+  const crossH = Math.max(2, Math.round(grain * 0.6));
+  for (let x = 0; x < GW; x++) {
+    for (let y = Math.max(0, crossY-crossH); y < Math.min(GH, crossY+crossH); y++) {
+      const i = y*GW+x;
+      social[i]    = Math.min(1, social[i] + 0.35);
+      wall[i]      = Math.min(1, wall[i]   + 0.4);
+    }
+  }
+  log.push(`P31/32 spine: x=${spineX} w=${spineW} cross y=${crossY}`);
+
+  // ── P37 — House Cluster (residential grain) ────────────────────────────
+  // Outside the density centre, residential clusters emerge at regular grain.
+  // Each cluster is a patch of moderate built height + low wall.
+  const clusterSpacing = grain * 2.5;
+  let nClusters = 0;
+  for (let gy = clusterSpacing; gy < GH - clusterSpacing; gy += clusterSpacing) {
+    for (let gx = clusterSpacing/2; gx < GW - clusterSpacing/2; gx += clusterSpacing) {
+      const dx = gx - dcx, dy = gy - dcy;
+      const distFromCentre = Math.sqrt(dx*dx + dy*dy) / Math.min(GW, GH);
+      if (distFromCentre < 0.15) continue; // too close to density peak
+      const jx = Math.round(gx + (rng()-0.5)*clusterSpacing*0.4);
+      const jy = Math.round(gy + (rng()-0.5)*clusterSpacing*0.4);
+      if (jx < 0 || jx >= GW || jy < 0 || jy >= GH) continue;
+      const r = grain * (0.8 + rng()*0.5);
+      const ht = 0.3 + rng()*0.3;
+      gauss2d(built, GW, GH, jx, jy, r, r, ht);
+      gauss2d(comfort, GW, GH, jx, jy, r*1.5, r*1.5, 0.4);
+      nClusters++;
+    }
+  }
+  log.push(`P37 house clusters: ${nClusters}`);
+
+  // ── P67 — Common Land / P60 — Accessible Green ────────────────────────
+  // Wild patches placed at site edges and low-density zones.
+  // Wild should NOT overlap with high-density spine or nodes.
+  const nWildPatches = Math.round(2 + rng() * 4);
+  for (let i = 0; i < nWildPatches; i++) {
+    // Prefer edges and areas far from density centre
+    const side = Math.floor(rng() * 4);
+    let wx, wy;
+    if (side === 0) { wx = rng()*GW; wy = rng()*GH*0.15; }        // N edge
+    else if (side === 1) { wx = rng()*GW; wy = GH*(0.85+rng()*0.15); } // S edge
+    else if (side === 2) { wx = rng()*GW*0.15; wy = rng()*GH; }    // W edge
+    else { wx = GW*(0.85+rng()*0.15); wy = rng()*GH; }             // E edge
+    const wr = GW * (wildCover * 0.6 + rng() * wildCover * 0.4);
+    gauss2d(wild, GW, GH, wx, wy, wr, wr*(0.6+rng()*0.4), 0.9);
+  }
+  // Central commons/sponge: always one at the sponge parcel analog
+  const spongeX = GW * (0.3 + rng()*0.4);
+  const spongeY = GH * (0.6 + rng()*0.25);
+  const spongeR = GW * wildCover * 0.5;
+  gauss2d(wild, GW, GH, spongeX, spongeY, spongeR, spongeR*0.7, 1.0);
+  log.push(`P67 wild patches: ${nWildPatches} + sponge at (${spongeX.toFixed(0)},${spongeY.toFixed(0)})`);
+
+  // ── Wild suppresses social (Alexander: wild ≠ gathering) ────────────────
+  for (let i = 0; i < N; i++) {
+    social[i] = social[i] * (1 - wild[i] * 0.4);
+    built[i]  = built[i]  * (1 - wild[i] * 0.7);
+  }
+
+  // ── P106 — Positive Outdoor Space (convex voids between buildings) ─────
+  // Low built between high-built clusters → comfort + social
+  for (let y = 1; y < GH-1; y++) {
+    for (let x = 1; x < GW-1; x++) {
+      const b = built[y*GW+x];
+      const bn = (built[(y-1)*GW+x] + built[(y+1)*GW+x] +
+                  built[y*GW+x-1]   + built[y*GW+x+1]) / 4;
+      if (b < 0.2 && bn > 0.4) {
+        // Convex void: low local, high neighbours → outdoor space
+        comfort[y*GW+x] = Math.min(1, comfort[y*GW+x] + 0.5);
+        social[y*GW+x]  = Math.min(1, social[y*GW+x]  + 0.3);
+      }
+    }
+  }
+
+  // ── P122 — Building Fronts (wall along social corridors) ──────────────
+  // Where social is high and built is present, wall forms on the interface.
+  for (let y = 1; y < GH-1; y++) {
+    for (let x = 1; x < GW-1; x++) {
+      const i = y*GW+x;
+      if (social[i] > 0.4 && built[i] > 0.2) {
+        wall[i] = Math.min(1, wall[i] + social[i] * built[i] * 0.8);
+      }
+    }
+  }
+
+  // ── P128 — Indoor Sunlight (comfort inside built mass) ─────────────────
+  for (let i = 0; i < N; i++) {
+    if (built[i] > 0.3) {
+      comfort[i] = Math.min(1, comfort[i] + built[i] * interest_z[i] * 0.6);
+    }
+  }
+
+  // ── P176 — Garden Wall (wild/built boundary) ──────────────────────────
+  // At the edge between wild and built, wall crystallises.
+  for (let y = 1; y < GH-1; y++) {
+    for (let x = 1; x < GW-1; x++) {
+      const i = y*GW+x;
+      const w = wild[i];
+      const b = built[i];
+      const wg = Math.abs(wild[y*GW+x+1]-wild[y*GW+x-1]) +
+                 Math.abs(wild[(y+1)*GW+x]-wild[(y-1)*GW+x]);
+      if (wg > 0.15 && w > 0.2 && w < 0.8) {
+        wall[i] = Math.min(1, wall[i] + wg * 0.5);
+      }
+    }
+  }
+
+  // ── Noise floor (fBm): spatial variation, not uniformity ─────────────
+  const noise = valueNoise(GW, GH, GW*0.3, GW*0.12, rng);
+  for (let i = 0; i < N; i++) {
+    social[i]    = Math.min(1, Math.max(0, social[i]    + (noise[i]-0.5)*0.08));
+    interest_z[i]= Math.min(1, Math.max(0, interest_z[i]+ (noise[i]-0.5)*0.06));
+  }
+
+  // ── Pattern activation scores (for signature display) ────────────────
+  const patterns = scorePatterns(social, comfort, wild, built, wall, interest_z, GW, GH);
+
+  return { social, comfort, wild, built, wall, interest_z, GW, GH, patterns, log };
+}
+
+// ── Score patterns from field state ──────────────────────────────────────
+function scorePatterns(social, comfort, wild, built, wall, interest_z, GW, GH) {
+  const N = GW * GH;
+  const mean = (arr) => { let s=0; for (const v of arr) s+=v; return s/N; };
+  const cov  = (a, b) => { let s=0; for (let i=0;i<N;i++) s+=a[i]*b[i]; return s/N; };
+  const gradMag = (arr) => {
+    let s=0, n=0;
+    for (let y=1;y<GH-1;y++) for (let x=1;x<GW-1;x++) {
+      const gx = arr[y*GW+x+1]-arr[y*GW+x-1];
+      const gy = arr[(y+1)*GW+x]-arr[(y-1)*GW+x];
+      s += Math.sqrt(gx*gx+gy*gy); n++;
+    }
+    return s/n;
+  };
+
+  const ms = mean(social), mw = mean(wild), mb = mean(built);
+  const mc = mean(comfort), mwl = mean(wall);
+
+  return [
+    { id: 29,  name: 'Density Rings',     v: gradMag(social) * 2 },
+    { id: 30,  name: 'Activity Nodes',    v: cov(social, interest_z) * 3 },
+    { id: 37,  name: 'House Cluster',     v: mb * (1-ms) * 2 },
+    { id: 44,  name: 'Local Town Hall',   v: cov(social, interest_z) * ms * 4 },
+    { id: 46,  name: 'Market',            v: ms * mwl * 3 },
+    { id: 51,  name: 'Green Streets',     v: cov(wild, social) * 3 },
+    { id: 60,  name: 'Accessible Green',  v: mw * (1-mb) * 2 },
+    { id: 61,  name: 'Small Squares',     v: mc * ms * 3 },
+    { id: 67,  name: 'Common Land',       v: mw * 2 },
+    { id: 106, name: 'Outdoor Space',     v: mc * (1-mb) * 2 },
+    { id: 115, name: 'Courtyards',        v: mc * mb * 3 },
+    { id: 122, name: 'Building Fronts',   v: mwl * ms * 3 },
+    { id: 123, name: 'Ped Density',       v: ms * ms * 4 },
+    { id: 128, name: 'Indoor Sunlight',   v: mc * mb * 2 },
+    { id: 160, name: 'Building Edge',     v: gradMag(built) * 2 },
+    { id: 176, name: 'Garden Wall',       v: gradMag(wild) * mwl * 2 },
+  ].map(p => ({ ...p, v: Math.min(1, p.v) }));
+}
+
+// ── Colour maps ───────────────────────────────────────────────────────────
+const CMAPS = {
+  heat:    v => [Math.min(1,v*2), Math.min(1,v*1.4), v<0.5?0:(v-0.5)*0.3],
+  green:   v => [v*0.08, v*0.65+0.05, v*0.08],
+  cyan:    v => [0, v*0.75, v],
+  viridis: v => {
+    const r = Math.max(0,Math.min(1, 0.267+1.5*v-1.8*v*v+1.4*v*v*v));
+    const g = Math.max(0,Math.min(1, 0.005+1.5*v-0.8*v*v));
+    const b = Math.max(0,Math.min(1, 0.33+1.0*v-2.5*v*v+1.5*v*v*v));
+    return [r,g,b];
+  },
+  amber:   v => [v*0.9+0.05, v*0.55, v*0.02],
+  cool:    v => [v*0.2, v*0.5, v*0.9],
+};
+
+function renderField(canvas, data, W, H, cmap) {
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(W, H);
+  let mn=Infinity, mx=-Infinity;
+  for (const v of data) { if(v<mn)mn=v; if(v>mx)mx=v; }
+  const range = mx - mn || 1;
+  for (let i = 0; i < data.length; i++) {
+    const [r,g,b] = cmap((data[i]-mn)/range);
+    img.data[i*4]   = r*255|0;
+    img.data[i*4+1] = g*255|0;
+    img.data[i*4+2] = b*255|0;
+    img.data[i*4+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  const mn3 = mn.toFixed(3), mx3 = mx.toFixed(3);
+  const mean3 = (data.reduce((a,b)=>a+b,0)/data.length).toFixed(3);
+  return `${mn3} – ${mx3} μ=${mean3}`;
+}
+
+// ── Main render ───────────────────────────────────────────────────────────
+let _currentSeed = null;
+
+function sample(seed) {
+  seed = seed ?? (Math.random() * 0xFFFFFFFF | 0);
+  _currentSeed = seed;
+  document.getElementById('seed-disp').textContent = `seed: ${seed}`;
+
+  const GW = parseInt(document.getElementById('p-gw').value);
+  const GH = parseInt(document.getElementById('p-gh').value);
+  const densePeak = parseFloat(document.getElementById('p-dens').value);
+  const wildCover = parseFloat(document.getElementById('p-wild').value);
+  const nNodes = parseInt(document.getElementById('p-nodes').value);
+  const grain = parseInt(document.getElementById('p-grain').value);
+
+  const rng = makePRNG(seed);
+  const result = sampleNeighborhood({ GW, GH, densePeak, wildCover, nNodes, grain }, rng);
+
+  const FIELDS = [
+    { key: 'social',     label: 'SOCIAL',      cmap: CMAPS.heat    },
+    { key: 'wild',       label: 'WILD',         cmap: CMAPS.green   },
+    { key: 'built',      label: 'BUILT HEIGHT', cmap: CMAPS.viridis },
+    { key: 'wall',       label: 'WALL',         cmap: CMAPS.cyan    },
+    { key: 'comfort',    label: 'COMFORT',      cmap: CMAPS.amber   },
+    { key: 'interest_z', label: 'INTEREST Z',   cmap: CMAPS.cool    },
+  ];
+
+  const grid = document.getElementById('field-grid');
+  grid.innerHTML = '';
+  for (const f of FIELDS) {
+    const card = document.createElement('div');
+    card.className = 'field-card';
+    const lbl = document.createElement('div');
+    lbl.className = 'field-label';
+    const canvas = document.createElement('canvas');
+    card.appendChild(lbl);
+    card.appendChild(canvas);
+    grid.appendChild(card);
+    const stats = renderField(canvas, result[f.key], GW, GH, f.cmap);
+    lbl.innerHTML = `<span>${f.label}</span><span class="stats">${stats}</span>`;
+  }
+
+  // Pattern signature
+  const sigGrid = document.getElementById('sig-grid');
+  sigGrid.innerHTML = '';
+  for (const p of result.patterns) {
+    const item = document.createElement('div');
+    item.className = 'sig-item';
+    item.innerHTML = `<span class="pid">P${p.id} ${p.name}</span>
+      <div class="pval"><div class="pbar" style="width:${(p.v*100).toFixed(0)}%"></div></div>`;
+    sigGrid.appendChild(item);
+  }
+
+  // Log
+  const logEl = document.getElementById('log');
+  logEl.innerHTML = result.log.map((l,i) =>
+    `<span class="${i===0?'hi':'ok'}">${l}</span>`
+  ).join('\n');
+}
+
+function sampleN(n) {
+  // Show n samples in sequence with a short delay for visual effect
+  let i = 0;
+  const seeds = Array.from({length: n}, () => Math.random() * 0xFFFFFFFF | 0);
+  const step = () => { if (i < n) { sample(seeds[i++]); setTimeout(step, 80); } };
+  step();
+}
+
+// Initial sample
+sample(42);
+</script>
+</body>
+</html>

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neighborhood Derasterizer</title>
+<style>
+:root {
+  --ink: #080c06; --paper: #e8e4d8; --accent: #b8d820;
+  --dim: #4a5240; --warn: #d04020; --ok: #40c870;
+  --mono: 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--ink); color: var(--paper); font-family: var(--mono); font-size: 11px; padding: 12px; }
+header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #1a2a10; }
+h1 { font-size: 13px; color: var(--accent); letter-spacing: 0.1em; }
+.sub { color: var(--dim); font-size: 9px; margin-left: 10px; }
+
+.neighborhood-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+button {
+  font-family: var(--mono); font-size: 10px; padding: 5px 12px;
+  border: 1px solid #2a4010; background: transparent; color: var(--paper);
+  cursor: pointer; letter-spacing: 0.05em; transition: all 0.1s;
+}
+button:hover { border-color: var(--accent); color: var(--accent); }
+button.active { background: var(--accent); color: var(--ink); border-color: var(--accent); font-weight: bold; }
+button:disabled { opacity: 0.4; cursor: default; }
+
+.custom-row { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+.custom-row input[type=text] {
+  font-family: var(--mono); font-size: 10px;
+  background: #0a120a; border: 1px solid #2a4010; color: var(--paper);
+  padding: 4px 8px; width: 240px;
+}
+.custom-row input:focus { outline: none; border-color: var(--accent); }
+.custom-row label { color: var(--dim); font-size: 9px; }
+
+.field-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+.field-card { }
+.field-label { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); margin-bottom: 3px; display: flex; justify-content: space-between; }
+.field-label .stats { color: #6a7a50; }
+canvas { display: block; width: 100%; height: auto; border: 1px solid #1a2a10; image-rendering: pixelated; }
+
+.sig-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 10px; }
+.sig-item { padding: 3px 5px; border: 1px solid #1a2a10; font-size: 8px; }
+.sig-item .pid { color: var(--dim); }
+.pval { display: inline-block; width: 40px; height: 4px; background: #1a2a10; margin-top: 2px; position: relative; }
+.pbar { position: absolute; left:0; top:0; bottom:0; background: var(--accent); }
+
+.status { font-size: 10px; color: var(--dim); margin-bottom: 6px; min-height: 16px; }
+.status .ok { color: var(--ok); }
+.status .err { color: var(--warn); }
+.status .hi { color: var(--paper); }
+
+.log-box { background: #030604; border: 1px solid #1a2a10; padding: 8px; font-size: 9px; line-height: 1.7; max-height: 100px; overflow-y: auto; color: var(--dim); }
+.log-box .ok { color: var(--accent); }
+
+.export-row { display: flex; gap: 8px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>NEIGHBORHOOD DERASTERIZER</h1>
+    <span class="sub">OSM → 6-field training sample</span>
+  </div>
+</header>
+
+<!-- Known good neighborhoods -->
+<div class="neighborhood-bar" id="nbhd-bar">
+  <!-- populated by JS -->
+</div>
+
+<div class="custom-row">
+  <label>CUSTOM BBOX</label>
+  <input type="text" id="custom-bbox" placeholder="minLon,minLat,maxLon,maxLat  e.g. 2.177,41.384,2.190,41.393">
+  <button onclick="fetchCustom()">FETCH</button>
+  <label style="margin-left:8px">GRID</label>
+  <input type="text" id="grid-size" value="80" style="width:40px">
+  <label>×</label>
+  <input type="text" id="grid-size-h" value="70" style="width:40px">
+</div>
+
+<div class="status" id="status">Select a neighborhood or enter a custom bbox.</div>
+
+<div class="field-grid" id="field-grid"></div>
+
+<div style="font-size:9px;color:var(--dim);letter-spacing:0.1em;margin-bottom:5px;">PATTERN SIGNATURE</div>
+<div class="sig-grid" id="sig-grid"></div>
+
+<div class="log-box" id="log"></div>
+
+<div class="export-row">
+  <button id="export-btn" onclick="exportJSON()" disabled>↓ EXPORT JSON</button>
+  <button id="compare-btn" onclick="openCompare()" disabled>⇄ COMPARE WITH SAMPLER</button>
+  <span id="export-note" style="color:var(--dim);font-size:9px;line-height:2"></span>
+</div>
+
+<script>
+// ── Known neighborhoods ───────────────────────────────────────────────────
+// Each has a bbox [minLon, minLat, maxLon, maxLat] and a character profile
+const NEIGHBORHOODS = [
+  { name: 'El Born\nBarcelona',  bbox: [2.177, 41.383, 2.191, 41.393], char: 'high density, fine grain, mixed use' },
+  { name: 'Eixample\nBarcelona', bbox: [2.154, 41.386, 2.172, 41.396], char: 'superblock grid, chamfered corners' },
+  { name: 'Marais\nParis',       bbox: [2.350, 48.854, 2.363, 48.862], char: 'medieval street pattern, mixed scale' },
+  { name: 'Greenwich Vill.\nNYC', bbox: [-74.007, 40.729, -73.997, 40.737], char: 'irregular grid, human scale' },
+  { name: 'Oaxaca Centro\nMexico', bbox: [-96.730, 17.059, -96.717, 17.069], char: 'colonial grid, courtyards, zocalo' },
+  { name: 'Hanoi Old Qtr\nVietnam', bbox: [105.846, 21.032, 105.857, 21.041], char: 'tube houses, dense informal' },
+  { name: 'Bologna Centro\nItaly', bbox: [11.340, 44.493, 11.354, 44.501], char: 'portici, medieval, civic' },
+  { name: 'Ghent Canal\nBelgium', bbox: [3.715, 51.051, 3.727, 51.059], char: 'Flemish medieval, waterfront' },
+];
+
+let _currentFields = null;
+let _currentName = null;
+
+// Build neighborhood buttons
+const bar = document.getElementById('nbhd-bar');
+NEIGHBORHOODS.forEach((n, i) => {
+  const btn = document.createElement('button');
+  btn.textContent = n.name.replace('\n', ' · ');
+  btn.title = n.char;
+  btn.onclick = () => {
+    document.querySelectorAll('#nbhd-bar button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    fetchNeighborhood(n);
+  };
+  bar.appendChild(btn);
+});
+
+// ── Overpass API fetch ────────────────────────────────────────────────────
+async function overpassQuery(bbox, query) {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  const body = `[out:json][timeout:25];
+(${query.replace(/\{BBOX\}/g, `${minLat},${minLon},${maxLat},${maxLon}`)});
+out body;>;out skel qt;`;
+
+  // Try multiple Overpass endpoints
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+  ];
+  for (const ep of endpoints) {
+    try {
+      const r = await fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'data=' + encodeURIComponent(body),
+        signal: AbortSignal.timeout(20000),
+      });
+      if (r.ok) return r.json();
+    } catch (_) {}
+  }
+  throw new Error('All Overpass endpoints failed');
+}
+
+function setStatus(msg, cls='') {
+  const el = document.getElementById('status');
+  el.innerHTML = cls ? `<span class="${cls}">${msg}</span>` : msg;
+}
+function appendLog(msg, cls='') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<span class="${cls?cls:''}">${msg}</span>\n`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Main fetch + rasterize ────────────────────────────────────────────────
+async function fetchNeighborhood(n) {
+  const GW = parseInt(document.getElementById('grid-size').value) || 80;
+  const GH = parseInt(document.getElementById('grid-size-h').value) || 70;
+  document.getElementById('log').innerHTML = '';
+  setStatus(`Fetching ${n.name.replace('\n',' ')}…`);
+  appendLog(`Neighborhood: ${n.name.replace('\n',' ')} — ${n.char}`);
+  appendLog(`BBox: ${n.bbox.join(', ')}`);
+
+  try {
+    // Fetch buildings
+    setStatus('Querying OSM: buildings…');
+    const bldgData = await overpassQuery(n.bbox,
+      `way["building"]({{BBOX}});`
+    );
+    appendLog(`Buildings: ${bldgData.elements.filter(e=>e.type==='way').length} ways`, 'ok');
+
+    // Fetch streets
+    setStatus('Querying OSM: streets…');
+    const streetData = await overpassQuery(n.bbox,
+      `way["highway"~"primary|secondary|tertiary|residential|pedestrian|footway|living_street|unclassified"]({{BBOX}});`
+    );
+    appendLog(`Streets: ${streetData.elements.filter(e=>e.type==='way').length} ways`, 'ok');
+
+    // Fetch green space
+    setStatus('Querying OSM: green space…');
+    const greenData = await overpassQuery(n.bbox,
+      `(way["landuse"~"grass|meadow|park|garden|forest|recreation_ground"]({{BBOX}});
+        way["leisure"~"park|garden|nature_reserve"]({{BBOX}});
+        way["natural"~"wood|scrub|grassland"]({{BBOX}}););`
+    );
+    appendLog(`Green: ${greenData.elements.filter(e=>e.type==='way').length} ways`, 'ok');
+
+    setStatus('Rasterizing…');
+    const fields = rasterize(bldgData, streetData, greenData, n.bbox, GW, GH);
+    _currentFields = fields;
+    _currentName = n.name.replace('\n', '_');
+
+    appendLog(`Grid: ${GW}×${GH} = ${(GW*GH).toLocaleString()} cells`);
+    appendLog(`social: max=${fields.social.reduce((a,b)=>Math.max(a,b),0).toFixed(3)}`);
+    appendLog(`built: max=${fields.built.reduce((a,b)=>Math.max(a,b),0).toFixed(3)}`);
+    appendLog(`wild: max=${fields.wild.reduce((a,b)=>Math.max(a,b),0).toFixed(3)}`);
+
+    renderAll(fields, GW, GH);
+    setStatus(`✓ ${n.name.replace('\n',' ')} — ${GW}×${GH}`, 'ok');
+    document.getElementById('export-btn').disabled = false;
+    document.getElementById('compare-btn').disabled = false;
+    document.getElementById('export-note').textContent = `${GW*GH} cells · ${n.name.replace('\n',' ')}`;
+  } catch(e) {
+    setStatus(`✗ ${e.message}`, 'err');
+    appendLog(`Error: ${e.message}`);
+    appendLog('Note: Overpass API may be rate-limited. Try again in 30s.');
+  }
+}
+
+async function fetchCustom() {
+  const raw = document.getElementById('custom-bbox').value.trim();
+  const parts = raw.split(',').map(Number);
+  if (parts.length !== 4 || parts.some(isNaN)) {
+    setStatus('✗ Invalid bbox — need minLon,minLat,maxLon,maxLat', 'err'); return;
+  }
+  const [minLon, minLat, maxLon, maxLat] = parts;
+  const bbox = [minLon, minLat, maxLon, maxLat];
+  const spanKm = Math.hypot((maxLon-minLon)*111*Math.cos(minLat*Math.PI/180), (maxLat-minLat)*111);
+  if (spanKm > 3) { setStatus('✗ Bbox too large (>3km). Use a smaller area.', 'err'); return; }
+  await fetchNeighborhood({ name: 'Custom', bbox, char: 'custom bbox' });
+}
+
+// ── Rasterizer ────────────────────────────────────────────────────────────
+function rasterize(bldgData, streetData, greenData, bbox, GW, GH) {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  const N = GW * GH;
+
+  const social     = new Float32Array(N);
+  const comfort    = new Float32Array(N);
+  const wild       = new Float32Array(N);
+  const built      = new Float32Array(N);
+  const wall       = new Float32Array(N);
+  const interest_z = new Float32Array(N);
+
+  // Build node map
+  const nodes = {};
+  for (const el of [...bldgData.elements, ...streetData.elements, ...greenData.elements]) {
+    if (el.type === 'node') nodes[el.id] = [el.lon, el.lat];
+  }
+
+  // Project lon/lat → grid cell
+  const proj = (lon, lat) => {
+    const x = (lon - minLon) / (maxLon - minLon) * GW;
+    const y = (1 - (lat - minLat) / (maxLat - minLat)) * GH; // Y flipped
+    return [x, y];
+  };
+
+  // ── Buildings → built_height, wall ────────────────────────────────────
+  // Each building polygon: fill interior with built, stamp perimeter as wall
+  let bldgCount = 0;
+  for (const el of bldgData.elements) {
+    if (el.type !== 'way' || !el.nodes) continue;
+    const pts = el.nodes.map(id => nodes[id]).filter(Boolean).map(([lon,lat]) => proj(lon,lat));
+    if (pts.length < 3) continue;
+
+    // Height proxy: use levels tag or default 2 stories
+    const levels = parseInt(el.tags?.['building:levels'] || el.tags?.['levels'] || '2');
+    const htNorm = Math.min(1, levels / 8); // normalize: 8 stories = max
+
+    // Fill polygon (scan-line)
+    let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+    for (const [x,y] of pts) { minX=Math.min(minX,x); maxX=Math.max(maxX,x); minY=Math.min(minY,y); maxY=Math.max(maxY,y); }
+
+    for (let cy = Math.max(0,Math.floor(minY)); cy <= Math.min(GH-1,Math.ceil(maxY)); cy++) {
+      for (let cx = Math.max(0,Math.floor(minX)); cx <= Math.min(GW-1,Math.ceil(maxX)); cx++) {
+        if (pip(cx+0.5, cy+0.5, pts)) {
+          built[cy*GW+cx] = Math.min(1, built[cy*GW+cx] + htNorm);
+          comfort[cy*GW+cx] = Math.min(1, comfort[cy*GW+cx] + htNorm * 0.3);
+        }
+      }
+    }
+
+    // Perimeter → wall (stamp each edge)
+    for (let i = 0; i < pts.length-1; i++) {
+      stampLine(wall, GW, GH, pts[i][0], pts[i][1], pts[(i+1)%pts.length][0], pts[(i+1)%pts.length][1], 1.0, 0.8);
+    }
+    bldgCount++;
+  }
+  appendLog(`  Rasterized ${bldgCount} buildings`);
+
+  // Normalize built to [0,1]
+  let builtMax = 0; for (const v of built) if (v>builtMax) builtMax=v;
+  if (builtMax > 0) for (let i=0;i<N;i++) built[i] /= builtMax;
+
+  // ── Streets → movement, social ────────────────────────────────────────
+  const STREET_SOCIAL = { primary:0.9, secondary:0.75, tertiary:0.6, residential:0.4,
+    pedestrian:1.0, footway:0.7, living_street:0.65, unclassified:0.35 };
+  let streetCount = 0;
+  for (const el of streetData.elements) {
+    if (el.type !== 'way' || !el.nodes) continue;
+    const hw = el.tags?.highway || 'unclassified';
+    const socialAmp = STREET_SOCIAL[hw] || 0.3;
+    const width = hw === 'pedestrian' ? 2.0 : hw === 'primary' ? 1.5 : 1.0;
+
+    const pts = el.nodes.map(id => nodes[id]).filter(Boolean).map(([lon,lat]) => proj(lon,lat));
+    if (pts.length < 2) continue;
+
+    for (let i = 0; i < pts.length-1; i++) {
+      stampLine(social, GW, GH, pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1], socialAmp, width);
+      stampLine(interest_z, GW, GH, pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1], socialAmp*0.5, width);
+    }
+    streetCount++;
+  }
+  appendLog(`  Rasterized ${streetCount} street segments`);
+
+  // ── Green → wild ────────────────────────────────────────────────────────
+  let greenCount = 0;
+  for (const el of greenData.elements) {
+    if (el.type !== 'way' || !el.nodes) continue;
+    const pts = el.nodes.map(id => nodes[id]).filter(Boolean).map(([lon,lat]) => proj(lon,lat));
+    if (pts.length < 3) continue;
+
+    let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+    for (const [x,y] of pts) { minX=Math.min(minX,x); maxX=Math.max(maxX,x); minY=Math.min(minY,y); maxY=Math.max(maxY,y); }
+    for (let cy=Math.max(0,Math.floor(minY)); cy<=Math.min(GH-1,Math.ceil(maxY)); cy++) {
+      for (let cx=Math.max(0,Math.floor(minX)); cx<=Math.min(GW-1,Math.ceil(maxX)); cx++) {
+        if (pip(cx+0.5, cy+0.5, pts)) {
+          wild[cy*GW+cx] = Math.min(1, wild[cy*GW+cx] + 0.8);
+        }
+      }
+    }
+    greenCount++;
+  }
+
+  // Residual wild: low-built, low-social areas
+  for (let i = 0; i < N; i++) {
+    if (built[i] < 0.1 && social[i] < 0.1) {
+      wild[i] = Math.min(1, wild[i] + 0.3);
+    }
+  }
+  appendLog(`  Rasterized ${greenCount} green polygons`);
+
+  // ── Comfort: enclosure quality ──────────────────────────────────────────
+  // Where street meets buildings on both sides: good enclosure = high comfort
+  for (let cy = 1; cy < GH-1; cy++) {
+    for (let cx = 1; cx < GW-1; cx++) {
+      const i = cy*GW+cx;
+      if (social[i] > 0.2) {
+        // Check building presence on adjacent cells
+        const bNbhd = (built[(cy-1)*GW+cx] + built[(cy+1)*GW+cx] +
+                       built[cy*GW+cx-1]   + built[cy*GW+cx+1]) / 4;
+        comfort[i] = Math.min(1, comfort[i] + social[i] * bNbhd * 0.8);
+      }
+    }
+  }
+
+  // ── Interest Z: intersection density + building mass ────────────────────
+  // Intersections (where social peaks sharply) = high interest
+  for (let cy = 1; cy < GH-1; cy++) {
+    for (let cx = 1; cx < GW-1; cx++) {
+      const i = cy*GW+cx;
+      const sLap = 4*social[i] - social[(cy-1)*GW+cx] - social[(cy+1)*GW+cx]
+                 - social[cy*GW+cx-1] - social[cy*GW+cx+1];
+      if (sLap < -0.05) { // local social peak = intersection
+        interest_z[i] = Math.min(1, interest_z[i] + Math.abs(sLap) * 2 + built[i] * 0.4);
+      }
+    }
+  }
+
+  // Gaussian smoothing pass (3×3 box)
+  const smooth = (arr) => {
+    const out = new Float32Array(N);
+    for (let cy=1;cy<GH-1;cy++) for (let cx=1;cx<GW-1;cx++) {
+      let s=0;
+      for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) s+=arr[(cy+dy)*GW+(cx+dx)];
+      out[cy*GW+cx] = s/9;
+    }
+    return out;
+  };
+
+  return {
+    social:     smooth(social),
+    comfort:    smooth(comfort),
+    wild:       smooth(wild),
+    built:      smooth(built),
+    wall:       smooth(wall),
+    interest_z: smooth(interest_z),
+    GW, GH,
+    patterns:   scorePatterns(social, comfort, wild, built, wall, interest_z, GW, GH),
+  };
+}
+
+// ── Geometry helpers ──────────────────────────────────────────────────────
+function pip(px, py, ring) {
+  let inside = false;
+  for (let i=0, j=ring.length-1; i<ring.length; j=i++) {
+    const [xi,yi]=ring[i],[xj,yj]=ring[j];
+    if (((yi>py)!==(yj>py)) && px<(xj-xi)*(py-yi)/(yj-yi)+xi) inside=!inside;
+  }
+  return inside;
+}
+
+function stampLine(arr, W, H, x0, y0, x1, y1, amp, radius) {
+  const dx = x1-x0, dy = y1-y0, len = Math.sqrt(dx*dx+dy*dy);
+  if (len < 0.01) return;
+  const steps = Math.ceil(len * 2);
+  const r2 = radius*radius;
+  for (let t=0; t<=steps; t++) {
+    const cx = Math.round(x0 + dx*t/steps);
+    const cy = Math.round(y0 + dy*t/steps);
+    for (let ry=-Math.ceil(radius); ry<=Math.ceil(radius); ry++) {
+      for (let rx=-Math.ceil(radius); rx<=Math.ceil(radius); rx++) {
+        const px=cx+rx, py=cy+ry;
+        if (px<0||px>=W||py<0||py>=H) continue;
+        const d2=rx*rx+ry*ry;
+        if (d2<=r2) {
+          const w = 1-Math.sqrt(d2)/(radius+0.5);
+          arr[py*W+px] = Math.min(1, arr[py*W+px] + amp*w);
+        }
+      }
+    }
+  }
+}
+
+// ── Pattern scoring (same as sampler) ────────────────────────────────────
+function scorePatterns(social, comfort, wild, built, wall, interest_z, GW, GH) {
+  const N = GW*GH;
+  const mean = (a) => { let s=0; for (const v of a) s+=v; return s/N; };
+  const cov  = (a,b) => { let s=0; for (let i=0;i<N;i++) s+=a[i]*b[i]; return s/N; };
+  const gradMag = (arr) => {
+    let s=0,n=0;
+    for (let y=1;y<GH-1;y++) for (let x=1;x<GW-1;x++) {
+      const gx=arr[y*GW+x+1]-arr[y*GW+x-1], gy=arr[(y+1)*GW+x]-arr[(y-1)*GW+x];
+      s+=Math.sqrt(gx*gx+gy*gy); n++;
+    }
+    return s/n;
+  };
+  const ms=mean(social),mw=mean(wild),mb=mean(built),mc=mean(comfort),mwl=mean(wall);
+  return [
+    {id:29,  name:'Density Rings',   v:Math.min(1,gradMag(social)*2)},
+    {id:30,  name:'Activity Nodes',  v:Math.min(1,cov(social,interest_z)*3)},
+    {id:37,  name:'House Cluster',   v:Math.min(1,mb*(1-ms)*2)},
+    {id:44,  name:'Local Town Hall', v:Math.min(1,cov(social,interest_z)*ms*4)},
+    {id:46,  name:'Market',          v:Math.min(1,ms*mwl*3)},
+    {id:51,  name:'Green Streets',   v:Math.min(1,cov(wild,social)*3)},
+    {id:60,  name:'Accessible Green',v:Math.min(1,mw*(1-mb)*2)},
+    {id:61,  name:'Small Squares',   v:Math.min(1,mc*ms*3)},
+    {id:67,  name:'Common Land',     v:Math.min(1,mw*2)},
+    {id:106, name:'Outdoor Space',   v:Math.min(1,mc*(1-mb)*2)},
+    {id:115, name:'Courtyards',      v:Math.min(1,mc*mb*3)},
+    {id:122, name:'Building Fronts', v:Math.min(1,mwl*ms*3)},
+    {id:123, name:'Ped Density',     v:Math.min(1,ms*ms*4)},
+    {id:128, name:'Indoor Sunlight', v:Math.min(1,mc*mb*2)},
+    {id:160, name:'Building Edge',   v:Math.min(1,gradMag(built)*2)},
+    {id:176, name:'Garden Wall',     v:Math.min(1,gradMag(wild)*mwl*2)},
+  ];
+}
+
+// ── Colour maps ───────────────────────────────────────────────────────────
+const CMAPS = {
+  heat:    v=>[Math.min(1,v*2),Math.min(1,v*1.4),v<0.5?0:(v-0.5)*0.3],
+  green:   v=>[v*0.08,v*0.65+0.05,v*0.08],
+  cyan:    v=>[0,v*0.75,v],
+  viridis: v=>{
+    return [Math.max(0,Math.min(1,0.267+1.5*v-1.8*v*v+1.4*v*v*v)),
+            Math.max(0,Math.min(1,0.005+1.5*v-0.8*v*v)),
+            Math.max(0,Math.min(1,0.33+1.0*v-2.5*v*v+1.5*v*v*v))];
+  },
+  amber:   v=>[v*0.9+0.05,v*0.55,v*0.02],
+  cool:    v=>[v*0.2,v*0.5,v*0.9],
+};
+
+function renderField(canvas, data, W, H, cmap) {
+  canvas.width=W; canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  const img=ctx.createImageData(W,H);
+  let mn=Infinity,mx=-Infinity;
+  for (const v of data){if(v<mn)mn=v;if(v>mx)mx=v;}
+  const range=mx-mn||1;
+  for (let i=0;i<data.length;i++){
+    const [r,g,b]=cmap((data[i]-mn)/range);
+    img.data[i*4]=r*255|0; img.data[i*4+1]=g*255|0;
+    img.data[i*4+2]=b*255|0; img.data[i*4+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  const mean=(data.reduce((a,b)=>a+b,0)/data.length).toFixed(3);
+  return `${mn.toFixed(3)}–${mx.toFixed(3)} μ=${mean}`;
+}
+
+function renderAll(fields, GW, GH) {
+  const FIELD_DEFS = [
+    {key:'social',    label:'SOCIAL',      cmap:CMAPS.heat},
+    {key:'wild',      label:'WILD',        cmap:CMAPS.green},
+    {key:'built',     label:'BUILT HT',    cmap:CMAPS.viridis},
+    {key:'wall',      label:'WALL',        cmap:CMAPS.cyan},
+    {key:'comfort',   label:'COMFORT',     cmap:CMAPS.amber},
+    {key:'interest_z',label:'INTEREST Z',  cmap:CMAPS.cool},
+  ];
+  const grid=document.getElementById('field-grid');
+  grid.innerHTML='';
+  for (const f of FIELD_DEFS){
+    const card=document.createElement('div'); card.className='field-card';
+    const lbl=document.createElement('div'); lbl.className='field-label';
+    const canvas=document.createElement('canvas');
+    card.appendChild(lbl); card.appendChild(canvas); grid.appendChild(card);
+    const stats=renderField(canvas,fields[f.key],GW,GH,f.cmap);
+    lbl.innerHTML=`<span>${f.label}</span><span class="stats">${stats}</span>`;
+  }
+
+  const sigGrid=document.getElementById('sig-grid');
+  sigGrid.innerHTML='';
+  for (const p of fields.patterns){
+    const item=document.createElement('div'); item.className='sig-item';
+    item.innerHTML=`<span class="pid">P${p.id} ${p.name}</span>
+      <div class="pval"><div class="pbar" style="width:${(p.v*100).toFixed(0)}%"></div></div>`;
+    sigGrid.appendChild(item);
+  }
+}
+
+// ── Export ────────────────────────────────────────────────────────────────
+function exportJSON() {
+  if (!_currentFields) return;
+  const { GW, GH } = _currentFields;
+  const out = {
+    name: _currentName,
+    GW, GH,
+    fields: {},
+    patterns: _currentFields.patterns,
+    ts: Date.now(),
+  };
+  // Convert Float32Arrays to regular arrays for JSON
+  for (const k of ['social','comfort','wild','built','wall','interest_z']) {
+    out.fields[k] = Array.from(_currentFields[k]);
+  }
+  const blob = new Blob([JSON.stringify(out)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `neighborhood_${_currentName}_${GW}x${GH}.json`;
+  a.click();
+}
+
+function openCompare() {
+  // Store in sessionStorage for cross-artifact comparison
+  if (!_currentFields) return;
+  const { GW, GH } = _currentFields;
+  const payload = {
+    name: _currentName,
+    GW, GH,
+    patterns: _currentFields.patterns,
+    // Store field stats (not full arrays — too large for sessionStorage)
+    fieldStats: {},
+  };
+  for (const k of ['social','comfort','wild','built','wall','interest_z']) {
+    const arr = _currentFields[k];
+    const max = arr.reduce((a,b)=>Math.max(a,b),0);
+    const mean = arr.reduce((a,b)=>a+b,0)/arr.length;
+    payload.fieldStats[k] = {max, mean};
+  }
+  try {
+    sessionStorage.setItem('deraster_result', JSON.stringify(payload));
+    alert('Saved to sessionStorage as "deraster_result". Open the sampler in the same browser tab to compare.');
+  } catch(_) {
+    alert('sessionStorage write failed.');
+  }
+}
+</script>
+</body>
+</html>
