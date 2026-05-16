@@ -912,11 +912,11 @@ details[open] summary::before { content: '▼  '; }
         z-index:50; pointer-events:none; width:80%; max-width:420px;
       "></div>
 
-      <!-- Git hash / version chip — bottom center -->
+      <!-- Git hash / version chip — top left under header -->
       <div id="map-version" style="
-        position:absolute; bottom:0.4rem; left:50%; transform:translateX(-50%);
+        position:absolute; top:0.35rem; left:0.6rem;
         font-family:var(--font-mono); font-size:0.5rem; color:var(--muted);
-        letter-spacing:0.08em; pointer-events:none; opacity:0.5;
+        letter-spacing:0.06em; pointer-events:none; opacity:0.6; z-index:10;
       ">—</div>
 
       <div id="map-error-overlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);color:#e06060;font-family:monospace;font-size:0.7rem;padding:2rem;white-space:pre-wrap;z-index:200;pointer-events:none;"></div>
