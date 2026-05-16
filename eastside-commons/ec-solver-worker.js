@@ -127,6 +127,16 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   // Seeds the BUILT_HEIGHT field so wall-distance fires immediately
   if (mallCx) addSeed(mallCx, mallCy, 350, 0, 0, 24, 0, 0, 0);
 
+  // Mall perimeter → wall seeds (4 cardinal edges of the oval)
+  // Wall must be seeded directly; pattern modulators can't write it
+  // until patterns first fire, and patterns need wall → chicken-and-egg.
+  if (mallCx) {
+    addSeed(mallCx,           mallCy+mallRy, 80, 0, 0, 8, 0, 0, 0); // N wall
+    addSeed(mallCx+mallRx,    mallCy,        80, 0, 0, 8, 0, 0, 0); // E wall
+    addSeed(mallCx,           mallCy-mallRy, 80, 0, 0, 8, 0, 0, 0); // S wall
+    addSeed(mallCx-mallRx,    mallCy,        80, 0, 0, 8, 0, 0, 0); // W wall
+  }
+
   // Ring road → 4 directional movement seeds around the oval perimeter
   // Clockwise circulation: N→E→S→W
   if (mallCx) {
@@ -325,7 +335,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     // comfort, wall) are untouched. Skip pass 0 so IC seeds survive first pass.
     if (pass > 0) {
       gpu.runDecay({
-        uDecaySocial:   opts.decaySocial   ?? 0.55,
+        uDecaySocial:   opts.decaySocial   ?? 0.80,  // was 0.55 — too aggressive; patterns need social to persist
         uDecayMovement: opts.decayMovement  ?? 0.50,
         uDecayInterest: opts.decayInterest  ?? 0.60,
       });

@@ -308,6 +308,9 @@ class ECGpuFields {
     const fbo = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+    // Required: explicit drawBuffers even for single-attachment FBOs.
+    // Without this, layout(location=0) out writes to NONE on some drivers.
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
     return fbo;
   }
 

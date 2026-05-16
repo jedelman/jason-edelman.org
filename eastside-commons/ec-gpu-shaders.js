@@ -240,8 +240,13 @@ void main() {
   float fbm_wild = ic_vnoiseA(uv_cells, 40.0, 999.0) * 0.10 * (1.0 - wild);  // was 0.28
   wild = clamp(wild + fbm_wild, 0.0, 1.0);
 
+  // Derive initial wall from built_height — any existing structure creates wall signal.
+  // This breaks the pattern chicken-and-egg: wall_dist fires in pass 1,
+  // which enables building-edge and frontage detectors immediately.
+  float wall_ic = clamp(built * 0.04, 0.0, 1.0);  // ~1.0 wall at built=24ft
+
   outF0 = vec4(social, comfort, clamp(wild,0.,1.), built);
-  outF1 = vec4(mvx, mvy, 0.0, 0.0);
+  outF1 = vec4(mvx, mvy, wall_ic, 0.0);
   outF2 = vec4(ix, iy, iz, 0.0);
   outPID = vec4(0.0, 0.0, 0.0, 1.0);
 }`;
