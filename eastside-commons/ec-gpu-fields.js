@@ -34,6 +34,11 @@ class ECGpuFields {
 
     if (!gl.getExtension('EXT_color_buffer_float'))
       throw new Error('EXT_color_buffer_float not available');
+    // Request float texture filtering — some drivers require this even for
+    // NEAREST sampling of R32F textures when rendering to a float FBO.
+    gl.getExtension('OES_texture_float_linear');
+    // Also request EXT_float_blend in case blend ops touch float buffers.
+    gl.getExtension('EXT_float_blend');
 
     this.canvas.width  = this.W;
     this.canvas.height = this.H;
@@ -45,8 +50,8 @@ class ECGpuFields {
       this.textures[name+'_B'] = this._makeRGBA32F();
     }
     // PID texture: tracks which pattern last wrote BUILT_HEIGHT
-    this.textures['PID_A'] = this._makeR32F();
-    this.textures['PID_B'] = this._makeR32F();
+    this.textures['PID_A'] = this._makeRGBA32F();
+    this.textures['PID_B'] = this._makeRGBA32F();
 
     // Static single-pass textures
     this.textures['WALL_DIST']   = this._makeR32F();
@@ -197,12 +202,14 @@ class ECGpuFields {
     const f2=[]; readTex(this.textures['F2_A'], f2);
     R.interest_x=f2[0]; R.interest_y=f2[1]; R.interest_z=f2[2];
 
-    // PID readback (single channel)
-    const pidbuf = new Float32Array(this.W * this.H);
+    // PID readback — PID_A is now RGBA32F, read RGBA and extract red channel
+    const pidbuf_rgba = new Float32Array(this.W * this.H * 4);
     const pidfbo = this._makeFBO1(this.textures['PID_A']);
     gl.bindFramebuffer(gl.FRAMEBUFFER, pidfbo);
-    gl.readPixels(0, 0, this.W, this.H, gl.RED, gl.FLOAT, pidbuf);
+    gl.readPixels(0, 0, this.W, this.H, gl.RGBA, gl.FLOAT, pidbuf_rgba);
     gl.deleteFramebuffer(pidfbo);
+    const pidbuf = new Float32Array(this.W * this.H);
+    for (let i = 0; i < pidbuf.length; i++) pidbuf[i] = pidbuf_rgba[i * 4];
     R.pid = pidbuf;
 
     return R;
