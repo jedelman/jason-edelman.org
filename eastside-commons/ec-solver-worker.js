@@ -356,6 +356,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
         uWeight:    1.0,
         uNbhdR:     pdef.nbhdR || 4.0,
         uPatternId: pid,          // written to PID texture by modulator
+        uThreshold: pdef.threshold ?? 0.15,  // gate: modulator only fires above this
         ...pdef.uniforms,
       };
 
@@ -368,6 +369,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
       gpu.runInvariant(invariantU);
 
       // Pass 1 only: verify the first pattern detector actually wrote output
+      // NOTE: runPattern already ran; the JS threshold check below is for next pass.
       if (pass === 0 && !_patDiagDone) {
         _patDiagDone = true;
         const diagBuf = gpu.readbackPattern(pid);

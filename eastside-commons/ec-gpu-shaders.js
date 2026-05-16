@@ -515,15 +515,21 @@ void main() {
 
 // Shared pattern stdlib header (weight uniforms etc.)
 const PAT_STDLIB = STDLIB + `
-uniform sampler2D uPattern; // per-pattern detector buffer (R32F)
+uniform sampler2D uPattern; // per-pattern detector buffer (RGBA8, r=value)
 uniform sampler2D uPID;     // pattern-id tracking texture
 uniform float uWeight;
 uniform float uNbhdR;
 uniform float uPatternId;   // id of this pattern (for PID write)
+uniform float uThreshold;   // minimum detector value to trigger modulation
 
 float P() { return texture(uPattern, vUV).r; }
-// Sample pattern buffer with spatial kernel (inverted Gaussian accumulation)
+// Sample pattern buffer with spatial kernel
 float Pnbhd(float r) { return nbhd(uPattern, 0, vUV, r); }
+// Gated neighborhood: returns 0 if below threshold — localization gate
+float Pgated(float r) {
+  float v = nbhd(uPattern, 0, vUV, r);
+  return (v > uThreshold) ? (v - uThreshold) / (1.0 - uThreshold + 0.001) : 0.0;
+}
 `;
 
 // ─────────────────────────────────────────────────────────────────
@@ -549,7 +555,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   // Garden wall: low wall, some comfort (enclosure), wild holds
   dF0 = vec4(0.0, p*0.2, 0.0, 0.0);         // slight comfort
   dF1 = vec4(0.0, 0.0,   p*0.8, 0.0);       // WALL
@@ -578,7 +584,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(0.0, p*0.5, -p*0.4, p*4.0);   // comfort, wild suppression, low built height
   dF1 = vec4(0.0, 0.0,   p*0.6,  0.0);      // WALL (posts)
   dF2 = vec4(0.0);
@@ -604,7 +610,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   float built = BUILT(vUV);
   float expansion = p * (1.0 - clamp(built*0.5, 0.0, 1.0));
   // INTEREST.xy toward wild edge direction
@@ -633,7 +639,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 bg = grad_f(uF0, 3, vUV);
   // Perpendicular to edge = rotated 90° = movement direction along wall
   vec2 edge_perp = (length(bg)>0.01) ? normalize(vec2(-bg.y, bg.x)) : vec2(0.0);
@@ -661,7 +667,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(0.0, p*0.8, 0.0, 0.0); // COMFORT (indoor daylight)
   dF1 = vec4(0.0);
   dF2 = vec4(0.0);
@@ -688,7 +694,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 mv = MVMT(vUV);
   dF0 = vec4(0.0, p*0.3, 0.0, 0.0);           // comfort at threshold
   dF1 = vec4(mv*(-p*0.2), p*0.7, 0.0);         // slow movement + WALL
@@ -714,7 +720,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 mv = MVMT(vUV);
   vec2 mv_amplified = mv * (1.0 + p * 0.8);
   vec2 ixy = (length(mv)>0.01) ? normalize(mv) * p * 0.6 : vec2(0.0);
@@ -748,7 +754,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 wg = grad_f(uF1, 2, vUV);
   // INTEREST points toward the wall (pulls people to look at the front)
   vec2 ixy = (length(wg)>0.01) ? normalize(wg) * p * 0.5 : vec2(0.0);
@@ -779,7 +785,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 mv = MVMT(vUV);
   dF0 = vec4(0.0, 0.0, -p*0.5, 0.0);   // WILD suppression
   dF1 = vec4(mv * p * 0.5, 0.0, 0.0);  // MOVEMENT reinforcement
@@ -806,7 +812,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR * 2.0); // wide neighbourhood — paths influence large areas
+  float p = Pgated(uNbhdR * 2.0); // wide neighbourhood — paths influence large areas
   vec2 ixy = INTEREST_XY(vUV);
   // Bend MOVEMENT toward INTEREST direction
   vec2 pull = (length(ixy)>0.01) ? normalize(ixy) * p * 0.7 : vec2(0.0);
@@ -840,7 +846,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*0.5, p*1.0, -p*0.3, p*8.0);  // SOCIAL, COMFORT, -WILD, arcade roof height
   dF1 = vec4(0.0);
   dF2 = vec4(0.0);
@@ -875,7 +881,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   float existing_wall = WALL(vUV);
   dF0 = vec4(0.0, p*1.4, 0.0, p*uRoofHeightFt);  // COMFORT + BUILT_HEIGHT
   dF1 = vec4(0.0, 0.0, p*existing_wall*0.8, 0.0); // WALL at eave
@@ -906,7 +912,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*0.8, p*0.6, -p*0.4, 0.0);  // SOCIAL, COMFORT, -WILD
   dF1 = vec4(0.0);
   dF2 = vec4(0.0, 0.0, p*0.3, 0.0);       // slight INTEREST.z (courtyard as place)
@@ -935,7 +941,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*0.3, 0.0, p*0.2, 0.0);    // SOCIAL, WILD reinforcement
   dF1 = vec4(0.0);
   dF2 = vec4(0.0, 0.0, p*0.4, 0.0);     // INTEREST.z at transitions
@@ -963,7 +969,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*1.0, p*0.5, -p*0.8, p*uMainBuildingHt);  // SOCIAL, COMFORT, -WILD, BUILT
   dF1 = vec4(0.0, 0.0, p*1.5, 0.0);                       // strong WALL
   dF2 = vec4(0.0, 0.0, p*1.2, 0.0);                       // amplify INTEREST.z
@@ -994,7 +1000,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 bg = grad_f(uF0, 3, vUV);
   float wall_edge = length(bg);
   dF0 = vec4(p*0.3, p*0.4, -p*0.7, p*uResidentialHt);  // SOCIAL, COMFORT, -WILD, HEIGHT
@@ -1026,7 +1032,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR * 0.5); // tight neighbourhood
+  float p = Pgated(uNbhdR * 0.5); // tight neighbourhood
   vec2 mv = MVMT(vUV);
   dF0 = vec4(p*0.3, p*0.4, 0.0, p*12.0);    // connector height
   dF1 = vec4(mv*p*0.4, p*0.9, 0.0);          // MOVEMENT through + WALL
@@ -1057,7 +1063,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(0.0, p*0.7, 0.0, 0.0);    // COMFORT (light enters)
   dF1 = vec4(0.0);
   dF2 = vec4(0.0, 0.0, p*0.5, 0.0);   // INTEREST.z (wings are landmarks)
@@ -1085,7 +1091,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   // INTEREST.xy: inward pull (the space pulls people into it)
   vec2 bg = grad_f(uF0, 3, vUV); // toward mass
   vec2 inward = (length(bg)>0.01) ? normalize(bg) * p * 0.6 : vec2(0.0);
@@ -1117,7 +1123,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*0.5, p*0.8, p*0.2, 0.0);  // SOCIAL, COMFORT (solar), slight WILD
   dF1 = vec4(0.0);
   dF2 = vec4(0.0);
@@ -1147,7 +1153,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR * 0.5);
+  float p = Pgated(uNbhdR * 0.5);
   dF0 = vec4(0.0, 0.0, p*0.5, -p*10.0);  // WILD reinforcement, built suppression
   dF1 = vec4(0.0, 0.0, p*0.7, 0.0);      // WALL at edge
   dF2 = vec4(0.0);
@@ -1174,7 +1180,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 mv = MVMT(vUV);
   vec2 ixy = (length(mv)>0.01) ? normalize(mv)*p*0.7 : vec2(0.0);
   dF0 = vec4(p*0.8, 0.0, -p*0.6, 0.0);   // SOCIAL, -WILD
@@ -1203,7 +1209,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*0.4, p*0.3, -p*0.5, p*uComplexHt);
   dF1 = vec4(0.0, 0.0, p*0.8, 0.0);   // WALL between buildings
   dF2 = vec4(0.0, 0.0, p*0.6, 0.0);   // INTEREST.z
@@ -1231,7 +1237,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*1.2, p*0.6, -p*0.3, 0.0);   // strong SOCIAL, COMFORT, -WILD
   dF1 = vec4(0.0);
   dF2 = vec4(0.0, 0.0, p*0.4, 0.0);         // INTEREST.z (cafe as landmark)
@@ -1257,7 +1263,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*0.8, 0.0, -p*0.6, p*14.0);  // SOCIAL, -WILD, ground floor BUILT
   dF1 = vec4(0.0, 0.0, p*1.0, 0.0);          // WALL (shopfront)
   dF2 = vec4(0.0);
@@ -1284,7 +1290,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 wg = grad_f(uF0, 2, vUV);
   // MOVEMENT: bend toward commons edge
   vec2 mv_pull = (length(wg)>0.01) ? normalize(wg) * p * 0.5 : vec2(0.0);
@@ -1313,7 +1319,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*1.0, p*0.4, -p*0.3, 0.0);  // SOCIAL, COMFORT, -WILD
   dF1 = vec4(0.0);
   dF2 = vec4(0.0, 0.0, p*0.6, 0.0);        // INTEREST.z (square as place)
@@ -1341,7 +1347,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*0.5, p*0.4, p*0.8, 0.0);   // SOCIAL, COMFORT, WILD sustain
   dF1 = vec4(0.0);
   dF2 = vec4(0.0, 0.0, p*0.3, 0.0);        // INTEREST.z (canopy)
@@ -1368,7 +1374,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 mv = MVMT(vUV);
   vec2 ixy = (length(mv)>0.01) ? normalize(mv)*p*0.5 : vec2(0.0);
   dF0 = vec4(0.0, 0.0, -p*0.4, 0.0);   // WILD suppression
@@ -1403,7 +1409,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*0.8, 0.0, 0.0, 0.0);         // SOCIAL
   dF1 = vec4(0.0, 0.0, p*1.0, 0.0);          // WALL (gateway structure)
   dF2 = vec4(0.0, 0.0, p*uGatewayHt, 0.0);  // INTEREST.z (gateway as landmark)
@@ -1429,7 +1435,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 mv = MVMT(vUV);
   dF0 = vec4(p*0.4, 0.0, p*0.3, 0.0);  // SOCIAL, WILD sustain along street
   dF1 = vec4(mv*p*0.3, 0.0, 0.0);       // MOVEMENT
@@ -1458,7 +1464,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   dF0 = vec4(p*1.5, 0.0, -p*0.8, p*uMarketHt);  // strong SOCIAL, -WILD, BUILT
   dF1 = vec4(0.0, 0.0, p*1.2, 0.0);               // WALL (market structure)
   dF2 = vec4(0.0, 0.0, p*1.0, 0.0);               // INTEREST.z (market hall)
@@ -1485,7 +1491,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR * 1.5); // wide influence
+  float p = Pgated(uNbhdR * 1.5); // wide influence
   dF0 = vec4(p*1.8, 0.0, -p*0.8, p*uTownHallHt);  // SOCIAL, -WILD, BUILT
   dF1 = vec4(0.0, 0.0, p*1.4, 0.0);                 // WALL
   dF2 = vec4(0.0, 0.0, p*2.5, 0.0);                 // strong INTEREST.z
@@ -1513,8 +1519,8 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR * 0.5); // tight core — repel
-  float p_ring = Pnbhd(uNbhdR * 2.0) - p; // attract ring outside core
+  float p = Pgated(uNbhdR * 0.5); // tight core — repel
+  float p_ring = Pgated(uNbhdR * 2.0) - p; // attract ring outside core
   // Repel: suppress new building at existing structure
   dF0 = vec4(0.0, 0.0, 0.0, -p*30.0 + p_ring*5.0);  // -BUILT at core, +BUILT at ring
   dF1 = vec4(0.0);
@@ -1546,7 +1552,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 bg = grad_f(uF0, 3, vUV);
   float wall_edge = length(bg);
   dF0 = vec4(p*0.3, p*0.4, -p*0.7, p*uResidentialHt);
@@ -1572,7 +1578,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 sg = grad_f(uF0, 0, vUV);
   vec2 inward = (length(sg)>0.01) ? normalize(sg)*p*0.4 : vec2(0.0);
   vec2 mv = MVMT(vUV);
@@ -1606,7 +1612,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 mv = MVMT(vUV);
   dF0 = vec4(p*0.9, 0.0, -p*0.5, p*uShopHt);   // SOCIAL, -WILD, BUILT
   dF1 = vec4(mv*p*0.3, p*0.9, 0.0);              // MOVEMENT, WALL
@@ -1638,7 +1644,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR);
+  float p = Pgated(uNbhdR);
   vec2 mv = MVMT(vUV);
   vec2 new_mv = mix(mv, vec2(mv.x*0.3, length(mv)), p*0.7);
   dF0 = vec4(p*1.2, 0.0, -p*1.5, 0.0);           // SOCIAL, strong -WILD
@@ -1665,7 +1671,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR * 2.0); // wide influence
+  float p = Pgated(uNbhdR * 2.0); // wide influence
   // INTEREST.xy: this node pulls people — radiates interest outward
   // Each node cell writes to its own INTEREST.xy
   // (neighbours accumulate this over multiple cells = radial field)
@@ -1696,7 +1702,7 @@ layout(location=1) out vec4 dF1;
 layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
-  float p = Pnbhd(uNbhdR * 3.0); // very wide
+  float p = Pgated(uNbhdR * 3.0); // very wide
   vec2 sg = grad_f(uF0, 0, vUV);
   vec2 radial = (length(sg)>0.01) ? normalize(sg)*p*0.4 : vec2(0.0);
   dF0 = vec4(0.0, 0.0, 0.0, p*uDensityHtScale);  // BUILT_HEIGHT from density
@@ -1762,9 +1768,12 @@ const EC_GPU_SHADERS = {
   IC_FRAG, INVARIANT_FRAG, WALL_DIST_FRAG, COPY_FRAG, DIFFUSE_FRAG, GAIN_FRAG, DECAY_FRAG,
   // Pattern shaders keyed by id, descending order
   patterns: {
-    176: { detect: DETECT_P176, modulate: MODULATE_P176, nbhdR: 3.0, uniforms: {} },
-    174: { detect: DETECT_P174, modulate: MODULATE_P174, nbhdR: 4.0, uniforms: {} },
-    172: { detect: DETECT_P172, modulate: MODULATE_P172, nbhdR: 5.0, uniforms: {} },
+    // threshold: fraction of max detector value below which modulator is silent
+    // Higher threshold = tighter localization (fires only at strong detections)
+    // Lower threshold = more diffuse influence (fires at weak detections too)
+    176: { detect: DETECT_P176, modulate: MODULATE_P176, nbhdR: 3.0, threshold: 0.40, uniforms: {} },  // Garden Wall — was firing everywhere; needs strong wild/built boundary
+    174: { detect: DETECT_P174, modulate: MODULATE_P174, nbhdR: 4.0, threshold: 0.25, uniforms: {} },  // Trellised Walk
+    172: { detect: DETECT_P172, modulate: MODULATE_P172, nbhdR: 5.0, threshold: 0.35, uniforms: {} },  // Garden Growing Wild — was nz=42K; needs actual edge
     160: { detect: DETECT_P160, modulate: MODULATE_P160, nbhdR: 4.0, uniforms: {} },
     128: { detect: DETECT_P128, modulate: MODULATE_P128, nbhdR: 3.0, uniforms: {} },
     127: { detect: DETECT_P127, modulate: MODULATE_P127, nbhdR: 4.0, uniforms: {} },
