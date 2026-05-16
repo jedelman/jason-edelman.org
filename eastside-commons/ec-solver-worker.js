@@ -98,7 +98,11 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   // Encode all geometry as gaussian seeds (no named constants at shader time)
   const seeds = [];
   function addSeed(ftX, ftY, r, social=0, wild=0, built=0, mvx=0, mvy=0, intZ=0) {
-    seeds.push({ x:(ftX-MAP.x0)/(MAP.x1-MAP.x0), y:(ftY-MAP.y0)/(MAP.y1-MAP.y0),
+    const ux = (ftX-MAP.x0)/(MAP.x1-MAP.x0);
+    const uy = (ftY-MAP.y0)/(MAP.y1-MAP.y0);
+    // Clamp to grid bounds — OOB seeds waste a slot and produce no output
+    if (ux < -0.1 || ux > 1.1 || uy < -0.1 || uy > 1.1) return;
+    seeds.push({ x: Math.max(0,Math.min(1,ux)), y: Math.max(0,Math.min(1,uy)),
                  r:r/CELL_SIZE, social, wild, built, mvx, mvy, intZ });
   }
 
@@ -449,7 +453,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     const epsSocial = opts.eps    || 0.002;   // stricter social delta
     const epsEntropy= opts.epsH   || 0.0015;  // stricter entropy delta
     const epsDiff   = opts.epsDiff|| 0.03;    // stricter diff delta
-    const minH      = opts.minH   || 0.80;    // minimum entropy before considering saturated
+    const minH      = opts.minH   || 0.70;    // minimum entropy (fBm floor keeps H ~0.73+; 0.80 was unreachable)
     const minPasses = opts.minPasses || 6;    // always run at least this many passes
     if (pass >= minPasses - 1 &&
         meanEntropy >= minH &&

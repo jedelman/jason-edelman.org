@@ -1037,7 +1037,6 @@ details[open] summary::before { content: '▼  '; }
 
 <script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
 <script src="/eastside-commons/ec-parcel-data.js" defer></script>
-<script src="/eastside-commons/ec-context-fetch.js" defer></script>
 <script defer>
 
 'use strict';
@@ -1065,14 +1064,27 @@ requestAnimationFrame(() => requestAnimationFrame(() => {
       requestAnimationFrame(loadPipeline);
       return;
     }
-    const s = document.createElement('script');
-    s.src = '/eastside-commons/ec-pipeline.js';
-    s.async = true;
-    s.onerror = () => {
-      const m = document.getElementById('ec-loading-msg');
-      if (m) m.textContent = '⚠ Failed to load pipeline. Check network.';
-    };
-    document.head.appendChild(s);
+    // Load ec-context-fetch.js first, then pipeline (ensures EC_Context is defined
+    // before triggerPipeline runs — async vs defer ordering is not guaranteed)
+    function loadPipelineScript() {
+      const s = document.createElement('script');
+      s.src = '/eastside-commons/ec-pipeline.js';
+      s.async = true;
+      s.onerror = () => {
+        const m = document.getElementById('ec-loading-msg');
+        if (m) m.textContent = '⚠ Failed to load pipeline. Check network.';
+      };
+      document.head.appendChild(s);
+    }
+    if (window.EC_Context) {
+      loadPipelineScript();
+    } else {
+      const sc = document.createElement('script');
+      sc.src = '/eastside-commons/ec-context-fetch.js';
+      sc.onload = loadPipelineScript;
+      sc.onerror = loadPipelineScript; // fail gracefully — pipeline runs without context
+      document.head.appendChild(sc);
+    }
   }
   loadPipeline();
 }));

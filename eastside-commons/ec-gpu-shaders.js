@@ -161,16 +161,18 @@ float ic_vnoiseC(vec2 uv_c,float s,float off){
   return mix(mix(ic_hashC(gi),ic_hashC(gi+vec2(1,0)),u.x),mix(ic_hashC(gi+vec2(0,1)),ic_hashC(gi+vec2(1,1)),u.x),u.y);}
 
 void main() {
-  if (!IN_EDA(vUV)) {
-    // Non-EDA cells: seed from external city context (buildings + streets)
-    // so diffusion carries real urban fabric inward across the EDA boundary.
+  float in_eda = IN_EDA(vUV) ? 1.0 : 0.0;
+
+  // Non-EDA cells: seed from external city context so diffusion carries
+  // real urban fabric inward. Then return — no pattern seeds apply outside EDA.
+  if (in_eda < 0.5) {
     if (uHaveContext > 0.5) {
       vec4 ctx0 = texture(uContextF0, vUV);
       vec4 ctx1 = texture(uContextF1, vUV);
       vec4 ctx2 = texture(uContextF2, vUV);
-      outF0  = vec4(0.0, ctx0.r, 0.0, 0.0);  // F0.g = comfort
-      outF1  = vec4(ctx1.r, ctx1.g, 0.0, 0.0); // F1.rg = movement xy
-      outF2  = vec4(0.0, 0.0, ctx2.r, 0.0);  // F2.b = interest_z
+      outF0  = vec4(0.0, ctx0.r, 0.0, 0.0);  // comfort
+      outF1  = vec4(ctx1.r, ctx1.g, 0.0, 0.0); // movement xy
+      outF2  = vec4(0.0, 0.0, ctx2.r, 0.0);  // interest_z
     } else {
       outF0 = vec4(0.0); outF1 = vec4(0.0); outF2 = vec4(0.0);
     }
