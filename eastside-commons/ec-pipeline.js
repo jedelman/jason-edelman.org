@@ -5107,6 +5107,35 @@ function applyFieldResult(psResult, params, t1) {
   const statusText = document.getElementById('map-status');
   const btn = document.getElementById('run-btn');
 
+  // ── Remap GPU solver coordinates → SVG space (0–4200 × 0–3700) ──────
+  // GPU solver works in its own MAP space (x0=-96..x1=2507, y0=-96..y1=2503).
+  // SVG pipeline works in 0–4200 × 0–3700 with Y-up→Y-down flip.
+  // Buildings and hotNodes must be remapped before renderPlanBuildings.
+  const gMAP = psResult.MAP;
+  if (gMAP && psResult.sceneGraph) {
+    const SVG_W = 4200, SVG_H = 3700;
+    const mw = gMAP.x1 - gMAP.x0, mh = gMAP.y1 - gMAP.y0;
+    const remapX = x => (x - gMAP.x0) / mw * SVG_W;
+    const remapY = y => SVG_H - (y - gMAP.y0) / mh * SVG_H; // Y-flip
+
+    psResult.sceneGraph.buildings = (psResult.sceneGraph.buildings || []).map(b => ({
+      ...b,
+      x: remapX(b.x),
+      y: remapY(b.y + b.h), // top edge: y+h in MAP space → lowest SVG y
+      w: b.w / mw * SVG_W,
+      h: b.h / mh * SVG_H,
+    }));
+
+    psResult.sceneGraph.instances = (psResult.sceneGraph.instances || []).map(n => ({
+      ...n,
+      x: remapX(n.x),
+      y: remapY(n.y),
+    }));
+
+    // Keep buildings array in sync (used for stats)
+    psResult.buildings = psResult.sceneGraph.buildings;
+  }
+
   if (svg) {
     svg.querySelectorAll('[data-t7],[data-plan-layer]').forEach(e => e.remove());
     svg.querySelector('#pattern-overlay')?.remove();
