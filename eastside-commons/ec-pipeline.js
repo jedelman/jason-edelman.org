@@ -5087,6 +5087,37 @@ window.EC_Decomp = {
 };
 
 
+
+// ── IndexedDB store for full solver payload (fields are Float32Arrays) ────────
+const EC_IDB_NAME = 'eastside-commons', EC_IDB_STORE = 'solver', EC_IDB_KEY = 'last';
+function _ecIDB(mode) {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(EC_IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(EC_IDB_STORE);
+    req.onsuccess = e => {
+      const db = e.target.result;
+      res(db.transaction(EC_IDB_STORE, mode).objectStore(EC_IDB_STORE));
+    };
+    req.onerror = () => rej(req.error);
+  });
+}
+async function ecStorePayload(payload) {
+  try {
+    const store = await _ecIDB('readwrite');
+    store.put(payload, EC_IDB_KEY);
+  } catch(e) { console.warn('[EC IDB write]', e); }
+}
+async function ecLoadPayload() {
+  try {
+    const store = await _ecIDB('readonly');
+    return await new Promise((res, rej) => {
+      const req = store.get(EC_IDB_KEY);
+      req.onsuccess = () => res(req.result ?? null);
+      req.onerror  = () => rej(req.error);
+    });
+  } catch(e) { console.warn('[EC IDB read]', e); return null; }
+}
+
 function initPipeline(parcels, proj, MAP, derivedG) {
   _pipelineParcels = parcels; _pipelineProj = proj; _pipelineMAP = MAP;
   window._derivedG = derivedG;
@@ -5396,8 +5427,15 @@ async function triggerPipeline() {
         mapLog('✗ ' + msg, 'error');
         window._solverWorker = null;
       } else if (type === 'result') {
-        // Persist crash-safe copy
-        try { localStorage.setItem('ec-solver-result', JSON.stringify(payload)); } catch(_) {}
+        // Keep full payload (with Float32Array fields) in memory for diagnostic
+        window._lastSolverPayload = payload;
+        // Persist to IndexedDB (handles Float32Arrays; localStorage can't)
+        ecStorePayload(payload);
+        // Also write slim version (no fields) to localStorage for resumeFromCache
+        try {
+          const slim = Object.assign({}, payload, { fields: null, patternFields: null });
+          localStorage.setItem('ec-solver-result', JSON.stringify(slim));
+        } catch(_) {}
         const psResult = {
           buildings: payload.buildings, hotNodes: payload.hotNodes,
           fieldLines: payload.fieldLines, log: payload.log,

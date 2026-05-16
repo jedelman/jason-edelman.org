@@ -297,9 +297,10 @@ function fieldStats(data, edaMask) {
 let _data = null;
 let _edaMask = null;
 
-function clearCache() {
-  if (!confirm('Clear ec-solver-result from localStorage? You will need to re-run the solver.')) return;
+async function clearCache() {
+  if (!confirm('Clear solver cache (IndexedDB + localStorage)? You will need to re-run the solver.')) return;
   localStorage.removeItem('ec-solver-result');
+  try { const s = await _ecIDB('readwrite'); s.delete(EC_IDB_KEY); } catch(_) {}
   _data = null;
   document.getElementById('main-grid').innerHTML = `<div class="empty" style="grid-column:1/-1">
     <div class="big">⬡</div>
@@ -310,13 +311,45 @@ function clearCache() {
   document.getElementById('data-src').textContent = '—';
 }
 
-function loadData() {
-  const raw = localStorage.getItem('ec-solver-result');
-  if (!raw) {
-    showEmpty(); return;
+// ── IndexedDB helpers (mirrors ec-pipeline.js) ──────────────────────────────
+const EC_IDB_NAME = 'eastside-commons', EC_IDB_STORE = 'solver', EC_IDB_KEY = 'last';
+function _ecIDB(mode) {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(EC_IDB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(EC_IDB_STORE);
+    req.onsuccess = e => {
+      const db = e.target.result;
+      res(db.transaction(EC_IDB_STORE, mode).objectStore(EC_IDB_STORE));
+    };
+    req.onerror = () => rej(req.error);
+  });
+}
+async function ecLoadPayload() {
+  try {
+    const store = await _ecIDB('readonly');
+    return await new Promise((res, rej) => {
+      const req = store.get(EC_IDB_KEY);
+      req.onsuccess = () => res(req.result ?? null);
+      req.onerror  = () => rej(req.error);
+    });
+  } catch(e) { return null; }
+}
+
+async function loadData() {
+  // Try IndexedDB first (has Float32Array fields intact)
+  let payload = await ecLoadPayload();
+  if (payload) {
+    _data = payload;
+    document.getElementById('data-src').textContent = 'IndexedDB[eastside-commons/solver]';
+    render(_data);
+    return;
   }
+  // Fallback: localStorage slim payload (no fields)
+  const raw = localStorage.getItem('ec-solver-result');
+  if (!raw) { showEmpty(); return; }
   try {
     _data = JSON.parse(raw);
+    document.getElementById('data-src').textContent = 'localStorage[ec-solver-result] (no fields)';
     render(_data);
   } catch(e) {
     showEmpty(`Parse error: ${e.message}`);
