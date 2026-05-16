@@ -62,6 +62,13 @@ class ECGpuFields {
     this.textures['SPONGE_MASK'] = this._makeR8();
     this.textures['NODE_PROX']   = this._makeRGBA32F();
 
+    // Context field textures: rasterized external city fabric (buildings + streets)
+    // Uploaded via uploadContext(f0, f1, f2). Dummy 1×1 zero textures until then.
+    this.textures['CONTEXT_F0'] = this._makeRGBA32F();
+    this.textures['CONTEXT_F1'] = this._makeRGBA32F();
+    this.textures['CONTEXT_F2'] = this._makeRGBA32F();
+    this._haveContext = false;
+
     // MRT FBO: writes F0_B, F1_B, F2_B, PID_B simultaneously
     this._setupMRT();
     // Wall-dist FBO
@@ -78,7 +85,8 @@ class ECGpuFields {
 
   // Call after all uploadMask / uploadFloat calls.
   paintIC() {
-    this._paintIC(this._icUniforms || {});
+    const extras = { ...(this._icUniforms || {}), uHaveContext: this._haveContext ? 1.0 : 0.0 };
+    this._paintIC(extras);
   }
 
   // ── Run one pattern: detector → modulator → (caller runs invariant) ───
@@ -182,6 +190,24 @@ class ECGpuFields {
     gl.bindTexture(gl.TEXTURE_2D, this.textures[name]);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.W, this.H, 0,
                   gl.RGBA, gl.FLOAT, rgba);
+  }
+
+  // Upload context fields (RGBA32F Float32Arrays of length W*H*4)
+  // f0: comfort channel in .r
+  // f1: movement_x in .r, movement_y in .g
+  // f2: interest_z in .r
+  uploadContext(f0, f1, f2) {
+    const gl = this.gl;
+    const upload = (name, data) => {
+      gl.bindTexture(gl.TEXTURE_2D, this.textures[name]);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.W, this.H, 0,
+                    gl.RGBA, gl.FLOAT, data);
+    };
+    upload('CONTEXT_F0', f0);
+    upload('CONTEXT_F1', f1);
+    upload('CONTEXT_F2', f2);
+    this._haveContext = true;
+    this._log.push(`uploadContext: context fields loaded (${this.W}×${this.H})`);
   }
 
   // ── Readback all field values ──────────────────────────────────────────
@@ -396,6 +422,9 @@ class ECGpuFields {
       ['uSpongeMask', this.textures['SPONGE_MASK']],
       ['uWallDist',   this.textures['WALL_DIST']],
       ['uNodeProx',   this.textures['NODE_PROX']],
+      ['uContextF0',  this.textures['CONTEXT_F0']],
+      ['uContextF1',  this.textures['CONTEXT_F1']],
+      ['uContextF2',  this.textures['CONTEXT_F2']],
     ];
     if (patternTex) slots.push(['uPattern', patternTex]);
 

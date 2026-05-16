@@ -217,6 +217,17 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   gpu.uploadMask('SPONGE_MASK', spongeMask);
   gpu.uploadFloat('NODE_PROX',  nodeProx);
 
+  // Upload external context fields if provided (rasterized Norfolk GIS data)
+  if (opts.contextFields) {
+    const { f0, f1, f2 } = opts.contextFields;
+    if (f0 && f1 && f2 && f0.length === GW * GH * 4) {
+      gpu.uploadContext(f0, f1, f2);
+      log.push(`Context fields uploaded: GW=${GW} GH=${GH}`);
+    } else {
+      log.push(`Context fields skipped: size mismatch (expected ${GW*GH*4}, got ${f0?.length})`);
+    }
+  }
+
   // Paint IC now that masks are uploaded (EDA_MASK needed by IC shader)
   gpu.paintIC();
   for (const msg of gpu._log) log.push('  GPU: ' + msg);

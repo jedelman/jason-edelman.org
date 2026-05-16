@@ -131,6 +131,14 @@ uniform float uSeedMvY[16];
 uniform float uSeedIntZ[16];
 uniform float uNoiseSeed;   // randomized each run, controls spatial noise pattern
 
+// External context fields: rasterized Norfolk GIS buildings + streets.
+// Provide boundary conditions for non-EDA cells so diffusion carries
+// the surrounding urban fabric inward rather than starting from zero.
+uniform sampler2D uContextF0;  // RGBA32F: r=comfort (building density/height)
+uniform sampler2D uContextF1;  // RGBA32F: r=movement_x, g=movement_y (street direction)
+uniform sampler2D uContextF2;  // RGBA32F: r=interest_z (building mass as latent activity)
+uniform float     uHaveContext; // 1.0 if context textures are loaded, 0.0 otherwise
+
 layout(location=0) out vec4 outF0;
 layout(location=1) out vec4 outF1;
 layout(location=2) out vec4 outF2;
@@ -154,7 +162,19 @@ float ic_vnoiseC(vec2 uv_c,float s,float off){
 
 void main() {
   if (!IN_EDA(vUV)) {
-    outF0 = vec4(0.0); outF1 = vec4(0.0); outF2 = vec4(0.0); outPID = vec4(0.0, 0.0, 0.0, 1.0);
+    // Non-EDA cells: seed from external city context (buildings + streets)
+    // so diffusion carries real urban fabric inward across the EDA boundary.
+    if (uHaveContext > 0.5) {
+      vec4 ctx0 = texture(uContextF0, vUV);
+      vec4 ctx1 = texture(uContextF1, vUV);
+      vec4 ctx2 = texture(uContextF2, vUV);
+      outF0  = vec4(0.0, ctx0.r, 0.0, 0.0);  // F0.g = comfort
+      outF1  = vec4(ctx1.r, ctx1.g, 0.0, 0.0); // F1.rg = movement xy
+      outF2  = vec4(0.0, 0.0, ctx2.r, 0.0);  // F2.b = interest_z
+    } else {
+      outF0 = vec4(0.0); outF1 = vec4(0.0); outF2 = vec4(0.0);
+    }
+    outPID = vec4(0.0, 0.0, 0.0, 1.0);
     return;
   }
 

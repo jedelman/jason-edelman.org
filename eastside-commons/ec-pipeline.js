@@ -5433,6 +5433,28 @@ async function triggerPipeline() {
       window._solverWorker = null;
     });
 
+    // ── Context fields: fetch Norfolk GIS buildings + streets ───────────────
+    // These become boundary conditions for non-EDA cells in the IC shader.
+    // Fetch runs in main thread (needs fetch API). Result cached 7 days.
+    let contextFields = null;
+    if (window.EC_Context) {
+      try {
+        const CELL_FT = params.ps_res || 10;
+        const GW = Math.ceil((MAP.x1 - MAP.x0) / CELL_FT) + 1;
+        const GH = Math.ceil((MAP.y1 - MAP.y0) / CELL_FT) + 1;
+        const bounds = proj._bounds || {};
+        if (statusText) statusText.textContent = 'Fetching city context (buildings + streets)…';
+        contextFields = await window.EC_Context.fetchContextFields(
+          bounds, MAP, proj, GW, GH, CELL_FT,
+          (msg) => { if (statusText) statusText.textContent = msg; mapLog(msg, 'info'); }
+        );
+        mapLog(`context: f0/f1/f2 ready (${GW}×${GH})`, 'ok');
+      } catch (ctxErr) {
+        mapLog(`context fetch failed: ${ctxErr.message} — continuing without`, 'error');
+        contextFields = null;
+      }
+    }
+
     worker.postMessage({
       parcels, derivedG: window._derivedG || {}, MAP,
       opts: {
@@ -5440,8 +5462,13 @@ async function triggerPipeline() {
         eps:       params.ps_eps     || 0.008,
         cellSize:  params.ps_res     || 10,
         threshold: params.ps_thresh  || 0.2,
+        contextFields,
       },
-    });
+    }, contextFields ? [
+      contextFields.f0.buffer,
+      contextFields.f1.buffer,
+      contextFields.f2.buffer,
+    ] : []);
 
     return;  // rendering happens async in worker.onmessage
 
