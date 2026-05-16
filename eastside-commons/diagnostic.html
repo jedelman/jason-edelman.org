@@ -182,6 +182,7 @@
   </div>
   <div class="btn-group">
     <button onclick="loadData()">↺ REFRESH</button>
+    <button onclick="clearCache()">⌫ CLEAR CACHE</button>
     <button class="primary" id="copy-btn" onclick="copyReport()">⊕ COPY REPORT</button>
   </div>
 </header>
@@ -296,6 +297,19 @@ function fieldStats(data, edaMask) {
 let _data = null;
 let _edaMask = null;
 
+function clearCache() {
+  if (!confirm('Clear ec-solver-result from localStorage? You will need to re-run the solver.')) return;
+  localStorage.removeItem('ec-solver-result');
+  _data = null;
+  document.getElementById('main-grid').innerHTML = `<div class="empty" style="grid-column:1/-1">
+    <div class="big">⬡</div>
+    <p>Cache cleared. Run the GPU solver at <code><a href="/eastside-commons/" style="color:inherit">eastside-commons/</a></code> then refresh.</p>
+  </div>`;
+  document.getElementById('run-meta').textContent = '— cleared';
+  document.getElementById('data-ts').textContent = '—';
+  document.getElementById('data-src').textContent = '—';
+}
+
 function loadData() {
   const raw = localStorage.getItem('ec-solver-result');
   if (!raw) {
@@ -325,9 +339,27 @@ function render(d) {
   const g = document.getElementById('main-grid');
   g.innerHTML = '';
 
-  const gw = d.gw, gh = d.gh;
-  const fields = d.fields;
-  const N = gw * gh;
+  // Normalise — old JS-solver payloads may lack gw/gh/cellSize at top level
+  const gw       = d.gw       ?? d.opts?.gw       ?? null;
+  const gh       = d.gh       ?? d.opts?.gh       ?? null;
+  const cellSize = d.cellSize ?? d.opts?.cellSize  ?? null;
+  const solver   = d.fields   ? 'GPU' : (d.jsFieldMap ? 'JS-CPU' : 'unknown');
+  const fields   = d.fields;
+  const N        = gw && gh ? gw * gh : null;
+
+  // Guard: if no grid dims, show stale-cache warning
+  if (!gw || !gh) {
+    g.innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <div class="big">⚠</div>
+      <p>Cached result is from the <strong>JS CPU solver</strong> (pre-GPU era).<br>
+      No field buffer data available. Clear the cache and run the GPU solver.<br><br>
+      <button class="primary" onclick="clearCache()" style="margin:0 auto;display:block">⌫ CLEAR CACHE &amp; RELOAD</button></p>
+    </div>`;
+    document.getElementById('run-meta').textContent = ' — stale JS-solver cache';
+    document.getElementById('data-ts').textContent = d.ts ? new Date(d.ts).toLocaleString() : '—';
+    document.getElementById('data-src').textContent = 'localStorage[ec-solver-result] ← JS solver (old)';
+    return;
+  }
 
   // Build EDA mask from edaMask if present, else infer from edaCount
   _edaMask = null;  // fields are pre-masked; stats use all nonzero
@@ -368,7 +400,11 @@ function render(d) {
         </div>
         <div class="metric">
           <div class="label">Cell Size</div>
-          <div class="value sm">${d.cellSize ?? '?'}ft</div>
+          <div class="value sm">${cellSize ?? '?'}ft</div>
+        </div>
+        <div class="metric">
+          <div class="label">Solver</div>
+          <div class="value sm">${solver}</div>
         </div>
         <div class="metric">
           <div class="label">EDA Coverage</div>
@@ -447,7 +483,7 @@ function render(d) {
 
   const fieldsHTML = fields ? `
     <div class="panel full">
-      <div class="panel-title">Semantic Field Buffers — ${gw}×${gh} · ${N.toLocaleString()} cells</div>
+      <div class="panel-title">Semantic Field Buffers — ${gw}×${gh} · ${N?.toLocaleString?.()??"?"} cells</div>
       <div class="fields-grid">${fieldItems}</div>
     </div>` : `
     <div class="panel full">
@@ -533,7 +569,9 @@ function copyReport() {
   lines.push('');
   lines.push(`  Generated : ${new Date().toISOString()}`);
   lines.push(`  Run time  : ${d.ts ? new Date(d.ts).toISOString() : 'unknown'}`);
-  lines.push(`  Grid      : ${d.gw}×${d.gh} = ${(d.gw*d.gh).toLocaleString()} cells @ ${d.cellSize}ft`);
+  const _gw=d.gw??null, _gh=d.gh??null, _cs=d.cellSize??d.opts?.cellSize??null;
+  lines.push(`  Grid      : ${_gw??'?'}×${_gh??'?'} = ${_gw&&_gh?((_gw*_gh).toLocaleString()):'?'} cells @ ${_cs??'?'}ft`);
+  lines.push(`  Solver    : ${d.fields?'GPU':(d.jsFieldMap?'JS-CPU':'unknown')}`);
   lines.push('');
   lines.push('── OUTCOME ─────────────────────────────────────────────');
   lines.push(`  Buildings   : ${d.buildings?.length ?? '?'}`);
