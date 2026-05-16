@@ -1265,7 +1265,7 @@ layout(location=2) out vec4 dF2;
 layout(location=3) out vec4 dPID;
 void main() {
   float p = Pgated(uNbhdR);
-  dF0 = vec4(p*0.8, 0.0, -p*0.6, p*14.0);  // SOCIAL, -WILD, ground floor BUILT
+  dF0 = vec4(p*0.8, 0.0, -p*0.6, p*0.15);  // SOCIAL, -WILD, ground floor BUILT (~14ft normalized)
   dF1 = vec4(0.0, 0.0, p*1.0, 0.0);          // WALL (shopfront)
   dF2 = vec4(0.0);
 }`;
@@ -1281,7 +1281,8 @@ void main() {
   float wild = WILD(vUV);
   float wild_nb = nbhd(uF0, 2, vUV, 6.0);
   // Ring: moderate wild here, high wild nearby (the sponge edge)
-  float ring = wild * (1.0 - wild * 0.5) * clamp(wild_nb * 1.5, 0.0, 1.0);
+  // Require strong wild AND high wild neighborhood (sponge proximity)
+  float ring = clamp((wild - 0.4) * 2.5, 0.0, 1.0) * clamp((wild_nb - 0.4) * 2.5, 0.0, 1.0);
   outP = vec4(ring * (IN_EDA(vUV) ? uWeight : 0.0), 0.0, 0.0, 1.0);
 }`;
 
@@ -1339,7 +1340,8 @@ void main() {
   float built = BUILT(vUV);
   float accessible = mv * (1.0-clamp(mv-0.5,0.,1.)*2.0); // peaks mid-movement
   float sweet = wild * (1.0-wild*0.5);                     // peaks at wild~0.5
-  outP = vec4(sweet * (0.3+accessible*0.7) * (1.0-clamp(built*0.1,0.,1.)) * uWeight, 0.0, 0.0, 1.0);
+  // (1-built): suppress where built-up; require mid-wild sweet spot
+  outP = vec4(sweet * (0.3+accessible*0.7) * (1.0 - built) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P60 = PAT_STDLIB + `
@@ -1366,7 +1368,8 @@ void main() {
   float built = BUILT(vUV);
   float wall = WALL(vUV);
   // Bike path: movement present, minimal building/wall obstruction
-  outP = vec4(mv * (1.0-clamp(built*0.1,0.,1.)) * (1.0-wall*0.5) * uWeight, 0.0, 0.0, 1.0);
+  // Require strong movement AND low built AND low wall
+  outP = vec4(mv * (1.0 - built) * (1.0 - wall*0.5) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P56 = PAT_STDLIB + `
@@ -1427,7 +1430,8 @@ void main() {
   float mv = length(MVMT(vUV));
   float wild_nb = nbhd(uF0, 2, vUV, 2.0); // adjacent wild
   float built = BUILT(vUV);
-  outP = vec4(mv * clamp(wild_nb*1.5,0.,1.) * (1.0-clamp(built*0.1,0.,1.)) * uWeight, 0.0, 0.0, 1.0);
+  // Require movement + adjacent wild + unbuilt
+  outP = vec4(mv * clamp(wild_nb*1.5,0.,1.) * (1.0 - built) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P51 = PAT_STDLIB + `

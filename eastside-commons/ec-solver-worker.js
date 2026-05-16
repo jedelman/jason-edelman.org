@@ -466,6 +466,15 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     const deltaDiff = prevBuiltStd !== null ? Math.abs(builtStd - prevBuiltStd) : null;
 
     log.push(`  Δsocial=${(deltaS??0).toFixed(5)} H=${meanEntropy.toFixed(3)} Δh=${(deltaE??0).toFixed(4)} σbuilt=${builtStd.toFixed(2)} Δσ=${(deltaDiff??0).toFixed(3)}`);
+    // Comfort diagnostic — should be nonzero after pass 1 if P128/P60 are writing
+    if (pass < 3) {
+      let comfortMax = 0, comfortNZ = 0;
+      for (let i = 0; i < fields.comfort.length; i++) {
+        if (fields.comfort[i] > comfortMax) comfortMax = fields.comfort[i];
+        if (fields.comfort[i] > 1e-4) comfortNZ++;
+      }
+      log.push(`  [diag] comfort: max=${comfortMax.toFixed(6)} nz=${comfortNZ}`);
+    }
 
     // Debug: built_height range in EDA
     {
