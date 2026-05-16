@@ -658,7 +658,8 @@ layout(location=0) out vec4 outP;
 void main() {
   float built = BUILT(vUV);
   float iz = INTEREST_Z(vUV);
-  outP = vec4(clamp(built/60.0, 0.0, 1.0) * (0.3 + iz * 0.7) * uWeight, 0.0, 0.0, 1.0);
+  // built is normalized [0,1] by gain shader — no /60 needed
+  outP = vec4(built * (0.3 + iz * 0.7) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P128 = PAT_STDLIB + `
@@ -1054,7 +1055,7 @@ void main() {
   float ne = BUILT(vUV+vec2(d.x,d.y));
   float nw = BUILT(vUV+vec2(-d.x,d.y));
   float openness = 1.0 - min(ne,nw)/max(built,1.0);
-  outP = vec4(clamp(built/40.0,0.,1.) * openness * uWeight, 0.0, 0.0, 1.0);
+  outP = vec4(built * openness * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P107 = PAT_STDLIB + `
@@ -1080,7 +1081,7 @@ void main() {
   float built = BUILT(vUV);
   float built_nb = nbhd(uF0, 3, vUV, 4.0);
   // Convex outdoor: empty here, surrounded by mass
-  float convex = (1.0-clamp(built/15.0,0.,1.)) * clamp(built_nb/25.0,0.,1.);
+  float convex = (1.0-built) * built_nb;
   float wild_ok = 1.0 - WILD(vUV) * 0.5; // some wild OK in positive space
   outP = vec4(convex * wild_ok * (IN_EDA(vUV) ? uWeight : 0.0), 0.0, 0.0, 1.0);
 }`;
@@ -1113,7 +1114,7 @@ void main() {
   // South face: low built here, high built to NORTH (positive y = north in our coords)
   vec2 d = 1.0/uResolution;
   float built_n = BUILT(vUV + vec2(0.0, d.y*2.0));
-  float south_face = (1.0-clamp(built/10.0,0.,1.)) * clamp(built_n/20.0,0.,1.);
+  float south_face = (1.0-built) * built_n;
   outP = vec4(south_face * (IN_EDA(vUV) ? uWeight : 0.0), 0.0, 0.0, 1.0);
 }`;
 
@@ -1171,7 +1172,7 @@ void main() {
   float social = SOCIAL(vUV);
   float built = BUILT(vUV);
   // Pedestrian: high movement, some social, low built (not inside a building)
-  outP = vec4(mv * social * (1.0-clamp(built/20.0,0.,1.)) * uWeight, 0.0, 0.0, 1.0);
+  outP = vec4(mv * social * (1.0-built) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P100 = PAT_STDLIB + `
@@ -1199,7 +1200,7 @@ void main() {
   float built = BUILT(vUV);
   float social = SOCIAL(vUV);
   float built_nb = nbhd(uF0, 3, vUV, 5.0);
-  outP = vec4(clamp(built/30.0,0.,1.) * social * clamp(built_nb/25.0,0.,1.) * uWeight, 0.0, 0.0, 1.0);
+  outP = vec4(built * social * built_nb * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P95 = PAT_STDLIB + `
@@ -1228,7 +1229,7 @@ void main() {
   float wall = WALL(vUV);
   float built = BUILT(vUV);
   // Cafe: social, movement passing by, wall behind, not inside a building
-  outP = vec4(social * mv * wall * (1.0-clamp(built/15.0,0.,1.)) * uWeight, 0.0, 0.0, 1.0);
+  outP = vec4(social * mv * wall * (1.0-built) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P88 = PAT_STDLIB + `
@@ -1310,7 +1311,7 @@ void main() {
   float social = SOCIAL(vUV);
   float built = BUILT(vUV);
   float wall_nb = nbhd(uF1, 2, vUV, 3.0); // nearby wall
-  outP = vec4(social * (1.0-clamp(built/10.0,0.,1.)) * clamp(wall_nb*2.0,0.,1.) * uWeight, 0.0, 0.0, 1.0);
+  outP = vec4(social * (1.0-built) * clamp(wall_nb*2.0,0.,1.) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P61 = PAT_STDLIB + `
@@ -1776,38 +1777,38 @@ const EC_GPU_SHADERS = {
     172: { detect: DETECT_P172, modulate: MODULATE_P172, nbhdR: 5.0, threshold: 0.35, uniforms: {} },  // Garden Growing Wild — was nz=42K; needs actual edge
     160: { detect: DETECT_P160, modulate: MODULATE_P160, nbhdR: 4.0, uniforms: {} },
     128: { detect: DETECT_P128, modulate: MODULATE_P128, nbhdR: 3.0, uniforms: {} },
-    127: { detect: DETECT_P127, modulate: MODULATE_P127, nbhdR: 4.0, uniforms: {} },
+    127: { detect: DETECT_P127, modulate: MODULATE_P127, nbhdR: 4.0, threshold: 0.35, uniforms: {} },  // Intimacy Gradient — social gradient fires broadly
     123: { detect: DETECT_P123, modulate: MODULATE_P123, nbhdR: 5.0, uniforms: {} },
     122: { detect: DETECT_P122, modulate: MODULATE_P122, nbhdR: 4.0, uniforms: {} },
-    121: { detect: DETECT_P121, modulate: MODULATE_P121, nbhdR: 4.0, uniforms: {} },
-    120: { detect: DETECT_P120, modulate: MODULATE_P120, nbhdR: 8.0, uniforms: {} },
-    119: { detect: DETECT_P119, modulate: MODULATE_P119, nbhdR: 4.0, uniforms: { uMaxSpanCells: 6.0 } },
-    116: { detect: DETECT_P116, modulate: MODULATE_P116, nbhdR: 4.0, uniforms: { uMaxSpanCells: 6.0, uRoofHeightFt: 14.0 } },
-    115: { detect: DETECT_P115, modulate: MODULATE_P115, nbhdR: 3.0, uniforms: {} },
+    121: { detect: DETECT_P121, modulate: MODULATE_P121, nbhdR: 4.0, threshold: 0.30, uniforms: {} },
+    120: { detect: DETECT_P120, modulate: MODULATE_P120, nbhdR: 8.0, threshold: 0.45, uniforms: {} },  // Paths and Goals — interest_z nonzero everywhere
+    119: { detect: DETECT_P119, modulate: MODULATE_P119, nbhdR: 4.0, threshold: 0.25, uniforms: { uMaxSpanCells: 6.0 } },
+    116: { detect: DETECT_P116, modulate: MODULATE_P116, nbhdR: 4.0, uniforms: { uMaxSpanCells: 6.0, uRoofHeightFt: 0.15 } },
+    115: { detect: DETECT_P115, modulate: MODULATE_P115, nbhdR: 3.0, threshold: 0.20, uniforms: {} },
     114: { detect: DETECT_P114, modulate: MODULATE_P114, nbhdR: 6.0, uniforms: {} },
-    110: { detect: DETECT_P110, modulate: MODULATE_P110, nbhdR: 5.0, uniforms: { uMainBuildingHt: 80.0 } },
-    109: { detect: DETECT_P109, modulate: MODULATE_P109, nbhdR: 4.0, uniforms: { uResidentialHt: 48.0 } },
+    110: { detect: DETECT_P110, modulate: MODULATE_P110, nbhdR: 5.0, uniforms: { uMainBuildingHt: 0.83 } },
+    109: { detect: DETECT_P109, modulate: MODULATE_P109, nbhdR: 4.0, uniforms: { uResidentialHt: 0.50 } },
     108: { detect: DETECT_P108, modulate: MODULATE_P108, nbhdR: 3.0, uniforms: { uConnectMaxCells: 5.0 } },
     107: { detect: DETECT_P107, modulate: MODULATE_P107, nbhdR: 3.0, uniforms: {} },
     106: { detect: DETECT_P106, modulate: MODULATE_P106, nbhdR: 4.0, uniforms: {} },
-    105: { detect: DETECT_P105, modulate: MODULATE_P105, nbhdR: 4.0, uniforms: {} },
+    105: { detect: DETECT_P105, modulate: MODULATE_P105, nbhdR: 4.0, threshold: 0.20, uniforms: {} },
     104: { detect: DETECT_P104, modulate: MODULATE_P104, nbhdR: 2.0, uniforms: {} },
     100: { detect: DETECT_P100, modulate: MODULATE_P100, nbhdR: 5.0, uniforms: {} },
-     95: { detect: DETECT_P95,  modulate: MODULATE_P95,  nbhdR: 4.0, uniforms: { uComplexHt: 60.0 } },
+     95: { detect: DETECT_P95,  modulate: MODULATE_P95,  nbhdR: 4.0, uniforms: { uComplexHt: 0.63 } },
      88: { detect: DETECT_P88,  modulate: MODULATE_P88,  nbhdR: 3.0, uniforms: {} },
      87: { detect: DETECT_P87,  modulate: MODULATE_P87,  nbhdR: 4.0, uniforms: {} },
-     67: { detect: DETECT_P67,  modulate: MODULATE_P67,  nbhdR: 5.0, uniforms: {} },
+     67: { detect: DETECT_P67,  modulate: MODULATE_P67,  nbhdR: 5.0, threshold: 0.45, uniforms: {} },  // Common Land — needs strong wild ring, not just any wild
      61: { detect: DETECT_P61,  modulate: MODULATE_P61,  nbhdR: 3.0, uniforms: {} },
-     60: { detect: DETECT_P60,  modulate: MODULATE_P60,  nbhdR: 5.0, uniforms: {} },
-     56: { detect: DETECT_P56,  modulate: MODULATE_P56,  nbhdR: 5.0, uniforms: {} },
-     53: { detect: DETECT_P53,  modulate: MODULATE_P53,  nbhdR: 4.0, uniforms: { uGatewayHt: 1.5 } },
-     51: { detect: DETECT_P51,  modulate: MODULATE_P51,  nbhdR: 4.0, uniforms: {} },
-     46: { detect: DETECT_P46,  modulate: MODULATE_P46,  nbhdR: 5.0, uniforms: { uMarketHt: 40.0 } },
-     44: { detect: DETECT_P44,  modulate: MODULATE_P44,  nbhdR: 6.0, uniforms: { uTownHallHt: 60.0 } },
+     60: { detect: DETECT_P60,  modulate: MODULATE_P60,  nbhdR: 5.0, threshold: 0.40, uniforms: {} },  // Accessible Green — wild*mv fires everywhere
+     56: { detect: DETECT_P56,  modulate: MODULATE_P56,  nbhdR: 5.0, threshold: 0.35, uniforms: {} },  // Bike Paths — mv*(1-built) fires broadly
+     53: { detect: DETECT_P53,  modulate: MODULATE_P53,  nbhdR: 4.0, threshold: 0.40, uniforms: { uGatewayHt: 0.60 } },  // Main Gateways — needs strong movement convergence at EDA edge
+     51: { detect: DETECT_P51,  modulate: MODULATE_P51,  nbhdR: 4.0, threshold: 0.40, uniforms: {} },  // Green Streets — mv*wild fires broadly
+     46: { detect: DETECT_P46,  modulate: MODULATE_P46,  nbhdR: 5.0, uniforms: { uMarketHt: 0.42 } },
+     44: { detect: DETECT_P44,  modulate: MODULATE_P44,  nbhdR: 6.0, uniforms: { uTownHallHt: 0.63 } },
      40: { detect: DETECT_P40,  modulate: MODULATE_P40,  nbhdR: 4.0, uniforms: { uPreserveHtMarker: 100.0 } },
-     37: { detect: DETECT_P37,  modulate: MODULATE_P37,  nbhdR: 5.0, uniforms: { uResidentialHt: 48.0 } },
+     37: { detect: DETECT_P37,  modulate: MODULATE_P37,  nbhdR: 5.0, uniforms: { uResidentialHt: 0.50 } },
      36: { detect: DETECT_P36,  modulate: MODULATE_P36,  nbhdR: 4.0, uniforms: {} },
-     32: { detect: DETECT_P32,  modulate: MODULATE_P32,  nbhdR: 4.0, uniforms: { uShopHt: 20.0 } },
+     32: { detect: DETECT_P32,  modulate: MODULATE_P32,  nbhdR: 4.0, threshold: 0.30, uniforms: { uShopHt: 0.21 } },
      31: { detect: DETECT_P31,  modulate: MODULATE_P31,  nbhdR: 5.0, uniforms: { uSpineHalfWidthUV: 0.025 } },
      30: { detect: DETECT_P30,  modulate: MODULATE_P30,  nbhdR: 8.0, uniforms: {} },
      29: { detect: DETECT_P29,  modulate: MODULATE_P29,  nbhdR:10.0, uniforms: { uDensityHtScale: 30.0 } },
