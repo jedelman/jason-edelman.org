@@ -236,6 +236,12 @@ void main() {
   mvy   += fbm_mvy;
   iz     = max(iz, fbm_iz);
 
+  // Social floor from distance-to-seed: give P29 (Density Rings) real input.
+  // Seeds with high social create a gravity well — cells far from any social seed
+  // still get a base floor proportional to the seed sum from all Gaussians.
+  // This ensures the density gradient exists from pass 1 without saturating peaks.
+  social = clamp(social, 0.15 * in_eda, 1.0);  // 0.15 floor inside EDA only
+
   // Ecotone noise for wild (structural, not choice — coarser, single octave)
   float fbm_wild = ic_vnoiseA(uv_cells, 40.0, 999.0) * 0.10 * (1.0 - wild);  // was 0.28
   wild = clamp(wild + fbm_wild, 0.0, 1.0);

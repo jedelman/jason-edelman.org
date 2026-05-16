@@ -94,7 +94,10 @@ class ECGpuFields {
     const gl = this.gl;
 
     if (!this._patternBufs[patternId]) {
-      const tex = this._makeRGBA32F();  // R32F rejected on some mobile GPUs; use RGBA32F
+      // RGBA8 guaranteed renderable; RGBA32F single-attachment FBOs fail on
+      // many mobile drivers even with EXT_color_buffer_float. Pattern values
+      // are [0,1] so 8-bit precision (1/255 ≈ 0.004) is sufficient.
+      const tex = this._makeRGBA8();
       const fbo = this._makeFBO1(tex);
       this._patternBufs[patternId] = { tex, fbo };
     }
@@ -274,11 +277,14 @@ class ECGpuFields {
   readbackPattern(patternId) {
     const gl = this.gl;
     if (!this._patternBufs[patternId]) return null;
-    const buf = new Float32Array(this.W * this.H);
+    // Read RGBA8 as unsigned bytes, extract red channel, normalize to [0,1]
+    const raw = new Uint8Array(this.W * this.H * 4);
     const fbo = this._makeFBO1(this._patternBufs[patternId].tex);
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-    gl.readPixels(0, 0, this.W, this.H, gl.RED, gl.FLOAT, buf);
+    gl.readPixels(0, 0, this.W, this.H, gl.RGBA, gl.UNSIGNED_BYTE, raw);
     gl.deleteFramebuffer(fbo);
+    const buf = new Float32Array(this.W * this.H);
+    for (let i = 0; i < buf.length; i++) buf[i] = raw[i * 4] / 255;
     return buf;
   }
 
@@ -290,6 +296,19 @@ class ECGpuFields {
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.W, this.H, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return tex;
+  }
+
+  // RGBA8 texture — always renderable as FBO color attachment (no extension needed)
+  _makeRGBA8() {
+    const gl = this.gl;
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, this.W, this.H, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
