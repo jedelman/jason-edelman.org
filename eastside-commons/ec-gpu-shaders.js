@@ -207,7 +207,7 @@ void main() {
             + texture(uEdaMask, vUV-vec2(0,d.y)).r;
     edge = 1.0 - n/4.0;
   }
-  wild = max(wild, edge * 0.5);
+  wild = max(wild, edge * 0.20);  // was 0.5 — boundary-only wild pressure
 
   // ── Smooth fBm ICs for choice fields ──────────────────────────────────
   // Social, movement, interest_z represent affordances people would choose:
@@ -237,7 +237,7 @@ void main() {
   iz     = max(iz, fbm_iz);
 
   // Ecotone noise for wild (structural, not choice — coarser, single octave)
-  float fbm_wild = ic_vnoiseA(uv_cells, 40.0, 999.0) * 0.28 * (1.0 - wild);
+  float fbm_wild = ic_vnoiseA(uv_cells, 40.0, 999.0) * 0.10 * (1.0 - wild);  // was 0.28
   wild = clamp(wild + fbm_wild, 0.0, 1.0);
 
   outF0 = vec4(social, comfort, clamp(wild,0.,1.), built);
@@ -274,7 +274,7 @@ void main() {
   built = min(built, max_h);
 
   // Wild suppresses social (wilderness ≠ gathering)
-  float social = f0.r * (1.0 - f0.b * 0.7);
+  float social = f0.r * (1.0 - f0.b * 0.35);  // was 0.7 — wild was killing social everywhere
 
   // Comfort floor: zero everywhere (never negative)
   float comfort = max(0.0, f0.g);

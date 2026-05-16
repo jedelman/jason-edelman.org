@@ -359,7 +359,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
     // Diffuse fields once per pass
     gpu.runDiffuse({
       uDiffSocial: opts.diffSocial ?? 0.35,
-      uDiffWild:   opts.diffWild   ?? 0.30,
+      uDiffWild:   opts.diffWild   ?? 0.12,  // was 0.30 — was spreading wild too fast
       uDiffBuilt:  opts.diffBuilt  ?? 0.05,
     });
 
