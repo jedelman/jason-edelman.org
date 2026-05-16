@@ -1,0 +1,107 @@
+{
+  "barcelona_eixample": {
+    "name": "barcelona_eixample",
+    "label": "positive",
+    "bbox": [
+      41.385,
+      2.158,
+      41.395,
+      2.172
+    ],
+    "scale_m_per_px": 1.181167936919781,
+    "coverage": {
+      "built": 0.43409299850463867,
+      "street": 0.2195349931716919,
+      "amenity": 0.4673087000846863,
+      "building_height": 2.1313259601593018,
+      "connectivity": 0.3243338167667389
+    },
+    "amenity_count": 2038,
+    "building_count": 1269,
+    "street_count": 1795
+  },
+  "greenwich_village_nyc": {
+    "name": "greenwich_village_nyc",
+    "label": "positive",
+    "bbox": [
+      40.727,
+      -74.006,
+      40.737,
+      -73.996
+    ],
+    "scale_m_per_px": 1.1196768321720882,
+    "coverage": {
+      "built": 0.3418619930744171,
+      "street": 0.15732799470424652,
+      "amenity": 0.11736392974853516,
+      "building_height": 1.3407520055770874,
+      "connectivity": 0.30888494849205017
+    },
+    "amenity_count": 1324,
+    "building_count": 2068,
+    "street_count": 1138
+  },
+  "tysons_corner_va": {
+    "name": "tysons_corner_va",
+    "label": "negative",
+    "bbox": [
+      38.918,
+      -77.232,
+      38.928,
+      -77.222
+    ],
+    "scale_m_per_px": 1.0886915203239769,
+    "coverage": {
+      "built": 0.2542929947376251,
+      "street": 0.12654100358486176,
+      "amenity": 0.09281174838542938,
+      "building_height": 1.1451200246810913,
+      "connectivity": 0.2581802010536194
+    },
+    "amenity_count": 112,
+    "building_count": 104,
+    "street_count": 781
+  },
+  "military_circle_norfolk": {
+    "name": "military_circle_norfolk",
+    "label": "target",
+    "bbox": [
+      36.852,
+      -76.202,
+      36.862,
+      -76.192
+    ],
+    "scale_m_per_px": 1.0982013455941342,
+    "coverage": {
+      "built": 0.11497999727725983,
+      "street": 0.07678200304508209,
+      "amenity": 0.028186878189444542,
+      "building_height": 0.34498798847198486,
+      "connectivity": 0.18807125091552734
+    },
+    "amenity_count": 13,
+    "building_count": 418,
+    "street_count": 334
+  },
+  "kyoto_gion": {
+    "name": "kyoto_gion",
+    "label": "positive",
+    "bbox": [
+      35.002,
+      135.773,
+      35.012,
+      135.783
+    ],
+    "scale_m_per_px": 1.116106861606706,
+    "coverage": {
+      "built": 0.36023199558258057,
+      "street": 0.11482799798250198,
+      "amenity": 0.22953863441944122,
+      "building_height": 1.1448769569396973,
+      "connectivity": 0.2931590974330902
+    },
+    "amenity_count": 511,
+    "building_count": 4640,
+    "street_count": 928
+  }
+}
