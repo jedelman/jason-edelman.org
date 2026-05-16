@@ -136,16 +136,16 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
   for (const p of parcels) {
     if (p.spec==='CIVIC_700' && p.centroid) {
       const [cx,cy] = proj(p.centroid.lon, p.centroid.lat);
-      addSeed(cx, cy, 500, 0.7, 0, 100, 0, 0, 1.2);
+      addSeed(cx, cy, 500, 1.2, 0, 100, 0, 0, 1.5);
     }
     if (p.spec==='HOUSING_A_530' && p.centroid) {
       const [cx,cy] = proj(p.centroid.lon, p.centroid.lat);
-      addSeed(cx, cy, 300, 0.2, 0, 100, 0, 0, 0);
+      addSeed(cx, cy, 300, 0.6, 0, 100, 0, 0, 0.3);
     }
   }
 
   // Transit node (TIDE) → social seed, movement inflow
-  if (ti) addSeed(ti.x+ti.w/2, ti.y+ti.h/2, 600, 0.9, 0, 0, 0, 0.5, 0);
+  if (ti) addSeed(ti.x+ti.w/2, ti.y+ti.h/2, 600, 1.5, 0, 0, 0, 0.5, 0);
 
   // Sponge → wild seed
   if (sg) addSeed(sg.cx, sg.cy, Math.max(sg.rx,sg.ry)*2.5, 0, 0.95, 0, 0, 0, 0);
@@ -156,7 +156,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 
   // Spine corridor → baseline social
   if (s) {
-    addSeed(s.x+s.w/2, (MAP.y0+MAP.y1)*0.4, 400, 0.6, 0, 0, 0, 0.3, 0.4);
+    addSeed(s.x+s.w/2, (MAP.y0+MAP.y1)*0.4, 400, 1.0, 0, 0, 0, 0.3, 0.5);
   }
 
   // Research zone
@@ -377,6 +377,18 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 
     log.push(`  Δsocial=${(deltaS??0).toFixed(5)} H=${meanEntropy.toFixed(3)} Δh=${(deltaE??0).toFixed(4)} σbuilt=${builtStd.toFixed(2)} Δσ=${(deltaDiff??0).toFixed(3)}`);
 
+    // Debug: built_height range in EDA
+    {
+      let builtMax = 0, builtNZ = 0;
+      for (let i = 0; i < GW*GH; i++) {
+        if (!edaMask[i]) continue;
+        const v = fields.built_height[i];
+        if (v > 0.001) builtNZ++;
+        if (v > builtMax) builtMax = v;
+      }
+      log.push(`  built: max=${builtMax.toFixed(4)} nz=${builtNZ} (thresh=${0.08})`);
+    }
+
     // Saturate when ALL three conditions are met
     const epsSocial = opts.eps    || 0.002;   // stricter social delta
     const epsEntropy= opts.epsH   || 0.0015;  // stricter entropy delta
@@ -464,7 +476,7 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 // ── Extract buildings from GPU field readback ─────────────────────────────
 // Clusters BUILT_HEIGHT > threshold into building footprints.
 function extractBuildingsFromFields(fields, gw, gh, cellSize, MAP, edaMask) {
-  const BUILT_THRESH = 8.0; // ft — minimum height to be a building
+  const BUILT_THRESH = 0.08; // normalized [0-1] after gain — ~8% of p95 = meaningful built presence
   const built  = fields.built_height;
   const social = fields.social;
   const pid    = fields.pid;  // per-cell pattern-id texture

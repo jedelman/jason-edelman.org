@@ -193,6 +193,10 @@ void main() {
   float iz_noise = n_low * 0.35;
   iz = clamp(iz + iz_noise, 0.0, 1.0);
 
+  // Base social floor: uniform low-level activity across all EDA cells.
+  // Without this, detectors in low-seed areas return zero and nothing fires.
+  social = max(social, 0.15);
+
   outF0 = vec4(social, comfort, clamp(wild,0.,1.), built);
   outF1 = vec4(mvx, mvy, 0.0, 0.0);
   outF2 = vec4(ix, iy, iz, 0.0);
