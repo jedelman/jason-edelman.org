@@ -104,9 +104,27 @@ class ECGpuFields {
     const detectProg = this._getProgram('detect_' + patternId, detectSrc);
     gl.bindFramebuffer(gl.FRAMEBUFFER, patFbo);
     gl.viewport(0, 0, this.W, this.H);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);  // ensure clean slate
     gl.useProgram(detectProg);
     this._bindAll(detectProg, uniforms, null);
     this._quad();
+    // Verify: on first pattern run, check GL error and read one pixel
+    if (!this._patDiagDone) {
+      this._patDiagDone = true;
+      const glErr = gl.getError();
+      if (glErr !== 0) this._log.push(`[GPU] detect draw GL error: 0x${glErr.toString(16)}`);
+      // Read center pixel from pattern FBO
+      const px = new Float32Array(4);
+      gl.readPixels(Math.floor(this.W/2), Math.floor(this.H/2), 1, 1, gl.RGBA, gl.FLOAT, px);
+      const glErr2 = gl.getError();
+      if (glErr2 !== 0) this._log.push(`[GPU] readPixels GL error: 0x${glErr2.toString(16)}`);
+      this._log.push(`[GPU] P${patternId} center pixel: r=${px[0].toFixed(4)} g=${px[1].toFixed(4)} b=${px[2].toFixed(4)} a=${px[3].toFixed(4)}`);
+      // Also read from a boundary cell (EDA edge where wild gradient is strong)
+      const px2 = new Float32Array(4);
+      gl.readPixels(Math.floor(this.W*0.3), Math.floor(this.H*0.5), 1, 1, gl.RGBA, gl.FLOAT, px2);
+      this._log.push(`[GPU] P${patternId} boundary pixel: r=${px2[0].toFixed(4)}`);
+    }
 
     // ── Modulator: copy _A→_B, then additive delta from pattern ──
     // Step 1: copy _A → _B (preserves all channels not touched by this pattern)
