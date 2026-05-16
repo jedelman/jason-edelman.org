@@ -312,6 +312,13 @@ class ECGpuFields {
       this._log.push('gain shader FAILED: ' + e.message);
       this.progs['gain'] = null;
     }
+    try {
+      this.progs['decay'] = this._compile(S.VERT, S.DECAY_FRAG);
+      this._log.push('decay shader: OK');
+    } catch(e) {
+      this._log.push('decay shader FAILED: ' + e.message);
+      this.progs['decay'] = null;
+    }
   }
 
   _getProgram(key, fragSrc) {
@@ -434,6 +441,21 @@ class ECGpuFields {
     gl.viewport(0, 0, this.W, this.H);
     gl.useProgram(this.progs['gain']);
     this._bindAll(this.progs['gain'], uniforms, null);
+    gl.disable(gl.BLEND);
+    this._quad();
+    this._swap();
+  }
+
+  // ── Per-pass decay: exponential decay of choice fields (social/movement/interest_z) ──
+  // Call once at the top of each pass, before patterns fire.
+  // uDecaySocial/Movement/Interest control how much prior history survives.
+  runDecay(uniforms = {}) {
+    if (!this.progs['decay']) return; // shader failed to compile — skip silently
+    const gl = this.gl;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbos['MRT']);
+    gl.viewport(0, 0, this.W, this.H);
+    gl.useProgram(this.progs['decay']);
+    this._bindAll(this.progs['decay'], uniforms, null);
     gl.disable(gl.BLEND);
     this._quad();
     this._swap();

@@ -1651,11 +1651,60 @@ void main() {
 }`;
 
 // ─────────────────────────────────────────────────────────────────
+// ── Per-pass decay shader ──────────────────────────────────────────────────
+// Applies exponential decay to "choice" fields before patterns fire each pass.
+// Social, movement, and interest_z are affordance votes — they should reflect
+// what patterns are currently saying, not an unbounded sum of history.
+// Built_height, wild, comfort, wall stay untouched (absolute / structural).
+//
+// uDecaySocial   ~0.55 — each pass: field = prior * decay + new pattern votes
+// uDecayMovement ~0.50 — movement is most reactive, short memory
+// uDecayInterest ~0.60 — interest_z has slightly longer memory (place identity)
+//
+// Lower = more reactive to current pass (forgets history faster)
+// Higher = more stable / path-dependent (0.9 = mostly prior history)
+const DECAY_FRAG = STDLIB + `
+uniform float uDecaySocial;    // [0,1] decay factor for social field
+uniform float uDecayMovement;  // [0,1] decay factor for movement x/y
+uniform float uDecayInterest;  // [0,1] decay factor for interest_z
+
+layout(location=0) out vec4 outF0;
+layout(location=1) out vec4 outF1;
+layout(location=2) out vec4 outF2;
+layout(location=3) out float outPID;
+
+void main() {
+  vec4 f0 = texture(uF0, vUV);
+  vec4 f1 = texture(uF1, vUV);
+  vec4 f2 = texture(uF2, vUV);
+
+  // Decay choice layers; preserve structural layers (built_height, wild, comfort, wall)
+  outF0 = vec4(
+    f0.r * uDecaySocial,   // social — decays, patterns re-vote each pass
+    f0.g,                  // comfort — structural, no decay
+    f0.b,                  // wild — structural, no decay
+    f0.a                   // built_height — absolute, never decays
+  );
+  outF1 = vec4(
+    f1.r * uDecayMovement, // movement x — decays
+    f1.g * uDecayMovement, // movement y — decays
+    f1.b,                  // wall — structural, no decay
+    f1.a
+  );
+  outF2 = vec4(
+    f2.r,                  // interest x — leave as-is (pulled by social grad)
+    f2.g,                  // interest y — leave as-is
+    f2.b * uDecayInterest, // interest_z — decays, tracks current activity
+    f2.a
+  );
+  outPID = texture(uPID, vUV).r;
+}`;
+
 // Export all shaders
 // ─────────────────────────────────────────────────────────────────
 const EC_GPU_SHADERS = {
   VERT, STDLIB, PAT_STDLIB,
-  IC_FRAG, INVARIANT_FRAG, WALL_DIST_FRAG, COPY_FRAG, DIFFUSE_FRAG, GAIN_FRAG,
+  IC_FRAG, INVARIANT_FRAG, WALL_DIST_FRAG, COPY_FRAG, DIFFUSE_FRAG, GAIN_FRAG, DECAY_FRAG,
   // Pattern shaders keyed by id, descending order
   patterns: {
     176: { detect: DETECT_P176, modulate: MODULATE_P176, nbhdR: 3.0, uniforms: {} },

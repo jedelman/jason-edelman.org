@@ -271,6 +271,18 @@ function solveGPU(parcels, proj, MAP, derivedG, opts, onPass) {
 
     log.push(`Pass ${pass+1}/${MAX_PASSES}`);
 
+    // Decay choice fields (social, movement, interest_z) before patterns re-vote.
+    // These are affordance fields — they should reflect current pattern consensus,
+    // not an unbounded accumulation of history. Structural fields (built, wild,
+    // comfort, wall) are untouched. Skip pass 0 so IC seeds survive first pass.
+    if (pass > 0) {
+      gpu.runDecay({
+        uDecaySocial:   opts.decaySocial   ?? 0.55,
+        uDecayMovement: opts.decayMovement  ?? 0.50,
+        uDecayInterest: opts.decayInterest  ?? 0.60,
+      });
+    }
+
     // Recompute wall-distance texture
     gpu.runWallDistance({ uWallThreshold: 0.2 });
 
