@@ -143,14 +143,14 @@ float ic_hashB(vec2 p){return fract(sin(dot(p,vec2(269.5,183.3)))*17391.3527);}
 float ic_hashC(vec2 p){return fract(sin(dot(p,vec2(419.2, 93.7)))*28547.8831);}
 // Smooth (smoothstep-interpolated) value noise at scale s (cells per period)
 float ic_vnoiseA(vec2 uv_c,float s,float off){
-  vec2 p=(uv_c+off)/s;vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
-  return mix(mix(ic_hashA(i),ic_hashA(i+vec2(1,0)),u.x),mix(ic_hashA(i+vec2(0,1)),ic_hashA(i+vec2(1,1)),u.x),u.y);}
+  vec2 p=(uv_c+off)/s;vec2 gi=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
+  return mix(mix(ic_hashA(gi),ic_hashA(gi+vec2(1,0)),u.x),mix(ic_hashA(gi+vec2(0,1)),ic_hashA(gi+vec2(1,1)),u.x),u.y);}
 float ic_vnoiseB(vec2 uv_c,float s,float off){
-  vec2 p=(uv_c+off)/s;vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
-  return mix(mix(ic_hashB(i),ic_hashB(i+vec2(1,0)),u.x),mix(ic_hashB(i+vec2(0,1)),ic_hashB(i+vec2(1,1)),u.x),u.y);}
+  vec2 p=(uv_c+off)/s;vec2 gi=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
+  return mix(mix(ic_hashB(gi),ic_hashB(gi+vec2(1,0)),u.x),mix(ic_hashB(gi+vec2(0,1)),ic_hashB(gi+vec2(1,1)),u.x),u.y);}
 float ic_vnoiseC(vec2 uv_c,float s,float off){
-  vec2 p=(uv_c+off)/s;vec2 i=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
-  return mix(mix(ic_hashC(i),ic_hashC(i+vec2(1,0)),u.x),mix(ic_hashC(i+vec2(0,1)),ic_hashC(i+vec2(1,1)),u.x),u.y);}
+  vec2 p=(uv_c+off)/s;vec2 gi=floor(p);vec2 f=fract(p);vec2 u=f*f*(3.0-2.0*f);
+  return mix(mix(ic_hashC(gi),ic_hashC(gi+vec2(1,0)),u.x),mix(ic_hashC(gi+vec2(0,1)),ic_hashC(gi+vec2(1,1)),u.x),u.y);}
 
 void main() {
   if (!IN_EDA(vUV)) {
@@ -1688,6 +1688,7 @@ const DECAY_FRAG = STDLIB + `
 uniform float uDecaySocial;    // [0,1] decay factor for social field
 uniform float uDecayMovement;  // [0,1] decay factor for movement x/y
 uniform float uDecayInterest;  // [0,1] decay factor for interest_z
+uniform sampler2D uPID;        // pattern-id passthrough
 
 layout(location=0) out vec4 outF0;
 layout(location=1) out vec4 outF1;

@@ -300,7 +300,13 @@ class ECGpuFields {
   _compileCore() {
     const S = self.EC_GPU_SHADERS;
     if (!S) throw new Error('EC_GPU_SHADERS not loaded');
-    this.progs['ic']        = this._compile(S.VERT, S.IC_FRAG);
+    try {
+      this.progs['ic'] = this._compile(S.VERT, S.IC_FRAG);
+      this._log.push('ic shader: OK');
+    } catch(e) {
+      this._log.push('ic shader FAILED: ' + e.message);
+      throw e; // IC failure is fatal — rethrow so GPU path aborts cleanly
+    }
     this.progs['invariant'] = this._compile(S.VERT, S.INVARIANT_FRAG);
     this.progs['wall_dist'] = this._compile(S.VERT, S.WALL_DIST_FRAG);
     this.progs['copy']      = this._compile(S.VERT, S.COPY_FRAG);
@@ -319,6 +325,10 @@ class ECGpuFields {
       this._log.push('decay shader FAILED: ' + e.message);
       this.progs['decay'] = null;
     }
+    // Log all compiled shader statuses for debugging
+    this._log.push('shaders: ' + Object.entries(this.progs)
+      .filter(([,v])=>v!==null&&typeof v!=='undefined')
+      .map(([k])=>k).join(' '));
   }
 
   _getProgram(key, fragSrc) {
