@@ -54,10 +54,13 @@ class ECGpuFields {
     this.textures['PID_B'] = this._makeRGBA32F();
 
     // Static single-pass textures
-    this.textures['WALL_DIST']   = this._makeR32F();
+    // Use RGBA32F everywhere — R32F render targets are rejected on some mobile
+    // WebGL2 drivers even with EXT_color_buffer_float. Wastes 3 channels but
+    // eliminates all single-channel float FBO issues.
+    this.textures['WALL_DIST']   = this._makeRGBA32F();
     this.textures['EDA_MASK']    = this._makeR8();
     this.textures['SPONGE_MASK'] = this._makeR8();
-    this.textures['NODE_PROX']   = this._makeR32F();
+    this.textures['NODE_PROX']   = this._makeRGBA32F();
 
     // MRT FBO: writes F0_B, F1_B, F2_B, PID_B simultaneously
     this._setupMRT();
@@ -83,7 +86,7 @@ class ECGpuFields {
     const gl = this.gl;
 
     if (!this._patternBufs[patternId]) {
-      const tex = this._makeR32F();
+      const tex = this._makeRGBA32F();  // R32F rejected on some mobile GPUs; use RGBA32F
       const fbo = this._makeFBO1(tex);
       this._patternBufs[patternId] = { tex, fbo };
     }
@@ -161,16 +164,24 @@ class ECGpuFields {
   uploadMask(name, data) {
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.textures[name]);
+    // UNPACK_ALIGNMENT defaults to 4. For R8 textures where width % 4 != 0
+    // (e.g. 262 px wide), WebGL pads each row to 4 bytes and expects a larger
+    // buffer. Set alignment to 1 so rows are tightly packed.
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, this.W, this.H, 0,
                   gl.RED, gl.UNSIGNED_BYTE, data);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4); // restore default
   }
 
-  // Upload float texture (Float32Array, single channel)
+  // Upload float texture (Float32Array, single channel) → RGBA32F texture
+  // Expands scalar data into RGBA by putting values in red channel.
   uploadFloat(name, data) {
     const gl = this.gl;
+    const rgba = new Float32Array(this.W * this.H * 4);
+    for (let i = 0; i < data.length; i++) rgba[i * 4] = data[i];
     gl.bindTexture(gl.TEXTURE_2D, this.textures[name]);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, this.W, this.H, 0,
-                  gl.RED, gl.FLOAT, data);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.W, this.H, 0,
+                  gl.RGBA, gl.FLOAT, rgba);
   }
 
   // ── Readback all field values ──────────────────────────────────────────
@@ -256,7 +267,9 @@ class ECGpuFields {
     const gl = this.gl;
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, this.W, this.H, 0, gl.RED, gl.UNSIGNED_BYTE, null);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);

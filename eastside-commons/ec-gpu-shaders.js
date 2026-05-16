@@ -279,11 +279,11 @@ void main() {
 const WALL_DIST_FRAG = STDLIB + `
 uniform float uWallThreshold; // e.g. 0.2
 
-layout(location=0) out float outDist;
+layout(location=0) out vec4 outDist;
 
 void main() {
   float wall_here = WALL(vUV);
-  if (wall_here >= uWallThreshold) { outDist = 0.0; return; }
+  if (wall_here >= uWallThreshold) { outDist = vec4(0.0, 0.0, 0.0, 1.0); return; }
 
   float min_dist = 999.0;
   vec2 d = 1.0 / uResolution;
@@ -297,7 +297,7 @@ void main() {
       }
     }
   }
-  outDist = min_dist;
+  outDist = vec4(min_dist, 0.0, 0.0, 1.0);
 }`;
 
 // ── Copy shader (copy _A → _B, used before additive modulator) ────────────
@@ -499,7 +499,7 @@ float Pnbhd(float r) { return nbhd(uPattern, 0, vUV, r); }
 // Modulate: write WALL at ecological boundary
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P176 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   vec2 wild_grad = grad_f(uF0, 2, vUV);
   float wild = WILD(vUV);
@@ -507,7 +507,7 @@ void main() {
   // Edge between wild and built: high gradient, moderate wild
   float boundary = length(wild_grad) * wild * (1.0 - wild);
   float near_built = clamp(built * 0.5, 0.0, 1.0);
-  outP = boundary * (0.3 + near_built * 0.7) * uWeight;
+  outP = vec4(boundary * (0.3 + near_built * 0.7) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P176 = PAT_STDLIB + `
@@ -529,14 +529,14 @@ void main() {
 // Modulate: WALL (trellis posts), low BUILT_HEIGHT (trellis roof), WILD suppression along path
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P174 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float mv = length(MVMT(vUV));
   float wild = WILD(vUV);
   float built = BUILT(vUV);
   // Trellised walk: moderate movement, near wild edge, not already built-up
   float near_edge = wild * (1.0 - wild) * 4.0; // peaks at wild=0.5
-  outP = mv * near_edge * (1.0 - clamp(built * 0.3, 0.0, 1.0)) * uWeight;
+  outP = vec4(mv * near_edge * (1.0 - clamp(built * 0.3, 0.0, 1.0)) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P174 = PAT_STDLIB + `
@@ -557,12 +557,12 @@ void main() {
 // Modulate: WILD expansion, INTEREST.xy toward wild edge
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P172 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   vec2 wg = grad_f(uF0, 2, vUV);
   float wild = WILD(vUV);
   float edge = length(wg) * wild * (1.0 - wild) * 4.0;
-  outP = edge * uWeight;
+  outP = vec4(edge * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P172 = PAT_STDLIB + `
@@ -588,10 +588,10 @@ void main() {
 // Modulate: WALL reinforcement, INTEREST.xy perpendicular to edge (people walk edges)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P160 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   vec2 bg = grad_f(uF0, 3, vUV); // gradient of BUILT_HEIGHT
-  outP = length(bg) * uWeight;
+  outP = vec4(length(bg) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P160 = PAT_STDLIB + `
@@ -615,11 +615,11 @@ void main() {
 // Modulate: COMFORT boost inside built mass (daylit interior)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P128 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float built = BUILT(vUV);
   float iz = INTEREST_Z(vUV);
-  outP = clamp(built/60.0, 0.0, 1.0) * (0.3 + iz * 0.7) * uWeight;
+  outP = vec4(clamp(built/60.0, 0.0, 1.0) * (0.3 + iz * 0.7) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P128 = PAT_STDLIB + `
@@ -641,12 +641,12 @@ void main() {
 //           MOVEMENT slowdown (people pause at transitions)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P127 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   vec2 sg = grad_f(uF0, 0, vUV); // social gradient
   float social = SOCIAL(vUV);
   // High social gradient = threshold zone
-  outP = length(sg) * (0.2 + social * 0.8) * uWeight;
+  outP = vec4(length(sg) * (0.2 + social * 0.8) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P127 = PAT_STDLIB + `
@@ -668,11 +668,11 @@ void main() {
 // Modulate: amplify SOCIAL, amplify MOVEMENT magnitude, INTEREST.xy radiates outward
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P123 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float mv = length(MVMT(vUV));
-  outP = social * mv * uWeight;
+  outP = vec4(social * mv * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P123 = PAT_STDLIB + `
@@ -697,7 +697,7 @@ void main() {
 //           INTEREST.xy toward the front (entrances pull people)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P122 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float wall = WALL(vUV);
   vec2 mv = MVMT(vUV);
@@ -706,7 +706,7 @@ void main() {
   float parallel = (length(wg)>0.01 && length(mv)>0.01)
     ? 1.0 - abs(dot(normalize(mv), normalize(wg)))
     : 0.0;
-  outP = wall * parallel * uWeight;
+  outP = vec4(wall * parallel * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P122 = PAT_STDLIB + `
@@ -730,14 +730,14 @@ void main() {
 // Modulate: reinforce MOVEMENT direction, WILD suppression along path
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P121 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   vec2 mv = MVMT(vUV);
   vec2 ixy = INTEREST_XY(vUV);
   float alignment = (length(mv)>0.01 && length(ixy)>0.01)
     ? max(0.0, dot(normalize(mv), normalize(ixy)))
     : 0.0;
-  outP = length(mv) * alignment * uWeight;
+  outP = vec4(length(mv) * alignment * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P121 = PAT_STDLIB + `
@@ -759,12 +759,12 @@ void main() {
 // Modulate: MOVEMENT bent toward INTEREST peaks; SOCIAL at goal arrival
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P120 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float iz = INTEREST_Z(vUV);
   vec2 ixy = INTEREST_XY(vUV);
   // Goals: high INTEREST magnitude
-  outP = (length(ixy) * 0.6 + iz * 0.4) * uWeight;
+  outP = vec4((length(ixy) * 0.6 + iz * 0.4) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P120 = PAT_STDLIB + `
@@ -789,16 +789,16 @@ void main() {
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P119 = PAT_STDLIB + `
 uniform float uMaxSpanCells; // max arcade width in cells
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   vec2 mv = MVMT(vUV);
   float mv_len = length(mv);
-  if (mv_len < 0.05) { outP = 0.0; return; }
+  if (mv_len < 0.05) { outP = vec4(0.0, 0.0, 0.0, 1.0); return; }
   // Check for flanking walls perpendicular to movement
   vec2 perp = normalize(vec2(-mv.y, mv.x)) / uResolution;
   float wall_l = WALL(vUV + perp * uMaxSpanCells * 0.5);
   float wall_r = WALL(vUV - perp * uMaxSpanCells * 0.5);
-  outP = mv_len * wall_l * wall_r * uWeight;
+  outP = vec4(mv_len * wall_l * wall_r * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P119 = PAT_STDLIB + `
@@ -820,7 +820,7 @@ void main() {
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P116 = PAT_STDLIB + `
 uniform float uMaxSpanCells;
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float wild = WILD(vUV);
   float social = SOCIAL(vUV);
@@ -832,7 +832,7 @@ void main() {
   float span_quality = (wd < half_span && wd > 0.5)
     ? (1.0 - wd/half_span) * (1.0 - wild * 0.5)
     : 0.0;
-  outP = span_quality * social * uWeight;
+  outP = vec4(span_quality * social * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P116 = PAT_STDLIB + `
@@ -856,7 +856,7 @@ void main() {
 // Modulate: SOCIAL (the courtyard is gathering space), COMFORT
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P115 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float built_here = BUILT(vUV);
   // Neighbours: average built
@@ -864,7 +864,7 @@ void main() {
   // Courtyard: low here, high around
   float convex_void = (1.0 - clamp(built_here/20.0,0.0,1.0)) * clamp(built_nb/30.0,0.0,1.0);
   float in_eda = IN_EDA(vUV) ? 1.0 : 0.0;
-  outP = convex_void * in_eda * uWeight;
+  outP = vec4(convex_void * in_eda * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P115 = PAT_STDLIB + `
@@ -885,7 +885,7 @@ void main() {
 // Modulate: INTEREST.z at space hierarchy transitions, SOCIAL gradient
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P114 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float wild = WILD(vUV);
   float built = BUILT(vUV);
@@ -893,7 +893,7 @@ void main() {
   float wild_nb_near = nbhd(uF0, 2, vUV, 2.0);  // near neighbourhood
   // Hierarchy: this cell wilder than near, less wild than far
   float hierarchy = max(0.0, wild_nb_near - wild) * max(0.0, wild - wild_nb_far * 0.5);
-  outP = hierarchy * (1.0 - clamp(built*0.1,0.0,1.0)) * uWeight;
+  outP = vec4(hierarchy * (1.0 - clamp(built*0.1,0.0,1.0)) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P114 = PAT_STDLIB + `
@@ -914,13 +914,13 @@ void main() {
 // Modulate: strong BUILT_HEIGHT, WALL, INTEREST.z amplification
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P110 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float iz = INTEREST_Z(vUV);
   float wild = WILD(vUV);
   // Main building: where social and vertical interest peak together
-  outP = social * iz * (1.0 - wild * 0.5) * uWeight;
+  outP = vec4(social * iz * (1.0 - wild * 0.5) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P110 = PAT_STDLIB + `
@@ -942,7 +942,7 @@ void main() {
 // Modulate: WALL along long axis, BUILT_HEIGHT, COMFORT
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P109 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float mv = length(MVMT(vUV));
@@ -951,7 +951,7 @@ void main() {
   // Long thin house: moderate social (residential), calm, not yet built
   float residential = social * (1.0 - social*0.6); // peaks at ~0.4 social
   float calm = 1.0 - clamp(mv*2.0, 0.0, 1.0);
-  outP = residential * calm * (1.0-wild*0.7) * (1.0-clamp(built*0.05,0.0,1.0)) * uWeight;
+  outP = vec4(residential * calm * (1.0-wild*0.7) * (1.0-clamp(built*0.05,0.0,1.0)) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P109 = PAT_STDLIB + `
@@ -976,15 +976,15 @@ void main() {
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P108 = PAT_STDLIB + `
 uniform float uConnectMaxCells;
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float built_here = BUILT(vUV);
-  if (built_here < 10.0) { outP = 0.0; return; }
+  if (built_here < 10.0) { outP = vec4(0.0, 0.0, 0.0, 1.0); return; }
   // Look for another BUILT cluster within connection distance
   float wd = WALL_DIST(vUV);
   // Connection condition: this cell is built, nearby wall, but gap exists
   float built_nb = nbhd(uF0, 3, vUV, uConnectMaxCells);
-  outP = clamp(built_here/40.0,0.,1.) * clamp(built_nb/40.0,0.,1.) * uWeight;
+  outP = vec4(clamp(built_here/40.0,0.,1.) * clamp(built_nb/40.0,0.,1.) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P108 = PAT_STDLIB + `
@@ -1006,16 +1006,16 @@ void main() {
 // Modulate: INTEREST.z (wing tips are interesting), COMFORT (light enters)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P107 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float built = BUILT(vUV);
-  if (built < 10.0) { outP = 0.0; return; }
+  if (built < 10.0) { outP = vec4(0.0, 0.0, 0.0, 1.0); return; }
   // Wing tip: built here, open on at least one side
   vec2 d = 1.0/uResolution;
   float ne = BUILT(vUV+vec2(d.x,d.y));
   float nw = BUILT(vUV+vec2(-d.x,d.y));
   float openness = 1.0 - min(ne,nw)/max(built,1.0);
-  outP = clamp(built/40.0,0.,1.) * openness * uWeight;
+  outP = vec4(clamp(built/40.0,0.,1.) * openness * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P107 = PAT_STDLIB + `
@@ -1036,14 +1036,14 @@ void main() {
 // Modulate: SOCIAL (the space is used), INTEREST.xy radiates inward
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P106 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float built = BUILT(vUV);
   float built_nb = nbhd(uF0, 3, vUV, 4.0);
   // Convex outdoor: empty here, surrounded by mass
   float convex = (1.0-clamp(built/15.0,0.,1.)) * clamp(built_nb/25.0,0.,1.);
   float wild_ok = 1.0 - WILD(vUV) * 0.5; // some wild OK in positive space
-  outP = convex * wild_ok * (IN_EDA(vUV) ? uWeight : 0.0);
+  outP = vec4(convex * wild_ok * (IN_EDA(vUV) ? uWeight : 0.0), 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P106 = PAT_STDLIB + `
@@ -1068,14 +1068,14 @@ void main() {
 // NOTE: COMFORT is marked v2, so we write it anyway for future use.
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P105 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float built = BUILT(vUV);
   // South face: low built here, high built to NORTH (positive y = north in our coords)
   vec2 d = 1.0/uResolution;
   float built_n = BUILT(vUV + vec2(0.0, d.y*2.0));
   float south_face = (1.0-clamp(built/10.0,0.,1.)) * clamp(built_n/20.0,0.,1.);
-  outP = south_face * (IN_EDA(vUV) ? uWeight : 0.0);
+  outP = vec4(south_face * (IN_EDA(vUV) ? uWeight : 0.0), 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P105 = PAT_STDLIB + `
@@ -1096,16 +1096,16 @@ void main() {
 // Modulate: WALL along edge, WILD reinforcement, BUILT suppression at boundary
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P104 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
-  if (!IN_EDA(vUV)) { outP = 0.0; return; }
+  if (!IN_EDA(vUV)) { outP = vec4(0.0, 0.0, 0.0, 1.0); return; }
   vec2 d = 1.0/uResolution;
   float n  = texture(uEdaMask, vUV+vec2(0,d.y)).r;
   float s  = texture(uEdaMask, vUV-vec2(0,d.y)).r;
   float e_ = texture(uEdaMask, vUV+vec2(d.x,0)).r;
   float w  = texture(uEdaMask, vUV-vec2(d.x,0)).r;
   float edge = 1.0 - (n+s+e_+w)/4.0; // 1 at boundary
-  outP = edge * uWeight;
+  outP = vec4(edge * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P104 = PAT_STDLIB + `
@@ -1126,13 +1126,13 @@ void main() {
 // Modulate: amplify MOVEMENT, SOCIAL, WILD suppression, INTEREST.xy along path
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P100 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float mv = length(MVMT(vUV));
   float social = SOCIAL(vUV);
   float built = BUILT(vUV);
   // Pedestrian: high movement, some social, low built (not inside a building)
-  outP = mv * social * (1.0-clamp(built/20.0,0.,1.)) * uWeight;
+  outP = vec4(mv * social * (1.0-clamp(built/20.0,0.,1.)) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P100 = PAT_STDLIB + `
@@ -1155,12 +1155,12 @@ void main() {
 // Modulate: reinforce BUILT, WALL between buildings, INTEREST.z
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P95 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float built = BUILT(vUV);
   float social = SOCIAL(vUV);
   float built_nb = nbhd(uF0, 3, vUV, 5.0);
-  outP = clamp(built/30.0,0.,1.) * social * clamp(built_nb/25.0,0.,1.) * uWeight;
+  outP = vec4(clamp(built/30.0,0.,1.) * social * clamp(built_nb/25.0,0.,1.) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P95 = PAT_STDLIB + `
@@ -1182,14 +1182,14 @@ void main() {
 // Modulate: SOCIAL amplification, COMFORT (tables, shelter), INTEREST.xy
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P88 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float mv = length(MVMT(vUV));
   float wall = WALL(vUV);
   float built = BUILT(vUV);
   // Cafe: social, movement passing by, wall behind, not inside a building
-  outP = social * mv * wall * (1.0-clamp(built/15.0,0.,1.)) * uWeight;
+  outP = vec4(social * mv * wall * (1.0-clamp(built/15.0,0.,1.)) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P88 = PAT_STDLIB + `
@@ -1210,12 +1210,12 @@ void main() {
 // Modulate: BUILT_HEIGHT (ground floor commercial), WALL, SOCIAL, INTEREST.xy
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P87 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float mv = length(MVMT(vUV));
   float wall = WALL(vUV);
   float social = SOCIAL(vUV);
-  outP = mv * (0.3 + wall*0.7) * social * uWeight;
+  outP = vec4(mv * (0.3 + wall*0.7) * social * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P87 = PAT_STDLIB + `
@@ -1236,13 +1236,13 @@ void main() {
 // Modulate: WILD reinforcement, SOCIAL at commons boundary, MOVEMENT toward commons
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P67 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float wild = WILD(vUV);
   float wild_nb = nbhd(uF0, 2, vUV, 6.0);
   // Ring: moderate wild here, high wild nearby (the sponge edge)
   float ring = wild * (1.0 - wild * 0.5) * clamp(wild_nb * 1.5, 0.0, 1.0);
-  outP = ring * (IN_EDA(vUV) ? uWeight : 0.0);
+  outP = vec4(ring * (IN_EDA(vUV) ? uWeight : 0.0), 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P67 = PAT_STDLIB + `
@@ -1266,12 +1266,12 @@ void main() {
 // Modulate: SOCIAL amplification, INTEREST.z (vertical definition of the square)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P61 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float built = BUILT(vUV);
   float wall_nb = nbhd(uF1, 2, vUV, 3.0); // nearby wall
-  outP = social * (1.0-clamp(built/10.0,0.,1.)) * clamp(wall_nb*2.0,0.,1.) * uWeight;
+  outP = vec4(social * (1.0-clamp(built/10.0,0.,1.)) * clamp(wall_nb*2.0,0.,1.) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P61 = PAT_STDLIB + `
@@ -1292,14 +1292,14 @@ void main() {
 // Modulate: WILD sustain, SOCIAL (parks are social), COMFORT, INTEREST.z (canopy)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P60 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float wild = WILD(vUV);
   float mv = length(MVMT(vUV));
   float built = BUILT(vUV);
   float accessible = mv * (1.0-clamp(mv-0.5,0.,1.)*2.0); // peaks mid-movement
   float sweet = wild * (1.0-wild*0.5);                     // peaks at wild~0.5
-  outP = sweet * (0.3+accessible*0.7) * (1.0-clamp(built*0.1,0.,1.)) * uWeight;
+  outP = vec4(sweet * (0.3+accessible*0.7) * (1.0-clamp(built*0.1,0.,1.)) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P60 = PAT_STDLIB + `
@@ -1320,13 +1320,13 @@ void main() {
 // Modulate: directional MOVEMENT, WILD suppression, INTEREST.xy along path
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P56 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float mv = length(MVMT(vUV));
   float built = BUILT(vUV);
   float wall = WALL(vUV);
   // Bike path: movement present, minimal building/wall obstruction
-  outP = mv * (1.0-clamp(built*0.1,0.,1.)) * (1.0-wall*0.5) * uWeight;
+  outP = vec4(mv * (1.0-clamp(built*0.1,0.,1.)) * (1.0-wall*0.5) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P56 = PAT_STDLIB + `
@@ -1349,7 +1349,7 @@ void main() {
 // Modulate: INTEREST.z (gateway as landmark), SOCIAL boost, MOVEMENT focused inward
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P53 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float mv = length(MVMT(vUV));
   float convergence = clamp(-div_movement(vUV), 0.0, 1.0);
@@ -1360,7 +1360,7 @@ void main() {
     texture(uEdaMask,vUV-vec2(d.x,0)).r+
     texture(uEdaMask,vUV+vec2(0,d.y)).r+
     texture(uEdaMask,vUV-vec2(0,d.y)).r)/4.0) : 0.0;
-  outP = mv * convergence * (0.3+edge*0.7) * uWeight;
+  outP = vec4(mv * convergence * (0.3+edge*0.7) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P53 = PAT_STDLIB + `
@@ -1382,12 +1382,12 @@ void main() {
 // Modulate: WILD along corridor, SOCIAL, MOVEMENT reinforcement
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P51 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float mv = length(MVMT(vUV));
   float wild_nb = nbhd(uF0, 2, vUV, 2.0); // adjacent wild
   float built = BUILT(vUV);
-  outP = mv * clamp(wild_nb*1.5,0.,1.) * (1.0-clamp(built*0.1,0.,1.)) * uWeight;
+  outP = vec4(mv * clamp(wild_nb*1.5,0.,1.) * (1.0-clamp(built*0.1,0.,1.)) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P51 = PAT_STDLIB + `
@@ -1409,13 +1409,13 @@ void main() {
 // Modulate: strong SOCIAL, BUILT_HEIGHT, WALL, INTEREST.z (market hall as landmark)
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P46 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float social_nb = nbhd(uF0, 0, vUV, 5.0);
   float mv = length(MVMT(vUV));
   float convergence = clamp(-div_movement(vUV)*0.5, 0.0, 1.0);
-  outP = social * social_nb * (mv * 0.5 + convergence * 0.5) * uWeight;
+  outP = vec4(social * social_nb * (mv * 0.5 + convergence * 0.5) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P46 = PAT_STDLIB + `
@@ -1437,12 +1437,12 @@ void main() {
 // Modulate: INTEREST.z spike, SOCIAL amplification, WALL, BUILT_HEIGHT
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P44 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float wild = WILD(vUV);
   float convergence = clamp(-div_movement(vUV), 0.0, 1.0);
-  outP = social * convergence * (1.0-wild) * uWeight;
+  outP = vec4(social * convergence * (1.0-wild) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P44 = PAT_STDLIB + `
@@ -1466,10 +1466,10 @@ void main() {
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P40 = PAT_STDLIB + `
 uniform float uPreserveHtMarker;
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float built = BUILT(vUV);
-  outP = clamp(built/uPreserveHtMarker - 0.8, 0.0, 0.2) * uWeight;
+  outP = vec4(clamp(built/uPreserveHtMarker - 0.8, 0.0, 0.2) * uWeight, 0.0, 0.0, 1.0);
 }`;
 // Note: uPreserveHtMarker is a uniform marking IC-seeded existing buildings
 
@@ -1494,7 +1494,7 @@ void main() {
 // Modulate: BUILT_HEIGHT (4-story mass), WALL at cluster edge, SOCIAL, -WILD
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P37 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float mv = length(MVMT(vUV));
@@ -1503,7 +1503,7 @@ void main() {
   float calm = 1.0 - clamp(mv*2.0, 0.0, 1.0);
   float residential = social * (1.0-social*0.6); // peaks ~0.4 social
   float available = (1.0-wild*0.8) * (1.0-clamp(built*0.05,0.,1.));
-  outP = residential * calm * available * uWeight;
+  outP = vec4(residential * calm * available * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P37 = PAT_STDLIB + `
@@ -1527,10 +1527,10 @@ void main() {
 // Modulate: WALL (threshold elements), MOVEMENT slowdown, INTEREST.xy inward
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P36 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   vec2 sg = grad_f(uF0, 0, vUV);
-  outP = length(sg) * uWeight;
+  outP = vec4(length(sg) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P36 = PAT_STDLIB + `
@@ -1554,7 +1554,7 @@ void main() {
 // Modulate: BUILT_HEIGHT (above shops), WALL, SOCIAL, MOVEMENT reinforcement
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P32 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float mv = length(MVMT(vUV));
   float wall = WALL(vUV);
@@ -1563,7 +1563,7 @@ void main() {
   float wall_e = WALL(vUV+vec2(d.x*2.0,0));
   float wall_w = WALL(vUV-vec2(d.x*2.0,0));
   float one_sided = max(wall_e,wall_w) * (1.0-min(wall_e,wall_w)*0.5);
-  outP = mv * one_sided * uWeight;
+  outP = vec4(mv * one_sided * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P32 = PAT_STDLIB + `
@@ -1587,7 +1587,7 @@ void main() {
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P31 = PAT_STDLIB + `
 uniform float uSpineHalfWidthUV;  // spine width / 2 in UV units
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   vec2 mv = MVMT(vUV);
@@ -1596,7 +1596,7 @@ void main() {
   float wall_e = WALL(vUV+vec2(uSpineHalfWidthUV,0));
   float wall_w = WALL(vUV-vec2(uSpineHalfWidthUV,0));
   float flanked = wall_e * wall_w;
-  outP = social * ns_align * (0.4+flanked*0.6) * uWeight;
+  outP = vec4(social * ns_align * (0.4+flanked*0.6) * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P31 = PAT_STDLIB + `
@@ -1619,11 +1619,11 @@ void main() {
 // Modulate: radiate INTEREST.xy outward, amplify SOCIAL, INTEREST.z spike
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P30 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float convergence = clamp(-div_movement(vUV)*0.3, 0.0, 1.0);
-  outP = social * convergence * uWeight;
+  outP = vec4(social * convergence * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P30 = PAT_STDLIB + `
@@ -1649,11 +1649,11 @@ void main() {
 //           MOVEMENT radial
 // ─────────────────────────────────────────────────────────────────
 const DETECT_P29 = PAT_STDLIB + `
-layout(location=0) out float outP;
+layout(location=0) out vec4 outP;
 void main() {
   float social = SOCIAL(vUV);
   float social_nb = nbhd(uF0, 0, vUV, 10.0); // wide social density
-  outP = social * social_nb * uWeight;
+  outP = vec4(social * social_nb * uWeight, 0.0, 0.0, 1.0);
 }`;
 
 const MODULATE_P29 = PAT_STDLIB + `
