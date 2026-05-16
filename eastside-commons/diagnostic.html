@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EC Field Diagnostic</title>
+<style>
+  :root {
+    --ink: #0a0e08;
+    --paper: #f0ede6;
+    --green: #1a4a1a;
+    --accent: #c8e840;
+    --dim: #8a9080;
+    --warn: #e84040;
+    --ok: #40c870;
+    --mono: 'JetBrains Mono', 'Fira Mono', 'Courier New', monospace;
+    --serif: 'Playfair Display', Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────── */
+  header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid #1e2a1a;
+    position: sticky; top: 0; z-index: 100;
+    background: var(--ink);
+  }
+  header h1 {
+    font-family: var(--serif);
+    font-size: 15px; font-weight: 700; letter-spacing: 0.04em;
+    color: var(--accent);
+  }
+  header .sub { color: var(--dim); font-size: 10px; margin-left: 12px; }
+  .btn-group { display: flex; gap: 8px; }
+  button {
+    font-family: var(--mono); font-size: 10px;
+    padding: 5px 12px;
+    border: 1px solid #2a3a20;
+    background: transparent; color: var(--paper);
+    cursor: pointer; letter-spacing: 0.05em;
+    transition: all 0.12s;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button.primary {
+    background: var(--accent); color: var(--ink);
+    border-color: var(--accent); font-weight: 700;
+  }
+  button.primary:hover { background: #d4f040; }
+  button.copied { background: var(--ok); color: var(--ink); border-color: var(--ok); }
+
+  /* ── LAYOUT ─────────────────────────────────────────────── */
+  .main { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  @media (max-width: 700px) { .main { grid-template-columns: 1fr; } }
+
+  .panel {
+    padding: 14px 16px;
+    border-right: 1px solid #1e2a1a;
+    border-bottom: 1px solid #1e2a1a;
+  }
+  .panel:nth-child(even) { border-right: none; }
+  .panel.full { grid-column: 1 / -1; border-right: none; }
+
+  .panel-title {
+    font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 10px;
+    padding-bottom: 5px; border-bottom: 1px solid #1e2a1a;
+  }
+
+  /* ── METRICS GRID ────────────────────────────────────────── */
+  .metrics {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .metric { }
+  .metric .label { color: var(--dim); font-size: 9px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .metric .value { font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: -0.02em; }
+  .metric .value.warn { color: var(--warn); }
+  .metric .value.ok { color: var(--ok); }
+  .metric .value.sm { font-size: 12px; }
+
+  /* ── FIELD CANVASES ──────────────────────────────────────── */
+  .fields-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .field-item { }
+  .field-label {
+    font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 3px;
+  }
+  .field-canvas-wrap {
+    position: relative;
+    border: 1px solid #1e2a1a;
+    overflow: hidden;
+  }
+  .field-canvas-wrap canvas {
+    display: block; width: 100%; height: auto;
+    image-rendering: pixelated;
+  }
+  .field-stats {
+    font-size: 8px; color: var(--dim); margin-top: 2px;
+  }
+  .field-stats span { color: var(--paper); }
+
+  /* ── LOG ─────────────────────────────────────────────────── */
+  .log-scroll {
+    max-height: 260px; overflow-y: auto;
+    background: #060a04;
+    padding: 10px 12px;
+    border: 1px solid #1e2a1a;
+    font-size: 10px; line-height: 1.6;
+    white-space: pre-wrap; word-break: break-all;
+  }
+  .log-scroll::-webkit-scrollbar { width: 4px; }
+  .log-scroll::-webkit-scrollbar-track { background: transparent; }
+  .log-scroll::-webkit-scrollbar-thumb { background: #2a3a20; }
+
+  .log-line { color: var(--dim); }
+  .log-line.ok { color: var(--ok); }
+  .log-line.warn { color: var(--warn); }
+  .log-line.accent { color: var(--accent); }
+  .log-line.info { color: #8ae880; }
+
+  /* ── FIELD PASS TABLE ────────────────────────────────────── */
+  .pass-table { width: 100%; border-collapse: collapse; }
+  .pass-table th {
+    font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--dim); text-align: left; padding: 3px 6px;
+    border-bottom: 1px solid #1e2a1a;
+  }
+  .pass-table td {
+    font-size: 10px; padding: 3px 6px;
+    border-bottom: 1px solid #0e140a;
+    white-space: nowrap;
+  }
+  .pass-table tr:last-child td { border-bottom: none; }
+  .pass-table .sat { color: var(--ok); font-weight: 700; }
+  .pass-table .nosat { color: var(--dim); }
+
+  /* ── EMPTY STATE ─────────────────────────────────────────── */
+  .empty {
+    text-align: center; padding: 48px 24px;
+    color: var(--dim); grid-column: 1/-1;
+  }
+  .empty .big { font-size: 32px; margin-bottom: 12px; opacity: 0.3; }
+  .empty p { font-size: 11px; line-height: 1.7; }
+  .empty code {
+    background: #1a2a14; padding: 2px 6px;
+    font-family: var(--mono); font-size: 10px; color: var(--accent);
+  }
+
+  /* ── STATUS BAR ──────────────────────────────────────────── */
+  .status-bar {
+    position: sticky; bottom: 0;
+    background: #060a04; border-top: 1px solid #1e2a1a;
+    padding: 6px 18px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .status-bar .ts { color: var(--dim); font-size: 9px; }
+  .status-bar .src { color: var(--dim); font-size: 9px; }
+  .status-bar .src span { color: var(--accent); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:baseline;gap:0">
+    <h1>EC FIELD DIAGNOSTIC</h1>
+    <span class="sub" id="run-meta">— no data</span>
+  </div>
+  <div class="btn-group">
+    <button onclick="loadData()">↺ REFRESH</button>
+    <button class="primary" id="copy-btn" onclick="copyReport()">⊕ COPY REPORT</button>
+  </div>
+</header>
+
+<div class="main" id="main-grid">
+  <div class="empty" id="empty-state">
+    <div class="big">⬡</div>
+    <p>No solver result found.<br>
+    Run the field solver at <code><a href="/eastside-commons/" style="color:inherit">eastside-commons/</a></code>,<br>
+    then refresh this page.</p>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span class="ts" id="data-ts">—</span>
+  <span class="src">source: <span id="data-src">—</span></span>
+</div>
+
+<script>
+// ── Colour maps ──────────────────────────────────────────────────────────────
+const CMAPS = {
+  heat: (v) => {   // 0=black → 1=yellow
+    const r = Math.min(1, v * 2);
+    const g = Math.min(1, v * 1.5);
+    const b = v < 0.5 ? 0 : (v - 0.5) * 0.4;
+    return [r, g, b];
+  },
+  wild: (v) => {   // 0=dark → 1=bright green
+    return [v * 0.1, v * 0.7 + 0.05, v * 0.1];
+  },
+  wall: (v) => {   // 0=dark → 1=cyan
+    return [0, v * 0.8, v];
+  },
+  diverge: (v) => { // -1→1 bipolar: blue–black–red
+    const vn = (v + 1) / 2;
+    return [Math.max(0, vn * 2 - 1), 0, Math.max(0, 1 - vn * 2)];
+  },
+  viridis: (v) => { // approximation
+    const r = Math.max(0, Math.min(1, 0.267 + 1.5*v - 1.8*v*v + 1.4*v*v*v - 0.4*v*v*v*v));
+    const g = Math.max(0, Math.min(1, 0.005 + 1.5*v - 0.8*v*v));
+    const b = Math.max(0, Math.min(1, 0.33 + 1.0*v - 2.5*v*v + 1.5*v*v*v));
+    return [r, g, b];
+  },
+  movement: (v, vx, vy) => {  // direction-coloured; v = magnitude
+    if (v < 0.01) return [0.04, 0.06, 0.04];
+    const angle = Math.atan2(vy, vx) / (2 * Math.PI) + 0.5; // 0–1
+    const h = angle * 360;
+    const [rh, gh, bh] = hsl2rgb(h, 0.9, 0.5);
+    return [rh * v * 1.5, gh * v * 1.5, bh * v * 1.5];
+  },
+};
+
+function hsl2rgb(h, s, l) {
+  h = h % 360; s = s; l = l;
+  const c = (1 - Math.abs(2*l - 1)) * s;
+  const x = c * (1 - Math.abs((h/60)%2 - 1));
+  const m = l - c/2;
+  let r=0,g=0,b=0;
+  if      (h<60)  { r=c; g=x; b=0; }
+  else if (h<120) { r=x; g=c; b=0; }
+  else if (h<180) { r=0; g=c; b=x; }
+  else if (h<240) { r=0; g=x; b=c; }
+  else if (h<300) { r=x; g=0; b=c; }
+  else            { r=c; g=0; b=x; }
+  return [r+m, g+m, b+m];
+}
+
+// ── Field rendering ──────────────────────────────────────────────────────────
+function renderField(canvas, data, gw, gh, cmap, auxX, auxY) {
+  canvas.width = gw; canvas.height = gh;
+  const ctx = canvas.getContext('2d');
+  const img = ctx.createImageData(gw, gh);
+  let mn = Infinity, mx = -Infinity;
+  for (let i = 0; i < data.length; i++) { if (data[i] < mn) mn = data[i]; if (data[i] > mx) mx = data[i]; }
+  const range = mx - mn || 1;
+  for (let i = 0; i < data.length; i++) {
+    const v = (data[i] - mn) / range;
+    let rgb;
+    if (cmap === 'movement' && auxX && auxY) {
+      const vx = auxX[i], vy = auxY[i];
+      const mag = Math.sqrt(vx*vx + vy*vy);
+      rgb = CMAPS.movement(mag > 0.01 ? mag / range : 0, vx, vy);
+    } else {
+      rgb = CMAPS[cmap](v);
+    }
+    const p = i * 4;
+    img.data[p]   = Math.round(rgb[0] * 255);
+    img.data[p+1] = Math.round(rgb[1] * 255);
+    img.data[p+2] = Math.round(rgb[2] * 255);
+    img.data[p+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  return { min: mn, max: mx };
+}
+
+function fieldStats(data, edaMask) {
+  let sum = 0, sum2 = 0, n = 0, nz = 0, mx = -Infinity;
+  for (let i = 0; i < data.length; i++) {
+    const inEda = !edaMask || edaMask[i];
+    if (!inEda) continue;
+    const v = data[i];
+    sum += v; sum2 += v*v; n++;
+    if (v > 0.001) nz++;
+    if (v > mx) mx = v;
+  }
+  const mean = n ? sum/n : 0;
+  const std = n ? Math.sqrt(Math.max(0, sum2/n - mean*mean)) : 0;
+  return { mean, std, max: mx, nz, n };
+}
+
+// ── Data loading ─────────────────────────────────────────────────────────────
+let _data = null;
+let _edaMask = null;
+
+function loadData() {
+  const raw = localStorage.getItem('ec-solver-result');
+  if (!raw) {
+    showEmpty(); return;
+  }
+  try {
+    _data = JSON.parse(raw);
+    render(_data);
+  } catch(e) {
+    showEmpty(`Parse error: ${e.message}`);
+  }
+}
+
+function showEmpty(msg) {
+  const g = document.getElementById('main-grid');
+  const meta = document.getElementById('run-meta');
+  meta.textContent = '— no data';
+  document.getElementById('data-ts').textContent = '—';
+  document.getElementById('data-src').textContent = '—';
+  if (msg) {
+    g.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">⚠</div><p>${msg}</p></div>`;
+  }
+}
+
+// ── Main render ──────────────────────────────────────────────────────────────
+function render(d) {
+  const g = document.getElementById('main-grid');
+  g.innerHTML = '';
+
+  const gw = d.gw, gh = d.gh;
+  const fields = d.fields;
+  const N = gw * gh;
+
+  // Build EDA mask from edaMask if present, else infer from edaCount
+  _edaMask = null;  // fields are pre-masked; stats use all nonzero
+
+  // ── Metadata ──────────────────────────────────────────────
+  const ts = d.ts ? new Date(d.ts).toLocaleString() : 'unknown';
+  const ageMins = d.ts ? Math.round((Date.now() - d.ts) / 60000) : null;
+  document.getElementById('run-meta').textContent =
+    ` — ${d.buildings?.length ?? '?'} bldgs · ${d.hotNodes?.length ?? '?'} nodes` +
+    (d.saturatedAt ? ` · sat@${d.saturatedAt}` : ' · unsaturated') +
+    (ageMins !== null ? ` · ${ageMins}m ago` : '');
+  document.getElementById('data-ts').textContent = ts;
+  document.getElementById('data-src').textContent = 'localStorage[ec-solver-result]';
+
+  // ── Panel 1: Metrics ──────────────────────────────────────
+  const edaPct = d.edaCount && d.totalCells
+    ? (d.edaCount / d.totalCells * 100).toFixed(1)
+    : extractEdaPct(d.log);
+  const metricHTML = `
+    <div class="panel">
+      <div class="panel-title">Run Metrics</div>
+      <div class="metrics">
+        <div class="metric">
+          <div class="label">Buildings</div>
+          <div class="value ${(d.buildings?.length||0) > 0 ? 'ok' : 'warn'}">${d.buildings?.length ?? '—'}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Hot Nodes</div>
+          <div class="value">${d.hotNodes?.length ?? '—'}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Saturation</div>
+          <div class="value ${d.saturatedAt ? 'ok' : 'warn'} sm">${d.saturatedAt ? `Pass ${d.saturatedAt}` : 'UNSATURATED'}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Grid</div>
+          <div class="value sm">${gw}×${gh}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Cell Size</div>
+          <div class="value sm">${d.cellSize ?? '?'}ft</div>
+        </div>
+        <div class="metric">
+          <div class="label">EDA Coverage</div>
+          <div class="value sm ${edaPct && parseFloat(edaPct) > 40 ? 'ok' : 'warn'}">${edaPct ? edaPct+'%' : '—'}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Noise Seed</div>
+          <div class="value sm" style="font-size:10px">${d.noiseSeed?.toFixed?.(4) ?? '—'}</div>
+        </div>
+        <div class="metric">
+          <div class="label">Field Lines</div>
+          <div class="value sm">${d.fieldLines?.length ?? '—'}</div>
+        </div>
+      </div>
+    </div>`;
+
+  // ── Panel 2: Pass convergence ─────────────────────────────
+  const passes = extractPasses(d.log);
+  const passRows = passes.map((p, i) => {
+    const isSat = d.saturatedAt === i + 1;
+    return `<tr>
+      <td class="${isSat ? 'sat' : ''}">${i+1}${isSat ? ' ✓' : ''}</td>
+      <td>${p.ds ?? '—'}</td>
+      <td>${p.H ?? '—'}</td>
+      <td>${p.dh ?? '—'}</td>
+      <td>${p.sigma ?? '—'}</td>
+      <td>${p.dSigma ?? '—'}</td>
+      <td>${p.builtMax ?? '—'}</td>
+      <td>${p.builtNZ ?? '—'}</td>
+    </tr>`;
+  }).join('');
+
+  const passHTML = `
+    <div class="panel">
+      <div class="panel-title">Pass Convergence</div>
+      <div style="overflow-x:auto">
+        <table class="pass-table">
+          <thead><tr>
+            <th>Pass</th><th>Δsocial</th><th>H</th><th>Δh</th>
+            <th>σbuilt</th><th>Δσ</th><th>blt.max</th><th>blt.nz</th>
+          </tr></thead>
+          <tbody>${passRows || '<tr><td colspan="8" style="color:var(--dim);padding:8px">No pass data in log</td></tr>'}</tbody>
+        </table>
+      </div>
+    </div>`;
+
+  // ── Panel 3: Field buffers ────────────────────────────────
+  const FIELD_DEFS = fields ? [
+    { key: 'social',      label: 'SOCIAL',      cmap: 'heat'    },
+    { key: 'wild',        label: 'WILD',        cmap: 'wild'    },
+    { key: 'comfort',     label: 'COMFORT',     cmap: 'heat'    },
+    { key: 'built_height',label: 'BUILT HT',    cmap: 'viridis' },
+    { key: 'wall',        label: 'WALL',        cmap: 'wall'    },
+    { key: 'interest_z',  label: 'INTEREST Z',  cmap: 'heat'    },
+    { key: 'movement_x',  label: 'MOVEMENT',    cmap: 'movement', auxX: 'movement_x', auxY: 'movement_y' },
+    { key: 'interest_x',  label: 'INTEREST XY', cmap: 'movement', auxX: 'interest_x', auxY: 'interest_y' },
+  ] : [];
+
+  const fieldItems = FIELD_DEFS.map((f, fi) => {
+    const data = fields[f.key];
+    if (!data) return `<div class="field-item"><div class="field-label">${f.label}</div><div style="color:var(--warn);font-size:9px">missing</div></div>`;
+    const stats = fieldStats(data, null);
+    return `<div class="field-item">
+      <div class="field-label">${f.label}</div>
+      <div class="field-canvas-wrap">
+        <canvas id="fc-${fi}" width="${gw}" height="${gh}"></canvas>
+      </div>
+      <div class="field-stats">
+        max <span>${stats.max.toFixed(3)}</span> ·
+        μ <span>${stats.mean.toFixed(3)}</span> ·
+        σ <span>${stats.std.toFixed(3)}</span> ·
+        nz <span>${stats.nz}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const fieldsHTML = fields ? `
+    <div class="panel full">
+      <div class="panel-title">Semantic Field Buffers — ${gw}×${gh} · ${N.toLocaleString()} cells</div>
+      <div class="fields-grid">${fieldItems}</div>
+    </div>` : `
+    <div class="panel full">
+      <div class="panel-title">Semantic Field Buffers</div>
+      <div style="color:var(--warn);font-size:10px;padding:12px 0">
+        fields not in cache — run solver with fields enabled, or reload immediately after solve
+        (localStorage stores the full payload including field arrays)
+      </div>
+    </div>`;
+
+  // ── Panel 4: Pattern activation ───────────────────────────
+  const patternFields = d.patternFields || {};
+  const patternNames  = d.patternNames  || {};
+  const patternColors = d.patternColors || {};
+  const pids = Object.keys(patternFields);
+
+  const patternHTML = `
+    <div class="panel full">
+      <div class="panel-title">Pattern Activations — ${pids.length} detectors</div>
+      <div class="fields-grid">
+        ${pids.length ? pids.slice(0,8).map((pid, pi) => {
+          const data = patternFields[pid];
+          const stats = fieldStats(data, null);
+          const color = patternColors[pid] || '#888';
+          return `<div class="field-item">
+            <div class="field-label" style="color:${color}">${patternNames[pid] || pid}</div>
+            <div class="field-canvas-wrap" style="border-color:${color}33">
+              <canvas id="pc-${pi}" width="${gw}" height="${gh}"></canvas>
+            </div>
+            <div class="field-stats">max <span>${stats.max.toFixed(3)}</span> · nz <span>${stats.nz}</span></div>
+          </div>`;
+        }).join('') : '<div style="color:var(--dim);font-size:10px">No pattern fields in payload</div>'}
+      </div>
+    </div>`;
+
+  // ── Panel 5: Log ──────────────────────────────────────────
+  const logLines = (d.log || ['(no log)']).map(line => {
+    let cls = 'log-line';
+    if (line.includes('✓') || line.includes('ok')) cls += ' ok';
+    else if (line.includes('✗') || line.includes('!!') || line.includes('BROKEN')) cls += ' warn';
+    else if (line.includes('GPU path') || line.includes('IC painted') || line.includes('Saturated') || line.includes('Done:')) cls += ' accent';
+    else if (line.startsWith('  ')) cls += ' info';
+    return `<div class="${cls}">${escHtml(line)}</div>`;
+  }).join('');
+
+  const logHTML = `
+    <div class="panel full">
+      <div class="panel-title">Solver Log — ${(d.log||[]).length} lines</div>
+      <div class="log-scroll" id="log-content">${logLines}</div>
+    </div>`;
+
+  // ── Assemble ──────────────────────────────────────────────
+  g.innerHTML = metricHTML + passHTML + fieldsHTML + patternHTML + logHTML;
+
+  // ── Render field canvases (deferred to after DOM insertion) ──
+  requestAnimationFrame(() => {
+    if (!fields) return;
+    FIELD_DEFS.forEach((f, fi) => {
+      const canvas = document.getElementById(`fc-${fi}`);
+      if (!canvas || !fields[f.key]) return;
+      const auxX = f.auxX ? fields[f.auxX] : null;
+      const auxY = f.auxY ? fields[f.auxY] : null;
+      renderField(canvas, fields[f.key], gw, gh, f.cmap, auxX, auxY);
+    });
+    pids.slice(0,8).forEach((pid, pi) => {
+      const canvas = document.getElementById(`pc-${pi}`);
+      if (!canvas) return;
+      renderField(canvas, patternFields[pid], gw, gh, 'heat');
+    });
+  });
+}
+
+// ── Copy report ──────────────────────────────────────────────────────────────
+function copyReport() {
+  const btn = document.getElementById('copy-btn');
+  if (!_data) { btn.textContent = '✗ NO DATA'; return; }
+  const d = _data;
+
+  const lines = [];
+  lines.push('═══════════════════════════════════════════════════════');
+  lines.push('  EASTSIDE COMMONS — FIELD SOLVER DIAGNOSTIC REPORT');
+  lines.push('═══════════════════════════════════════════════════════');
+  lines.push('');
+  lines.push(`  Generated : ${new Date().toISOString()}`);
+  lines.push(`  Run time  : ${d.ts ? new Date(d.ts).toISOString() : 'unknown'}`);
+  lines.push(`  Grid      : ${d.gw}×${d.gh} = ${(d.gw*d.gh).toLocaleString()} cells @ ${d.cellSize}ft`);
+  lines.push('');
+  lines.push('── OUTCOME ─────────────────────────────────────────────');
+  lines.push(`  Buildings   : ${d.buildings?.length ?? '?'}`);
+  lines.push(`  Hot nodes   : ${d.hotNodes?.length ?? '?'}`);
+  lines.push(`  Field lines : ${d.fieldLines?.length ?? '?'}`);
+  lines.push(`  Saturated   : ${d.saturatedAt ? `pass ${d.saturatedAt}` : 'NO (ran to max passes)'}`);
+  lines.push(`  Noise seed  : ${d.noiseSeed?.toFixed?.(6) ?? '?'}`);
+  lines.push('');
+
+  // Field stats
+  if (d.fields) {
+    lines.push('── FIELD STATISTICS (EDA cells) ────────────────────────');
+    const fkeys = ['social','comfort','wild','built_height','wall','interest_z','movement_x','movement_y','interest_x','interest_y'];
+    for (const k of fkeys) {
+      if (!d.fields[k]) continue;
+      const s = fieldStats(d.fields[k], null);
+      lines.push(`  ${k.padEnd(15)} max=${s.max.toFixed(4).padStart(7)}  mean=${s.mean.toFixed(4).padStart(7)}  std=${s.std.toFixed(4).padStart(7)}  nz=${String(s.nz).padStart(6)}/${d.gw*d.gh}`);
+    }
+    lines.push('');
+  }
+
+  // Pattern activations
+  if (d.patternFields && Object.keys(d.patternFields).length) {
+    lines.push('── PATTERN ACTIVATIONS ─────────────────────────────────');
+    for (const [pid, data] of Object.entries(d.patternFields)) {
+      const s = fieldStats(data, null);
+      const name = (d.patternNames?.[pid] || pid).padEnd(28);
+      lines.push(`  ${name}  max=${s.max.toFixed(4).padStart(7)}  nz=${String(s.nz).padStart(6)}`);
+    }
+    lines.push('');
+  }
+
+  // Pass convergence
+  const passes = extractPasses(d.log);
+  if (passes.length) {
+    lines.push('── PASS CONVERGENCE ────────────────────────────────────');
+    lines.push('  Pass  Δsocial   H        Δh       σbuilt   Δσ       blt.max  blt.nz');
+    passes.forEach((p, i) => {
+      const isSat = d.saturatedAt === i + 1;
+      lines.push(`  ${String(i+1).padStart(4)}  ${(p.ds||'—').padEnd(9)} ${(p.H||'—').padEnd(8)} ${(p.dh||'—').padEnd(8)} ${(p.sigma||'—').padEnd(8)} ${(p.dSigma||'—').padEnd(8)} ${(p.builtMax||'—').padEnd(8)} ${p.builtNZ||'—'}${isSat?' ✓ SATURATED':''}`);
+    });
+    lines.push('');
+  }
+
+  // Full log
+  lines.push('── FULL SOLVER LOG ─────────────────────────────────────');
+  (d.log || []).forEach(l => lines.push('  ' + l));
+  lines.push('');
+  lines.push('═══════════════════════════════════════════════════════');
+
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ COPIED';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '⊕ COPY REPORT'; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    // Fallback: textarea select
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    btn.textContent = '✓ COPIED'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '⊕ COPY REPORT'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ── Log parsing ──────────────────────────────────────────────────────────────
+function extractPasses(log) {
+  if (!log) return [];
+  const passes = [];
+  let cur = null;
+  for (const line of log) {
+    const pm = line.match(/^Pass (\d+)\/\d+$/);
+    if (pm) { cur = {}; passes.push(cur); continue; }
+    if (!cur) continue;
+    const dm = line.match(/Δsocial=([\d.]+)\s+H=([\d.]+)\s+Δh=([\d.]+)\s+σbuilt=([\d.]+)\s+Δσ=([\d.]+)/);
+    if (dm) { cur.ds = dm[1]; cur.H = dm[2]; cur.dh = dm[3]; cur.sigma = dm[4]; cur.dSigma = dm[5]; }
+    const bm = line.match(/built: max=([\d.]+) nz=(\d+)/);
+    if (bm) { cur.builtMax = bm[1]; cur.builtNZ = bm[2]; }
+  }
+  return passes;
+}
+
+function extractEdaPct(log) {
+  if (!log) return null;
+  for (const line of log) {
+    const m = line.match(/edaMask: \d+\/\d+ cells \(([\d.]+)%\)/);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
