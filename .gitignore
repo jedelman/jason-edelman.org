@@ -10,3 +10,6 @@ node_modules/
 
 # OS
 .DS_Store
+
+# GitHub Pages CNAME — not used; deploy is Cloudflare Workers Assets
+CNAME
