@@ -45,7 +45,7 @@ main {
   gap: 2.75rem;
 }
 
-a { color: var(--link); }
+a { color: var(--link); text-underline-offset: 0.15em; }
 a:hover { color: var(--link-hover); }
 
 .back { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.04em; color: var(--muted); text-decoration: none; }
@@ -151,9 +151,8 @@ section > p + p { margin-top: 1.05rem; }
 .log-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
 .log-col li { font-size: 0.85rem; }
 .log-col .yr { font-family: var(--font-mono); color: var(--col-color, var(--accent)); font-size: 0.75rem; display: block; }
-.log-col .src { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); }
-.log-col .src a { color: var(--muted); }
-.log-col .src a:hover { color: var(--link); }
+.log-col a, .reading a { text-decoration: underline; text-decoration-color: var(--border); }
+.log-col a:hover, .reading a:hover { text-decoration-color: var(--link-hover); }
 
 /* ── Reading ── */
 .reading { display: flex; flex-direction: column; gap: 1.4rem; }
@@ -162,10 +161,6 @@ section > p + p { margin-top: 1.05rem; }
 .reading .block.ghana { --col-color: var(--c-ghana); }
 .reading .block.america { --col-color: var(--c-america); }
 .reading .block h3 { font-family: var(--font-display); font-size: 1rem; margin-bottom: 0.4rem; }
-
-/* ── Sources ── */
-#sources ul { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.82rem; }
-#sources .src-name { color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; }
 
 footer {
   border-top: 1px solid var(--border);
@@ -230,45 +225,14 @@ footer {
 
     <section id="reading">
       <h2>Reading the throughline</h2>
-      <div class="reading">
-        <div class="block england">
-          <h3>England / Britain</h3>
-          <p>England's trajectory from a minor North Atlantic kingdom to a global empire runs
-          directly through state-chartered extraction — the Royal African Company, the East India
-          Company's forebears, the colonization of North America. Losing the American colonies in
-          1783 didn't end the model; it redirected it toward Africa and Asia. Losing the Gold Coast
-          in 1957, the first African colony to gain independence, marked the start of the empire's
-          unwinding rather than an isolated event.</p>
-        </div>
-        <div class="block ghana">
-          <h3>Gold Coast / Ghana</h3>
-          <p>The region's name in European accounts — "the Gold Coast" — describes what it was
-          understood to be worth to outsiders, not what its people called it. The Ashanti Empire
-          built real regional power on control of gold, then found that same coastline turned into
-          the busiest slaving corridor in West Africa as European demand shifted from metal to
-          people. Ghana's 1957 independence, the first in sub-Saharan Africa, was framed by Nkrumah
-          explicitly as incomplete until linked to the liberation of the whole continent.</p>
-        </div>
-        <div class="block america">
-          <h3>Colonial America / United States</h3>
-          <p>Jamestown and the arrival of the first enslaved Africans at Point Comfort happen twelve
-          years apart, and the country's founding mythology and its founding contradiction are
-          nearly the same age. The line from 1619 to the Civil War to the civil rights movement is
-          continuous, not a story of a settled past — and it runs directly back through the Atlantic
-          to the coast the English called Gold.</p>
-        </div>
-      </div>
-    </section>
-
-    <section id="sources">
-      <h2>Sources</h2>
-      <ul id="sources-list"><!-- populated by script --></ul>
+      <div class="reading" id="reading-grid"><!-- populated by script --></div>
     </section>
 
     <footer>
-      Built as a proof of concept for <a href="/">jason-edelman.org</a>. Every date above is drawn
-      from the sources cited; nothing here is inferred or invented. Corrections welcome —
-      <a href="mailto:edelmanja@gmail.com">edelmanja@gmail.com</a>.
+      Built as a proof of concept for <a href="/">jason-edelman.org</a>. Every specific claim above
+      links directly to the outlet it's drawn from — Britannica, Wikipedia, BlackPast, the Stanford
+      MLK Research &amp; Education Institute, HISTORY.com. Nothing here is inferred or invented.
+      Corrections welcome — <a href="mailto:edelmanja@gmail.com">edelmanja@gmail.com</a>.
     </footer>
 
   </main>
@@ -288,7 +252,8 @@ footer {
     america: { baseline: 750, color: 'var(--c-america)', label: 'Colonial America / United States', start: 1607 },
   };
 
-  // Sources referenced by short key, cited per event.
+  // Sources referenced by short key. Every event/reading claim below links inline
+  // to one of these — see linkify() — rather than a separate citation list.
   const SOURCES = {
     britannica_elmina: { name: 'Britannica — Elmina Castle', url: 'https://www.britannica.com/place/Elmina-Castle' },
     wiki_rac: { name: 'Wikipedia — Royal African Company', url: 'https://en.wikipedia.org/wiki/Royal_African_Company' },
@@ -317,54 +282,56 @@ footer {
     britannica_louisiana_purchase: { name: 'Britannica — Louisiana Purchase', url: 'https://www.britannica.com/event/Louisiana-Purchase' },
   };
 
-  // year = plotting position (start of range where a range is given)
+  // label/desc support inline citation links: [visible text](sourceKey).
+  // linkify() turns these into <a> tags; stripLinks() renders them as plain
+  // text for the SVG diagram, which isn't a good place for hyperlinks.
   const EVENTS = {
     england: [
       { year: 1497, label: 'Cabot voyage', desc: 'John Cabot lands in North America, the basis of England’s first claim to the continent.', src: [] },
       { year: 1562, label: 'Hawkins begins English slave trading', desc: 'John Hawkins launches England’s first slaving voyages between West Africa and the Spanish Caribbean.', src: [] },
-      { year: 1607, label: 'Jamestown founded', desc: 'First permanent English colony in North America.', src: ['britannica_jamestown'] },
-      { year: 1660, label: 'State-chartered slave trade begins', desc: 'The Crown charters the Company of Royal Adventurers Trading to Africa (reorganized 1672 as the Royal African Company), England’s state-backed slave-trading monopoly.', src: ['wiki_rac', 'history_royal_african'] },
-      { year: 1707, label: 'Acts of Union', desc: 'England and Scotland unite to form Great Britain.', src: ['britannica_union_1707'] },
+      { year: 1607, label: '[Jamestown](britannica_jamestown) founded', desc: 'First permanent English colony in North America.', src: ['britannica_jamestown'] },
+      { year: 1660, label: '[State-chartered slave trade begins](wiki_rac)', desc: 'The Crown charters the Company of Royal Adventurers Trading to Africa, reorganized 1672 as the [Royal African Company](history_royal_african), England’s state-backed slave-trading monopoly.', src: ['wiki_rac', 'history_royal_african'] },
+      { year: 1707, label: '[Acts of Union](britannica_union_1707)', desc: 'England and Scotland unite to form Great Britain.', src: ['britannica_union_1707'] },
       { year: 1776, label: 'American colonies declare independence', desc: '', src: [] },
-      { year: 1783, label: 'Treaty of Paris', desc: 'Britain formally recognizes US independence.', src: ['britannica_treaty_paris'] },
-      { year: 1807, label: 'Slave Trade Act', desc: 'Abolishes the slave trade across the British Empire (not slavery itself).', src: ['britannica_slave_trade_act'] },
-      { year: 1833, label: 'Slavery Abolition Act', desc: 'Abolishes slavery throughout most of the British Empire.', src: ['britannica_slavery_abolition_act'] },
-      { year: 1874, label: 'Gold Coast becomes Crown Colony', desc: 'Formal British colonial rule begins after the Third Anglo-Ashanti War.', src: ['wiki_ashanti_wars'] },
-      { year: 1884, label: 'Berlin Conference', desc: 'European powers, Britain included, formalize the partition of Africa.', src: ['britannica_berlin_conf'] },
+      { year: 1783, label: '[Treaty of Paris](britannica_treaty_paris)', desc: 'Britain formally recognizes US independence.', src: ['britannica_treaty_paris'] },
+      { year: 1807, label: '[Slave Trade Act](britannica_slave_trade_act)', desc: 'Abolishes the slave trade across the British Empire (not slavery itself).', src: ['britannica_slave_trade_act'] },
+      { year: 1833, label: '[Slavery Abolition Act](britannica_slavery_abolition_act)', desc: 'Abolishes slavery throughout most of the British Empire.', src: ['britannica_slavery_abolition_act'] },
+      { year: 1874, label: '[Gold Coast becomes Crown Colony](wiki_ashanti_wars)', desc: 'Formal British colonial rule begins after the Third Anglo-Ashanti War.', src: ['wiki_ashanti_wars'] },
+      { year: 1884, label: '[Berlin Conference](britannica_berlin_conf)', desc: 'European powers, Britain included, formalize the partition of Africa.', src: ['britannica_berlin_conf'] },
       { year: 1914, endYear: 1918, label: 'World War I', desc: '', src: [] },
       { year: 1939, endYear: 1945, label: 'World War II', desc: '', src: [] },
-      { year: 1957, label: 'Loses the Gold Coast', desc: 'Ghana becomes the first sub-Saharan African colony to gain independence, opening the decolonization era.', src: ['britannica_ghana_indep'] },
-      { year: 1997, label: 'Hong Kong handover', desc: 'Widely read as the symbolic end of the British Empire.', src: ['britannica_hong_kong'] },
+      { year: 1957, label: 'Loses the Gold Coast', desc: 'Ghana becomes the [first sub-Saharan African colony](britannica_ghana_indep) to gain independence, opening the decolonization era.', src: ['britannica_ghana_indep'] },
+      { year: 1997, label: '[Hong Kong handover](britannica_hong_kong)', desc: 'Widely read as the symbolic end of the British Empire.', src: ['britannica_hong_kong'] },
     ],
     ghana: [
-      { year: 1482, label: 'Elmina Castle built', desc: 'Portugal builds the first European trading post on the Gulf of Guinea — gold first, later people.', src: ['britannica_elmina'] },
-      { year: 1637, label: 'Dutch capture Elmina', desc: 'The Dutch seize Elmina from Portugal, beginning a longer contest among European powers for Gold Coast forts.', src: ['britannica_elmina'] },
-      { year: 1701, label: 'Ashanti Empire unified', desc: 'Osei Tutu unifies Akan states into the Ashanti Empire, built on control of the regional gold fields.', src: ['britannica_osei_tutu', 'blackpast_osei_tutu'] },
+      { year: 1482, label: '[Elmina Castle](britannica_elmina) built', desc: 'Portugal builds the first European trading post on the Gulf of Guinea — gold first, later people.', src: ['britannica_elmina'] },
+      { year: 1637, label: '[Dutch capture Elmina](britannica_elmina)', desc: 'The Dutch seize Elmina from Portugal, beginning a longer contest among European powers for Gold Coast forts.', src: ['britannica_elmina'] },
+      { year: 1701, label: '[Ashanti Empire unified](britannica_osei_tutu)', desc: '[Osei Tutu](blackpast_osei_tutu) unifies Akan states into the Ashanti Empire, built on control of the regional gold fields.', src: ['britannica_osei_tutu', 'blackpast_osei_tutu'] },
       { year: 1660, endYear: 1807, label: 'Peak slave-trade era', desc: 'Dutch, English, Danish, and Swedish forts compete along the coast as the trade shifts from gold to people.', src: [] },
       { year: 1821, label: 'British Crown takes direct control', desc: 'Britain assumes direct control of Gold Coast forts from merchant companies.', src: [] },
-      { year: 1823, endYear: 1900, label: 'Anglo-Ashanti Wars', desc: 'Five conflicts between Britain and the Ashanti Empire over control of the interior and the gold trade.', src: ['wiki_ashanti_wars', 'blackpast_ashanti_wars'] },
-      { year: 1900, label: 'War of the Golden Stool', desc: 'Ashanti uprising against British rule, led by Yaa Asantewaa.', src: ['wiki_ashanti_wars'] },
-      { year: 1901, label: 'Ashanti annexed', desc: 'Formally incorporated as a British protectorate.', src: ['wiki_ashanti_wars'] },
-      { year: 1957, label: 'Ghana independence', desc: 'March 6 — first sub-Saharan African colony to gain independence, led by Kwame Nkrumah.', src: ['britannica_ghana_indep'] },
-      { year: 1966, label: 'Nkrumah overthrown', desc: 'February 24 — military coup deposes Nkrumah while he is abroad.', src: ['wiki_1966_coup'] },
+      { year: 1823, endYear: 1900, label: '[Anglo-Ashanti Wars](wiki_ashanti_wars)', desc: 'Five conflicts between Britain and the [Ashanti Empire](blackpast_ashanti_wars) over control of the interior and the gold trade.', src: ['wiki_ashanti_wars', 'blackpast_ashanti_wars'] },
+      { year: 1900, label: '[War of the Golden Stool](wiki_ashanti_wars)', desc: 'Ashanti uprising against British rule, led by Yaa Asantewaa.', src: ['wiki_ashanti_wars'] },
+      { year: 1901, label: '[Ashanti annexed](wiki_ashanti_wars)', desc: 'Formally incorporated as a British protectorate.', src: ['wiki_ashanti_wars'] },
+      { year: 1957, label: '[Ghana independence](britannica_ghana_indep)', desc: 'March 6 — first sub-Saharan African colony to gain independence, led by Kwame Nkrumah.', src: ['britannica_ghana_indep'] },
+      { year: 1966, label: '[Nkrumah overthrown](wiki_1966_coup)', desc: 'February 24 — military coup deposes Nkrumah while he is abroad.', src: ['wiki_1966_coup'] },
     ],
     america: [
-      { year: 1607, label: 'Jamestown founded', desc: 'First permanent English colony in North America.', src: ['britannica_jamestown'] },
-      { year: 1619, label: 'First recorded Africans in English North America', desc: 'Arrive at Point Comfort, Virginia.', src: ['history_1619'] },
+      { year: 1607, label: '[Jamestown founded](britannica_jamestown)', desc: 'First permanent English colony in North America.', src: ['britannica_jamestown'] },
+      { year: 1619, label: 'First recorded Africans in English North America', desc: 'Arrive at [Point Comfort, Virginia](history_1619).', src: ['history_1619'] },
       { year: 1620, label: 'Plymouth founded', desc: '', src: [] },
       { year: 1776, label: 'Declaration of Independence', desc: '', src: [] },
       { year: 1787, label: 'US Constitution drafted', desc: '', src: [] },
-      { year: 1803, label: 'Louisiana Purchase', desc: '', src: ['britannica_louisiana_purchase'] },
-      { year: 1808, label: 'Atlantic slave trade banned', desc: 'The US ban on importing enslaved people takes effect (the domestic trade continues).', src: ['britannica_us_import_ban'] },
+      { year: 1803, label: '[Louisiana Purchase](britannica_louisiana_purchase)', desc: '', src: ['britannica_louisiana_purchase'] },
+      { year: 1808, label: '[Atlantic slave trade banned](britannica_us_import_ban)', desc: 'The US ban on importing enslaved people takes effect (the domestic trade continues).', src: ['britannica_us_import_ban'] },
       { year: 1861, endYear: 1865, label: 'Civil War', desc: '', src: [] },
-      { year: 1863, label: 'Emancipation Proclamation', desc: '', src: ['britannica_emancipation'] },
-      { year: 1865, label: '13th Amendment', desc: 'Abolishes slavery.', src: ['britannica_13th'] },
+      { year: 1863, label: '[Emancipation Proclamation](britannica_emancipation)', desc: '', src: ['britannica_emancipation'] },
+      { year: 1865, label: '[13th Amendment](britannica_13th)', desc: 'Abolishes slavery.', src: ['britannica_13th'] },
       { year: 1877, label: 'Reconstruction ends', desc: '', src: [] },
       { year: 1939, endYear: 1945, label: 'World War II', desc: '', src: [] },
-      { year: 1954, label: 'Brown v. Board of Education', desc: '', src: ['britannica_brown'] },
-      { year: 1957, label: 'MLK attends Ghana independence', desc: 'Invited by Nkrumah; the trip shapes King’s later framing of civil rights as a global, not only domestic, struggle.', src: ['king_institute_ghana'] },
-      { year: 1964, label: 'Civil Rights Act', desc: '', src: ['britannica_cra'] },
-      { year: 1965, label: 'Voting Rights Act', desc: '', src: ['britannica_vra'] },
+      { year: 1954, label: '[Brown v. Board of Education](britannica_brown)', desc: '', src: ['britannica_brown'] },
+      { year: 1957, label: 'MLK attends Ghana independence', desc: '[Invited by Nkrumah](king_institute_ghana); the trip shapes King’s later framing of civil rights as a global, not only domestic, struggle.', src: ['king_institute_ghana'] },
+      { year: 1964, label: '[Civil Rights Act](britannica_cra)', desc: '', src: ['britannica_cra'] },
+      { year: 1965, label: '[Voting Rights Act](britannica_vra)', desc: '', src: ['britannica_vra'] },
     ],
   };
 
@@ -377,8 +344,61 @@ footer {
     { from: { track: 'ghana', year: 1957 }, to: { track: 'america', year: 1957 }, label: 'Nkrumah invites MLK to Ghana’s independence, Mar 1957' },
   ];
 
+  const READING = {
+    england: `England's trajectory from a minor North Atlantic kingdom to a global empire runs
+      directly through state-chartered extraction: the [Royal African Company](wiki_rac)'s
+      monopoly on the West African trade, and the colonization of North America at
+      [Jamestown](britannica_jamestown). Losing the American colonies at the
+      [Treaty of Paris](britannica_treaty_paris) in 1783 didn't end the model — it redirected it
+      toward Africa and Asia, formalized a century later at the [Berlin Conference](britannica_berlin_conf).
+      Losing the Gold Coast in 1957, [the first African colony to gain independence](britannica_ghana_indep),
+      marked the start of the empire's unwinding rather than an isolated event — a process closed,
+      symbolically, by the [Hong Kong handover](britannica_hong_kong) forty years later.`,
+    ghana: `The region's name in European accounts — "the Gold Coast" — describes what it was
+      understood to be worth to outsiders, not what its people called it. The
+      [Ashanti Empire](britannica_osei_tutu) built real regional power on control of gold, then
+      found that same coastline turned into the busiest slaving corridor in West Africa as
+      European demand shifted from metal to people, contested across five
+      [Anglo-Ashanti Wars](wiki_ashanti_wars). Ghana's [1957 independence](britannica_ghana_indep),
+      the first in sub-Saharan Africa, was framed by Nkrumah explicitly as incomplete until
+      linked to the liberation of the whole continent.`,
+    america: `[Jamestown](britannica_jamestown) and the arrival of the
+      [first enslaved Africans at Point Comfort](history_1619) happen twelve years apart, and the
+      country's founding mythology and its founding contradiction are nearly the same age. The
+      line from 1619 through the Civil War to the [civil rights movement](britannica_cra) is
+      continuous, not a story of a settled past — and in 1957 it ran directly back through the
+      Atlantic, when [Martin Luther King attended Ghana's independence ceremony](king_institute_ghana)
+      at Kwame Nkrumah's invitation.`,
+  };
+
   function xScale(year) {
     return MARGIN_L + ((year - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * PLOT_W;
+  }
+
+  const LINK_RE = /\[([^\]]+)\]\(([a-zA-Z0-9_]+)\)/g;
+
+  /** Strip [text](key) markup down to plain "text" — for the SVG, which doesn't link out. */
+  function stripLinks(str) {
+    return str.replace(LINK_RE, '$1');
+  }
+
+  /** Parse [text](key) markup into a mix of text nodes and <a> elements, appended to parent. */
+  function linkify(str, parent) {
+    let last = 0, m;
+    LINK_RE.lastIndex = 0;
+    while ((m = LINK_RE.exec(str)) !== null) {
+      if (m.index > last) parent.appendChild(document.createTextNode(str.slice(last, m.index)));
+      const src = SOURCES[m[2]];
+      const a = document.createElement('a');
+      a.href = src ? src.url : '#';
+      a.target = '_blank';
+      a.rel = 'noopener';
+      if (src) a.title = src.name;
+      a.textContent = m[1];
+      parent.appendChild(a);
+      last = LINK_RE.lastIndex;
+    }
+    if (last < str.length) parent.appendChild(document.createTextNode(str.slice(last)));
   }
 
   const NS = 'http://www.w3.org/2000/svg';
@@ -419,6 +439,8 @@ footer {
 
       EVENTS[key].forEach((ev, i) => {
         const x = xScale(ev.year);
+        const label = stripLinks(ev.label);
+        const desc = stripLinks(ev.desc);
         const up = i % 2 === 0;
         const stemLen = 26 + (i % 3) * 18;
         const labelY = up ? t.baseline - stemLen - 6 : t.baseline + stemLen + 16;
@@ -432,16 +454,16 @@ footer {
 
         const g = el('g', { class: 'tl-marker' });
         const circle = el('circle', { cx: x, cy: t.baseline, r: 5, fill: t.color });
-        const title = el('title', {}, ev.desc ? `${ev.year}${ev.endYear ? '–' + ev.endYear : ''} — ${ev.label}: ${ev.desc}` : `${ev.year}${ev.endYear ? '–' + ev.endYear : ''} — ${ev.label}`);
+        const title = el('title', {}, desc ? `${ev.year}${ev.endYear ? '–' + ev.endYear : ''} — ${label}: ${desc}` : `${ev.year}${ev.endYear ? '–' + ev.endYear : ''} — ${label}`);
         circle.appendChild(title);
         g.appendChild(circle);
 
-        const label = el('text', { x: x, y: labelY, class: 'tl-label', 'text-anchor': 'middle' });
+        const labelEl = el('text', { x: x, y: labelY, class: 'tl-label', 'text-anchor': 'middle' });
         const yrTspan = el('tspan', { class: 'yr', x: x, dy: 0 }, `${ev.year}${ev.endYear ? '–' + String(ev.endYear).slice(2) : ''}`);
-        label.appendChild(yrTspan);
-        const labelTspan = el('tspan', { x: x, dy: 13 }, ev.label);
-        label.appendChild(labelTspan);
-        g.appendChild(label);
+        labelEl.appendChild(yrTspan);
+        const labelTspan = el('tspan', { x: x, dy: 13 }, label);
+        labelEl.appendChild(labelTspan);
+        g.appendChild(labelEl);
 
         svg.appendChild(g);
       });
@@ -478,22 +500,10 @@ footer {
         yrSpan.className = 'yr';
         yrSpan.textContent = `${ev.year}${ev.endYear ? '–' + ev.endYear : ''}`;
         li.appendChild(yrSpan);
-        li.appendChild(document.createTextNode(ev.label + (ev.desc ? ' — ' + ev.desc : '') + ' '));
-        if (ev.src && ev.src.length) {
-          const srcSpan = document.createElement('span');
-          srcSpan.className = 'src';
-          ev.src.forEach((key, idx) => {
-            const s = SOURCES[key];
-            if (!s) return;
-            const a = document.createElement('a');
-            a.href = s.url;
-            a.textContent = `[${idx + 1}]`;
-            a.target = '_blank';
-            a.rel = 'noopener';
-            srcSpan.appendChild(a);
-            srcSpan.appendChild(document.createTextNode(' '));
-          });
-          li.appendChild(srcSpan);
+        linkify(ev.label, li);
+        if (ev.desc) {
+          li.appendChild(document.createTextNode(' — '));
+          linkify(ev.desc, li);
         }
         ul.appendChild(li);
       });
@@ -502,32 +512,29 @@ footer {
     });
   }
 
-  function renderSources() {
-    const list = document.getElementById('sources-list');
-    const seen = new Set();
-    Object.values(EVENTS).flat().forEach(ev => (ev.src || []).forEach(k => seen.add(k)));
-    Array.from(seen).sort().forEach(key => {
-      const s = SOURCES[key];
-      if (!s) return;
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = s.url;
-      a.textContent = s.url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      li.appendChild(document.createTextNode(''));
-      const nameSpan = document.createElement('span');
-      nameSpan.className = 'src-name';
-      nameSpan.textContent = s.name + ' — ';
-      li.appendChild(nameSpan);
-      li.appendChild(a);
-      list.appendChild(li);
+  function renderReading() {
+    const grid = document.getElementById('reading-grid');
+    const blocks = [
+      { key: 'england', title: 'England / Britain' },
+      { key: 'ghana', title: 'Gold Coast / Ghana' },
+      { key: 'america', title: 'Colonial America / United States' },
+    ];
+    blocks.forEach(b => {
+      const div = document.createElement('div');
+      div.className = `block ${b.key}`;
+      const h3 = document.createElement('h3');
+      h3.textContent = b.title;
+      div.appendChild(h3);
+      const p = document.createElement('p');
+      linkify(READING[b.key].replace(/\s+/g, ' ').trim(), p);
+      div.appendChild(p);
+      grid.appendChild(div);
     });
   }
 
   renderTimeline();
   renderLog();
-  renderSources();
+  renderReading();
 })();
 </script>
 </body>
