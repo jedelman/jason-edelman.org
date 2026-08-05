@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Atlantic Triangle — England, the Gold Coast, and America</title>
+<meta name="description" content="A connected-history timeline of England, the Gold Coast (Ghana), and America — how geography, extraction, and empire shaped three national trajectories.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:          oklch(11% 0.006 145);
+  --surface:     oklch(16% 0.007 145);
+  --border:      oklch(23% 0.008 145);
+  --text:        oklch(85% 0.010 145);
+  --muted:       oklch(52% 0.010 145);
+  --accent:      oklch(64% 0.12  145);
+  --link:        oklch(72% 0.10  145);
+  --link-hover:  oklch(82% 0.09  145);
+  --font-display: 'Epilogue', 'Arial Narrow', sans-serif;
+  --font-body:    'Lora', Georgia, serif;
+  --font-mono:    'DM Mono', ui-monospace, monospace;
+
+  --c-england: oklch(72% 0.11 250);
+  --c-ghana:   oklch(78% 0.15 75);
+  --c-america: var(--accent);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 17px; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+
+body {
+  font-family: var(--font-body);
+  line-height: 1.7;
+  padding: 3.5rem 1.25rem 6rem;
+}
+
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2.75rem;
+}
+
+a { color: var(--link); }
+a:hover { color: var(--link-hover); }
+
+.back { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.04em; color: var(--muted); text-decoration: none; }
+.back:hover { color: var(--link); }
+
+header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: oklch(96% 0.008 145);
+  margin-top: 0.75rem;
+}
+
+header .tagline {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+  margin-top: 0.6rem;
+}
+
+h2 {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+section > p { max-width: 66ch; }
+section > p + p { margin-top: 1.05rem; }
+
+.scope-note {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1.1rem 1.3rem;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+.scope-note strong { color: var(--text); }
+
+/* ── Legend ── */
+.legend {
+  display: flex;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+.legend span { display: inline-flex; align-items: center; gap: 0.5rem; }
+.legend i { width: 0.85rem; height: 0.85rem; display: inline-block; }
+.legend .england i { background: var(--c-england); }
+.legend .ghana i { background: var(--c-ghana); }
+.legend .america i { background: var(--c-america); }
+
+/* ── Timeline ── */
+.timeline-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 0.5rem 0;
+}
+#timeline { display: block; font-family: var(--font-mono); width: 2240px; height: 900px; max-width: none; }
+.tl-track-label { fill: var(--muted); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
+.tl-axis-label { fill: var(--muted); font-size: 11px; }
+.tl-axis-line { stroke: var(--border); stroke-width: 1; }
+.tl-baseline { stroke-width: 1.5; opacity: 0.55; }
+.tl-stem { stroke-width: 1; opacity: 0.55; }
+.tl-marker { cursor: default; }
+.tl-marker circle { stroke: var(--bg); stroke-width: 1.5; }
+.tl-label { font-size: 11px; fill: var(--text); }
+.tl-label .yr { fill: var(--muted); }
+.tl-band { opacity: 0.08; }
+.tl-band-label { font-size: 10.5px; fill: var(--muted); font-style: italic; letter-spacing: 0.02em; }
+.tl-connector { fill: none; stroke: oklch(85% 0.05 60); stroke-width: 1.2; stroke-dasharray: 3 3; opacity: 0.6; }
+.tl-connector-label { font-size: 10px; fill: oklch(85% 0.05 60); }
+
+/* ── Event log ── */
+.log-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+@media (min-width: 720px) {
+  .log-grid { grid-template-columns: repeat(3, 1fr); }
+}
+.log-col h3 {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding-bottom: 0.4rem;
+  border-bottom: 2px solid var(--col-color, var(--accent));
+  margin-bottom: 0.85rem;
+}
+.log-col.england h3 { --col-color: var(--c-england); }
+.log-col.ghana h3 { --col-color: var(--c-ghana); }
+.log-col.america h3 { --col-color: var(--c-america); }
+.log-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
+.log-col li { font-size: 0.85rem; }
+.log-col .yr { font-family: var(--font-mono); color: var(--col-color, var(--accent)); font-size: 0.75rem; display: block; }
+.log-col .src { font-family: var(--font-mono); font-size: 0.68rem; color: var(--muted); }
+.log-col .src a { color: var(--muted); }
+.log-col .src a:hover { color: var(--link); }
+
+/* ── Reading ── */
+.reading { display: flex; flex-direction: column; gap: 1.4rem; }
+.reading .block { border-left: 2px solid var(--col-color, var(--accent)); padding-left: 1.1rem; }
+.reading .block.england { --col-color: var(--c-england); }
+.reading .block.ghana { --col-color: var(--c-ghana); }
+.reading .block.america { --col-color: var(--c-america); }
+.reading .block h3 { font-family: var(--font-display); font-size: 1rem; margin-bottom: 0.4rem; }
+
+/* ── Sources ── */
+#sources ul { list-style: none; display: flex; flex-direction: column; gap: 0.4rem; font-size: 0.82rem; }
+#sources .src-name { color: var(--muted); font-family: var(--font-mono); font-size: 0.72rem; }
+
+footer {
+  border-top: 1px solid var(--border);
+  padding-top: 1.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+</style>
+</head>
+<body>
+  <main>
+
+    <a class="back" href="/">← jason-edelman.org</a>
+
+    <header>
+      <h1>Atlantic Triangle</h1>
+      <p class="tagline">A connected-history timeline · England · the Gold Coast (Ghana) · America</p>
+    </header>
+
+    <section id="intro">
+      <p>
+        A friend asked whether anything existed that visualized how a country's history — its
+        geography, its resources, the outside powers that came for both — shapes its national
+        psychology and its position in the world over time. Nothing quite like that turned up.
+        This is a proof of concept, not the answer: one connected cluster of three places whose
+        histories are inseparable from each other, laid out on a shared timeline.
+      </p>
+      <p>
+        England, the Gold Coast, and colonial/early America are not three parallel stories — they're
+        one story told from three vantage points. English ships built forts on the Gold Coast to
+        extract gold, then people; the people taken were forced into the plantation economies of
+        English colonies in America; the wealth those colonies generated flowed back to England.
+        The timeline below tracks each place on its own axis, with shaded bands marking the periods
+        where their histories were most directly entangled.
+      </p>
+      <div class="scope-note">
+        <strong>Scope:</strong> this covers one cluster as a proof of concept — not "every country,"
+        which was the original, much larger ask. A second cluster (Mexico/Spain was suggested) is a
+        natural next step if this format holds up. National borders shifted constantly over this span
+        (the Ashanti Empire and Gold Coast are not the same polity as modern Ghana, no more than
+        colonial Virginia is the modern United States); the tracks below follow the geographic region,
+        not a fixed nation-state.
+      </div>
+    </section>
+
+    <section id="viz">
+      <h2>Timeline, c. 1450–2026</h2>
+      <div class="legend">
+        <span class="england"><i></i>England / Britain</span>
+        <span class="ghana"><i></i>Gold Coast / Ashanti / Ghana</span>
+        <span class="america"><i></i>Colonial America / United States</span>
+      </div>
+      <div class="timeline-wrap">
+        <svg id="timeline" viewBox="0 0 2240 900" role="img" aria-label="Timeline of England, the Gold Coast, and America from 1450 to 2026"></svg>
+      </div>
+    </section>
+
+    <section id="log">
+      <h2>Event log</h2>
+      <div class="log-grid" id="log-grid"><!-- populated by script --></div>
+    </section>
+
+    <section id="reading">
+      <h2>Reading the throughline</h2>
+      <div class="reading">
+        <div class="block england">
+          <h3>England / Britain</h3>
+          <p>England's trajectory from a minor North Atlantic kingdom to a global empire runs
+          directly through state-chartered extraction — the Royal African Company, the East India
+          Company's forebears, the colonization of North America. Losing the American colonies in
+          1783 didn't end the model; it redirected it toward Africa and Asia. Losing the Gold Coast
+          in 1957, the first African colony to gain independence, marked the start of the empire's
+          unwinding rather than an isolated event.</p>
+        </div>
+        <div class="block ghana">
+          <h3>Gold Coast / Ghana</h3>
+          <p>The region's name in European accounts — "the Gold Coast" — describes what it was
+          understood to be worth to outsiders, not what its people called it. The Ashanti Empire
+          built real regional power on control of gold, then found that same coastline turned into
+          the busiest slaving corridor in West Africa as European demand shifted from metal to
+          people. Ghana's 1957 independence, the first in sub-Saharan Africa, was framed by Nkrumah
+          explicitly as incomplete until linked to the liberation of the whole continent.</p>
+        </div>
+        <div class="block america">
+          <h3>Colonial America / United States</h3>
+          <p>Jamestown and the arrival of the first enslaved Africans at Point Comfort happen twelve
+          years apart, and the country's founding mythology and its founding contradiction are
+          nearly the same age. The line from 1619 to the Civil War to the civil rights movement is
+          continuous, not a story of a settled past — and it runs directly back through the Atlantic
+          to the coast the English called Gold.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sources">
+      <h2>Sources</h2>
+      <ul id="sources-list"><!-- populated by script --></ul>
+    </section>
+
+    <footer>
+      Built as a proof of concept for <a href="/">jason-edelman.org</a>. Every date above is drawn
+      from the sources cited; nothing here is inferred or invented. Corrections welcome —
+      <a href="mailto:edelmanja@gmail.com">edelmanja@gmail.com</a>.
+    </footer>
+
+  </main>
+
+<script>
+(function () {
+  "use strict";
+
+  const YEAR_MIN = 1450, YEAR_MAX = 2030;
+  const SVG_W = 2240, SVG_H = 900;
+  const MARGIN_L = 40, MARGIN_R = 40;
+  const PLOT_W = SVG_W - MARGIN_L - MARGIN_R;
+
+  const TRACKS = {
+    england: { baseline: 170, color: 'var(--c-england)', label: 'England / Britain', start: 1497 },
+    ghana:   { baseline: 460, color: 'var(--c-ghana)',   label: 'Gold Coast / Ashanti / Ghana', start: 1482 },
+    america: { baseline: 750, color: 'var(--c-america)', label: 'Colonial America / United States', start: 1607 },
+  };
+
+  // Sources referenced by short key, cited per event.
+  const SOURCES = {
+    britannica_elmina: { name: 'Britannica — Elmina Castle', url: 'https://www.britannica.com/place/Elmina-Castle' },
+    wiki_rac: { name: 'Wikipedia — Royal African Company', url: 'https://en.wikipedia.org/wiki/Royal_African_Company' },
+    wiki_ashanti_wars: { name: 'Wikipedia — Anglo-Ashanti Wars', url: 'https://en.wikipedia.org/wiki/Anglo-Ashanti_wars' },
+    blackpast_ashanti_wars: { name: 'BlackPast — Anglo-Ashanti Wars', url: 'https://blackpast.org/global-african-history/anglo-ashanti-wars-1823-1900/' },
+    britannica_osei_tutu: { name: 'Britannica — Osei Tutu', url: 'https://www.britannica.com/biography/Osei-Tutu' },
+    blackpast_osei_tutu: { name: 'BlackPast — Osei Kofi Tutu', url: 'https://blackpast.org/global-african-history/tutu-osei-kofi-c-1680-1717/' },
+    britannica_ghana_indep: { name: 'Britannica — First Sub-Saharan African Country to Gain Independence', url: 'https://www.britannica.com/topic/What-Is-the-First-Sub-Saharan-African-Country-to-Gain-Independence' },
+    wiki_1966_coup: { name: 'Wikipedia — 1966 Ghanaian coup d’état', url: 'https://en.wikipedia.org/wiki/1966_Ghanaian_coup_d%27%C3%A9tat' },
+    king_institute_ghana: { name: 'Stanford MLK Research & Education Institute — Ghana Trip', url: 'https://kinginstitute.stanford.edu/ghana-trip' },
+    history_royal_african: { name: 'HISTORY.com — What Was the Royal African Company?', url: 'https://www.history.com/articles/what-was-the-royal-african-company' },
+    britannica_slave_trade_act: { name: 'Britannica — Slave Trade Act 1807', url: 'https://www.britannica.com/event/Slave-Trade-Act' },
+    britannica_slavery_abolition_act: { name: 'Britannica — Slavery Abolition Act 1833', url: 'https://www.britannica.com/event/Slavery-Abolition-Act' },
+    britannica_jamestown: { name: 'Britannica — Jamestown Colony', url: 'https://www.britannica.com/place/Jamestown-Virginia' },
+    history_1619: { name: 'HISTORY.com — First Africans in Virginia, 1619', url: 'https://www.history.com/this-day-in-history/first-african-slave-ship-arrives-jamestown-colony' },
+    britannica_us_import_ban: { name: 'Britannica — Act Prohibiting Importation of Slaves (1808)', url: 'https://www.britannica.com/topic/Act-Prohibiting-Importation-of-Slaves' },
+    britannica_emancipation: { name: 'Britannica — Emancipation Proclamation', url: 'https://www.britannica.com/topic/Emancipation-Proclamation' },
+    britannica_13th: { name: 'Britannica — Thirteenth Amendment', url: 'https://www.britannica.com/topic/Thirteenth-Amendment' },
+    britannica_brown: { name: 'Britannica — Brown v. Board of Education', url: 'https://www.britannica.com/event/Brown-v-Board-of-Education-of-Topeka' },
+    britannica_cra: { name: 'Britannica — Civil Rights Act of 1964', url: 'https://www.britannica.com/topic/Civil-Rights-Act-United-States-1964' },
+    britannica_vra: { name: 'Britannica — Voting Rights Act of 1965', url: 'https://www.britannica.com/event/Voting-Rights-Act' },
+    britannica_berlin_conf: { name: 'Britannica — Berlin Conference', url: 'https://www.britannica.com/event/Berlin-Conference' },
+    britannica_union_1707: { name: 'Britannica — Acts of Union 1707', url: 'https://www.britannica.com/event/Act-of-Union-United-Kingdom-1707' },
+    britannica_treaty_paris: { name: 'Britannica — Treaty of Paris 1783', url: 'https://www.britannica.com/event/Treaty-of-Paris-1783' },
+    britannica_hong_kong: { name: 'Britannica — Hong Kong handover, 1997', url: 'https://www.britannica.com/event/Hong-Kongs-Handover-to-China' },
+    britannica_louisiana_purchase: { name: 'Britannica — Louisiana Purchase', url: 'https://www.britannica.com/event/Louisiana-Purchase' },
+  };
+
+  // year = plotting position (start of range where a range is given)
+  const EVENTS = {
+    england: [
+      { year: 1497, label: 'Cabot voyage', desc: 'John Cabot lands in North America, the basis of England’s first claim to the continent.', src: [] },
+      { year: 1562, label: 'Hawkins begins English slave trading', desc: 'John Hawkins launches England’s first slaving voyages between West Africa and the Spanish Caribbean.', src: [] },
+      { year: 1607, label: 'Jamestown founded', desc: 'First permanent English colony in North America.', src: ['britannica_jamestown'] },
+      { year: 1660, label: 'State-chartered slave trade begins', desc: 'The Crown charters the Company of Royal Adventurers Trading to Africa (reorganized 1672 as the Royal African Company), England’s state-backed slave-trading monopoly.', src: ['wiki_rac', 'history_royal_african'] },
+      { year: 1707, label: 'Acts of Union', desc: 'England and Scotland unite to form Great Britain.', src: ['britannica_union_1707'] },
+      { year: 1776, label: 'American colonies declare independence', desc: '', src: [] },
+      { year: 1783, label: 'Treaty of Paris', desc: 'Britain formally recognizes US independence.', src: ['britannica_treaty_paris'] },
+      { year: 1807, label: 'Slave Trade Act', desc: 'Abolishes the slave trade across the British Empire (not slavery itself).', src: ['britannica_slave_trade_act'] },
+      { year: 1833, label: 'Slavery Abolition Act', desc: 'Abolishes slavery throughout most of the British Empire.', src: ['britannica_slavery_abolition_act'] },
+      { year: 1874, label: 'Gold Coast becomes Crown Colony', desc: 'Formal British colonial rule begins after the Third Anglo-Ashanti War.', src: ['wiki_ashanti_wars'] },
+      { year: 1884, label: 'Berlin Conference', desc: 'European powers, Britain included, formalize the partition of Africa.', src: ['britannica_berlin_conf'] },
+      { year: 1914, endYear: 1918, label: 'World War I', desc: '', src: [] },
+      { year: 1939, endYear: 1945, label: 'World War II', desc: '', src: [] },
+      { year: 1957, label: 'Loses the Gold Coast', desc: 'Ghana becomes the first sub-Saharan African colony to gain independence, opening the decolonization era.', src: ['britannica_ghana_indep'] },
+      { year: 1997, label: 'Hong Kong handover', desc: 'Widely read as the symbolic end of the British Empire.', src: ['britannica_hong_kong'] },
+    ],
+    ghana: [
+      { year: 1482, label: 'Elmina Castle built', desc: 'Portugal builds the first European trading post on the Gulf of Guinea — gold first, later people.', src: ['britannica_elmina'] },
+      { year: 1637, label: 'Dutch capture Elmina', desc: 'The Dutch seize Elmina from Portugal, beginning a longer contest among European powers for Gold Coast forts.', src: ['britannica_elmina'] },
+      { year: 1701, label: 'Ashanti Empire unified', desc: 'Osei Tutu unifies Akan states into the Ashanti Empire, built on control of the regional gold fields.', src: ['britannica_osei_tutu', 'blackpast_osei_tutu'] },
+      { year: 1660, endYear: 1807, label: 'Peak slave-trade era', desc: 'Dutch, English, Danish, and Swedish forts compete along the coast as the trade shifts from gold to people.', src: [] },
+      { year: 1821, label: 'British Crown takes direct control', desc: 'Britain assumes direct control of Gold Coast forts from merchant companies.', src: [] },
+      { year: 1823, endYear: 1900, label: 'Anglo-Ashanti Wars', desc: 'Five conflicts between Britain and the Ashanti Empire over control of the interior and the gold trade.', src: ['wiki_ashanti_wars', 'blackpast_ashanti_wars'] },
+      { year: 1900, label: 'War of the Golden Stool', desc: 'Ashanti uprising against British rule, led by Yaa Asantewaa.', src: ['wiki_ashanti_wars'] },
+      { year: 1901, label: 'Ashanti annexed', desc: 'Formally incorporated as a British protectorate.', src: ['wiki_ashanti_wars'] },
+      { year: 1957, label: 'Ghana independence', desc: 'March 6 — first sub-Saharan African colony to gain independence, led by Kwame Nkrumah.', src: ['britannica_ghana_indep'] },
+      { year: 1966, label: 'Nkrumah overthrown', desc: 'February 24 — military coup deposes Nkrumah while he is abroad.', src: ['wiki_1966_coup'] },
+    ],
+    america: [
+      { year: 1607, label: 'Jamestown founded', desc: 'First permanent English colony in North America.', src: ['britannica_jamestown'] },
+      { year: 1619, label: 'First recorded Africans in English North America', desc: 'Arrive at Point Comfort, Virginia.', src: ['history_1619'] },
+      { year: 1620, label: 'Plymouth founded', desc: '', src: [] },
+      { year: 1776, label: 'Declaration of Independence', desc: '', src: [] },
+      { year: 1787, label: 'US Constitution drafted', desc: '', src: [] },
+      { year: 1803, label: 'Louisiana Purchase', desc: '', src: ['britannica_louisiana_purchase'] },
+      { year: 1808, label: 'Atlantic slave trade banned', desc: 'The US ban on importing enslaved people takes effect (the domestic trade continues).', src: ['britannica_us_import_ban'] },
+      { year: 1861, endYear: 1865, label: 'Civil War', desc: '', src: [] },
+      { year: 1863, label: 'Emancipation Proclamation', desc: '', src: ['britannica_emancipation'] },
+      { year: 1865, label: '13th Amendment', desc: 'Abolishes slavery.', src: ['britannica_13th'] },
+      { year: 1877, label: 'Reconstruction ends', desc: '', src: [] },
+      { year: 1939, endYear: 1945, label: 'World War II', desc: '', src: [] },
+      { year: 1954, label: 'Brown v. Board of Education', desc: '', src: ['britannica_brown'] },
+      { year: 1957, label: 'MLK attends Ghana independence', desc: 'Invited by Nkrumah; the trip shapes King’s later framing of civil rights as a global, not only domestic, struggle.', src: ['king_institute_ghana'] },
+      { year: 1964, label: 'Civil Rights Act', desc: '', src: ['britannica_cra'] },
+      { year: 1965, label: 'Voting Rights Act', desc: '', src: ['britannica_vra'] },
+    ],
+  };
+
+  const BANDS = [
+    { start: 1660, end: 1808, label: 'Transatlantic slave trade era (peak)' },
+    { start: 1939, end: 1945, label: 'World War II' },
+  ];
+
+  const CONNECTORS = [
+    { from: { track: 'ghana', year: 1957 }, to: { track: 'america', year: 1957 }, label: 'Nkrumah invites MLK to Ghana’s independence, Mar 1957' },
+  ];
+
+  function xScale(year) {
+    return MARGIN_L + ((year - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * PLOT_W;
+  }
+
+  const NS = 'http://www.w3.org/2000/svg';
+  function el(tag, attrs, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function renderTimeline() {
+    const svg = document.getElementById('timeline');
+    svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+
+    // Bands (behind everything)
+    BANDS.forEach(b => {
+      const x1 = xScale(b.start), x2 = xScale(b.end);
+      svg.appendChild(el('rect', { x: x1, y: 40, width: x2 - x1, height: SVG_H - 100, class: 'tl-band', fill: 'oklch(80% 0.1 60)' }));
+      svg.appendChild(el('text', { x: x1 + 6, y: 56, class: 'tl-band-label' }, b.label));
+    });
+
+    // Axis
+    for (let y = 1450; y <= 2000; y += 50) {
+      const x = xScale(y);
+      svg.appendChild(el('line', { x1: x, x2: x, y1: 40, y2: SVG_H - 50, class: 'tl-axis-line' }));
+      svg.appendChild(el('text', { x: x, y: SVG_H - 30, class: 'tl-axis-label', 'text-anchor': 'middle' }, String(y)));
+    }
+    const xNow = xScale(2026);
+    svg.appendChild(el('line', { x1: xNow, x2: xNow, y1: 40, y2: SVG_H - 50, class: 'tl-axis-line' }));
+    svg.appendChild(el('text', { x: xNow, y: SVG_H - 30, class: 'tl-axis-label', 'text-anchor': 'middle' }, '2026'));
+
+    // Tracks
+    Object.keys(TRACKS).forEach(key => {
+      const t = TRACKS[key];
+      const xStart = xScale(t.start), xEnd = xScale(2026);
+      svg.appendChild(el('text', { x: MARGIN_L, y: t.baseline - 60, class: 'tl-track-label' }, t.label));
+      svg.appendChild(el('line', { x1: xStart, x2: xEnd, y1: t.baseline, y2: t.baseline, class: 'tl-baseline', stroke: t.color }));
+
+      EVENTS[key].forEach((ev, i) => {
+        const x = xScale(ev.year);
+        const up = i % 2 === 0;
+        const stemLen = 26 + (i % 3) * 18;
+        const labelY = up ? t.baseline - stemLen - 6 : t.baseline + stemLen + 16;
+
+        svg.appendChild(el('line', { x1: x, x2: x, y1: t.baseline, y2: up ? t.baseline - stemLen : t.baseline + stemLen, class: 'tl-stem', stroke: t.color }));
+
+        if (ev.endYear) {
+          const x2 = xScale(ev.endYear);
+          svg.appendChild(el('line', { x1: x, x2: x2, y1: t.baseline, y2: t.baseline, stroke: t.color, 'stroke-width': 4 }));
+        }
+
+        const g = el('g', { class: 'tl-marker' });
+        const circle = el('circle', { cx: x, cy: t.baseline, r: 5, fill: t.color });
+        const title = el('title', {}, ev.desc ? `${ev.year}${ev.endYear ? '–' + ev.endYear : ''} — ${ev.label}: ${ev.desc}` : `${ev.year}${ev.endYear ? '–' + ev.endYear : ''} — ${ev.label}`);
+        circle.appendChild(title);
+        g.appendChild(circle);
+
+        const label = el('text', { x: x, y: labelY, class: 'tl-label', 'text-anchor': 'middle' });
+        const yrTspan = el('tspan', { class: 'yr', x: x, dy: 0 }, `${ev.year}${ev.endYear ? '–' + String(ev.endYear).slice(2) : ''}`);
+        label.appendChild(yrTspan);
+        const labelTspan = el('tspan', { x: x, dy: 13 }, ev.label);
+        label.appendChild(labelTspan);
+        g.appendChild(label);
+
+        svg.appendChild(g);
+      });
+    });
+
+    // Connectors (on top)
+    CONNECTORS.forEach(c => {
+      const x1 = xScale(c.from.year), y1 = TRACKS[c.from.track].baseline;
+      const x2 = xScale(c.to.year), y2 = TRACKS[c.to.track].baseline;
+      const midY = (y1 + y2) / 2;
+      const path = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+      svg.appendChild(el('path', { d: path, class: 'tl-connector' }));
+      svg.appendChild(el('text', { x: (x1 + x2) / 2, y: midY - 6, class: 'tl-connector-label', 'text-anchor': 'middle' }, c.label));
+    });
+  }
+
+  function renderLog() {
+    const grid = document.getElementById('log-grid');
+    const cols = [
+      { key: 'england', title: 'England / Britain' },
+      { key: 'ghana', title: 'Gold Coast / Ashanti / Ghana' },
+      { key: 'america', title: 'Colonial America / United States' },
+    ];
+    cols.forEach(c => {
+      const col = document.createElement('div');
+      col.className = `log-col ${c.key}`;
+      const h3 = document.createElement('h3');
+      h3.textContent = c.title;
+      col.appendChild(h3);
+      const ul = document.createElement('ul');
+      EVENTS[c.key].forEach(ev => {
+        const li = document.createElement('li');
+        const yrSpan = document.createElement('span');
+        yrSpan.className = 'yr';
+        yrSpan.textContent = `${ev.year}${ev.endYear ? '–' + ev.endYear : ''}`;
+        li.appendChild(yrSpan);
+        li.appendChild(document.createTextNode(ev.label + (ev.desc ? ' — ' + ev.desc : '') + ' '));
+        if (ev.src && ev.src.length) {
+          const srcSpan = document.createElement('span');
+          srcSpan.className = 'src';
+          ev.src.forEach((key, idx) => {
+            const s = SOURCES[key];
+            if (!s) return;
+            const a = document.createElement('a');
+            a.href = s.url;
+            a.textContent = `[${idx + 1}]`;
+            a.target = '_blank';
+            a.rel = 'noopener';
+            srcSpan.appendChild(a);
+            srcSpan.appendChild(document.createTextNode(' '));
+          });
+          li.appendChild(srcSpan);
+        }
+        ul.appendChild(li);
+      });
+      col.appendChild(ul);
+      grid.appendChild(col);
+    });
+  }
+
+  function renderSources() {
+    const list = document.getElementById('sources-list');
+    const seen = new Set();
+    Object.values(EVENTS).flat().forEach(ev => (ev.src || []).forEach(k => seen.add(k)));
+    Array.from(seen).sort().forEach(key => {
+      const s = SOURCES[key];
+      if (!s) return;
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = s.url;
+      a.textContent = s.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      li.appendChild(document.createTextNode(''));
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'src-name';
+      nameSpan.textContent = s.name + ' — ';
+      li.appendChild(nameSpan);
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+  }
+
+  renderTimeline();
+  renderLog();
+  renderSources();
+})();
+</script>
+</body>
+</html>

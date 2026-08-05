@@ -24,6 +24,7 @@ const STATIC = [
   'index.html',
   'style.css',
   'dev-journal',
+  'atlantic-triangle',
   '.well-known',
 ];
 
