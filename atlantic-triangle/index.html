@@ -25,11 +25,19 @@
   --c-england: oklch(72% 0.11 250);
   --c-ghana:   oklch(78% 0.15 75);
   --c-america: var(--accent);
+
+  --c-migration:   oklch(72% 0.10 200);
+  --c-trafficking: oklch(58% 0.19 25);
+  --c-enslavement: oklch(50% 0.15 15);
+  --c-goods:       oklch(70% 0.12 45);
+  --c-money:       oklch(80% 0.09 95);
+  --c-ideas:       oklch(72% 0.13 300);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html { font-size: 17px; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+html { font-size: 17px; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+[id] { scroll-margin-top: 2rem; }
 
 body {
   font-family: var(--font-body);
@@ -91,8 +99,8 @@ section > p + p { margin-top: 1.05rem; }
 }
 .scope-note strong { color: var(--text); }
 
-/* ── Legend ── */
-.legend {
+/* ── Legends ── */
+.legend, .flow-legend {
   display: flex;
   gap: 1.6rem;
   flex-wrap: wrap;
@@ -100,11 +108,15 @@ section > p + p { margin-top: 1.05rem; }
   font-size: 0.72rem;
   letter-spacing: 0.02em;
 }
-.legend span { display: inline-flex; align-items: center; gap: 0.5rem; }
+.flow-legend { gap: 1.2rem; margin-top: 0.6rem; color: var(--muted); }
+.legend span, .flow-legend span { display: inline-flex; align-items: center; gap: 0.5rem; }
 .legend i { width: 0.85rem; height: 0.85rem; display: inline-block; }
 .legend .england i { background: var(--c-england); }
 .legend .ghana i { background: var(--c-ghana); }
 .legend .america i { background: var(--c-america); }
+.flow-legend i { width: 1.15rem; height: 0; border-top-width: 3px; border-top-style: solid; display: inline-block; }
+.flow-legend i.event { border-top-style: dashed; }
+.flow-legend i.process { border-top-width: 6px; opacity: 0.5; }
 
 /* ── Timeline ── */
 .timeline-wrap {
@@ -113,22 +125,30 @@ section > p + p { margin-top: 1.05rem; }
   background: var(--surface);
   padding: 0.5rem 0;
 }
-#timeline { display: block; font-family: var(--font-mono); width: 2240px; height: 900px; max-width: none; }
+#timeline { display: block; font-family: var(--font-mono); width: 2240px; height: 980px; max-width: none; }
 .tl-track-label { fill: var(--muted); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
 .tl-axis-label { fill: var(--muted); font-size: 11px; }
 .tl-axis-line { stroke: var(--border); stroke-width: 1; }
 .tl-baseline { stroke-width: 1.5; opacity: 0.55; }
 .tl-stem { stroke-width: 1; opacity: 0.55; }
-.tl-marker { cursor: default; }
-.tl-marker circle { stroke: var(--bg); stroke-width: 1.5; }
+.tl-marker-link, .tl-flow-link { cursor: pointer; }
+.tl-marker circle { stroke: var(--bg); stroke-width: 1.5; transition: r 0.12s ease; }
+.tl-marker-link:hover circle { r: 7.5; }
+.tl-marker-link:hover .tl-label tspan:last-child { text-decoration: underline; }
 .tl-label { font-size: 11px; fill: var(--text); }
 .tl-label .yr { fill: var(--muted); }
 .tl-band { opacity: 0.08; }
 .tl-band-label { font-size: 10.5px; fill: var(--muted); font-style: italic; letter-spacing: 0.02em; }
-.tl-connector { fill: none; stroke: oklch(85% 0.05 60); stroke-width: 1.2; stroke-dasharray: 3 3; opacity: 0.6; }
-.tl-connector-label { font-size: 10px; fill: oklch(85% 0.05 60); }
+.tl-flow-event { fill: none; stroke-width: 1.4; stroke-dasharray: 4 3; opacity: 0.8; }
+.tl-flow-link:hover .tl-flow-event { opacity: 1; stroke-width: 2; }
+.tl-flow-process { fill: none; stroke-width: 9; opacity: 0.14; }
+.tl-flow-link:hover .tl-flow-process { opacity: 0.28; }
+.tl-flow-label { font-size: 10px; font-style: italic; }
+.tl-annot-line { stroke-width: 1.2; opacity: 0.6; }
+.tl-annot-tick { stroke-width: 1.2; opacity: 0.6; }
+.tl-annot-label { font-size: 10px; fill: var(--muted); font-style: italic; }
 
-/* ── Event log ── */
+/* ── Event log / flows list ── */
 .log-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -151,8 +171,18 @@ section > p + p { margin-top: 1.05rem; }
 .log-col ul { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; }
 .log-col li { font-size: 0.85rem; }
 .log-col .yr { font-family: var(--font-mono); color: var(--col-color, var(--accent)); font-size: 0.75rem; display: block; }
-.log-col a, .reading a { text-decoration: underline; text-decoration-color: var(--border); }
-.log-col a:hover, .reading a:hover { text-decoration-color: var(--link-hover); }
+.log-col a, .reading a, .flows-list a { text-decoration: underline; text-decoration-color: var(--border); }
+.log-col a:hover, .reading a:hover, .flows-list a:hover { text-decoration-color: var(--link-hover); }
+li[id]:target, .flows-list li[id]:target {
+  background: var(--surface);
+  outline: 1px dashed var(--muted);
+  outline-offset: 5px;
+}
+
+.flows-list { list-style: none; display: flex; flex-direction: column; gap: 1rem; }
+.flows-list li { border-left: 2px solid var(--cat-color, var(--accent)); padding: 0.1rem 0 0.1rem 1rem; font-size: 0.88rem; }
+.flows-list .cat { font-family: var(--font-mono); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cat-color, var(--muted)); display: block; margin-bottom: 0.2rem; }
+.flows-list .title { font-weight: 600; }
 
 /* ── Reading ── */
 .reading { display: flex; flex-direction: column; gap: 1.4rem; }
@@ -193,8 +223,8 @@ footer {
         one story told from three vantage points. English ships built forts on the Gold Coast to
         extract gold, then people; the people taken were forced into the plantation economies of
         English colonies in America; the wealth those colonies generated flowed back to England.
-        The timeline below tracks each place on its own axis, with shaded bands marking the periods
-        where their histories were most directly entangled.
+        The tracks below plot each place on its own axis; the flows crossing between them plot what
+        actually moved from one to another — people, goods, money, and ideas.
       </p>
       <div class="scope-note">
         <strong>Scope:</strong> this covers one cluster as a proof of concept — not "every country,"
@@ -213,9 +243,19 @@ footer {
         <span class="ghana"><i></i>Gold Coast / Ashanti / Ghana</span>
         <span class="america"><i></i>Colonial America / United States</span>
       </div>
+      <div class="flow-legend" id="flow-legend"><!-- populated by script --></div>
       <div class="timeline-wrap">
-        <svg id="timeline" viewBox="0 0 2240 900" role="img" aria-label="Timeline of England, the Gold Coast, and America from 1450 to 2026"></svg>
+        <svg id="timeline" viewBox="0 0 2240 980" role="img" aria-label="Timeline of England, the Gold Coast, and America from 1450 to 2026, with flows of people, goods, money, and ideas crossing between them"></svg>
       </div>
+      <p style="font-size: 0.78rem; color: var(--muted); margin-top: 0.6rem;">
+        Every marker and flow line links down to its entry below — click one to jump straight to the
+        source.
+      </p>
+    </section>
+
+    <section id="flows">
+      <h2>What moved between them</h2>
+      <ul class="flows-list" id="flows-grid"><!-- populated by script --></ul>
     </section>
 
     <section id="log">
@@ -231,8 +271,8 @@ footer {
     <footer>
       Built as a proof of concept for <a href="/">jason-edelman.org</a>. Every specific claim above
       links directly to the outlet it's drawn from — Britannica, Wikipedia, BlackPast, the Stanford
-      MLK Research &amp; Education Institute, HISTORY.com. Nothing here is inferred or invented.
-      Corrections welcome — <a href="mailto:edelmanja@gmail.com">edelmanja@gmail.com</a>.
+      MLK Research &amp; Education Institute, HISTORY.com, and others. Nothing here is inferred or
+      invented. Corrections welcome — <a href="mailto:edelmanja@gmail.com">edelmanja@gmail.com</a>.
     </footer>
 
   </main>
@@ -242,7 +282,7 @@ footer {
   "use strict";
 
   const YEAR_MIN = 1450, YEAR_MAX = 2030;
-  const SVG_W = 2240, SVG_H = 900;
+  const SVG_W = 2240, SVG_H = 980;
   const MARGIN_L = 40, MARGIN_R = 40;
   const PLOT_W = SVG_W - MARGIN_L - MARGIN_R;
 
@@ -252,7 +292,7 @@ footer {
     america: { baseline: 750, color: 'var(--c-america)', label: 'Colonial America / United States', start: 1607 },
   };
 
-  // Sources referenced by short key. Every event/reading claim below links inline
+  // Sources referenced by short key. Every event/flow/reading claim below links inline
   // to one of these — see linkify() — rather than a separate citation list.
   const SOURCES = {
     britannica_elmina: { name: 'Britannica — Elmina Castle', url: 'https://www.britannica.com/place/Elmina-Castle' },
@@ -280,11 +320,16 @@ footer {
     britannica_treaty_paris: { name: 'Britannica — Treaty of Paris 1783', url: 'https://www.britannica.com/event/Treaty-of-Paris-1783' },
     britannica_hong_kong: { name: 'Britannica — Hong Kong handover, 1997', url: 'https://www.britannica.com/event/Hong-Kongs-Handover-to-China' },
     britannica_louisiana_purchase: { name: 'Britannica — Louisiana Purchase', url: 'https://www.britannica.com/event/Louisiana-Purchase' },
+    slavery_remembrance_transatlantic: { name: 'Slavery and Remembrance — Transatlantic Slave Trade', url: 'https://slaveryandremembrance.org/articles/article/?id=A0002' },
+    britannica_triangular_trade: { name: 'Britannica — Triangular Trade', url: 'https://www.britannica.com/topic/triangular-trade' },
+    wayne_state_dubois_ghana: { name: 'Wayne State University — W.E.B. Du Bois in Ghana', url: 'https://clas.wayne.edu/afamstudies/news/web-du-bois-in-ghana-56503' },
+    census_slave_population: { name: 'Total Slave Population by State, 1790–1860 — American Legal History to the 1860s', url: 'https://wisc.pb.unizin.org/ls261/chapter/ch-2-2-total-slave-population-by-state-1790-1860/' },
   };
 
   // label/desc support inline citation links: [visible text](sourceKey).
   // linkify() turns these into <a> tags; stripLinks() renders them as plain
-  // text for the SVG diagram, which isn't a good place for hyperlinks.
+  // text for the SVG diagram — the diagram links by *navigation* instead
+  // (each marker/flow is wrapped in <a href="#id"> pointing at its entry below).
   const EVENTS = {
     england: [
       { year: 1497, label: 'Cabot voyage', desc: 'John Cabot lands in North America, the basis of England’s first claim to the continent.', src: [] },
@@ -340,8 +385,62 @@ footer {
     { start: 1939, end: 1945, label: 'World War II' },
   ];
 
-  const CONNECTORS = [
-    { from: { track: 'ghana', year: 1957 }, to: { track: 'america', year: 1957 }, label: 'Nkrumah invites MLK to Ghana’s independence, Mar 1957' },
+  // What moved between the tracks. `weight: 'process'` = a sustained, recurring
+  // flow over decades, drawn as a thick translucent line behind everything.
+  // `weight: 'event'` = a specific dated transfer, drawn as a thin dashed arrow
+  // with an arrowhead, on top. Both are clickable — they link to their entry
+  // in the "What moved between them" list below.
+  const CATEGORIES = {
+    migration:   { label: 'Migration (voluntary)',              weight: 'event' },
+    trafficking: { label: 'Trafficking (forced / Middle Passage)', weight: 'process' },
+    enslavement: { label: 'Enslavement (legal status)',          weight: 'event' },
+    goods:       { label: 'Goods',                               weight: 'process' },
+    money:       { label: 'Money / capital',                     weight: 'process' },
+    ideas:       { label: 'Ideas / individuals',                 weight: 'event' },
+  };
+
+  const FLOWS = [
+    { id: 'migration', category: 'migration', from: { track: 'england', year: 1607 }, to: { track: 'america', year: 1620 },
+      label: 'Colonists migrate to Virginia, then New England',
+      desc: 'The same [Jamestown](britannica_jamestown) venture that began as a commercial outpost becomes the seed of a much larger, mostly voluntary migration.',
+      src: ['britannica_jamestown'] },
+    { id: 'trafficking', category: 'trafficking', from: { track: 'ghana', year: 1619 }, to: { track: 'america', year: 1808 },
+      label: 'Transatlantic slave trade',
+      desc: 'Of roughly 12.5 million Africans forced onto Atlantic slave ships (about 11 million survived the Middle Passage), an estimated [388,000 landed in mainland North America](slavery_remembrance_transatlantic) — a small share of the total trade, but the population American chattel slavery was built on.',
+      src: ['slavery_remembrance_transatlantic'] },
+    { id: 'goods-out', category: 'goods', from: { track: 'england', year: 1660 }, to: { track: 'ghana', year: 1807 },
+      label: 'Manufactured goods to West Africa',
+      desc: 'The first leg of the [triangular trade](britannica_triangular_trade): textiles, firearms, metal goods, and alcohol shipped from England, traded for gold and captives.',
+      src: ['britannica_triangular_trade'] },
+    { id: 'goods-back', category: 'goods', from: { track: 'america', year: 1660 }, to: { track: 'england', year: 1807 },
+      label: 'Raw materials to England',
+      desc: 'The closing leg of the [triangular trade](britannica_triangular_trade): tobacco, cotton, sugar, rice, and indigo shipped from the colonies to supply English manufacturers.',
+      src: ['britannica_triangular_trade'] },
+    { id: 'money', category: 'money', from: { track: 'ghana', year: 1672 }, to: { track: 'england', year: 1731 },
+      label: 'Trade profits to London',
+      desc: 'The [Royal African Company](wiki_rac)’s gold and slaving profits flow to London as [shareholder dividends](history_royal_african) over its 1672–1731 charter period.',
+      src: ['wiki_rac', 'history_royal_african'] },
+    { id: 'enslavement', category: 'enslavement', from: { track: 'england', year: 1833 }, to: { track: 'america', year: 1865 },
+      label: 'Abolition, 32 years apart',
+      desc: 'Britain [abolishes slavery empire-wide in 1833](britannica_slavery_abolition_act); the US does not follow until the [13th Amendment in 1865](britannica_13th).',
+      src: ['britannica_slavery_abolition_act', 'britannica_13th'] },
+    { id: 'ideas-mlk', category: 'ideas', from: { track: 'ghana', year: 1957 }, to: { track: 'america', year: 1957 },
+      label: 'Nkrumah invites MLK to Ghana’s independence',
+      desc: '[Martin Luther King Jr. attends the independence ceremony](king_institute_ghana), March 1957, at Nkrumah’s invitation.',
+      src: ['king_institute_ghana'] },
+    { id: 'ideas-dubois', category: 'ideas', from: { track: 'america', year: 1961 }, to: { track: 'ghana', year: 1963 },
+      label: 'Du Bois moves to Ghana',
+      desc: '[W.E.B. Du Bois relocates to Accra](wayne_state_dubois_ghana) at Nkrumah’s invitation to lead the Encyclopedia Africana, and dies there in 1963 — the pan-African circuit closing in the other direction.',
+      src: ['wayne_state_dubois_ghana'] },
+  ];
+
+  // Same-track demographic annotation — not a cross-track flow, so drawn as a
+  // labeled bracket on a single baseline rather than a connector.
+  const ANNOTATIONS = [
+    { id: 'population', track: 'america', start: 1790, end: 1860,
+      label: 'Enslaved population: ~698,000 → ~3.95 million',
+      desc: 'Grows mainly through [natural increase](census_slave_population), not new arrivals, after the Atlantic trade is banned in 1808 — a demographic pattern distinct from Caribbean slave societies, which depended on continuous imports.',
+      src: ['census_slave_population'] },
   ];
 
   const READING = {
@@ -368,7 +467,8 @@ footer {
       line from 1619 through the Civil War to the [civil rights movement](britannica_cra) is
       continuous, not a story of a settled past — and in 1957 it ran directly back through the
       Atlantic, when [Martin Luther King attended Ghana's independence ceremony](king_institute_ghana)
-      at Kwame Nkrumah's invitation.`,
+      at Kwame Nkrumah's invitation. Four years later the circuit closed the other way, when
+      [Du Bois moved to Accra](wayne_state_dubois_ghana) to live out his last years.`,
   };
 
   function xScale(year) {
@@ -377,7 +477,7 @@ footer {
 
   const LINK_RE = /\[([^\]]+)\]\(([a-zA-Z0-9_]+)\)/g;
 
-  /** Strip [text](key) markup down to plain "text" — for the SVG, which doesn't link out. */
+  /** Strip [text](key) markup down to plain "text" — for the SVG, which links by navigation instead. */
   function stripLinks(str) {
     return str.replace(LINK_RE, '$1');
   }
@@ -409,15 +509,49 @@ footer {
     return e;
   }
 
+  /** Wrap children in an SVG <a href="#id">, so a marker/flow links to its body entry. */
+  function svgLink(href, cls, children) {
+    const a = el('a', { href, class: cls });
+    children.forEach(c => a.appendChild(c));
+    return a;
+  }
+
+  function renderDefs(svg) {
+    const defs = el('defs', {});
+    ['migration', 'enslavement', 'ideas'].forEach(cat => {
+      const marker = el('marker', {
+        id: `arrow-${cat}`, viewBox: '0 0 10 10', refX: '8', refY: '5',
+        markerWidth: '6', markerHeight: '6', orient: 'auto-start-reverse',
+      });
+      marker.appendChild(el('path', { d: 'M0,0 L10,5 L0,10 z', fill: `var(--c-${cat})` }));
+      defs.appendChild(marker);
+    });
+    svg.appendChild(defs);
+  }
+
   function renderTimeline() {
     const svg = document.getElementById('timeline');
     svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+    renderDefs(svg);
 
     // Bands (behind everything)
     BANDS.forEach(b => {
       const x1 = xScale(b.start), x2 = xScale(b.end);
       svg.appendChild(el('rect', { x: x1, y: 40, width: x2 - x1, height: SVG_H - 100, class: 'tl-band', fill: 'oklch(80% 0.1 60)' }));
       svg.appendChild(el('text', { x: x1 + 6, y: 56, class: 'tl-band-label' }, b.label));
+    });
+
+    // Process-weight flows (sustained, recurring) — thick, translucent, behind the tracks
+    FLOWS.filter(f => CATEGORIES[f.category].weight === 'process').forEach(f => {
+      const x1 = xScale(f.from.year), y1 = TRACKS[f.from.track].baseline;
+      const x2 = xScale(f.to.year), y2 = TRACKS[f.to.track].baseline;
+      const midY = (y1 + y2) / 2;
+      const path = el('path', {
+        d: `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`,
+        class: 'tl-flow-process', stroke: `var(--c-${f.category})`,
+      });
+      const label = el('text', { x: x1 + 4, y: y1 + (y2 > y1 ? 14 : -8), class: 'tl-flow-label', fill: `var(--c-${f.category})` }, f.label);
+      svg.appendChild(svgLink(`#flow-${f.id}`, 'tl-flow-link', [path, label]));
     });
 
     // Axis
@@ -452,31 +586,46 @@ footer {
           svg.appendChild(el('line', { x1: x, x2: x2, y1: t.baseline, y2: t.baseline, stroke: t.color, 'stroke-width': 4 }));
         }
 
-        const g = el('g', { class: 'tl-marker' });
         const circle = el('circle', { cx: x, cy: t.baseline, r: 5, fill: t.color });
         const title = el('title', {}, desc ? `${ev.year}${ev.endYear ? '–' + ev.endYear : ''} — ${label}: ${desc}` : `${ev.year}${ev.endYear ? '–' + ev.endYear : ''} — ${label}`);
         circle.appendChild(title);
-        g.appendChild(circle);
 
         const labelEl = el('text', { x: x, y: labelY, class: 'tl-label', 'text-anchor': 'middle' });
         const yrTspan = el('tspan', { class: 'yr', x: x, dy: 0 }, `${ev.year}${ev.endYear ? '–' + String(ev.endYear).slice(2) : ''}`);
         labelEl.appendChild(yrTspan);
         const labelTspan = el('tspan', { x: x, dy: 13 }, label);
         labelEl.appendChild(labelTspan);
-        g.appendChild(labelEl);
 
-        svg.appendChild(g);
+        svg.appendChild(svgLink(`#ev-${key}-${ev.year}`, 'tl-marker-link', [circle, labelEl]));
       });
     });
 
-    // Connectors (on top)
-    CONNECTORS.forEach(c => {
-      const x1 = xScale(c.from.year), y1 = TRACKS[c.from.track].baseline;
-      const x2 = xScale(c.to.year), y2 = TRACKS[c.to.track].baseline;
-      const midY = (y1 + y2) / 2;
-      const path = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
-      svg.appendChild(el('path', { d: path, class: 'tl-connector' }));
-      svg.appendChild(el('text', { x: (x1 + x2) / 2, y: midY - 6, class: 'tl-connector-label', 'text-anchor': 'middle' }, c.label));
+    // Population annotation — bracket on a single track, well clear of markers
+    ANNOTATIONS.forEach(a => {
+      const t = TRACKS[a.track];
+      const x1 = xScale(a.start), x2 = xScale(a.end);
+      const y = t.baseline + 112;
+      const line = el('line', { x1, x2, y1: y, y2: y, class: 'tl-annot-line', stroke: t.color });
+      const tick1 = el('line', { x1, x2: x1, y1: y - 5, y2: y + 5, class: 'tl-annot-tick', stroke: t.color });
+      const tick2 = el('line', { x1: x2, x2, y1: y - 5, y2: y + 5, class: 'tl-annot-tick', stroke: t.color });
+      const label = el('text', { x: x1, y: y + 16, class: 'tl-annot-label' }, a.label);
+      svg.appendChild(svgLink(`#annot-${a.id}`, 'tl-flow-link', [line, tick1, tick2, label]));
+    });
+
+    // Event-weight flows (specific, dated) — thin dashed arrows, on top
+    FLOWS.filter(f => CATEGORIES[f.category].weight === 'event').forEach((f, i) => {
+      const x1 = xScale(f.from.year), y1 = TRACKS[f.from.track].baseline;
+      const x2 = xScale(f.to.year), y2 = TRACKS[f.to.track].baseline;
+      const midY = (y1 + y2) / 2 + (i % 2 === 0 ? -10 : 10);
+      const path = el('path', {
+        d: `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`,
+        class: 'tl-flow-event', stroke: `var(--c-${f.category})`,
+        'marker-end': `url(#arrow-${f.category})`,
+      });
+      const label = el('text', {
+        x: (x1 + x2) / 2, y: midY - 6, class: 'tl-flow-label', 'text-anchor': 'middle', fill: `var(--c-${f.category})`,
+      }, f.label);
+      svg.appendChild(svgLink(`#flow-${f.id}`, 'tl-flow-link', [path, label]));
     });
   }
 
@@ -496,6 +645,7 @@ footer {
       const ul = document.createElement('ul');
       EVENTS[c.key].forEach(ev => {
         const li = document.createElement('li');
+        li.id = `ev-${c.key}-${ev.year}`;
         const yrSpan = document.createElement('span');
         yrSpan.className = 'yr';
         yrSpan.textContent = `${ev.year}${ev.endYear ? '–' + ev.endYear : ''}`;
@@ -509,6 +659,58 @@ footer {
       });
       col.appendChild(ul);
       grid.appendChild(col);
+    });
+  }
+
+  function renderFlowsList() {
+    const list = document.getElementById('flows-grid');
+    FLOWS.forEach(f => {
+      const li = document.createElement('li');
+      li.id = `flow-${f.id}`;
+      li.style.setProperty('--cat-color', `var(--c-${f.category})`);
+      const catSpan = document.createElement('span');
+      catSpan.className = 'cat';
+      catSpan.textContent = CATEGORIES[f.category].label;
+      li.appendChild(catSpan);
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'title';
+      linkify(f.label, titleSpan);
+      li.appendChild(titleSpan);
+      if (f.desc) {
+        li.appendChild(document.createTextNode(' — '));
+        linkify(f.desc, li);
+      }
+      list.appendChild(li);
+    });
+    ANNOTATIONS.forEach(a => {
+      const li = document.createElement('li');
+      li.id = `annot-${a.id}`;
+      li.style.setProperty('--cat-color', 'var(--c-america)');
+      const catSpan = document.createElement('span');
+      catSpan.className = 'cat';
+      catSpan.textContent = 'Population growth';
+      li.appendChild(catSpan);
+      const titleSpan = document.createElement('span');
+      titleSpan.className = 'title';
+      titleSpan.textContent = a.label;
+      li.appendChild(titleSpan);
+      li.appendChild(document.createTextNode(' — '));
+      linkify(a.desc, li);
+      list.appendChild(li);
+    });
+  }
+
+  function renderFlowLegend() {
+    const legend = document.getElementById('flow-legend');
+    Object.keys(CATEGORIES).forEach(key => {
+      const cat = CATEGORIES[key];
+      const span = document.createElement('span');
+      const i = document.createElement('i');
+      i.className = cat.weight;
+      i.style.borderTopColor = `var(--c-${key})`;
+      span.appendChild(i);
+      span.appendChild(document.createTextNode(cat.label));
+      legend.appendChild(span);
     });
   }
 
@@ -532,7 +734,9 @@ footer {
     });
   }
 
+  renderFlowLegend();
   renderTimeline();
+  renderFlowsList();
   renderLog();
   renderReading();
 })();
