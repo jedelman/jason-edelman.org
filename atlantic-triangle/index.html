@@ -141,7 +141,7 @@ section > p + p { margin-top: 1.05rem; }
 .tl-band-label { font-size: 10.5px; fill: var(--muted); font-style: italic; letter-spacing: 0.02em; }
 .tl-flow-event { fill: none; stroke-width: 1.4; stroke-dasharray: 4 3; opacity: 0.8; }
 .tl-flow-link:hover .tl-flow-event { opacity: 1; stroke-width: 2; }
-.tl-flow-process { fill: none; stroke-width: 9; opacity: 0.14; }
+.tl-flow-process { fill: none; opacity: var(--w-opacity, 0.14); }
 .tl-flow-link:hover .tl-flow-process { opacity: 0.28; }
 .tl-flow-label { font-size: 10px; font-style: italic; }
 .tl-annot-line { stroke-width: 1.2; opacity: 0.6; }
@@ -244,6 +244,12 @@ footer {
         <span class="america"><i></i>Colonial America / United States</span>
       </div>
       <div class="flow-legend" id="flow-legend"><!-- populated by script --></div>
+      <p style="font-size: 0.78rem; color: var(--muted); margin-top: 0.5rem; max-width: 66ch;">
+        Line weight is proportional to a real headcount only where one is documented — the
+        transatlantic slave-trade flow is sized to the ≈388,000 people estimated to have landed in
+        mainland North America. The other flows aren't quantified to that standard and are drawn at
+        a uniform reference weight, not a claim about their true relative size.
+      </p>
       <div class="timeline-wrap">
         <svg id="timeline" viewBox="0 0 2240 980" role="img" aria-label="Timeline of England, the Gold Coast, and America from 1450 to 2026, with flows of people, goods, money, and ideas crossing between them"></svg>
       </div>
@@ -406,6 +412,7 @@ footer {
       src: ['britannica_jamestown'] },
     { id: 'trafficking', category: 'trafficking', from: { track: 'ghana', year: 1619 }, to: { track: 'america', year: 1808 },
       label: 'Transatlantic slave trade',
+      magnitude: 388000, magnitudeLabel: '≈388,000 people',
       desc: 'Of roughly 12.5 million Africans forced onto Atlantic slave ships (about 11 million survived the Middle Passage), an estimated [388,000 landed in mainland North America](slavery_remembrance_transatlantic) — a small share of the total trade, but the population American chattel slavery was built on.',
       src: ['slavery_remembrance_transatlantic'] },
     { id: 'goods-out', category: 'goods', from: { track: 'england', year: 1660 }, to: { track: 'ghana', year: 1807 },
@@ -475,6 +482,19 @@ footer {
     return MARGIN_L + ((year - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * PLOT_W;
   }
 
+  // Process-flow stroke width is proportional to a real headcount only where
+  // one is documented (currently just the slave-trade flow, magnitude: 388000).
+  // Flows without a comparable figure fall back to DEFAULT_W — a uniform
+  // reference weight, not a claim about their true relative size.
+  const DEFAULT_PROCESS_W = 5, REF_MAGNITUDE = 400000, REF_W = 26;
+  function processWidth(magnitude) {
+    if (!magnitude) return DEFAULT_PROCESS_W;
+    return Math.min(REF_W, DEFAULT_PROCESS_W + (magnitude / REF_MAGNITUDE) * (REF_W - DEFAULT_PROCESS_W));
+  }
+  function processOpacity(width) {
+    return width >= 15 ? 0.13 : 0.22;
+  }
+
   const LINK_RE = /\[([^\]]+)\]\(([a-zA-Z0-9_]+)\)/g;
 
   /** Strip [text](key) markup down to plain "text" — for the SVG, which links by navigation instead. */
@@ -516,6 +536,17 @@ footer {
     return a;
   }
 
+  /** Add an opaque background rect behind a text label, once it's attached (getBBox needs layout). */
+  function addChip(parent, textEl, padX, padY) {
+    const bbox = textEl.getBBox();
+    const rect = el('rect', {
+      x: bbox.x - padX, y: bbox.y - padY,
+      width: bbox.width + padX * 2, height: bbox.height + padY * 2,
+      fill: 'var(--bg)', style: 'opacity: 0.82',
+    });
+    parent.insertBefore(rect, textEl);
+  }
+
   function renderDefs(svg) {
     const defs = el('defs', {});
     ['migration', 'enslavement', 'ideas'].forEach(cat => {
@@ -541,17 +572,23 @@ footer {
       svg.appendChild(el('text', { x: x1 + 6, y: 56, class: 'tl-band-label' }, b.label));
     });
 
-    // Process-weight flows (sustained, recurring) — thick, translucent, behind the tracks
+    // Process-weight flows (sustained, recurring) — thick, translucent, behind the tracks.
+    // Width is proportional to magnitude where one is documented; see processWidth().
     FLOWS.filter(f => CATEGORIES[f.category].weight === 'process').forEach(f => {
       const x1 = xScale(f.from.year), y1 = TRACKS[f.from.track].baseline;
       const x2 = xScale(f.to.year), y2 = TRACKS[f.to.track].baseline;
       const midY = (y1 + y2) / 2;
+      const w = processWidth(f.magnitude);
       const path = el('path', {
         d: `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`,
         class: 'tl-flow-process', stroke: `var(--c-${f.category})`,
+        'stroke-width': w, style: `--w-opacity: ${processOpacity(w)}`,
       });
-      const label = el('text', { x: x1 + 4, y: y1 + (y2 > y1 ? 14 : -8), class: 'tl-flow-label', fill: `var(--c-${f.category})` }, f.label);
-      svg.appendChild(svgLink(`#flow-${f.id}`, 'tl-flow-link', [path, label]));
+      const labelText = f.magnitudeLabel ? `${f.label} (${f.magnitudeLabel})` : f.label;
+      const label = el('text', { x: x1 + 4, y: y1 + (y2 > y1 ? 14 : -8), class: 'tl-flow-label', fill: `var(--c-${f.category})` }, labelText);
+      const a = svgLink(`#flow-${f.id}`, 'tl-flow-link', [path, label]);
+      svg.appendChild(a);
+      addChip(a, label, 3, 2);
     });
 
     // Axis
@@ -609,7 +646,9 @@ footer {
       const tick1 = el('line', { x1, x2: x1, y1: y - 5, y2: y + 5, class: 'tl-annot-tick', stroke: t.color });
       const tick2 = el('line', { x1: x2, x2, y1: y - 5, y2: y + 5, class: 'tl-annot-tick', stroke: t.color });
       const label = el('text', { x: x1, y: y + 16, class: 'tl-annot-label' }, a.label);
-      svg.appendChild(svgLink(`#annot-${a.id}`, 'tl-flow-link', [line, tick1, tick2, label]));
+      const link = svgLink(`#annot-${a.id}`, 'tl-flow-link', [line, tick1, tick2, label]);
+      svg.appendChild(link);
+      addChip(link, label, 3, 2);
     });
 
     // Event-weight flows (specific, dated) — thin dashed arrows, on top
@@ -625,7 +664,9 @@ footer {
       const label = el('text', {
         x: (x1 + x2) / 2, y: midY - 6, class: 'tl-flow-label', 'text-anchor': 'middle', fill: `var(--c-${f.category})`,
       }, f.label);
-      svg.appendChild(svgLink(`#flow-${f.id}`, 'tl-flow-link', [path, label]));
+      const a = svgLink(`#flow-${f.id}`, 'tl-flow-link', [path, label]);
+      svg.appendChild(a);
+      addChip(a, label, 3, 2);
     });
   }
 
