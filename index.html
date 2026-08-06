@@ -17,10 +17,15 @@
 
     <section id="about">
       <p>
-        I'm a developer and independent builder based in Norfolk, Virginia. I work
-        at the intersection of software, commons theory, and AI — building tools and
-        infrastructure that take seriously the question of who benefits from new
-        technology and who bears its costs.
+        I build agent systems — software that gives AI real agency inside hard
+        constraints, not a chat window bolted onto an app. <a href="https://bsky.app/profile/scout-two.bsky.social">Scout Two</a> is an
+        autonomous Bluesky agent with a self-updating, git-native harness: it polls
+        GitHub on an interval and restarts itself with new code. Written World lets an
+        LLM-backed "demiurge" generate a text-adventure world by proposing changes to a
+        graph, validated through the same schema gate as a player's own actions. Design
+        Patterns Skill turns a 253-pattern architecture corpus into a graph an LLM can
+        search mid-design. The throughline: constrain the model with a real schema or
+        validator, then let it act.
       </p>
       <p>
         I was a software engineer from 2004 to 2014. From 2019–2026, my wife and I ran
@@ -32,13 +37,93 @@
         My background in environmental education shapes how I think about collective
         behavior and change. The commons framework — resources governed collectively
         for shared benefit, as a practical alternative to both state control and
-        private enclosure — runs through everything I build.
+        private enclosure — runs through the civic and infrastructure projects below;
+        agent systems are where I spend most of my technical attention right now.
       </p>
     </section>
 
     <section id="projects">
       <h2>Projects</h2>
       <div class="projects-grid">
+
+        <div class="project-card in-progress">
+          <div class="project-header">
+            <span class="project-tag">commons · urban planning · pattern language</span>
+            <span class="status-badge">in progress</span>
+          </div>
+          <a href="https://github.com/jedelman/street-smarts">
+            <h3>Street Smarts</h3>
+          </a>
+          <p>Christopher Alexander argued a place's "aliveness" can't be measured —
+          Street Smarts takes that seriously and builds a tool anyway. It runs a real
+          proposal, like Eastside Commons, through geometric and activist opinions
+          designed to disagree, giving a coalition something to argue with instead of a
+          black-box score. Fifty years of pattern-language theory, made usable by the
+          people zoning law usually leaves out of the room.</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-tag">atproto · agent</span>
+          </div>
+          <a href="https://bsky.app/profile/scout-two.bsky.social">
+            <h3>Scout Two</h3>
+          </a>
+          <p>Scout Two isn't deployed once and left running — it manages its own
+          existence. The harness watches its own GitHub repo, pulls in new code, and
+          restarts itself with no human touching the server, so the agent thinking,
+          posting, and responding on Bluesky is also the one keeping itself alive and
+          current. Open infrastructure for agents whose own deployment loop is part of
+          their behavior, not something outside it.</p>
+        </div>
+
+        <div class="project-card in-progress">
+          <div class="project-header">
+            <span class="project-tag">ai · agents · interactive fiction</span>
+            <span class="status-badge">in progress</span>
+          </div>
+          <a href="https://github.com/jedelman/written-world/tree/world-engine-prototype">
+            <h3>Written World</h3>
+          </a>
+          <p>Text adventures have never had what voxel games take for granted: a world
+          state that's verifiable, not just prose someone typed. In Written World, an
+          LLM can be handed real creative license — inventing objects, relations, even
+          kinds of interaction the author never wrote — because every idea it proposes
+          has to clear the identical validation gate as a player's own move before it
+          becomes real. The AI gets genuine agency precisely because nothing it does is
+          trusted by default.</p>
+        </div>
+
+        <div class="project-card in-progress">
+          <div class="project-header">
+            <span class="project-tag">atproto · commons · marketplace</span>
+            <span class="status-badge">in progress</span>
+          </div>
+          <a href="https://github.com/jedelman/holdfast">
+            <h3>Holdfast</h3>
+          </a>
+          <p>A marketplace's trust — reviews, reputation, dispute history — normally
+          lives locked inside that company's database, gone the moment you leave the
+          platform. Holdfast puts it on the open, public AT Protocol firehose instead:
+          portable, permanent, and readable by any provider, with no company holding the
+          money, the listings, or the power to de-list you. A commons argument aimed at
+          Amazon and eBay's real asset — not the marketplace, but the trust data itself.</p>
+        </div>
+
+        <div class="project-card">
+          <div class="project-header">
+            <span class="project-tag">atproto · ai · community</span>
+          </div>
+          <a href="https://github.com/jedelman/Build-guild">
+            <h3>Build Guild</h3>
+          </a>
+          <p>Build Guild turns a single Bluesky thread's pitch — team up with people
+          whose skills cover your gaps, "100% like an MMORPG guild" — into a real,
+          working app, not just an idea people agreed with and forgot. It skips
+          building yet another identity system: a builder's Bluesky handle <em>is</em> their
+          verified identity, checked live against the public network, with login keys
+          that live entirely on-device and never touch the server.</p>
+        </div>
 
         <div class="project-card">
           <div class="project-header">
@@ -126,18 +211,6 @@
           <p>A pattern language extracted from the C2 Portland Pattern Repository,
           bundled into 13 pattern language corpora. Force-directed graph-based selection
           for LLM-driven architecture and design work.</p>
-        </div>
-
-        <div class="project-card">
-          <div class="project-header">
-            <span class="project-tag">atproto · agent</span>
-          </div>
-          <a href="https://bsky.app/profile/scout-two.bsky.social">
-            <h3>Scout Two</h3>
-          </a>
-          <p>Autonomous Bluesky agent with a git-native memory harness. Thinks, acts,
-          responds, and publishes using <code>tap</code> firehose and Claude runtime.
-          Open infrastructure for agent behavior research.</p>
         </div>
 
         <div class="project-card in-progress">
