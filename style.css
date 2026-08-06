@@ -160,8 +160,9 @@ section h2 {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--accent-dim);
-  white-space: nowrap;
-  flex-shrink: 0;
+  white-space: normal;
+  overflow-wrap: break-word;
+  min-width: 0;
 }
 
 .projects a {
