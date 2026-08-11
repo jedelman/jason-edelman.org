@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "claude-identity",
+  "main": "build/worker/shim.mjs",
+  "compatibility_date": "2024-09-23",
+  "routes": [
+    { "pattern": "claude.jason-edelman.org/*", "custom_domain": true }
+  ],
+  // CLAUDE_DID is left blank on purpose - fill in after account creation,
+  // then redeploy. FORWARD_TO must be a Cloudflare-verified destination
+  // address before Email Routing will accept mail for it.
+  "vars": {
+    "CLAUDE_DID": "",
+    "FORWARD_TO": ""
+  },
+  "build": {
+    "command": "cargo install -q worker-build && worker-build --release"
+  }
+}
