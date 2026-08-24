@@ -6,11 +6,18 @@
   // Custom domain routing is set up manually via the dashboard, not here -
   // declaring it in config too risks wrangler fighting the manual setup
   // on next deploy.
-  // CLAUDE_DID is left blank on purpose - fill in after account creation,
-  // then redeploy. FORWARD_TO must be a Cloudflare-verified destination
-  // address before Email Routing will accept mail for it.
+  // Real values, not placeholders: these are plain `vars`, not
+  // `wrangler secret put` values, so every `wrangler deploy` re-applies
+  // this exact block. Before this was filled in, the checked-in file
+  // still had both blank while the live worker had real values set from
+  // an uncommitted local deploy -- meaning any future deploy from this
+  // file (including CI) would have silently reset both to empty and
+  // broken DID resolution and mail forwarding. Confirmed correct against
+  // the live worker (com.atproto.identity.resolveHandle +
+  // /.well-known/atproto-did both round-trip to this exact DID) before
+  // committing.
   "vars": {
-    "CLAUDE_DID": "",
-    "FORWARD_TO": ""
+    "CLAUDE_DID": "did:plc:5y6kop75jnvkbujbubrhj6e3",
+    "FORWARD_TO": "jason.edelman.org@gmail.com"
   }
 }

@@ -1,0 +1,47 @@
+# Deploys the claude.jason-edelman.org identity worker (claude/) whenever
+# its own files change -- scoped narrowly so this never fires on unrelated
+# pushes to the rest of the site, and never touches the root site's own
+# deploy (which is separate, manual-via-dashboard infrastructure per this
+# repo's own history -- see the top-level wrangler.toml).
+#
+# Uses cloudflare/wrangler-action, the standard action for this, rather
+# than hand-rolling `npx wrangler deploy` in a shell step -- it handles
+# wrangler installation/caching itself. Secrets referenced here
+# (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID) are the action's own
+# documented required names; if this repo's secrets are named differently,
+# the deploy step fails loudly with an auth error, not silently.
+#
+# `vars` in claude/wrangler.jsonc (CLAUDE_DID, FORWARD_TO) are real, live
+# values now, not placeholders -- confirmed against the actually-deployed
+# worker before this workflow was added, since a plain `vars` block gets
+# fully re-applied on every deploy and a blank one would have reset both
+# on the very first automated run.
+
+name: Deploy claude identity worker
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'claude/**'
+      - '.github/workflows/deploy-claude-identity.yml'
+
+concurrency:
+  group: deploy-claude-identity-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy claude-jason-edelman-org worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: claude
+          command: deploy
