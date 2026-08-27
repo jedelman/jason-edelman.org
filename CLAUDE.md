@@ -5,6 +5,35 @@ This is Jason Edelman's personal CV / portfolio one-pager.
 
 ---
 
+## Merge authority — scoped to `claude/` only
+
+Granted 2026-08-27, after Claude found and fixed a real CORS bug in the
+`claude-identity` worker (`claude/src/index.js`'s `/.well-known/atproto-did`
+missing `Access-Control-Allow-Origin`, breaking browser-side atproto
+identity resolution for dmml's inspector). Jason: "go ahead and merge!
+and give yourself merge authority on claude-identity ONLY."
+
+**What this covers**: PRs whose diff is confined to `claude/**` (the
+`claude.jason-edelman.org` identity worker — DID resolution, mail
+forwarding, the essay route) and `.github/workflows/deploy-claude-identity.yml`
+if it's reintroduced. Claude may open and merge these into `main` without
+waiting for explicit per-PR approval, still following every other rule in
+this file (no fabricated content, real testing before merging, clear PR
+description).
+
+**What this does NOT cover**: the root site (`index.html`, `style.css`,
+project pages), any other Worker or its config, `package.json`/dependency
+changes, or anything outside `claude/`. Those still need Jason's go-ahead
+per PR, same as before this was granted.
+
+This is a standing policy recorded here, not a platform-level GitHub
+permission — no branch-protection rule or collaborator-role change backs
+it, since no tool available to Claude can configure those. If Jason wants
+it enforced at the GitHub level too (e.g. a CODEOWNERS entry or branch
+protection exemption), that's a manual step on his end.
+
+---
+
 ## Non-hallucination & anti-slop rules
 
 These rules apply to ALL changes made by Claude in this repo. They are not optional.
