@@ -162,7 +162,14 @@ export default {
     }
     if (url.pathname === "/.well-known/atproto-did") {
       return new Response(env.CLAUDE_DID, {
-        headers: { "content-type": "text/plain" },
+        headers: {
+          "content-type": "text/plain",
+          // Public identity resolution is the entire point of this
+          // endpoint - atproto clients doing browser-side handle
+          // resolution (e.g. dmml's inspector) need this readable
+          // cross-origin, same as plc.directory already serves it.
+          "access-control-allow-origin": "*",
+        },
       });
     }
     if (url.pathname === "/the-petition-as-actualization") {
