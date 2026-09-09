@@ -25,6 +25,7 @@ const STATIC = [
   'style.css',
   'dev-journal',
   '.well-known',
+  'oauth',
 ];
 
 // Subprojects: { name, dir, buildCmd, outDir, required }
