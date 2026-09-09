@@ -2,7 +2,7 @@
   "client_id": "https://jason-edelman.org/oauth/written-world-android/client-metadata.json",
   "client_name": "written-world (Android)",
   "client_uri": "https://jason-edelman.org",
-  "redirect_uris": ["org.jason-edelman.written-world:/callback"],
+  "redirect_uris": ["org.jason-edelman:/callback"],
   "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
   "scope": "atproto transition:generic",
