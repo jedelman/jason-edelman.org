@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code-Nose: Teaching Jev to Sniff, Not Judge — Dev Journal</title>
+  <meta name="description" content="Built a code review system on top of Jev that only ever flags 'something's off here' — never a verdict, never a merge decision. Shipped it end to end with a real baseline and a real CI gate.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Code-Nose: Teaching Jev to Sniff, Not Judge</h1>
+        <p class="date">September 20, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          I've had Jev — the judgment API underneath the DMML/jeventure work —
+          running through dozens of live batched calls for months, always as a
+          discriminator deciding what a fictional world does next. Today's
+          question was simpler: could the same three primitives review code?
+          Not decide what to merge. Just notice what's off.
+        </p>
+
+        <p>
+          The framing that made it work: Jev as a nose, not a judge. It has
+          exactly three moves — <code>choice</code> (softmax over
+          alternatives), <code>score</code> (a rubric), and <code>noul</code>
+          (an independent yes/no per option, in parallel). A nose only needs
+          the third one. Ask "is this worth a look," independently, per
+          candidate, and never ask it to pick a winner.
+        </p>
+
+        <h2>Two stages, cheap then expensive</h2>
+
+        <p>
+          Stage 1 is pure mechanics, no model involved: cluster the codebase
+          into three shapes worth comparing — sibling files that share a job
+          across forked directories, files that belong to an obvious naming
+          family and should share a structure, and comments that make a
+          numeric claim next to code that might not match it. Each candidate
+          gets handed to Stage 2 already phrased as a comparison, never a raw
+          diff.
+        </p>
+
+        <p>
+          Stage 2 is one batched <code>noul</code> call — every candidate
+          scored independently, ranked against a running baseline instead of
+          a fixed threshold. That last part mattered in practice: the first
+          live batch (structural outliers) scored everything between 0.50
+          and 0.65, decisiveness 0.127. A flat "flag above 0.5" rule would
+          have flagged all nine indiscriminately. A batch with real semantic
+          content — the same script forked five ways, one copy's token limit
+          quietly diverging from the rest — spread from 0.32 to 0.84,
+          decisiveness 0.325. Same model, same question shape, wildly
+          different sharpness, depending entirely on whether there was
+          something real to discriminate on.
+        </p>
+
+        <h2>What broke before it shipped</h2>
+
+        <p>
+          Two real bugs, caught by actually running it against the repo
+          rather than reasoning about it. A comment reading "bumped from
+          8000" got flagged as disagreeing with code that correctly said
+          12000 — the tool was reading a historical reference as a current
+          claim. And comparing every sibling in a five-way forked family
+          against every other sibling produced 129 candidates from one repo,
+          already past what a single Jev call can hold — fixed by comparing
+          each sibling against one reference file instead of all of each
+          other.
+        </p>
+
+        <p>
+          The CI design went through one real correction, too. My first
+          instinct was to have a bot auto-commit the baseline back to main
+          after every merge, or open an automatic PR for it. Simpler: minting
+          stays a manual, deliberate action; CI's only job is a cheap gate
+          checking the checked-in baseline is present and not stale. No bot
+          ever pushes to main.
+        </p>
+
+        <h2>Real spend, real signal</h2>
+
+        <p>
+          Shipped and minted for real: 58 live <code>noul</code> scores
+          against real code in
+          <a href="https://github.com/jedelman/dmml/tree/main/code-nose">jedelman/dmml</a>,
+          a real baseline (mean 0.625, sd 0.095) committed to main, and a
+          GitHub Actions workflow with a required freshness gate and an
+          advisory review job that never blocks a PR. The top real finding —
+          a token-limit constant that drifted in one fork and not its four
+          siblings — is exactly the class of bug the tool was built to catch,
+          and it surfaced on the very first live run.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>
