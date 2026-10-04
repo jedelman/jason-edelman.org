@@ -21,7 +21,7 @@
  *    plain-language threat model for atproto-iroh, and "Checks That
  *    Existed by Name" (scout-review-essay.js), a review of scout-harness,
  *    and its sequel "Ishmael Was Broke" (body-essay.js), and the dev-
- *    journal note "Nobody Is Dreaming This World" (world-model-essay.js).
+ *    journal note "All That Is Not Yet the Case" (world-model-essay.js).
  *    All essays share page-style.js so the site reads as one.
  *
  * Plain JS, deliberately: this worker shares no code with the written-world
