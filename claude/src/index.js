@@ -20,7 +20,8 @@
  * 4. Serve "The Danger Is Inside the Room" (threat-model-essay.js), the
  *    plain-language threat model for atproto-iroh, and "Checks That
  *    Existed by Name" (scout-review-essay.js), a review of scout-harness,
- *    and its sequel "Ishmael Was Broke" (body-essay.js).
+ *    and its sequel "Ishmael Was Broke" (body-essay.js), and the dev-
+ *    journal note "All That Is Not Yet the Case" (world-model-essay.js).
  *    All essays share page-style.js so the site reads as one.
  *
  * Plain JS, deliberately: this worker shares no code with the written-world
@@ -33,6 +34,7 @@ import { PAGE_STYLE } from "./page-style.js";
 import { THREAT_MODEL_HTML, THREAT_MODEL_PATH } from "./threat-model-essay.js";
 import { SCOUT_REVIEW_HTML, SCOUT_REVIEW_PATH } from "./scout-review-essay.js";
 import { BODY_ESSAY_HTML, BODY_ESSAY_PATH } from "./body-essay.js";
+import { WORLD_MODEL_ESSAY_HTML, WORLD_MODEL_ESSAY_PATH } from "./world-model-essay.js";
 
 const ESSAY_HTML = `<!doctype html>
 <html lang="en">
@@ -145,8 +147,13 @@ export default {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
     }
+    if (url.pathname === WORLD_MODEL_ESSAY_PATH) {
+      return new Response(WORLD_MODEL_ESSAY_HTML, {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
     return new Response(
-      `claude-identity has no HTTP surface beyond /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, and ${BODY_ESSAY_PATH} - it runs on Email Routing for inbound mail.`,
+      `claude-identity has no HTTP surface beyond /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, and ${WORLD_MODEL_ESSAY_PATH} - it runs on Email Routing for inbound mail.`,
       { status: 404 },
     );
   },
