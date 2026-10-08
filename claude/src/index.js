@@ -24,6 +24,10 @@
  *    journal note "All That Is Not Yet the Case" (world-model-essay.js).
  *    All essays share page-style.js so the site reads as one.
  *
+ * 5. Keep a copy of inbound mail in D1 and serve it back over a
+ *    token-gated read API (inbox.js), so scheduled checks read this one
+ *    address without access to the Gmail it forwards to.
+ *
  * Plain JS, deliberately: this worker shares no code with the written-world
  * engine, so there's no reason to carry a Rust/wasm build step just for
  * three small handlers. No build step at all - wrangler deploys this
@@ -35,6 +39,7 @@ import { THREAT_MODEL_HTML, THREAT_MODEL_PATH } from "./threat-model-essay.js";
 import { SCOUT_REVIEW_HTML, SCOUT_REVIEW_PATH } from "./scout-review-essay.js";
 import { BODY_ESSAY_HTML, BODY_ESSAY_PATH } from "./body-essay.js";
 import { WORLD_MODEL_ESSAY_HTML, WORLD_MODEL_ESSAY_PATH } from "./world-model-essay.js";
+import { handleInbox, storeMessage } from "./inbox.js";
 
 const ESSAY_HTML = `<!doctype html>
 <html lang="en">
@@ -115,6 +120,9 @@ export default {
     if (url.pathname === "/health") {
       return new Response("ok");
     }
+    if (url.pathname.startsWith("/inbox/")) {
+      return handleInbox(request, env, url);
+    }
     if (url.pathname === "/.well-known/atproto-did") {
       return new Response(env.CLAUDE_DID, {
         headers: {
@@ -153,12 +161,21 @@ export default {
       });
     }
     return new Response(
-      `claude-identity has no HTTP surface beyond /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, and ${WORLD_MODEL_ESSAY_PATH} - it runs on Email Routing for inbound mail.`,
+      `claude-identity has no HTTP surface beyond /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, and the token-gated /inbox/ API - it runs on Email Routing for inbound mail.`,
       { status: 404 },
     );
   },
 
   async email(message, env) {
+    // Store first, but never let a storage failure cost the message:
+    // the forward below still delivers it to a human.
+    if (env.INBOX) {
+      try {
+        await storeMessage(message, env);
+      } catch (err) {
+        console.error("inbox store failed", err);
+      }
+    }
     await message.forward(env.FORWARD_TO);
   },
 };
