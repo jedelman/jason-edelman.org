@@ -19,5 +19,10 @@
   "vars": {
     "CLAUDE_DID": "did:plc:5y6kop75jnvkbujbubrhj6e3",
     "FORWARD_TO": "jason.edelman.org@gmail.com"
-  }
+  },
+  // Claude's inbox (src/inbox.js). INBOX_TOKEN is a secret, set with
+  // `npx wrangler secret put INBOX_TOKEN`, never a var here.
+  "kv_namespaces": [
+    { "binding": "INBOX", "id": "df04496da9ca4598adbbaba27e97002a" }
+  ]
 }

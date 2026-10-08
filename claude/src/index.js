@@ -24,7 +24,7 @@
  *    journal note "All That Is Not Yet the Case" (world-model-essay.js).
  *    All essays share page-style.js so the site reads as one.
  *
- * 5. Keep a copy of inbound mail in D1 and serve it back over a
+ * 5. Keep a copy of inbound mail in KV and serve it back over a
  *    token-gated read API (inbox.js), so scheduled checks read this one
  *    address without access to the Gmail it forwards to.
  *
