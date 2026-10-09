@@ -67,7 +67,7 @@ async function readRaw(stream) {
 const utf8 = new TextEncoder();
 
 // Clip to at most `budget` UTF-8 bytes without splitting a character.
-function clip(value, budget = MAX_FIELD_BYTES) {
+export function clip(value, budget = MAX_FIELD_BYTES) {
   if (value == null) return null;
   if (utf8.encode(value).byteLength <= budget) return value;
   let out = "";
@@ -127,7 +127,7 @@ export async function storeMessage(message, env) {
   if (midKey) await env.INBOX.put(midKey, id);
 }
 
-function json(body, status = 200) {
+export function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { "content-type": "application/json; charset=utf-8" },
@@ -136,12 +136,12 @@ function json(body, status = 200) {
 
 // Hash both sides first so timingSafeEqual always compares equal-length
 // buffers and the token's length doesn't leak either.
-async function authorized(request, env) {
+export async function bearerMatches(request, token) {
   const header = request.headers.get("authorization") || "";
   const given = header.startsWith("Bearer ") ? header.slice(7) : "";
   const [a, b] = await Promise.all([
     crypto.subtle.digest("SHA-256", utf8.encode(given)),
-    crypto.subtle.digest("SHA-256", utf8.encode(env.INBOX_TOKEN)),
+    crypto.subtle.digest("SHA-256", utf8.encode(token)),
   ]);
   return crypto.subtle.timingSafeEqual(a, b);
 }
@@ -150,7 +150,7 @@ export async function handleInbox(request, env, url) {
   if (!env.INBOX || !env.INBOX_TOKEN) {
     return json({ error: "inbox not configured" }, 503);
   }
-  if (!(await authorized(request, env))) {
+  if (!(await bearerMatches(request, env.INBOX_TOKEN))) {
     return json({ error: "unauthorized" }, 401);
   }
 
