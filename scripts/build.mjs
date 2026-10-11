@@ -26,6 +26,7 @@ const STATIC = [
   'dev-journal',
   '.well-known',
   'oauth',
+  'operator-field',
 ];
 
 // Subprojects: { name, dir, buildCmd, outDir, required }
