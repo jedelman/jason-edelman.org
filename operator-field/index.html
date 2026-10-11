@@ -30,7 +30,7 @@ body {
 .app {
   height: 100%; box-sizing: border-box;
   padding: max(8px, env(safe-area-inset-top, 0px)) 12px max(8px, env(safe-area-inset-bottom, 0px));
-  display: grid; grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 0.55fr) auto minmax(0, 0.38fr);
+  display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto minmax(0, 0.55fr) auto minmax(0, 0.38fr);
   gap: 6px; max-width: 900px; margin: 0 auto;
 }
 header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -72,6 +72,10 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; border-r
   -webkit-user-select: text; user-select: text;
 }
 [hidden] { display: none !important; }
+.bank { display: flex; gap: 4px; align-items: center; }
+.slot { flex: 1; min-width: 0; padding: 7px 0; text-align: center; }
+.slot.empty { border-style: dashed; color: var(--dim); }
+.slot[aria-pressed="true"] { border-color: var(--carrier); color: var(--carrier); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -85,6 +89,13 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; border-r
     <button id="btnDel" class="danger">Delete op</button>
     <button id="btnExport">Export</button>
   </header>
+  <div class="bank" role="group" aria-label="Patch bank">
+    <button class="slot" data-i="0">1</button><button class="slot" data-i="1">2</button>
+    <button class="slot" data-i="2">3</button><button class="slot" data-i="3">4</button>
+    <button class="slot" data-i="4">5</button><button class="slot" data-i="5">6</button>
+    <button class="slot" data-i="6">7</button><button class="slot" data-i="7">8</button>
+    <button id="btnDup">Duplicate</button>
+  </div>
 
   <div class="wrap"><canvas id="field" aria-label="Operators in frequency and amplitude space"></canvas></div>
   <div class="hint"><span><b>Double-tap</b> add · <b>drag</b> move · <b>hold</b> a modulator, <b>tap</b> its target</span><span id="selInfo"></span></div>
@@ -99,8 +110,11 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; border-r
 
 <div id="sheet" hidden>
   <div class="card">
-    <h2>Patch</h2>
+    <h2>Export</h2>
     <div class="row">
+      <button id="scopePatch" aria-pressed="true">This patch</button>
+      <button id="scopeBank" aria-pressed="false">Whole bank</button>
+      <span style="flex:1"></span>
       <button id="fmtJson" aria-pressed="true">JSON</button>
       <button id="fmtSc" aria-pressed="false">SuperCollider</button>
     </div>
@@ -135,21 +149,47 @@ const example = () => ({
   edges: [[1, 0], [2, 1]],
 });
 
-let S = load() || example();
-let sel = 0;
+// Bank: 8 slots, one per Launchpad row. The patch being edited is always B.patches[B.slot].
+const SLOTS = 8;
+const blank = () => ({ ops: [{ freq: 220, amp: 0.6, env: defEnv() }], edges: [] });
+const B = load();
+let S = B.patches[B.slot];
+let sel = S.ops.length ? 0 : null;
 let linkMode = false, linkFrom = null;
 
-function load() {
-  try { const s = JSON.parse(localStorage.getItem('opfield')); return valid(s) ? s : null; } catch { return null; }
-}
-function save() { try { localStorage.setItem('opfield', JSON.stringify(S)); } catch {} }
 function valid(s) { return s && Array.isArray(s.ops) && Array.isArray(s.edges); }
+function load() {
+  const fresh = { slot: 0, patches: [example(), ...Array(SLOTS - 1).fill(null)] };
+  try {
+    const b = JSON.parse(localStorage.getItem('opfield-bank'));
+    if (b && Array.isArray(b.patches) && b.patches.length === SLOTS && valid(b.patches[b.slot])) {
+      b.patches = b.patches.map(p => valid(p) ? p : null); return b;
+    }
+    const old = JSON.parse(localStorage.getItem('opfield')); // single patch from before banks
+    if (valid(old)) fresh.patches[0] = old;
+  } catch {}
+  return fresh;
+}
+function save() { try { localStorage.setItem('opfield-bank', JSON.stringify(B)); } catch {} }
+function selectSlot(i) {
+  if (i === B.slot) return;
+  if (!S.ops.length) B.patches[B.slot] = null; // an emptied slot goes back to empty
+  if (!B.patches[i]) B.patches[i] = blank();
+  B.slot = i; S = B.patches[i]; sel = S.ops.length ? 0 : null; linkFrom = null;
+  save(); draw();
+}
+function duplicate() {
+  const i = B.patches.findIndex((p, k) => !p && k !== B.slot);
+  if (i < 0) { toast('No empty slot left'); return; }
+  B.patches[i] = JSON.parse(JSON.stringify(S));
+  toast(`Copied to slot ${i + 1}`); selectSlot(i);
+}
 
 const isCarrier = i => !S.edges.some(e => e[0] === i);
-function reaches(a, b) { // is b reachable from a following edges?
+function reaches(a, b, edges = S.edges) { // is b reachable from a following edges?
   const seen = new Set([a]), st = [a];
   while (st.length) { const n = st.pop(); if (n === b) return true;
-    for (const [s, d] of S.edges) if (s === n && !seen.has(d)) { seen.add(d); st.push(d); } }
+    for (const [s, d] of edges) if (s === n && !seen.has(d)) { seen.add(d); st.push(d); } }
   return false;
 }
 function toggleEdge(s, d) {
@@ -513,29 +553,46 @@ pad.cv.addEventListener('pointercancel', padUp);
 
 // ---------- export ----------
 const r4 = x => Math.round(x * 1e4) / 1e4;
-function exportObj() {
+function exportObj(S) {
   return {
     ops: S.ops.map(o => [r4(o.amp), r4(o.freq)]),
     dag: S.edges.map(e => e.slice()),
     env: S.ops.map(o => { const s = scEnv(o.env); return { ...s, levels: s.levels.map(r4), times: s.times.map(r4), curves: s.curves.map(r4) }; }),
   };
 }
+const a = v => '[' + v.join(', ') + ']';
+function jsonPatch(p, ind) {
+  const x = exportObj(p);
+  return '{\n' + ind + '  "ops": ' + JSON.stringify(x.ops) + ',\n' + ind + '  "dag": ' + JSON.stringify(x.dag) +
+    ',\n' + ind + '  "env": [\n' + x.env.map(e => ind + '    ' + JSON.stringify(e)).join(',\n') + '\n' + ind + '  ]\n' + ind + '}';
+}
+const scEnvs = (x, ind) => x.env.map(e => `${ind}Env(${a(e.levels)}, ${a(e.times)}, ${a(e.curves)}, ${e.releaseNode})`).join(',\n');
 function asJson() {
-  const x = exportObj();
-  return '{\n  "ops": ' + JSON.stringify(x.ops) + ',\n  "dag": ' + JSON.stringify(x.dag) +
-    ',\n  "env": [\n    ' + x.env.map(e => JSON.stringify(e)).join(',\n    ') + '\n  ]\n}';
+  if (scope === 'patch') return jsonPatch(S, '');
+  return '{\n  "bank": [\n' + B.patches.map(p => p && p.ops.length ? '  ' + jsonPatch(p, '  ') : '  null').join(',\n') + '\n  ]\n}';
 }
 function asSc() {
-  const x = exportObj(), a = v => '[' + v.join(', ') + ']';
-  return '(\n// [amp, freq] per operator; index = position\n~ops = ' + a(x.ops.map(a)) + ';\n' +
-    '// [src, dst]: src modulates dst. Carriers = ops with no outgoing edge.\n~dag = ' + a(x.dag.map(a)) + ';\n' +
-    '~envs = [\n' + x.env.map(e => `  Env(${a(e.levels)}, ${a(e.times)}, ${a(e.curves)}, ${e.releaseNode})`).join(',\n') + '\n];\n)';
+  if (scope === 'patch') {
+    const x = exportObj(S);
+    return '(\n// [amp, freq] per operator; index = position\n~ops = ' + a(x.ops.map(a)) + ';\n' +
+      '// [src, dst]: src modulates dst. Carriers = ops with no outgoing edge.\n~dag = ' + a(x.dag.map(a)) + ';\n' +
+      '~envs = [\n' + scEnvs(x, '  ') + '\n];\n)';
+  }
+  return '(\n// ' + SLOTS + ' slots, nil = empty. ops: [amp, freq]; dag: [src, dst], src modulates dst.\n~bank = [\n' +
+    B.patches.map((p, i) => {
+      if (!p || !p.ops.length) return `  nil /* ${i + 1} */`;
+      const x = exportObj(p);
+      return `  ( // ${i + 1}\n    ops: ${a(x.ops.map(a))},\n    dag: ${a(x.dag.map(a))},\n    envs: [\n${scEnvs(x, '      ')}\n    ]\n  )`;
+    }).join(',\n') + '\n];\n)';
 }
-let fmt = 'json';
+let fmt = 'json', scope = 'patch';
 const out = document.getElementById('out');
+const press = (id, on) => document.getElementById(id).setAttribute('aria-pressed', on);
 const refreshOut = () => { out.value = fmt === 'json' ? asJson() : asSc();
-  document.getElementById('fmtJson').setAttribute('aria-pressed', fmt === 'json');
-  document.getElementById('fmtSc').setAttribute('aria-pressed', fmt === 'sc'); };
+  press('fmtJson', fmt === 'json'); press('fmtSc', fmt === 'sc');
+  press('scopePatch', scope === 'patch'); press('scopeBank', scope === 'bank'); };
+document.getElementById('scopePatch').onclick = () => { scope = 'patch'; refreshOut(); };
+document.getElementById('scopeBank').onclick = () => { scope = 'bank'; refreshOut(); };
 document.getElementById('btnExport').onclick = () => { refreshOut(); document.getElementById('sheet').hidden = false; };
 document.getElementById('btnClose').onclick = () => { document.getElementById('sheet').hidden = true; };
 document.getElementById('fmtJson').onclick = () => { fmt = 'json'; refreshOut(); };
@@ -545,10 +602,8 @@ document.getElementById('btnCopy').onclick = () => {
   const fallback = () => { out.focus(); out.select(); toast('Selected — copy with your keyboard or long-press'); };
   try { navigator.clipboard.writeText(out.value).then(done, fallback); } catch { fallback(); }
 };
-document.getElementById('btnLoad').onclick = () => {
-  try {
-    const x = JSON.parse(out.value);
-    if (!Array.isArray(x.ops) || !Array.isArray(x.dag)) throw new Error('needs "ops" and "dag" arrays');
+function parsePatch(x) {
+    if (!x || !Array.isArray(x.ops) || !Array.isArray(x.dag)) throw new Error('a patch needs "ops" and "dag" arrays');
     const n = x.ops.length;
     const ops = x.ops.map(([amp, freq], i) => {
       const e = x.env && x.env[i];
@@ -559,10 +614,28 @@ document.getElementById('btnLoad').onclick = () => {
       }
       return { amp: clamp(+amp, 0, 1), freq: clamp(+freq, FMIN, FMAX), env };
     });
-    const edges = x.dag.filter(([s, d]) => s >= 0 && d >= 0 && s < n && d < n && s !== d);
-    const prev = S; S = { ops, edges: [] };
-    for (const [s, d] of edges) { if (reaches(d, s)) { S = prev; throw new Error(`edge ${s}→${d} makes a loop`); } S.edges.push([s, d]); }
-    sel = ops.length ? 0 : null; save(); draw(); toast('Loaded');
+    const edges = [];
+    for (const [s, d] of x.dag.filter(([s, d]) => s >= 0 && d >= 0 && s < n && d < n && s !== d)) {
+      if (reaches(d, s, edges)) throw new Error(`edge ${s}→${d} makes a loop`);
+      edges.push([s, d]);
+    }
+    return { ops, edges };
+}
+document.getElementById('btnLoad').onclick = () => {
+  try {
+    const x = JSON.parse(out.value);
+    if (Array.isArray(x.bank)) {
+      const ps = x.bank.slice(0, SLOTS).map(p => p == null ? null : parsePatch(p));
+      while (ps.length < SLOTS) ps.push(null);
+      if (!ps.some(Boolean)) throw new Error('the bank is empty');
+      B.patches = ps; B.slot = ps.findIndex(Boolean);
+      toast(`Loaded bank: ${ps.filter(Boolean).length} patches`);
+    } else {
+      B.patches[B.slot] = parsePatch(x);
+      toast(`Loaded into slot ${B.slot + 1}`);
+    }
+    S = B.patches[B.slot]; sel = S.ops.length ? 0 : null; linkFrom = null;
+    save(); draw();
   } catch (err) { toast('Could not load: ' + err.message); }
 };
 
@@ -572,12 +645,22 @@ document.getElementById('btnLink').onclick = e => {
   if (linkMode) toast('Tap the modulator, then its target');
 };
 document.getElementById('btnDel').onclick = () => delOp(sel);
+document.querySelectorAll('.slot').forEach(b => b.onclick = () => selectSlot(+b.dataset.i));
+document.getElementById('btnDup').onclick = duplicate;
+function drawBank() {
+  document.querySelectorAll('.slot').forEach(b => {
+    const i = +b.dataset.i, p = B.patches[i];
+    b.classList.toggle('empty', !p || !p.ops.length);
+    b.setAttribute('aria-pressed', i === B.slot);
+    b.setAttribute('aria-label', `Slot ${i + 1}${p && p.ops.length ? `, ${p.ops.length} operators` : ', empty'}`);
+  });
+}
 let toastT = 0;
 function toast(msg) {
   const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false;
   clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1800);
 }
-function draw() { drawField(field); drawEnv(env); }
+function draw() { drawField(field); drawEnv(env); drawBank(); }
 document.fonts && document.fonts.ready.then(draw);
 })();
 </script>
