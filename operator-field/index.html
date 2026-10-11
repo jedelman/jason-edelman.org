@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="A touch instrument for designing FM synth patches: place sine operators in frequency and amplitude, wire which modulates which, draw envelopes, play, and export to SuperCollider.">
+<title>Operator Field</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Epilogue:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one-screen instrument. Header, operator field (freq x amp), envelope strip, audition pad, stacked. */
+:root {
+  --ink: oklch(11% 0.006 145);    /* ground, same as the home page */
+  --panel: oklch(16% 0.007 145);  /* surfaces */
+  --line: oklch(25% 0.008 145);   /* grid, borders */
+  --text: oklch(85% 0.010 145);
+  --dim: oklch(56% 0.010 145);
+  --carrier: oklch(70% 0.13 145); /* operators that reach the output */
+  --mod: oklch(78% 0.12 75);      /* operators that modulate */
+  --warn: oklch(65% 0.16 30);
+  --f-ui: "Epilogue", "Arial Narrow", sans-serif;
+  --f-data: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--ink); color: var(--text); font-family: var(--f-ui);
+  margin: 0; overflow: hidden; -webkit-user-select: none; user-select: none;
+}
+.app {
+  height: 100%; box-sizing: border-box;
+  padding: max(8px, env(safe-area-inset-top, 0px)) 12px max(8px, env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 0.55fr) auto minmax(0, 0.38fr);
+  gap: 6px; max-width: 900px; margin: 0 auto;
+}
+header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: 0.02em; }
+.home { font: 11px var(--f-data); color: var(--dim); margin-right: auto; }
+.home:hover { color: var(--text); }
+button {
+  font: 500 12px var(--f-data); color: var(--text); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; cursor: pointer;
+}
+button:focus-visible { outline: 2px solid var(--carrier); outline-offset: 1px; }
+button[aria-pressed="true"] { border-color: var(--mod); color: var(--mod); }
+button.danger { color: var(--warn); }
+canvas { width: 100%; height: 100%; display: block; touch-action: none; border-radius: 6px; background: var(--panel); }
+.wrap { min-height: 0; position: relative; }
+.hint {
+  font: 11px var(--f-data); color: var(--dim); display: flex; justify-content: space-between;
+  gap: 8px; flex-wrap: wrap; letter-spacing: 0.01em;
+}
+.hint b { color: var(--text); font-weight: 500; }
+#toast {
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  background: var(--panel); border: 1px solid var(--warn); color: var(--text);
+  font: 12px var(--f-data); padding: 8px 12px; border-radius: 6px;
+}
+#sheet {
+  position: fixed; inset: 0; background: color-mix(in srgb, var(--ink) 88%, transparent);
+  display: grid; place-items: center; padding: 16px;
+}
+#sheet .card {
+  width: min(640px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+  padding: 14px; display: grid; gap: 10px; box-sizing: border-box;
+}
+#sheet h2 { font-size: 14px; margin: 0; font-weight: 600; }
+#sheet .row { display: flex; gap: 8px; flex-wrap: wrap; }
+#out {
+  width: 100%; box-sizing: border-box; height: 42vh; resize: vertical; background: var(--ink); color: var(--text);
+  border: 1px solid var(--line); border-radius: 6px; font: 12px/1.45 var(--f-data); padding: 10px;
+  -webkit-user-select: text; user-select: text;
+}
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Operator Field</h1>
+    <a class="home" href="/">home</a>
+    <button id="btnLink" aria-pressed="false">Link</button>
+    <button id="btnDel" class="danger">Delete op</button>
+    <button id="btnExport">Export</button>
+  </header>
+
+  <div class="wrap"><canvas id="field" aria-label="Operators in frequency and amplitude space"></canvas></div>
+  <div class="hint"><span><b>Double-tap</b> add · <b>drag</b> move · <b>hold</b> a modulator, <b>tap</b> its target</span><span id="selInfo"></span></div>
+
+  <div class="wrap"><canvas id="env" aria-label="Envelope of the selected operator"></canvas></div>
+  <div class="hint"><span><b>3 fingers</b> place peak, sustain, end · <b>drag</b> a point · <b>drag between</b> points to bend</span></div>
+
+  <div class="wrap"><canvas id="pad" aria-label="Audition pad"></canvas></div>
+</div>
+
+<div id="toast" hidden></div>
+
+<div id="sheet" hidden>
+  <div class="card">
+    <h2>Patch</h2>
+    <div class="row">
+      <button id="fmtJson" aria-pressed="true">JSON</button>
+      <button id="fmtSc" aria-pressed="false">SuperCollider</button>
+    </div>
+    <textarea id="out" spellcheck="false" aria-label="Patch text"></textarea>
+    <div class="row">
+      <button id="btnCopy">Copy</button>
+      <button id="btnLoad">Load JSON from box</button>
+      <button id="btnClose" style="margin-left:auto">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+// ---------- model ----------
+// op: { freq Hz, amp 0..1, env: { t:[peakT, susT, endT] s, l:[peakL, susL], c:[c0,c1,c2] SC Env curves } }
+// edges: [src, dst]  — src modulates dst. Operators with no outgoing edge are carriers.
+const FMIN = 20, FMAX = 8000, TMAX = 4, INDEX = 8;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const C = {};
+['--ink','--panel','--line','--text','--dim','--carrier','--mod','--warn'].forEach(k => C[k.slice(2)] = css(k));
+
+const defEnv = () => ({ t: [0.01, 0.3, 1.0], l: [1, 0.6], c: [-2, -3, -4] });
+const example = () => ({
+  ops: [
+    { freq: 220,  amp: 0.6,  env: { t: [0.02, 0.6, 1.6], l: [1, 0.7], c: [-2, -2, -4] } },
+    { freq: 440,  amp: 0.35, env: { t: [0.005, 0.9, 1.4], l: [1, 0.25], c: [-1, -5, -4] } },
+    { freq: 1540, amp: 0.15, env: { t: [0.003, 0.25, 0.6], l: [1, 0.0], c: [0, -6, -4] } },
+  ],
+  edges: [[1, 0], [2, 1]],
+});
+
+let S = load() || example();
+let sel = 0;
+let linkMode = false, linkFrom = null;
+
+function load() {
+  try { const s = JSON.parse(localStorage.getItem('opfield')); return valid(s) ? s : null; } catch { return null; }
+}
+function save() { try { localStorage.setItem('opfield', JSON.stringify(S)); } catch {} }
+function valid(s) { return s && Array.isArray(s.ops) && Array.isArray(s.edges); }
+
+const isCarrier = i => !S.edges.some(e => e[0] === i);
+function reaches(a, b) { // is b reachable from a following edges?
+  const seen = new Set([a]), st = [a];
+  while (st.length) { const n = st.pop(); if (n === b) return true;
+    for (const [s, d] of S.edges) if (s === n && !seen.has(d)) { seen.add(d); st.push(d); } }
+  return false;
+}
+function toggleEdge(s, d) {
+  if (s === d) return;
+  const k = S.edges.findIndex(e => e[0] === s && e[1] === d);
+  if (k >= 0) { S.edges.splice(k, 1); }
+  else if (reaches(d, s)) { toast(`op ${s} → op ${d} would make a loop`); return; }
+  else S.edges.push([s, d]);
+  save(); draw();
+}
+function addOp(freq, amp) { S.ops.push({ freq, amp, env: defEnv() }); sel = S.ops.length - 1; save(); draw(); }
+function delOp(i) {
+  if (i == null || !S.ops[i]) return;
+  S.ops.splice(i, 1);
+  S.edges = S.edges.filter(e => e[0] !== i && e[1] !== i).map(e => e.map(n => n > i ? n - 1 : n));
+  sel = S.ops.length ? Math.min(i, S.ops.length - 1) : null;
+  save(); draw();
+}
+
+// SC Env segment shape, identical to Env's numeric curve
+function shape(y0, y1, x, c) {
+  if (Math.abs(c) < 1e-3) return y0 + (y1 - y0) * x;
+  return y0 + (y1 - y0) * (1 - Math.exp(c * x)) / (1 - Math.exp(c));
+}
+// level during attack/decay/sustain (gate held), t seconds after onset
+function envHeld(env, t) {
+  const [t1, t2] = env.t, [l1, l2] = env.l;
+  if (t <= 0) return 0;
+  if (t < t1) return shape(0, l1, t / t1, env.c[0]);
+  if (t < t2) return shape(l1, l2, (t - t1) / (t2 - t1), env.c[1]);
+  return l2;
+}
+function scEnv(env) {
+  const [t1, t2, t3] = env.t;
+  return { levels: [0, env.l[0], env.l[1], 0], times: [t1, t2 - t1, t3 - t2], curves: env.c.slice(), releaseNode: 2 };
+}
+
+// ---------- canvas plumbing ----------
+function setup(cv, drawFn) {
+  const ctx = cv.getContext('2d');
+  const o = { cv, ctx, w: 0, h: 0, drawFn };
+  new ResizeObserver(() => {
+    const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+    o.w = r.width; o.h = r.height;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawFn(o);
+  }).observe(cv);
+  return o;
+}
+const pos = (cv, e) => { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmtF = f => f >= 1000 ? (f / 1000).toFixed(f >= 10000 ? 1 : 2) + 'k' : f.toFixed(f < 100 && !Number.isInteger(f) ? 1 : 0);
+
+// ---------- operator field ----------
+const FM = { l: 34, r: 12, t: 12, b: 22 };
+const field = setup(document.getElementById('field'), drawField);
+const fx = f => FM.l + (Math.log(f / FMIN) / Math.log(FMAX / FMIN)) * (field.w - FM.l - FM.r);
+const fy = a => FM.t + (1 - a) * (field.h - FM.t - FM.b);
+const xf = x => FMIN * Math.pow(FMAX / FMIN, clamp((x - FM.l) / (field.w - FM.l - FM.r), 0, 1));
+const ya = y => clamp(1 - (y - FM.t) / (field.h - FM.t - FM.b), 0, 1);
+const R = 15;
+
+function drawField(o) {
+  const { ctx, w, h } = o; if (!w) return;
+  ctx.clearRect(0, 0, w, h);
+  ctx.font = '10px "IBM Plex Mono", monospace'; ctx.lineWidth = 1;
+  for (const f of [50, 100, 200, 500, 1000, 2000, 5000]) {
+    const x = Math.round(fx(f)) + 0.5;
+    ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(x, FM.t); ctx.lineTo(x, h - FM.b); ctx.stroke();
+    ctx.fillStyle = C.dim; ctx.textAlign = 'center'; ctx.fillText(fmtF(f), x, h - 7);
+  }
+  for (const a of [0, 0.25, 0.5, 0.75, 1]) {
+    const y = Math.round(fy(a)) + 0.5;
+    ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(FM.l, y); ctx.lineTo(w - FM.r, y); ctx.stroke();
+    ctx.fillStyle = C.dim; ctx.textAlign = 'right'; ctx.fillText(a.toFixed(2).replace(/^0/, ''), FM.l - 5, y + 3);
+  }
+  ctx.fillStyle = C.dim; ctx.textAlign = 'right'; ctx.fillText('Hz', w - FM.r, h - 7 - 11);
+
+  // edges
+  for (const [s, d] of S.edges) {
+    const a = S.ops[s], b = S.ops[d]; if (!a || !b) continue;
+    const x1 = fx(a.freq), y1 = fy(a.amp), x2 = fx(b.freq), y2 = fy(b.amp);
+    const L = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / L, uy = (y2 - y1) / L;
+    const sx = x1 + ux * R, sy = y1 + uy * R, ex = x2 - ux * (R + 3), ey = y2 - uy * (R + 3);
+    ctx.strokeStyle = C.mod; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    ctx.fillStyle = C.mod; ctx.beginPath();
+    ctx.moveTo(ex, ey); ctx.lineTo(ex - ux * 9 - uy * 5, ey - uy * 9 + ux * 5); ctx.lineTo(ex - ux * 9 + uy * 5, ey - uy * 9 - ux * 5);
+    ctx.closePath(); ctx.fill();
+  }
+  // nodes
+  S.ops.forEach((op, i) => {
+    const x = fx(op.freq), y = fy(op.amp), car = isCarrier(i), col = car ? C.carrier : C.mod;
+    if (i === sel) { ctx.strokeStyle = C.text; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, R + 5, 0, 7); ctx.stroke(); }
+    if (i === linkFrom) { ctx.setLineDash([3, 3]); ctx.strokeStyle = C.mod; ctx.beginPath(); ctx.arc(x, y, R + 9, 0, 7); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.lineWidth = 2; ctx.strokeStyle = col; ctx.fillStyle = car ? col : C.panel;
+    ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = car ? C.ink : col; ctx.font = '500 12px "IBM Plex Mono", monospace'; ctx.textAlign = 'center';
+    ctx.fillText(String(i), x, y + 4);
+    ctx.fillStyle = C.dim; ctx.font = '10px "IBM Plex Mono", monospace';
+    const ly = y + R + 13 > h - FM.b ? y - R - 6 : y + R + 13;
+    ctx.fillText(`${fmtF(op.freq)} · ${op.amp.toFixed(2).replace(/^0/, '')}`, x, ly);
+  });
+  const op = S.ops[sel];
+  document.getElementById('selInfo').textContent = op
+    ? `op ${sel} ${isCarrier(sel) ? 'carrier' : 'modulator'} · ${op.freq.toFixed(1)} Hz · amp ${op.amp.toFixed(3)}`
+    : 'no operator';
+}
+
+const nodeAt = p => {
+  let best = null, bd = R + 12;
+  S.ops.forEach((op, i) => { const d = Math.hypot(fx(op.freq) - p.x, fy(op.amp) - p.y); if (d < bd) { bd = d; best = i; } });
+  return best;
+};
+
+const fp = new Map(); // pointerId -> { mode, node, dx, dy }
+let lastTap = { t: 0, x: 0, y: 0 };
+field.cv.addEventListener('pointerdown', e => {
+  field.cv.setPointerCapture(e.pointerId);
+  const p = pos(field.cv, e), hit = nodeAt(p);
+  if (linkMode) {
+    if (hit == null) { linkFrom = null; }
+    else if (linkFrom == null) { linkFrom = hit; }
+    else { toggleEdge(linkFrom, hit); linkFrom = null; }
+    fp.set(e.pointerId, { mode: 'none' }); draw(); return;
+  }
+  if (hit != null) {
+    const holder = [...fp.values()].find(v => v.mode === 'drag' && v.node !== hit);
+    if (holder) { holder.mode = 'held'; toggleEdge(holder.node, hit); fp.set(e.pointerId, { mode: 'none' }); return; }
+    sel = hit;
+    const op = S.ops[hit];
+    fp.set(e.pointerId, { mode: 'drag', node: hit, dx: fx(op.freq) - p.x, dy: fy(op.amp) - p.y });
+    draw(); return;
+  }
+  const now = performance.now();
+  if (now - lastTap.t < 320 && Math.hypot(p.x - lastTap.x, p.y - lastTap.y) < 30) { addOp(xf(p.x), ya(p.y)); lastTap.t = 0; }
+  else lastTap = { t: now, x: p.x, y: p.y };
+  fp.set(e.pointerId, { mode: 'none' });
+});
+field.cv.addEventListener('pointermove', e => {
+  const v = fp.get(e.pointerId); if (!v || v.mode !== 'drag') return;
+  const p = pos(field.cv, e), op = S.ops[v.node];
+  op.freq = xf(p.x + v.dx); op.amp = ya(p.y + v.dy);
+  draw();
+});
+const fieldUp = e => { const v = fp.get(e.pointerId); fp.delete(e.pointerId); if (v && v.mode !== 'none') save(); };
+field.cv.addEventListener('pointerup', fieldUp);
+field.cv.addEventListener('pointercancel', fieldUp);
+
+// ---------- envelope ----------
+const EM = { l: 30, r: 12, t: 10, b: 20 };
+const env = setup(document.getElementById('env'), drawEnv);
+// sqrt time axis: short attacks get room
+const ex = t => EM.l + Math.sqrt(clamp(t, 0, TMAX) / TMAX) * (env.w - EM.l - EM.r);
+const ey = l => EM.t + (1 - l) * (env.h - EM.t - EM.b);
+const xt = x => TMAX * Math.pow(clamp((x - EM.l) / (env.w - EM.l - EM.r), 0, 1), 2);
+const yl = y => clamp(1 - (y - EM.t) / (env.h - EM.t - EM.b), 0, 1);
+const envPts = E => [[0, 0], [E.t[0], E.l[0]], [E.t[1], E.l[1]], [E.t[2], 0]];
+
+function drawEnv(o) {
+  const { ctx, w, h } = o; if (!w) return;
+  ctx.clearRect(0, 0, w, h);
+  ctx.font = '10px "IBM Plex Mono", monospace'; ctx.lineWidth = 1;
+  for (const t of [0.01, 0.1, 0.5, 1, 2, 4]) {
+    const x = Math.round(ex(t)) + 0.5;
+    ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(x, EM.t); ctx.lineTo(x, h - EM.b); ctx.stroke();
+    ctx.fillStyle = C.dim; ctx.textAlign = 'center'; ctx.fillText(t < 1 ? String(t).replace(/^0/, '') : t + 's', x, h - 6);
+  }
+  for (const l of [0, 0.5, 1]) {
+    const y = Math.round(ey(l)) + 0.5;
+    ctx.strokeStyle = C.line; ctx.beginPath(); ctx.moveTo(EM.l, y); ctx.lineTo(w - EM.r, y); ctx.stroke();
+    ctx.fillStyle = C.dim; ctx.textAlign = 'right'; ctx.fillText(String(l), EM.l - 5, y + 3);
+  }
+  const op = S.ops[sel];
+  if (!op) { ctx.fillStyle = C.dim; ctx.textAlign = 'center'; ctx.fillText('select an operator', w / 2, h / 2); return; }
+  const E = op.env, P = envPts(E), col = isCarrier(sel) ? C.carrier : C.mod;
+  ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.beginPath();
+  for (let k = 0; k < 3; k++) {
+    const [t0, l0] = P[k], [t1, l1] = P[k + 1];
+    for (let j = 0; j <= 48; j++) {
+      const u = j / 48, x = ex(t0 + (t1 - t0) * u), y = ey(shape(l0, l1, u, E.c[k]));
+      (k === 0 && j === 0) ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
+  const names = ['peak', 'sustain', 'end'];
+  for (let k = 1; k <= 3; k++) {
+    const x = ex(P[k][0]), y = ey(P[k][1]);
+    ctx.fillStyle = k === 2 ? col : C.panel; ctx.strokeStyle = col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = C.dim; ctx.textAlign = 'center'; ctx.font = '10px "IBM Plex Mono", monospace';
+    ctx.fillText(names[k - 1], x, k === 3 ? y - 11 : (y - 11 < EM.t + 4 ? y + 19 : y - 11));
+  }
+  ctx.textAlign = 'right'; ctx.fillStyle = C.dim;
+  ctx.fillText(`op ${sel} · curves ${E.c.map(c => c.toFixed(1)).join(' ')}`, w - EM.r - 4, EM.t + 12);
+}
+
+const epts = new Map(); // pointerId -> {x,y}
+let emode = null;        // { kind:'drag', k } | { kind:'bend', k, y0, c0 } | { kind:'place' } | { kind:'idle' }
+function fixOrder(E) {
+  const g = 0.002;
+  E.t[0] = clamp(E.t[0], g, TMAX - 2 * g);
+  E.t[1] = clamp(E.t[1], E.t[0] + g, TMAX - g);
+  E.t[2] = clamp(E.t[2], E.t[1] + g, TMAX);
+}
+function place() {
+  const E = S.ops[sel].env, pts = [...epts.values()].sort((a, b) => a.x - b.x).slice(0, 3);
+  pts.forEach((p, k) => { E.t[k] = xt(p.x); if (k < 2) E.l[k] = yl(p.y); });
+  for (let k = 1; k < 3; k++) if (E.t[k] <= E.t[k - 1]) E.t[k] = E.t[k - 1] + 0.002;
+  fixOrder(E);
+}
+env.cv.addEventListener('pointerdown', e => {
+  if (!S.ops[sel]) return;
+  env.cv.setPointerCapture(e.pointerId);
+  const p = pos(env.cv, e); epts.set(e.pointerId, p);
+  if (epts.size >= 2) { emode = { kind: 'place' }; place(); draw(); return; }
+  const E = S.ops[sel].env, P = envPts(E);
+  let k = null, bd = 26;
+  for (let i = 1; i <= 3; i++) { const d = Math.hypot(ex(P[i][0]) - p.x, ey(P[i][1]) - p.y); if (d < bd) { bd = d; k = i; } }
+  if (k != null) emode = { kind: 'drag', k };
+  else {
+    const t = xt(p.x), seg = t < E.t[0] ? 0 : t < E.t[1] ? 1 : 2;
+    emode = { kind: 'bend', k: seg, y0: p.y, c0: E.c[seg] };
+  }
+});
+env.cv.addEventListener('pointermove', e => {
+  if (!epts.has(e.pointerId) || !emode) return;
+  const p = pos(env.cv, e); epts.set(e.pointerId, p);
+  const E = S.ops[sel].env;
+  if (emode.kind === 'place') place();
+  else if (emode.kind === 'drag') {
+    const k = emode.k; E.t[k - 1] = xt(p.x); if (k < 3) E.l[k - 1] = yl(p.y); fixOrder(E);
+  } else if (emode.kind === 'bend') {
+    const P = envPts(E), k = emode.k, rising = P[k + 1][1] > P[k][1];
+    const up = (emode.y0 - p.y) / 12; // px up → curve units
+    E.c[k] = clamp(emode.c0 + (rising ? -up : up), -12, 12);
+    if (Math.abs(E.c[k]) < 0.25) E.c[k] = 0;
+  }
+  draw();
+});
+const envUp = e => {
+  if (!epts.delete(e.pointerId)) return;
+  if (epts.size === 0) { emode = null; save(); }
+  else if (emode && emode.kind === 'place') emode = { kind: 'idle' };
+};
+env.cv.addEventListener('pointerup', envUp);
+env.cv.addEventListener('pointercancel', envUp);
+
+// ---------- audio ----------
+let actx = null, master = null;
+function audio() {
+  if (actx) { if (actx.state === 'suspended') actx.resume(); return actx; }
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = actx.createDynamicsCompressor();
+  master = actx.createGain(); master.gain.value = 0.35;
+  master.connect(comp); comp.connect(actx.destination);
+  return actx;
+}
+function curveArr(fn, dur) {
+  const n = clamp(Math.ceil(dur * 400), 8, 4096), a = new Float32Array(n);
+  for (let i = 0; i < n; i++) a[i] = fn(dur * i / (n - 1));
+  return a;
+}
+// one voice = one copy of the patch
+function startVoice(ctl) {
+  const ctx = audio(), t0 = ctx.currentTime + 0.01;
+  const ops = S.ops.map(o => ({ ...o, env: { t: o.env.t.slice(), l: o.env.l.slice(), c: o.env.c.slice() } }));
+  const edges = S.edges.map(e => e.slice());
+  const carriers = ops.map((_, i) => !edges.some(e => e[0] === i));
+  const nCar = Math.max(1, carriers.filter(Boolean).length);
+  const vg = ctx.createGain(); vg.gain.value = ctl.vol; vg.connect(master);
+  const nodes = ops.map((op, i) => {
+    const osc = ctx.createOscillator(); osc.frequency.value = op.freq * ctl.tr;
+    const eg = ctx.createGain(); eg.gain.value = 0;
+    const sg = ctx.createGain();
+    osc.connect(eg); eg.connect(sg);
+    const held = op.env.t[1];
+    eg.gain.setValueCurveAtTime(curveArr(t => envHeld(op.env, t), held), t0, held);
+    return { osc, eg, sg, op };
+  });
+  const setDepths = (ctl, at) => nodes.forEach((n, i) => {
+    const v = carriers[i] ? n.op.amp / nCar : n.op.amp * INDEX * n.op.freq * ctl.tr * ctl.bright;
+    n.sg.gain.setTargetAtTime(v, at, 0.015);
+    n.osc.frequency.setTargetAtTime(n.op.freq * ctl.tr, at, 0.015);
+  });
+  nodes.forEach((n, i) => {
+    const v = carriers[i] ? n.op.amp / nCar : n.op.amp * INDEX * n.op.freq * ctl.tr * ctl.bright;
+    n.sg.gain.value = v;
+    if (carriers[i]) n.sg.connect(vg);
+    for (const [s, d] of edges) if (s === i) n.sg.connect(nodes[d].osc.frequency);
+    n.osc.start(t0);
+  });
+  return {
+    update(c) { const at = ctx.currentTime; setDepths(c, at); vg.gain.setTargetAtTime(c.vol, at, 0.02); },
+    release() {
+      const now = ctx.currentTime + 0.005, el = now - t0;
+      let end = now;
+      nodes.forEach(n => {
+        const lv = envHeld(n.op.env, el), rt = n.op.env.t[2] - n.op.env.t[1], c = n.op.env.c[2];
+        n.eg.gain.cancelScheduledValues(0);
+        n.eg.gain.setValueAtTime(lv, now);
+        n.eg.gain.setValueCurveAtTime(curveArr(t => shape(lv, 0, t / rt, c), rt), now + 0.002, rt);
+        end = Math.max(end, now + rt + 0.01);
+      });
+      nodes.forEach(n => n.osc.stop(end + 0.05));
+      setTimeout(() => vg.disconnect(), (end - ctx.currentTime + 0.2) * 1000);
+    },
+  };
+}
+
+// ---------- audition pad ----------
+const pad = setup(document.getElementById('pad'), drawPad);
+const voices = new Map(); // pointerId -> { v, p, ctl }
+let pressSeen = new Set();
+function ctlFrom(p, e) {
+  const u = clamp(p.x / pad.w, 0, 1), vy = clamp(1 - p.y / pad.h, 0, 1);
+  const pr = e.pointerType === 'mouse' ? null : e.pressure;
+  if (pr != null) pressSeen.add(pr.toFixed(2));
+  return { tr: Math.pow(2, (u - 0.5) * 2), bright: vy * 2, vol: pr == null ? 0.8 : 0.3 + 0.7 * clamp(pr, 0, 1), pr };
+}
+function drawPad(o) {
+  const { ctx, w, h } = o; if (!w) return;
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = C.line; ctx.lineWidth = 1;
+  for (let k = 0; k <= 24; k++) { // semitone ticks across ±1 octave
+    const x = Math.round(k / 24 * w) + 0.5, oct = k % 12 === 0;
+    ctx.globalAlpha = oct ? 1 : 0.45; ctx.beginPath(); ctx.moveTo(x, oct ? 0 : h - 10); ctx.lineTo(x, h); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.font = '10px "IBM Plex Mono", monospace'; ctx.fillStyle = C.dim;
+  ctx.textAlign = 'left'; ctx.fillText('−1 oct', 6, 13);
+  ctx.textAlign = 'center'; ctx.fillText('touch to play', w / 2, h / 2 - 4);
+  ctx.fillText('x pitch · y mod depth · pressure level', w / 2, h / 2 + 10);
+  ctx.textAlign = 'right'; ctx.fillText('+1 oct', w - 6, 13);
+  for (const { p, ctl } of voices.values()) {
+    ctx.strokeStyle = C.carrier; ctx.fillStyle = C.carrier; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 14 + 16 * (ctl.pr ?? 0.5), 0, 7); ctx.stroke();
+    ctx.textAlign = 'center';
+    ctx.fillText(`×${ctl.tr.toFixed(3)}  d${ctl.bright.toFixed(2)}  p${ctl.pr == null ? '–' : ctl.pr.toFixed(2)}`, p.x, Math.max(26, p.y - 36));
+  }
+  if (pressSeen.size === 1 && voices.size) {
+    ctx.fillStyle = C.dim; ctx.textAlign = 'left'; ctx.fillText('pressure looks static on this device', 6, h - 14);
+  }
+}
+pad.cv.addEventListener('pointerdown', e => {
+  if (!S.ops.length) { toast('Add an operator first'); return; }
+  pad.cv.setPointerCapture(e.pointerId);
+  const p = pos(pad.cv, e), ctl = ctlFrom(p, e);
+  voices.set(e.pointerId, { v: startVoice(ctl), p, ctl });
+  drawPad(pad);
+});
+pad.cv.addEventListener('pointermove', e => {
+  const vo = voices.get(e.pointerId); if (!vo) return;
+  vo.p = pos(pad.cv, e); vo.ctl = ctlFrom(vo.p, e); vo.v.update(vo.ctl);
+  drawPad(pad);
+});
+const padUp = e => { const vo = voices.get(e.pointerId); if (!vo) return; vo.v.release(); voices.delete(e.pointerId); drawPad(pad); };
+pad.cv.addEventListener('pointerup', padUp);
+pad.cv.addEventListener('pointercancel', padUp);
+
+// ---------- export ----------
+const r4 = x => Math.round(x * 1e4) / 1e4;
+function exportObj() {
+  return {
+    ops: S.ops.map(o => [r4(o.amp), r4(o.freq)]),
+    dag: S.edges.map(e => e.slice()),
+    env: S.ops.map(o => { const s = scEnv(o.env); return { ...s, levels: s.levels.map(r4), times: s.times.map(r4), curves: s.curves.map(r4) }; }),
+  };
+}
+function asJson() {
+  const x = exportObj();
+  return '{\n  "ops": ' + JSON.stringify(x.ops) + ',\n  "dag": ' + JSON.stringify(x.dag) +
+    ',\n  "env": [\n    ' + x.env.map(e => JSON.stringify(e)).join(',\n    ') + '\n  ]\n}';
+}
+function asSc() {
+  const x = exportObj(), a = v => '[' + v.join(', ') + ']';
+  return '(\n// [amp, freq] per operator; index = position\n~ops = ' + a(x.ops.map(a)) + ';\n' +
+    '// [src, dst]: src modulates dst. Carriers = ops with no outgoing edge.\n~dag = ' + a(x.dag.map(a)) + ';\n' +
+    '~envs = [\n' + x.env.map(e => `  Env(${a(e.levels)}, ${a(e.times)}, ${a(e.curves)}, ${e.releaseNode})`).join(',\n') + '\n];\n)';
+}
+let fmt = 'json';
+const out = document.getElementById('out');
+const refreshOut = () => { out.value = fmt === 'json' ? asJson() : asSc();
+  document.getElementById('fmtJson').setAttribute('aria-pressed', fmt === 'json');
+  document.getElementById('fmtSc').setAttribute('aria-pressed', fmt === 'sc'); };
+document.getElementById('btnExport').onclick = () => { refreshOut(); document.getElementById('sheet').hidden = false; };
+document.getElementById('btnClose').onclick = () => { document.getElementById('sheet').hidden = true; };
+document.getElementById('fmtJson').onclick = () => { fmt = 'json'; refreshOut(); };
+document.getElementById('fmtSc').onclick = () => { fmt = 'sc'; refreshOut(); };
+document.getElementById('btnCopy').onclick = () => {
+  const done = () => toast('Copied');
+  const fallback = () => { out.focus(); out.select(); toast('Selected — copy with your keyboard or long-press'); };
+  try { navigator.clipboard.writeText(out.value).then(done, fallback); } catch { fallback(); }
+};
+document.getElementById('btnLoad').onclick = () => {
+  try {
+    const x = JSON.parse(out.value);
+    if (!Array.isArray(x.ops) || !Array.isArray(x.dag)) throw new Error('needs "ops" and "dag" arrays');
+    const n = x.ops.length;
+    const ops = x.ops.map(([amp, freq], i) => {
+      const e = x.env && x.env[i];
+      let env = defEnv();
+      if (e && e.levels && e.times && e.levels.length === 4 && e.times.length === 3) {
+        const [d0, d1, d2] = e.times;
+        env = { t: [d0, d0 + d1, d0 + d1 + d2], l: [e.levels[1], e.levels[2]], c: (e.curves || [0, 0, 0]).slice(0, 3) };
+      }
+      return { amp: clamp(+amp, 0, 1), freq: clamp(+freq, FMIN, FMAX), env };
+    });
+    const edges = x.dag.filter(([s, d]) => s >= 0 && d >= 0 && s < n && d < n && s !== d);
+    const prev = S; S = { ops, edges: [] };
+    for (const [s, d] of edges) { if (reaches(d, s)) { S = prev; throw new Error(`edge ${s}→${d} makes a loop`); } S.edges.push([s, d]); }
+    sel = ops.length ? 0 : null; save(); draw(); toast('Loaded');
+  } catch (err) { toast('Could not load: ' + err.message); }
+};
+
+// ---------- chrome ----------
+document.getElementById('btnLink').onclick = e => {
+  linkMode = !linkMode; linkFrom = null; e.currentTarget.setAttribute('aria-pressed', linkMode); draw();
+  if (linkMode) toast('Tap the modulator, then its target');
+};
+document.getElementById('btnDel').onclick = () => delOp(sel);
+let toastT = 0;
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1800);
+}
+function draw() { drawField(field); drawEnv(env); }
+document.fonts && document.fonts.ready.then(draw);
+})();
+</script>
+
+</body>
+</html>
