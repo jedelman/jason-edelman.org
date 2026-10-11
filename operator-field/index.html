@@ -72,10 +72,9 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; border-r
   -webkit-user-select: text; user-select: text;
 }
 [hidden] { display: none !important; }
-.bank { display: flex; gap: 4px; align-items: center; }
-.slot { flex: 1; min-width: 0; padding: 7px 0; text-align: center; }
-.slot.empty { border-style: dashed; color: var(--dim); }
-.slot[aria-pressed="true"] { border-color: var(--carrier); color: var(--carrier); }
+.bank { display: flex; gap: 6px; align-items: stretch; height: 40px; }
+.bank .wrap { flex: 1; min-width: 0; }
+#strip:focus-visible { outline: 2px solid var(--carrier); outline-offset: 1px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -89,11 +88,9 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; border-r
     <button id="btnDel" class="danger">Delete op</button>
     <button id="btnExport">Export</button>
   </header>
-  <div class="bank" role="group" aria-label="Patch bank">
-    <button class="slot" data-i="0">1</button><button class="slot" data-i="1">2</button>
-    <button class="slot" data-i="2">3</button><button class="slot" data-i="3">4</button>
-    <button class="slot" data-i="4">5</button><button class="slot" data-i="5">6</button>
-    <button class="slot" data-i="6">7</button><button class="slot" data-i="7">8</button>
+  <div class="bank">
+    <div class="wrap"><canvas id="strip" tabindex="0" role="slider" aria-label="Patch bank"
+      title="Tap a slot · drag to scroll · pinch sideways to zoom · arrow keys move"></canvas></div>
     <button id="btnDup">Duplicate</button>
   </div>
 
@@ -149,21 +146,30 @@ const example = () => ({
   edges: [[1, 0], [2, 1]],
 });
 
-// Bank: 8 slots, one per Launchpad row. The patch being edited is always B.patches[B.slot].
-const SLOTS = 8;
+// Bank: unbounded and sparse. Slots exist only once something is in them; they are grouped
+// into pages of 8 (one slot per Launchpad row). The patch being edited is B.patches[B.slot].
+const PAGE = 8;
 const blank = () => ({ ops: [{ freq: 220, amp: 0.6, env: defEnv() }], edges: [] });
 const B = load();
 let S = B.patches[B.slot];
 let sel = S.ops.length ? 0 : null;
 let linkMode = false, linkFrom = null;
+const slotName = i => `P${Math.floor(i / PAGE) + 1}.${i % PAGE + 1}`;
+const BLANK = JSON.stringify(blank());
+const isEmpty = p => !p || !p.ops.length || JSON.stringify(p) === BLANK; // untouched blanks don't count
+const filled = i => !isEmpty(B.patches[i]);
+const lastFilled = () => Math.max(-1, ...Object.keys(B.patches).map(Number).filter(filled));
 
 function valid(s) { return s && Array.isArray(s.ops) && Array.isArray(s.edges); }
 function load() {
-  const fresh = { slot: 0, patches: [example(), ...Array(SLOTS - 1).fill(null)] };
+  const fresh = { slot: 0, patches: { 0: example() } };
   try {
     const b = JSON.parse(localStorage.getItem('opfield-bank'));
-    if (b && Array.isArray(b.patches) && b.patches.length === SLOTS && valid(b.patches[b.slot])) {
-      b.patches = b.patches.map(p => valid(p) ? p : null); return b;
+    if (b && b.patches && typeof b.patches === 'object' && Number.isInteger(b.slot) && b.slot >= 0) {
+      const patches = {}; // also accepts the earlier fixed 8-slot array
+      for (const [k, p] of Object.entries(b.patches)) if (valid(p) && /^\d+$/.test(k)) patches[k] = p;
+      if (!valid(patches[b.slot])) patches[b.slot] = blank();
+      return { slot: b.slot, patches };
     }
     const old = JSON.parse(localStorage.getItem('opfield')); // single patch from before banks
     if (valid(old)) fresh.patches[0] = old;
@@ -172,17 +178,17 @@ function load() {
 }
 function save() { try { localStorage.setItem('opfield-bank', JSON.stringify(B)); } catch {} }
 function selectSlot(i) {
-  if (i === B.slot) return;
-  if (!S.ops.length) B.patches[B.slot] = null; // an emptied slot goes back to empty
+  if (i === B.slot || i < 0) return;
+  if (isEmpty(S)) delete B.patches[B.slot]; // leaving an empty or untouched slot frees it
   if (!B.patches[i]) B.patches[i] = blank();
   B.slot = i; S = B.patches[i]; sel = S.ops.length ? 0 : null; linkFrom = null;
-  save(); draw();
+  showSlot(i); save(); draw();
 }
 function duplicate() {
-  const i = B.patches.findIndex((p, k) => !p && k !== B.slot);
-  if (i < 0) { toast('No empty slot left'); return; }
+  let i = B.slot + 1;
+  while (B.patches[i]) i++;
   B.patches[i] = JSON.parse(JSON.stringify(S));
-  toast(`Copied to slot ${i + 1}`); selectSlot(i);
+  toast(`Copied to ${slotName(i)}`); selectSlot(i);
 }
 
 const isCarrier = i => !S.edges.some(e => e[0] === i);
@@ -296,7 +302,7 @@ function drawField(o) {
   });
   const op = S.ops[sel];
   document.getElementById('selInfo').textContent = op
-    ? `op ${sel} ${isCarrier(sel) ? 'carrier' : 'modulator'} · ${op.freq.toFixed(1)} Hz · amp ${op.amp.toFixed(3)}`
+    ? `${slotName(B.slot)} · op ${sel} ${isCarrier(sel) ? 'carrier' : 'modulator'} · ${op.freq.toFixed(1)} Hz · amp ${op.amp.toFixed(3)}`
     : 'no operator';
 }
 
@@ -567,9 +573,14 @@ function jsonPatch(p, ind) {
     ',\n' + ind + '  "env": [\n' + x.env.map(e => ind + '    ' + JSON.stringify(e)).join(',\n') + '\n' + ind + '  ]\n' + ind + '}';
 }
 const scEnvs = (x, ind) => x.env.map(e => `${ind}Env(${a(e.levels)}, ${a(e.times)}, ${a(e.curves)}, ${e.releaseNode})`).join(',\n');
+// every slot up to the last filled one, padded to whole pages
+function bankList() {
+  const n = Math.max(PAGE, Math.ceil((lastFilled() + 1) / PAGE) * PAGE);
+  return Array.from({ length: n }, (_, i) => filled(i) ? B.patches[i] : null);
+}
 function asJson() {
   if (scope === 'patch') return jsonPatch(S, '');
-  return '{\n  "bank": [\n' + B.patches.map(p => p && p.ops.length ? '  ' + jsonPatch(p, '  ') : '  null').join(',\n') + '\n  ]\n}';
+  return '{\n  "bank": [\n' + bankList().map(p => p ? '  ' + jsonPatch(p, '  ') : '  null').join(',\n') + '\n  ]\n}';
 }
 function asSc() {
   if (scope === 'patch') {
@@ -578,11 +589,13 @@ function asSc() {
       '// [src, dst]: src modulates dst. Carriers = ops with no outgoing edge.\n~dag = ' + a(x.dag.map(a)) + ';\n' +
       '~envs = [\n' + scEnvs(x, '  ') + '\n];\n)';
   }
-  return '(\n// ' + SLOTS + ' slots, nil = empty. ops: [amp, freq]; dag: [src, dst], src modulates dst.\n~bank = [\n' +
-    B.patches.map((p, i) => {
-      if (!p || !p.ops.length) return `  nil /* ${i + 1} */`;
+  const list = bankList();
+  return '(\n// ' + list.length / PAGE + ' page(s) of ' + PAGE + '; slot i is page i div 8, row i % 8. nil = empty.\n' +
+    '// ops: [amp, freq]; dag: [src, dst], src modulates dst.\n~bank = [\n' +
+    list.map((p, i) => {
+      if (!p) return `  nil /* ${slotName(i)} */`;
       const x = exportObj(p);
-      return `  ( // ${i + 1}\n    ops: ${a(x.ops.map(a))},\n    dag: ${a(x.dag.map(a))},\n    envs: [\n${scEnvs(x, '      ')}\n    ]\n  )`;
+      return `  ( // ${slotName(i)}\n    ops: ${a(x.ops.map(a))},\n    dag: ${a(x.dag.map(a))},\n    envs: [\n${scEnvs(x, '      ')}\n    ]\n  )`;
     }).join(',\n') + '\n];\n)';
 }
 let fmt = 'json', scope = 'patch';
@@ -625,16 +638,16 @@ document.getElementById('btnLoad').onclick = () => {
   try {
     const x = JSON.parse(out.value);
     if (Array.isArray(x.bank)) {
-      const ps = x.bank.slice(0, SLOTS).map(p => p == null ? null : parsePatch(p));
-      while (ps.length < SLOTS) ps.push(null);
-      if (!ps.some(Boolean)) throw new Error('the bank is empty');
-      B.patches = ps; B.slot = ps.findIndex(Boolean);
-      toast(`Loaded bank: ${ps.filter(Boolean).length} patches`);
+      const ps = x.bank.map(p => p == null ? null : parsePatch(p));
+      if (ps.every(isEmpty)) throw new Error('the bank is empty');
+      B.patches = {}; ps.forEach((p, i) => { if (!isEmpty(p)) B.patches[i] = p; });
+      B.slot = ps.findIndex(p => !isEmpty(p));
+      toast(`Loaded bank: ${Object.keys(B.patches).length} patches`);
     } else {
       B.patches[B.slot] = parsePatch(x);
-      toast(`Loaded into slot ${B.slot + 1}`);
+      toast(`Loaded into ${slotName(B.slot)}`);
     }
-    S = B.patches[B.slot]; sel = S.ops.length ? 0 : null; linkFrom = null;
+    S = B.patches[B.slot]; sel = S.ops.length ? 0 : null; linkFrom = null; showSlot(B.slot);
     save(); draw();
   } catch (err) { toast('Could not load: ' + err.message); }
 };
@@ -645,16 +658,122 @@ document.getElementById('btnLink').onclick = e => {
   if (linkMode) toast('Tap the modulator, then its target');
 };
 document.getElementById('btnDel').onclick = () => delOp(sel);
-document.querySelectorAll('.slot').forEach(b => b.onclick = () => selectSlot(+b.dataset.i));
 document.getElementById('btnDup').onclick = duplicate;
-function drawBank() {
-  document.querySelectorAll('.slot').forEach(b => {
-    const i = +b.dataset.i, p = B.patches[i];
-    b.classList.toggle('empty', !p || !p.ops.length);
-    b.setAttribute('aria-pressed', i === B.slot);
-    b.setAttribute('aria-label', `Slot ${i + 1}${p && p.ops.length ? `, ${p.ops.length} operators` : ', empty'}`);
-  });
+
+// ---------- bank strip ----------
+// A horizontal window onto the endless bank. V.off is the first visible slot, V.zoom how many
+// slots fit. Zoom settles on 8 × 2^k slots and scrolling settles on page boundaries.
+const ZMIN = PAGE, ZMAX = PAGE * 64;
+const V = { off: Math.floor(B.slot / PAGE) * PAGE, zoom: PAGE };
+const strip = setup(document.getElementById('strip'), drawStrip);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let anim = 0;
+function animateTo(off, zoom) {
+  cancelAnimationFrame(anim);
+  const o0 = V.off, z0 = V.zoom, t0 = performance.now(), dur = reduceMotion ? 0 : 160;
+  const step = now => {
+    const u = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - u, 3);
+    V.off = o0 + (off - o0) * e; V.zoom = z0 * Math.pow(zoom / z0, e);
+    drawStrip(strip);
+    if (u < 1) anim = requestAnimationFrame(step);
+  };
+  anim = requestAnimationFrame(step);
 }
+function snap() {
+  const z = clamp(PAGE * Math.pow(2, Math.round(Math.log2(V.zoom / PAGE))), ZMIN, ZMAX);
+  animateTo(Math.max(0, Math.round(V.off / PAGE) * PAGE), z);
+}
+function showSlot(i) {
+  if (i >= V.off && i < V.off + V.zoom) return;
+  animateTo(Math.max(0, Math.floor(i / PAGE) * PAGE - (V.zoom > PAGE ? PAGE : 0)), V.zoom);
+}
+function drawStrip(o) {
+  const { ctx, w, h } = o; if (!w) return;
+  ctx.clearRect(0, 0, w, h);
+  const cw = w / V.zoom, first = Math.floor(V.off), last = Math.ceil(V.off + V.zoom);
+  const gap = cw > 12 ? 2 : cw > 4 ? 1 : 0;
+  ctx.textAlign = 'center';
+  for (let i = first; i < last; i++) {
+    const x = (i - V.off) * cw, on = filled(i), cur = i === B.slot;
+    ctx.globalAlpha = 1;
+    if (on) { ctx.fillStyle = cur ? C.carrier : C.dim; ctx.fillRect(x + gap, 4, cw - 2 * gap, h - 8); }
+    else if (cur) { ctx.strokeStyle = C.carrier; ctx.lineWidth = 2; ctx.strokeRect(x + gap + 1, 5, cw - 2 * gap - 2, h - 10); }
+    else if (cw > 12) { ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.setLineDash([3, 3]);
+      ctx.strokeRect(x + gap + 0.5, 4.5, cw - 2 * gap - 1, h - 9); ctx.setLineDash([]); }
+    if (cur && on) { ctx.strokeStyle = C.carrier; ctx.lineWidth = 2; ctx.strokeRect(x + gap + 1, 5, cw - 2 * gap - 2, h - 10); }
+    if (i % PAGE === 0) { // page boundary
+      ctx.strokeStyle = C.dim; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(Math.round(x) + 0.5, 0); ctx.lineTo(Math.round(x) + 0.5, h); ctx.stroke();
+      if (cw * PAGE >= 26) {
+        ctx.fillStyle = C.dim; ctx.font = '9px "IBM Plex Mono", monospace'; ctx.textAlign = 'left';
+        ctx.fillText('P' + (i / PAGE + 1), x + 3, 11); ctx.textAlign = 'center';
+      }
+    }
+    if (cw >= 22) {
+      ctx.fillStyle = on ? C.ink : C.dim;
+      ctx.font = '500 12px "IBM Plex Mono", monospace';
+      ctx.fillText(String(i % PAGE + 1), x + cw / 2, h / 2 + 6);
+    }
+  }
+  const n = Object.keys(B.patches).filter(k => filled(+k)).length;
+  strip.cv.setAttribute('aria-valuetext', `${slotName(B.slot)}, ${n} filled, showing ${Math.round(V.zoom)} slots`);
+}
+const spts = new Map(); let sg = null;
+const slotAt = x => Math.floor(V.off + x / (strip.w / V.zoom));
+strip.cv.addEventListener('pointerdown', e => {
+  strip.cv.setPointerCapture(e.pointerId); cancelAnimationFrame(anim);
+  const p = pos(strip.cv, e); spts.set(e.pointerId, p);
+  if (spts.size === 1) sg = { kind: 'pan', x0: p.x, off0: V.off, moved: false };
+  else if (spts.size === 2) {
+    const [a, b] = [...spts.values()], mid = (a.x + b.x) / 2;
+    sg = { kind: 'pinch', d0: Math.max(10, Math.abs(a.x - b.x)), z0: V.zoom, anchor: V.off + mid / (strip.w / V.zoom) };
+  }
+});
+strip.cv.addEventListener('pointermove', e => {
+  if (!spts.has(e.pointerId) || !sg) return;
+  const p = pos(strip.cv, e); spts.set(e.pointerId, p);
+  if (sg.kind === 'pan') {
+    const dx = p.x - sg.x0; if (Math.abs(dx) > 6) sg.moved = true;
+    V.off = Math.max(0, sg.off0 - dx / (strip.w / V.zoom));
+  } else if (spts.size >= 2) {
+    const [a, b] = [...spts.values()], mid = (a.x + b.x) / 2;
+    V.zoom = clamp(sg.z0 * sg.d0 / Math.max(10, Math.abs(a.x - b.x)), ZMIN * 0.75, ZMAX);
+    V.off = Math.max(0, sg.anchor - mid / (strip.w / V.zoom));
+  }
+  drawStrip(strip);
+});
+const stripUp = e => {
+  if (!spts.has(e.pointerId)) return;
+  const p = pos(strip.cv, e); spts.delete(e.pointerId);
+  if (sg && sg.kind === 'pan' && !sg.moved && spts.size === 0 && e.type === 'pointerup') { selectSlot(slotAt(p.x)); sg = null; return; }
+  if (spts.size === 1) { const [q] = [...spts.values()]; sg = { kind: 'pan', x0: q.x, off0: V.off, moved: true }; }
+  if (spts.size === 0) { sg = null; snap(); }
+};
+strip.cv.addEventListener('pointerup', stripUp);
+strip.cv.addEventListener('pointercancel', stripUp);
+let wheelT = 0;
+strip.cv.addEventListener('wheel', e => {
+  e.preventDefault(); cancelAnimationFrame(anim);
+  const p = pos(strip.cv, e), cw = strip.w / V.zoom;
+  if (e.ctrlKey) {
+    const anchor = V.off + p.x / cw;
+    V.zoom = clamp(V.zoom * Math.exp(e.deltaY * 0.01), ZMIN * 0.75, ZMAX);
+    V.off = Math.max(0, anchor - p.x / (strip.w / V.zoom));
+  } else V.off = Math.max(0, V.off + (e.deltaX || e.deltaY) / cw);
+  drawStrip(strip); clearTimeout(wheelT); wheelT = setTimeout(snap, 160);
+}, { passive: false });
+strip.cv.addEventListener('keydown', e => {
+  const k = e.key;
+  if (k === 'ArrowRight') selectSlot(B.slot + 1);
+  else if (k === 'ArrowLeft') selectSlot(B.slot - 1);
+  else if (k === 'PageDown') selectSlot(B.slot + PAGE);
+  else if (k === 'PageUp') selectSlot(Math.max(0, B.slot - PAGE));
+  else if (k === '-') { V.zoom = clamp(V.zoom * 2, ZMIN, ZMAX); snap(); }
+  else if (k === '+' || k === '=') { V.zoom = clamp(V.zoom / 2, ZMIN, ZMAX); snap(); }
+  else return;
+  e.preventDefault();
+});
+function drawBank() { drawStrip(strip); }
 let toastT = 0;
 function toast(msg) {
   const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false;
