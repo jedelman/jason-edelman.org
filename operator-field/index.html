@@ -74,6 +74,8 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; border-r
 [hidden] { display: none !important; }
 .bank { display: flex; gap: 6px; align-items: stretch; height: 40px; }
 .bank .wrap { flex: 1; min-width: 0; }
+.overlay { position: absolute; right: 6px; bottom: 14px; padding: 5px 9px; font-size: 11px; }
+#cam { position: fixed; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 #strip:focus-visible { outline: 2px solid var(--carrier); outline-offset: 1px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -100,7 +102,10 @@ canvas { width: 100%; height: 100%; display: block; touch-action: none; border-r
   <div class="wrap"><canvas id="env" aria-label="Envelope of the selected operator"></canvas></div>
   <div class="hint"><span><b>3 fingers</b> place peak, sustain, end · <b>drag</b> a point · <b>drag between</b> points to bend</span></div>
 
-  <div class="wrap"><canvas id="pad" aria-label="Audition pad"></canvas></div>
+  <div class="wrap"><canvas id="pad" aria-label="Audition pad"></canvas>
+    <button id="btnHands" class="overlay" aria-pressed="false"
+      title="Play with your hands through the camera. The video stays on this device.">Hands</button></div>
+  <video id="cam" playsinline muted></video>
 </div>
 
 <div id="toast" hidden></div>
@@ -511,11 +516,14 @@ function startVoice(ctl) {
 const pad = setup(document.getElementById('pad'), drawPad);
 const voices = new Map(); // pointerId -> { v, p, ctl }
 let pressSeen = new Set();
-function ctlFrom(p, e) {
+function ctlAt(p, pr) {
   const u = clamp(p.x / pad.w, 0, 1), vy = clamp(1 - p.y / pad.h, 0, 1);
+  return { tr: Math.pow(2, (u - 0.5) * 2), bright: vy * 2, vol: pr == null ? 0.8 : 0.3 + 0.7 * clamp(pr, 0, 1), pr };
+}
+function ctlFrom(p, e) {
   const pr = e.pointerType === 'mouse' ? null : e.pressure;
   if (pr != null) pressSeen.add(pr.toFixed(2));
-  return { tr: Math.pow(2, (u - 0.5) * 2), bright: vy * 2, vol: pr == null ? 0.8 : 0.3 + 0.7 * clamp(pr, 0, 1), pr };
+  return ctlAt(p, pr);
 }
 function drawPad(o) {
   const { ctx, w, h } = o; if (!w) return;
@@ -528,16 +536,30 @@ function drawPad(o) {
   ctx.globalAlpha = 1;
   ctx.font = '10px "IBM Plex Mono", monospace'; ctx.fillStyle = C.dim;
   ctx.textAlign = 'left'; ctx.fillText('−1 oct', 6, 13);
-  ctx.textAlign = 'center'; ctx.fillText('touch to play', w / 2, h / 2 - 4);
-  ctx.fillText('x pitch · y mod depth · pressure level', w / 2, h / 2 + 10);
+  ctx.textAlign = 'center';
+  if (handsOn) {
+    ctx.fillText('pinch thumb and index to play', w / 2, h / 2 - 4);
+    ctx.fillText('x pitch · y mod depth · nearer is louder', w / 2, h / 2 + 10);
+  } else {
+    ctx.fillText('touch to play', w / 2, h / 2 - 4);
+    ctx.fillText('x pitch · y mod depth · pressure level', w / 2, h / 2 + 10);
+  }
   ctx.textAlign = 'right'; ctx.fillText('+1 oct', w - 6, 13);
+  for (const hm of handMarks) { // tracked hands, mirrored like a mirror
+    ctx.strokeStyle = hm.pinched ? C.carrier : C.dim; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.8;
+    ctx.beginPath();
+    for (const c of handConn) { const a = hm.pts[c.start], b = hm.pts[c.end]; ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); }
+    ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = hm.pinched ? C.carrier : C.text;
+    ctx.beginPath(); ctx.arc(hm.at.x, hm.at.y, 4, 0, 7); ctx.fill();
+  }
   for (const { p, ctl } of voices.values()) {
     ctx.strokeStyle = C.carrier; ctx.fillStyle = C.carrier; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(p.x, p.y, 14 + 16 * (ctl.pr ?? 0.5), 0, 7); ctx.stroke();
     ctx.textAlign = 'center';
     ctx.fillText(`×${ctl.tr.toFixed(3)}  d${ctl.bright.toFixed(2)}  p${ctl.pr == null ? '–' : ctl.pr.toFixed(2)}`, p.x, Math.max(26, p.y - 36));
   }
-  if (pressSeen.size === 1 && voices.size) {
+  if (pressSeen.size === 1 && [...voices.keys()].some(k => typeof k === 'number')) {
     ctx.fillStyle = C.dim; ctx.textAlign = 'left'; ctx.fillText('pressure looks static on this device', 6, h - 14);
   }
 }
@@ -556,6 +578,84 @@ pad.cv.addEventListener('pointermove', e => {
 const padUp = e => { const vo = voices.get(e.pointerId); if (!vo) return; vo.v.release(); voices.delete(e.pointerId); drawPad(pad); };
 pad.cv.addEventListener('pointerup', padUp);
 pad.cv.addEventListener('pointercancel', padUp);
+
+// ---------- hands (MediaPipe hand landmarker, runs in the browser) ----------
+// Each tracked hand is a voice. Pinching thumb and index starts the note, opening the pinch
+// releases it; the pinch point plays the pad like a finger, and hand size (closer to the
+// camera) stands in for pressure. Video never leaves the device.
+const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1';
+const HAND_MODEL = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
+const PINCH_ON = 0.35, PINCH_OFF = 0.55; // thumb–index gap over palm length, with hysteresis
+const cam = document.getElementById('cam'), btnHands = document.getElementById('btnHands');
+let landmarker = null, handConn = [], handsOn = false, lastFrame = -1, handMarks = [];
+const handState = new Map(); // key -> { pinched }
+const camToPad = l => ({ x: clamp((0.9 - l.x) / 0.8, 0, 1) * pad.w, y: clamp((l.y - 0.1) / 0.8, 0, 1) * pad.h });
+const gap = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+async function startHands() {
+  audio(); // create the audio context while the tap still counts as a user gesture
+  btnHands.disabled = true; toast('Loading hand tracking…');
+  try {
+    if (!landmarker) {
+      const vision = await import(MP + '/vision_bundle.mjs');
+      const files = await vision.FilesetResolver.forVisionTasks(MP + '/wasm');
+      const opts = delegate => ({ baseOptions: { modelAssetPath: HAND_MODEL, delegate }, runningMode: 'VIDEO', numHands: 2 });
+      try { landmarker = await vision.HandLandmarker.createFromOptions(files, opts('GPU')); }
+      catch { landmarker = await vision.HandLandmarker.createFromOptions(files, opts('CPU')); }
+      handConn = vision.HandLandmarker.HAND_CONNECTIONS || [];
+    }
+    cam.srcObject = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    await cam.play();
+    handsOn = true; btnHands.setAttribute('aria-pressed', 'true');
+    toast('Camera on. Video stays on this device.');
+    requestAnimationFrame(trackHands); drawPad(pad);
+  } catch (err) {
+    stopHands();
+    toast(err && err.name === 'NotAllowedError' ? 'Camera permission was denied' : 'Hand tracking failed: ' + (err && err.message || err));
+  } finally { btnHands.disabled = false; }
+}
+function stopHands() {
+  handsOn = false; btnHands.setAttribute('aria-pressed', 'false');
+  for (const [k, vo] of voices) if (typeof k === 'string') { vo.v.release(); voices.delete(k); }
+  handState.clear(); handMarks = [];
+  if (cam.srcObject) { cam.srcObject.getTracks().forEach(t => t.stop()); cam.srcObject = null; }
+  drawPad(pad);
+}
+function trackHands() {
+  if (!handsOn) return;
+  if (cam.readyState >= 2 && cam.currentTime !== lastFrame) {
+    lastFrame = cam.currentTime;
+    onHands(landmarker.detectForVideo(cam, performance.now()));
+  }
+  requestAnimationFrame(trackHands);
+}
+function onHands(r) {
+  const seen = new Set(); handMarks = [];
+  (r.landmarks || []).forEach((lm, i) => {
+    const cat = r.handedness && r.handedness[i] && r.handedness[i][0];
+    let key = 'hand:' + (cat ? cat.categoryName : i);
+    if (seen.has(key)) key += ':' + i;
+    seen.add(key);
+    const palm = Math.max(1e-3, gap(lm[0], lm[9]));            // wrist to middle knuckle
+    const pinch = gap(lm[4], lm[8]) / palm;                      // thumb tip to index tip
+    const at = camToPad({ x: (lm[4].x + lm[8].x) / 2, y: (lm[4].y + lm[8].y) / 2 });
+    const pr = clamp((palm - 0.08) / 0.25, 0, 1);                // bigger in frame = nearer = louder
+    const st = handState.get(key) || { pinched: false };
+    handState.set(key, st);
+    const ctl = ctlAt(at, pr);
+    if (!st.pinched && pinch < PINCH_ON && S.ops.length) { st.pinched = true; voices.set(key, { v: startVoice(ctl), p: at, ctl }); }
+    else if (st.pinched && pinch > PINCH_OFF) { st.pinched = false; const vo = voices.get(key); if (vo) vo.v.release(); voices.delete(key); }
+    else if (st.pinched) { const vo = voices.get(key); if (vo) { vo.p = at; vo.ctl = ctl; vo.v.update(ctl); } }
+    handMarks.push({ pts: lm.map(camToPad), at, pinched: st.pinched });
+  });
+  for (const k of [...handState.keys()]) if (!seen.has(k)) { // hand left the frame
+    const vo = voices.get(k); if (vo) vo.v.release();
+    voices.delete(k); handState.delete(k);
+  }
+  drawPad(pad);
+}
+btnHands.onclick = () => handsOn ? stopHands() : startHands();
+document.addEventListener('visibilitychange', () => { if (document.hidden && handsOn) stopHands(); });
 
 // ---------- export ----------
 const r4 = x => Math.round(x * 1e4) / 1e4;
