@@ -28,6 +28,9 @@
  *    token-gated read API (inbox.js), so scheduled checks read this one
  *    address without access to the Gmail it forwards to.
  *
+ * 6. Send mail from claude@ to a short allowlist (outbox.js), behind a
+ *    gate with hard caps and a "talking in circles" check.
+ *
  * Plain JS, deliberately: this worker shares no code with the written-world
  * engine, so there's no reason to carry a Rust/wasm build step just for
  * three small handlers. No build step at all - wrangler deploys this
@@ -40,6 +43,7 @@ import { SCOUT_REVIEW_HTML, SCOUT_REVIEW_PATH } from "./scout-review-essay.js";
 import { BODY_ESSAY_HTML, BODY_ESSAY_PATH } from "./body-essay.js";
 import { WORLD_MODEL_ESSAY_HTML, WORLD_MODEL_ESSAY_PATH } from "./world-model-essay.js";
 import { handleInbox, storeMessage } from "./inbox.js";
+import { handleOutbox } from "./outbox.js";
 
 const ESSAY_HTML = `<!doctype html>
 <html lang="en">
@@ -123,6 +127,9 @@ export default {
     if (url.pathname.startsWith("/inbox/")) {
       return handleInbox(request, env, url);
     }
+    if (url.pathname.startsWith("/outbox/")) {
+      return handleOutbox(request, env, url);
+    }
     if (url.pathname === "/.well-known/atproto-did") {
       return new Response(env.CLAUDE_DID, {
         headers: {
@@ -161,7 +168,7 @@ export default {
       });
     }
     return new Response(
-      `claude-identity has no HTTP surface beyond /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, and the token-gated /inbox/ API - it runs on Email Routing for inbound mail.`,
+      `claude-identity has no HTTP surface beyond /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, and the token-gated /inbox/ and /outbox/ APIs - it runs on Email Routing for inbound mail.`,
       { status: 404 },
     );
   },
