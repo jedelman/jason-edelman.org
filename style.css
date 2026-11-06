@@ -165,21 +165,22 @@ section h2 {
   min-width: 0;
 }
 
-.projects a {
+#projects a {
   text-decoration: none;
 }
 
-.projects h3 {
+#projects h3 {
   font-family: var(--font-display);
   font-size: 1.2rem;
   font-weight: 700;
   color: var(--link);
   letter-spacing: -0.01em;
   line-height: 1.15;
+  margin-bottom: 0.4rem;
   transition: color 0.15s;
 }
 
-.projects a:hover h3 { color: var(--link-hover); }
+#projects a:hover h3 { color: var(--link-hover); }
 
 .project-card p {
   font-size: 0.97rem;
