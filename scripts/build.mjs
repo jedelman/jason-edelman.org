@@ -27,6 +27,7 @@ const STATIC = [
   '.well-known',
   'oauth',
   'operator-field',
+  'img',
 ];
 
 // Subprojects: { name, dir, buildCmd, outDir, required }
