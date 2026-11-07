@@ -145,17 +145,21 @@ section h2 {
   white-space: nowrap;
 }
 
-/* A screenshot of the running project, flush to the card's edges. */
+/* A screenshot of the running project, flush to the card's edges,
+   linking where the card's title does. */
+.project-shot-link {
+  display: block;
+  margin: -1.5rem -1.5rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
 .project-shot {
   display: block;
-  width: calc(100% + 3rem);
-  max-width: none;
+  width: 100%;
   height: auto;
   aspect-ratio: 16 / 10;
   object-fit: cover;
   object-position: top;
-  margin: -1.5rem -1.5rem 1.25rem;
-  border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
 
@@ -393,7 +397,7 @@ section h2 {
   header h1 { font-size: 2rem; }
   .project-header { flex-direction: column; gap: 0.25rem; align-items: flex-start; }
   .project-card { padding: 1.25rem; }
-  .project-shot { width: calc(100% + 2.5rem); margin: -1.25rem -1.25rem 1rem; }
+  .project-shot-link { margin: -1.25rem -1.25rem 1rem; }
   .readings-callout { padding: 1.25rem; }
   .contact-links { flex-direction: column; }
   .contact-link { width: 100%; text-align: center; }
