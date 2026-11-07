@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Written World: A Text Adventure You Can Check — Dev Journal</title>
+  <meta name="description" content="Two days building a text world model in Rust: the world is a graph, every change passes one validator, and a model's ideas are exactly as untrusted as a player's.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Written World: A Text Adventure You Can Check</h1>
+        <p class="date">August 5–6, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Text adventures keep their world in prose. Once a room has been
+          described, the description is all there is, and nothing checks it.
+          Voxel games take the opposite for granted: a world state you can
+          inspect and verify. Written World was my attempt to give a text world
+          that second property. I'd talked the design through one morning,
+          slept on it, and decided to build it, with Rust for the engine and
+          WebAssembly for the browser.
+        </p>
+        <p>
+          The first version, built that day, made one rule absolute: nothing
+          changes the world except a batch of changes that validates against
+          the schema before any of it commits. Prose is never stored. It's
+          rendered fresh from state every time, so revisiting a room returns
+          byte-identical text. A locked exit could come with a lever and a
+          generated rule linking the two, which was the point: generated rules,
+          not just generated content.
+        </p>
+
+        <h2>A graph, and machines instead of verbs</h2>
+        <p>
+          Later that day I rebuilt it on a reified RDF graph. Rooms, items and
+          the rule linking a lever to a door are all triples. The fixed
+          vocabulary is small, and any other relation has to declare itself
+          before the validator will accept it; the declaration is just another
+          triple. There's no list of verbs either. A machine is a node equipped
+          to a thing, with a trigger verb, requirements and an effect, and the
+          player perceives and acts through a sight-machine and a
+          hands-machine. Perception and action are the same mechanism, run in
+          opposite directions.
+        </p>
+        <p>
+          Generation comes from a demiurge whose proposals pass through the
+          same gate as anything else. A second demiurge, backed by Workers AI,
+          answers only when the player chooses to commune with it: the model
+          proposes a few new facts about the room, sometimes a relation the
+          vocabulary never had, and its output is exactly as untrusted as a
+          player's input. Every commit lands in a transcript tagged with who
+          proposed it, and the tag is recorded, not trusted. Patterns
+          crystallize, too. The first door mechanism stays a nameless
+          "mechanism"; only when the same shape recurs does it earn a shared
+          kind, "lever". The matching behind that is still a hardcoded stand-in
+          for real interface congruence, and the README says so.
+        </p>
+
+        <figure>
+          <img src="/img/projects/written-world-full.webp" width="760" height="800"
+               alt="The Written World web UI: the Dripping Vault room with its exits and a lever, and below it a transcript of two lever pulls and the kinds command reporting that lever has crystallized.">
+          <figcaption>A session played through the real server, run locally with no model attached. Two lever pulls open a door, then <code>kinds</code> reports that "lever", seen twice, has crystallized.</figcaption>
+        </figure>
+
+        <h2>The second day</h2>
+        <p>
+          On day two the engine moved server-side into a Cloudflare Durable
+          Object. The browser became a thin view, the world persists as an
+          N-Quads snapshot that survives a reload, sign-in uses atproto OAuth,
+          and communing became a petition: a pub/sub queue that lives in the
+          graph itself, so the queue never decides who answers. Work continued
+          on another branch after that. The repo is private for now.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>

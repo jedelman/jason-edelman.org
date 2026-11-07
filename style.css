@@ -145,6 +145,36 @@ section h2 {
   white-space: nowrap;
 }
 
+/* A screenshot of the running project, flush to the card's edges. */
+.project-shot {
+  display: block;
+  width: calc(100% + 3rem);
+  max-width: none;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  object-position: top;
+  margin: -1.5rem -1.5rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+/* Where a project's own link is private, the journal entry explains it. */
+.project-more {
+  display: inline-block;
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--link);
+  text-decoration: none;
+  border-bottom: 1px solid var(--accent-dim);
+  padding-bottom: 1px;
+  transition: color 0.15s;
+}
+
+.project-more:hover { color: var(--link-hover); }
+
 .project-header {
   display: flex;
   align-items: center;
@@ -363,6 +393,7 @@ section h2 {
   header h1 { font-size: 2rem; }
   .project-header { flex-direction: column; gap: 0.25rem; align-items: flex-start; }
   .project-card { padding: 1.25rem; }
+  .project-shot { width: calc(100% + 2.5rem); margin: -1.25rem -1.25rem 1rem; }
   .readings-callout { padding: 1.25rem; }
   .contact-links { flex-direction: column; }
   .contact-link { width: 100%; text-align: center; }

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Goetia: A DAW That Summons Its Instruments — Dev Journal</title>
+  <meta name="description" content="Goetia is a SuperCollider performance engine played from a desk of controllers, a phone, or two hands in front of a camera. Sixteen days from an empty repo to playing it.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Goetia: A DAW That Summons Its Instruments</h1>
+        <p class="date">October 12–27, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          Goetia is a performance engine for SuperCollider, built around the
+          controllers on my table instead of a screen. A Launchpad Mini is the
+          step sequencer and picks scenes and patches. A Launch Control XL
+          shapes the synth. A Numark Mixtrack 3 is the mixing console: two
+          decks, a crossfader, live effects. A track is a SuperCollider script
+          that binds patterns, macros and patch banks to that desk. I described
+          all of it on the first day, the design document keeps it in my words,
+          and the code has been reshaped to fit it since.
+        </p>
+        <p>
+          It's also the cyborg project in practice. I decide what it should
+          feel like and play it. Claude builds it, tests what can be tested,
+          and says plainly what it can't, because it can't touch the
+          controllers or hear the sound. That split became a rule: no MIDI
+          mapping counts as done until I've confirmed it on the desk.
+        </p>
+
+        <figure>
+          <img src="/img/projects/goetia-full.webp" width="1280" height="800"
+               alt="Goetia's familiar in its Desk view: the Launchpad grid on the left, two Mixtrack decks with a crossfader in the middle, and the Launch Control XL's knobs on the right.">
+          <figcaption>The familiar's Desk view, laid out the way the hardware sits on the table. Here it runs with no engine attached.</figcaption>
+        </figure>
+
+        <h2>Spirits and a circle</h2>
+        <p>
+          The name comes from the <em>Ars Goetia</em>, the first book of the
+          <em>Lesser Key of Solomon</em>: a catalogue of spirits, each called
+          into a circle and sent away with a license to depart. So a patch is a
+          spirit, the shared bank is the grimoire, the running engine is the
+          circle, and you conjure it and let it depart. The FM spirits come
+          from <a href="/operator-field/">Operator Field</a>, the touch patch
+          designer on this site. The theme has one limit: a name never wins
+          over a control being obvious.
+        </p>
+        <p>
+          Under the theme sits one plain decision. Everything a controller can
+          do is a verb on a path in SuperCollider's own node tree, and there's
+          no second way in. The hardware, the browser and the hands all speak
+          that one protocol.
+        </p>
+
+        <h2>Away from the desk</h2>
+        <p>
+          I spent the first days traveling with only the laptop and my phone,
+          so the first instrument wasn't the desk at all. The familiar is a
+          browser page that stands in for every controller, and through the
+          laptop camera it became a hand instrument: the right hand signs, the
+          left holds the world. The first grammar treated hands as direct
+          controls. I wanted something else, hands as operators in a drawn
+          program space, so each deck became a circle with its lanes around it
+          as spirits. A few days later came a hypertheremin: eight dimensions
+          read from two hands.
+        </p>
+
+        <h2>On the desk</h2>
+        <p>
+          Back in Norfolk, the hardware met Windows. After Goetia sent the
+          Launchpad a SysEx message, Windows MIDI Services hung and the pads
+          went silent. The fix became a rule: plain notes and control changes
+          only. The next day the controllers moved to the browser's Web MIDI,
+          and on Windows SuperCollider now opens no MIDI at all. The first jam
+          ran a Freesound field recording of a metal door in wind, reversed,
+          pitched down about nineteen semitones, looped and low-passed. The
+          sequencer worked.
+        </p>
+        <p>
+          The repo is private for now.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>
