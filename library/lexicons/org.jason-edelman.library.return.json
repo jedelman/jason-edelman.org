@@ -1,0 +1,21 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.library.return",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A receipt for a finished loan, written in the borrower's repo at check-in, when the loan record itself is deleted. The borrower's history.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["subject", "library", "borrowedAt", "returnedAt"],
+        "properties": {
+          "subject": { "type": "ref", "ref": "com.atproto.repo.strongRef", "description": "The item record in the library owner's repo." },
+          "library": { "type": "string", "format": "did", "description": "The library owner's DID." },
+          "borrowedAt": { "type": "string", "format": "datetime" },
+          "returnedAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

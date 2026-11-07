@@ -102,7 +102,17 @@
     .item .out { color: var(--warn); }
     .history { list-style: none; }
     .history li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
-    .member { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+
+    form.row { position: relative; }
+    .typeahead {
+      position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 10; list-style: none;
+      background: var(--surface); border: 1px solid var(--border);
+    }
+    .typeahead li { display: flex; align-items: center; gap: 0.6rem; padding: 0.45rem 0.7rem; cursor: pointer; min-width: 0; }
+    .typeahead li[aria-selected=true], .typeahead li:hover { background: var(--border); }
+    .typeahead img, .typeahead .avatar { width: 28px; height: 28px; flex: none; object-fit: cover; background: var(--bg); }
+    .typeahead .who { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+    .typeahead .who .meta { font-size: 0.8rem; }
 
     form.stack { display: flex; flex-direction: column; gap: 0.9rem; }
     label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: var(--muted); }
@@ -131,7 +141,6 @@
     <button type="button" role="tab" data-tab="borrowed" aria-selected="false">Borrowed</button>
     <button type="button" role="tab" data-tab="catalog" aria-selected="false">Catalog</button>
     <button type="button" role="tab" data-tab="add" data-owner aria-selected="false" hidden>Add</button>
-    <button type="button" role="tab" data-tab="members" data-owner aria-selected="false" hidden>Members</button>
   </nav>
 
   <p id="notice" class="notice" role="status" hidden></p>
@@ -174,18 +183,8 @@
     </form>
   </section>
 
-  <section id="tab-members" role="tabpanel" hidden>
-    <p class="meta">Only members' checkouts count. Anyone can write a record in their own repo; this list is who the library listens to.</p>
-    <form id="member-form" class="row">
-      <input id="member-handle" placeholder="friend.bsky.social" autocapitalize="none" spellcheck="false" aria-label="Member's handle">
-      <button type="submit">Add member</button>
-    </form>
-    <p id="member-status" aria-live="polite"></p>
-    <ul id="member-list" class="items"></ul>
-  </section>
-
   <footer>
-    The inventory and member list live in the owner's atproto repo. Each checkout is a record in the borrower's own repo. All of it is public.
+    The inventory lives in the owner's atproto repo. Each checkout is a record in the borrower's own repo, found by its backlink to the library through <a href="https://constellation.microcosm.blue/">Constellation</a>. All of it is public.
   </footer>
 </main>
 <script type="module" src="app.js"></script>
