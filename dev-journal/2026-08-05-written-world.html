@@ -22,13 +22,14 @@
 
       <section>
         <p>
-          Text adventures keep their world in prose. Once a room has been
-          described, the description is all there is, and nothing checks it.
-          Voxel games take the opposite for granted: a world state you can
-          inspect and verify. Written World was my attempt to give a text world
-          that second property. I'd talked the design through one morning,
-          slept on it, and decided to build it, with Rust for the engine and
-          WebAssembly for the browser.
+          When a language model generates a text world, the world lives in
+          prose. Once a room has been described, the description is all there
+          is, and nothing checks it. Hand-written games like Zork always kept
+          structured state underneath, and 3D world models keep a state you can
+          inspect and verify; generated text worlds generally don't. Written
+          World was my attempt to give generated text that property. I'd talked
+          the design through, slept on it, and decided to build it, with Rust
+          for the engine and WebAssembly for the browser.
         </p>
         <p>
           The first version, built that day, made one rule absolute: nothing
@@ -42,7 +43,7 @@
 
         <h2>A graph, and machines instead of verbs</h2>
         <p>
-          Later that day I rebuilt it on a reified RDF graph. Rooms, items and
+          Later that day it was rebuilt on a reified RDF graph. Rooms, items and
           the rule linking a lever to a door are all triples. The fixed
           vocabulary is small, and any other relation has to declare itself
           before the validator will accept it; the declaration is just another
@@ -76,8 +77,9 @@
         <p>
           On day two the engine moved server-side into a Cloudflare Durable
           Object. The browser became a thin view, the world persists as an
-          N-Quads snapshot that survives a reload, sign-in uses atproto OAuth,
-          and communing became a petition: a pub/sub queue that lives in the
+          N-Quads snapshot that survives a reload, atproto OAuth sign-in was
+          built (finishing a login needs a public deploy), and communing became
+          a petition: a pub/sub queue that lives in the
           graph itself, so the queue never decides who answers. Work continued
           on another branch after that. The repo is private for now.
         </p>

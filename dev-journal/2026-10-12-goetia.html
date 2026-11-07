@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Goetia: A DAW That Summons Its Instruments — Dev Journal</title>
-  <meta name="description" content="Goetia is a SuperCollider performance engine played from a desk of controllers, a phone, or two hands in front of a camera. Sixteen days from an empty repo to playing it.">
+  <meta name="description" content="Goetia is a SuperCollider performance engine played from a desk of controllers, a browser, or two hands in front of a camera. Sixteen days of building, from an empty repo.">
   <link rel="stylesheet" href="journal.css">
 </head>
 <body>
@@ -27,7 +27,7 @@
           step sequencer and picks scenes and patches. A Launch Control XL
           shapes the synth. A Numark Mixtrack 3 is the mixing console: two
           decks, a crossfader, live effects. A track is a SuperCollider script
-          that binds patterns, macros and patch banks to that desk. I described
+          that binds patterns, macros and patch banks to the Mixtrack. I described
           all of it on the first day, the design document keeps it in my words,
           and the code has been reshaped to fit it since.
         </p>
@@ -66,26 +66,28 @@
         <h2>Away from the desk</h2>
         <p>
           I spent the first days traveling with only the laptop and my phone,
-          so the first instrument wasn't the desk at all. The familiar is a
-          browser page that stands in for every controller, and through the
+          so the first instrument I could play wasn't the desk. The familiar is
+          a browser page that stands in for every controller, and through the
           laptop camera it became a hand instrument: the right hand signs, the
           left holds the world. The first grammar treated hands as direct
           controls. I wanted something else, hands as operators in a drawn
           program space, so each deck became a circle with its lanes around it
-          as spirits. A few days later came a hypertheremin: eight dimensions
-          read from two hands.
+          as spirits.
         </p>
 
         <h2>On the desk</h2>
         <p>
-          Back in Norfolk, the hardware met Windows. After Goetia sent the
-          Launchpad a SysEx message, Windows MIDI Services hung and the pads
-          went silent. The fix became a rule: plain notes and control changes
-          only. The next day the controllers moved to the browser's Web MIDI,
-          and on Windows SuperCollider now opens no MIDI at all. The first jam
-          ran a Freesound field recording of a metal door in wind, reversed,
-          pitched down about nineteen semitones, looped and low-passed. The
-          sequencer worked.
+          Back in Norfolk, the hands grew a hypertheremin, eight dimensions
+          read from two hands, and then the hardware met Windows. After Goetia
+          sent the Launchpad a SysEx message, Windows MIDI Services hung and
+          the pads went silent. The fix became a rule: plain notes and control
+          changes only, with one later exception for switching the Launchpad
+          back into its programmer mode when it reconnects. That same evening
+          the first jam ran a Freesound field recording of a metal door in
+          wind, reversed, pitched down about nineteen semitones, looped and
+          low-passed. The sequencer worked. The next day the controllers moved
+          to the browser's Web MIDI, and on Windows SuperCollider now opens no
+          MIDI at all.
         </p>
         <p>
           The repo is private for now.
