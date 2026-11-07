@@ -1,0 +1,17 @@
+{
+  "name": "library-vendor",
+  "private": true,
+  "description": "Builds library/vendor/: the atproto SDK and barcode polyfill as browser modules. Run by hand; the site build only copies the output.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@atproto/api": "0.29.3",
+    "@atproto/oauth-client-browser": "0.5.10",
+    "barcode-detector": "3.2.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

@@ -1,16 +1,16 @@
 // Library UI: OAuth via the official SDK, camera scanning, tabs.
-// Protocol logic lives in lib.js.
-// ?bundle: esm.sh inlines dependencies. Without it, @atproto/api's `tlds`
-// dependency arrives as a JSON module, which browsers refuse to import.
-import { BrowserOAuthClient } from 'https://esm.sh/@atproto/oauth-client-browser@0.5.10?bundle'
+// Protocol logic lives in lib.js. Everything third-party is checked in under
+// vendor/, built from pinned npm versions by scripts/vendor-library.
+import { BrowserOAuthClient } from './vendor/oauth-client-browser.js'
 import * as L from './lib.js'
 
 const DEFAULT_LIBRARY = 'jason-edelman.org'
-// The SDK's Agent (~240 KB compressed) loads only once someone signs in;
+// The SDK's Agent (~140 KB gzipped) loads only once someone signs in;
 // browsing the catalog needs plain reads only.
-const API = 'https://esm.sh/@atproto/api@0.29.3?bundle'
+const API = './vendor/atproto-api.js'
 // Used only where the browser has no native BarcodeDetector (iOS Safari, Firefox).
-const POLYFILL = 'https://cdn.jsdelivr.net/npm/barcode-detector@3.2.3/dist/es/ponyfill.js'
+// It fetches its decoder, vendor/zxing_reader.wasm, from beside itself.
+const POLYFILL = './vendor/barcode-detector.js'
 const FORMATS = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code']
 
 const state = { client: null, session: null, agent: null, me: null, myHandle: null, lib: null, snap: null, busy: false }
