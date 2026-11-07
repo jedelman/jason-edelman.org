@@ -1,0 +1,26 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.library.item",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "An item a library lends. Lives in the library owner's repo; the owner's repo is the inventory.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["barcode", "title", "createdAt"],
+        "properties": {
+          "barcode": {
+            "type": "string",
+            "maxLength": 256,
+            "description": "The scanned code. A UPC-A is stored as 12 digits, not as an EAN-13 with a leading zero. Copies of one title share a barcode."
+          },
+          "title": { "type": "string", "maxLength": 3000, "maxGraphemes": 300 },
+          "notes": { "type": "string", "maxLength": 10000, "maxGraphemes": 1000 },
+          "photo": { "type": "blob", "accept": ["image/*"], "maxSize": 2000000 },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.library.checkin",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "The library owner closing a loan that lives in someone else's repo, as when an item comes back without its borrower scanning it. Lives in the owner's repo.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["loan", "createdAt"],
+        "properties": {
+          "loan": { "type": "ref", "ref": "com.atproto.repo.strongRef" },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "client_id": "https://jason-edelman.org/library/client-metadata.json",
+  "client_name": "Library",
+  "client_uri": "https://jason-edelman.org/library/",
+  "redirect_uris": ["https://jason-edelman.org/library/"],
+  "scope": "atproto repo:org.jason-edelman.library.item repo:org.jason-edelman.library.member repo:org.jason-edelman.library.loan repo:org.jason-edelman.library.checkin blob:image/*",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none",
+  "application_type": "web",
+  "dpop_bound_access_tokens": true
+}

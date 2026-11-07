@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library</title>
+  <meta name="description" content="A lending library on atproto. Scan an item to check it out or in; the records live in people's own repos.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;600;900&family=Lora:ital,wght@0,400;0,500;1,400&display=swap">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      oklch(11% 0.006 145);
+      --surface: oklch(16% 0.007 145);
+      --border:  oklch(23% 0.008 145);
+      --text:    oklch(85% 0.010 145);
+      --muted:   oklch(58% 0.010 145);
+      --accent:  oklch(64% 0.12 145);
+      --link:    oklch(72% 0.10 145);
+      --warn:    oklch(74% 0.11 75);
+      --bad:     oklch(68% 0.15 25);
+      --font-display: 'Epilogue', 'Arial Narrow', sans-serif;
+      --font-body:    'Lora', Georgia, serif;
+      --font-mono:    ui-monospace, 'Cascadia Code', 'Source Code Pro', monospace;
+      color-scheme: dark;
+    }
+
+    html { font-size: 17px; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+    body { font-family: var(--font-body); line-height: 1.6; padding: 2rem 1rem 5rem; background: var(--bg); }
+    main { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+    h1 { font-family: var(--font-display); font-weight: 900; font-size: clamp(2.2rem, 7vw, 3rem); line-height: 1; letter-spacing: -0.025em; }
+    h2 { font-family: var(--font-display); font-weight: 600; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 1.5rem 0 0.5rem; }
+    h2:first-child { margin-top: 0; }
+    a { color: var(--link); }
+    strong { font-weight: 500; color: var(--text); }
+    .mono { font-family: var(--font-mono); font-size: 0.85em; }
+    .meta { color: var(--muted); font-size: 0.85rem; }
+    .empty { color: var(--muted); font-style: italic; padding: 0.5rem 0; list-style: none; }
+
+    header { display: flex; flex-direction: column; gap: 0.4rem; }
+    #lib-line { color: var(--muted); }
+    #lib-change summary { display: inline; cursor: pointer; color: var(--link); font-size: 0.85rem; }
+    #lib-change summary::-webkit-details-marker { display: none; }
+    #lib-change[open] summary { margin-bottom: 0.5rem; }
+    #account { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1rem; }
+    #account .meta { flex-basis: 100%; }
+
+    input, textarea, button { font: inherit; color: var(--text); }
+    input, textarea {
+      background: var(--surface); border: 1px solid var(--border); padding: 0.55rem 0.7rem; width: 100%; min-width: 0;
+    }
+    input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    input[type=file] { padding: 0.4rem; }
+    button {
+      background: none; border: 1px solid var(--border); padding: 0.55rem 0.9rem; cursor: pointer;
+      font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.02em; white-space: nowrap;
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button[type=submit], .primary { border-color: var(--accent); color: var(--accent); }
+    button.quiet { color: var(--muted); }
+    button.link { border: none; padding: 0; color: var(--link); font-family: var(--font-body); font-weight: 400; font-size: 0.9rem; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .row { display: flex; gap: 0.5rem; align-items: stretch; }
+    .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+    .actions button { white-space: normal; text-align: left; padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+
+    nav { display: flex; gap: 1rem; border-bottom: 1px solid var(--border); overflow-x: auto; }
+    nav button {
+      border: none; border-bottom: 2px solid transparent; padding: 0.4rem 0 0.5rem; margin-bottom: -1px;
+      color: var(--muted); font-size: 0.9rem;
+    }
+    nav button[aria-selected=true] { color: var(--text); border-bottom-color: var(--accent); }
+    nav button:hover { color: var(--text); }
+
+    .notice { border-left: 2px solid var(--warn); padding: 0.25rem 0 0.25rem 0.75rem; font-size: 0.9rem; }
+
+    section { display: flex; flex-direction: column; gap: 0.9rem; }
+    section[hidden], [hidden] { display: none !important; }
+
+    .finder { position: relative; border: 1px solid var(--border); background: #000; aspect-ratio: 4 / 3; overflow: hidden; }
+    .finder video { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .finder::after { content: ''; position: absolute; left: 12%; right: 12%; top: 50%; border-top: 1px solid var(--accent); opacity: 0.8; }
+
+    .result { display: flex; gap: 1rem; align-items: flex-start; border-top: 1px solid var(--border); padding-top: 1rem; }
+    .result-line { font-family: var(--font-display); font-weight: 600; font-size: 1.25rem; line-height: 1.25; }
+    .result[data-tone=good] .result-line { color: var(--accent); }
+    .result[data-tone=warn] .result-line { color: var(--warn); }
+    .result-title { margin-top: 0.25rem; }
+    p[data-tone=bad] { color: var(--bad); }
+    p[data-tone=good] { color: var(--accent); }
+
+    .thumb { width: 56px; height: 56px; object-fit: cover; flex: none; border: 1px solid var(--border); background: var(--surface); }
+    .thumb.big { width: 96px; height: 96px; }
+    .items { list-style: none; display: flex; flex-direction: column; }
+    .item { display: flex; gap: 0.9rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
+    .item > div, .result > div { min-width: 0; overflow-wrap: anywhere; }
+    .item .title { line-height: 1.35; }
+    .item .in { color: var(--accent); }
+    .item .out { color: var(--warn); }
+    .history { list-style: none; }
+    .history li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
+    .member { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border); }
+
+    form.stack { display: flex; flex-direction: column; gap: 0.9rem; }
+    label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.85rem; color: var(--muted); }
+    #add-preview { max-width: 160px; border: 1px solid var(--border); }
+
+    footer { border-top: 1px solid var(--border); padding-top: 1rem; color: var(--muted); font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Library</h1>
+    <p id="lib-line">Loading&hellip;</p>
+    <details id="lib-change">
+      <summary>Another library</summary>
+      <form id="lib-form" class="row">
+        <input id="lib-input" placeholder="owner.handle" autocapitalize="none" spellcheck="false" aria-label="Library owner's handle">
+        <button type="submit">Open</button>
+      </form>
+    </details>
+    <div id="account"></div>
+  </header>
+
+  <nav role="tablist" aria-label="Library">
+    <button type="button" role="tab" data-tab="scan" aria-selected="true">Scan</button>
+    <button type="button" role="tab" data-tab="borrowed" aria-selected="false">Borrowed</button>
+    <button type="button" role="tab" data-tab="catalog" aria-selected="false">Catalog</button>
+    <button type="button" role="tab" data-tab="add" data-owner aria-selected="false" hidden>Add</button>
+    <button type="button" role="tab" data-tab="members" data-owner aria-selected="false" hidden>Members</button>
+  </nav>
+
+  <p id="notice" class="notice" role="status" hidden></p>
+
+  <section id="tab-scan" role="tabpanel">
+    <div id="scan-finder" class="finder" hidden><video id="scan-video" playsinline muted></video></div>
+    <div class="row"><button type="button" id="scan-cam" class="primary" data-idle="Start camera">Start camera</button></div>
+    <form id="scan-form" class="row">
+      <input id="scan-code" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Type a code, or use a handheld scanner" aria-label="Barcode">
+      <button type="submit">Go</button>
+    </form>
+    <div id="scan-result" aria-live="polite"></div>
+  </section>
+
+  <section id="tab-borrowed" role="tabpanel" hidden>
+    <div id="borrowed-list"></div>
+  </section>
+
+  <section id="tab-catalog" role="tabpanel" hidden>
+    <input id="catalog-filter" type="search" placeholder="Filter by title or code" aria-label="Filter the catalog">
+    <p id="catalog-count" class="meta"></p>
+    <ul id="catalog-list" class="items"></ul>
+  </section>
+
+  <section id="tab-add" role="tabpanel" hidden>
+    <form id="add-form" class="stack">
+      <label>Barcode
+        <span class="row">
+          <input id="add-code" required inputmode="numeric" autocomplete="off" spellcheck="false">
+          <button type="button" id="add-cam" data-idle="Scan">Scan</button>
+        </span>
+      </label>
+      <div id="add-finder" class="finder" hidden><video id="add-video" playsinline muted></video></div>
+      <label>Title <input id="add-title" required></label>
+      <label>Notes <textarea id="add-notes" rows="2"></textarea></label>
+      <label>Photo <input id="add-photo" type="file" accept="image/*" capture="environment"></label>
+      <img id="add-preview" alt="Photo preview" hidden>
+      <div class="row"><button type="submit">Add to catalog</button></div>
+      <p id="add-status" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section id="tab-members" role="tabpanel" hidden>
+    <p class="meta">Only members' checkouts count. Anyone can write a record in their own repo; this list is who the library listens to.</p>
+    <form id="member-form" class="row">
+      <input id="member-handle" placeholder="friend.bsky.social" autocapitalize="none" spellcheck="false" aria-label="Member's handle">
+      <button type="submit">Add member</button>
+    </form>
+    <p id="member-status" aria-live="polite"></p>
+    <ul id="member-list" class="items"></ul>
+  </section>
+
+  <footer>
+    The inventory and member list live in the owner's atproto repo. Each checkout is a record in the borrower's own repo. All of it is public.
+  </footer>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

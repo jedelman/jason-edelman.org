@@ -28,6 +28,7 @@ const STATIC = [
   'oauth',
   'operator-field',
   'img',
+  'library',
 ];
 
 // Subprojects: { name, dir, buildCmd, outDir, required }
