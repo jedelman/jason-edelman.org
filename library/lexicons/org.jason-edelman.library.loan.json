@@ -1,0 +1,21 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.library.loan",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A checkout. Lives in the borrower's repo. Open until returnedAt is set, or until the library owner writes a checkin record for it.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["subject", "library", "createdAt"],
+        "properties": {
+          "subject": { "type": "ref", "ref": "com.atproto.repo.strongRef", "description": "The item record in the library owner's repo." },
+          "library": { "type": "string", "format": "did", "description": "The library owner's DID." },
+          "createdAt": { "type": "string", "format": "datetime" },
+          "returnedAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}
