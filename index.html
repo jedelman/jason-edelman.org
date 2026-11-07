@@ -106,10 +106,10 @@
           </a>
           <p>A lending library with no server of its own. Scan an item's barcode with a
           phone camera or a handheld scanner to check it out, and scan it again to check
-          it back in. The catalog and the member list live in the owner's atproto repo,
-          and each checkout is a record in the borrower's own repo. The member list is
-          the boundary: anyone can write a record, but the library only counts the
-          people it lists.</p>
+          it back in. The catalog lives in the owner's atproto repo, and each checkout is
+          a record in the borrower's own repo that links back to the library. There's no
+          member list: anyone with an atproto account can borrow, and the library finds
+          who has what by asking a network-wide index which records point at it.</p>
         </div>
 
         <div class="project-card in-progress">

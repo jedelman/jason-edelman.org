@@ -145,11 +145,20 @@ async function signOut() {
 // ── Data ─────────────────────────────────────────────────────────────────
 
 async function refresh() {
-  state.snap = await L.loadLibrary(state.lib)
+  state.snap = await L.loadLibrary(state.lib, { me: state.me })
+  // Loans the owner checked in for me become receipts, once, quietly.
+  if (state.agent && L.closedLoansOf(state.snap, state.me).length) {
+    try {
+      await L.tidy(state.agent, state.me, state.snap)
+      state.snap = await L.loadLibrary(state.lib, { me: state.me })
+    } catch (e) {
+      console.warn('tidy failed', e)
+    }
+  }
   const n = state.snap.unreachable.length
-  const unreachableMsg = (k) => `Couldn't reach ${k} member repo${k === 1 ? '' : 's'}; some items may show as available when they aren't.`
-  if (n) notice(unreachableMsg(n))
-  else if ($('notice').textContent.startsWith("Couldn't reach")) notice('')
+  if (state.snap.indexError) notice(`Couldn't reach the backlink index (Constellation), so other people's checkouts may be missing: ${state.snap.indexError.message}`)
+  else if (n) notice(`Couldn't reach ${n} borrower repo${n === 1 ? '' : 's'}; some items may show as available when they aren't.`)
+  else if (/^Couldn't reach/.test($('notice').textContent)) notice('')
   renderAll()
 }
 
@@ -307,8 +316,6 @@ async function onScan(raw) {
         return showResult({ code, line: 'Not in this catalog.', actions: isOwner() ? [['Add it', () => startAdd(code)]] : [] })
       case 'signed-out':
         return showResult({ item: d.item, line: d.loan ? outLine(d.item) : 'Available. Sign in to check it out.' })
-      case 'not-member':
-        return showResult({ item: d.item, line: `Available, but you aren't on this library's member list. Ask ${ownerAt()} to add you.` })
       case 'out':
         return showResult({
           item: d.item,
@@ -321,9 +328,9 @@ async function onScan(raw) {
         await refresh()
         return showResult({ item: d.item, line: 'Checked out to you.', tone: 'good' })
       case 'checkin':
-        await L.checkIn(state.agent, state.me, d.loan)
+        const { deleted } = await L.checkIn(state.agent, state.me, d.loan)
         await refresh()
-        return showResult({ item: d.item, line: 'Checked in. Thank you.', tone: 'good' })
+        return showResult({ item: d.item, line: deleted ? 'Checked in. Thank you.' : 'Already checked in.', tone: 'good' })
     }
   })
 }
@@ -352,21 +359,97 @@ function renderHeader() {
   line.replaceChildren('Lending collection of ', el('strong', {}, ownerAt()))
 }
 
+let accountKey = null
 function renderAccount() {
+  // Rebuild only when something shown changes, so a refresh never wipes a
+  // handle someone is halfway through typing.
+  const role = state.snap && isOwner() ? 'owner' : ''
+  const key = `${state.me}|${state.myHandle}|${role}`
+  if (key === accountKey) return
+  accountKey = key
   const box = $('account')
   if (state.me) {
-    const role = !state.snap ? '' : isOwner() ? 'owner' : L.isMember(state.snap, state.me) ? 'member' : 'not a member'
     box.replaceChildren(
       el('span', {}, el('strong', {}, '@' + (state.myHandle ?? state.me)), role ? ` · ${role}` : ''),
       el('button', { type: 'button', class: 'link', onclick: signOut }, 'Sign out'),
     )
   } else {
-    const input = el('input', { name: 'handle', placeholder: 'your.handle', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', 'aria-label': 'Your handle' })
+    const input = el('input', { id: 'signin-handle', name: 'handle', placeholder: 'your.handle', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', 'aria-label': 'Your handle' })
     box.replaceChildren(
       el('form', { class: 'row', onsubmit: (e) => (e.preventDefault(), signIn(input.value)) }, input, el('button', { type: 'submit' }, 'Sign in')),
       el('p', { class: 'meta' }, 'Checkouts are public: each one is a record in your own repo.'),
     )
+    attachTypeahead(input, (handle) => signIn(handle))
   }
+}
+
+// Handle suggestions under an input, as an ARIA combobox. Picking one calls onPick.
+function attachTypeahead(input, onPick) {
+  const list = el('ul', { class: 'typeahead', role: 'listbox', id: `${input.id}-list`, hidden: true })
+  input.after(list)
+  input.setAttribute('role', 'combobox')
+  input.setAttribute('aria-autocomplete', 'list')
+  input.setAttribute('aria-expanded', 'false')
+  input.setAttribute('aria-controls', list.id)
+  input.autocomplete = 'off'
+  let actors = []
+  let active = -1
+  let timer
+  let ctrl
+  const close = () => {
+    list.hidden = true
+    input.setAttribute('aria-expanded', 'false')
+    input.removeAttribute('aria-activedescendant')
+    active = -1
+  }
+  const pick = (i) => {
+    input.value = actors[i].handle
+    close()
+    onPick(actors[i].handle)
+  }
+  const render = () => {
+    list.replaceChildren(
+      ...actors.map((a, i) =>
+        el(
+          'li',
+          { role: 'option', id: `${list.id}-${i}`, 'aria-selected': String(i === active), onmousedown: (e) => (e.preventDefault(), pick(i)) },
+          a.avatar ? el('img', { src: a.avatar, alt: '', loading: 'lazy' }) : el('span', { class: 'avatar blank', 'aria-hidden': 'true' }),
+          el('span', { class: 'who' }, a.displayName ? el('strong', {}, a.displayName) : null, el('span', { class: 'meta' }, '@' + a.handle)),
+        ),
+      ),
+    )
+    list.hidden = !actors.length
+    input.setAttribute('aria-expanded', String(!!actors.length))
+    if (active >= 0) input.setAttribute('aria-activedescendant', `${list.id}-${active}`)
+    else input.removeAttribute('aria-activedescendant')
+  }
+  input.addEventListener('input', () => {
+    clearTimeout(timer)
+    ctrl?.abort()
+    const q = input.value.trim().replace(/^@/, '')
+    if (!q) return ((actors = []), close())
+    timer = setTimeout(async () => {
+      ctrl = new AbortController()
+      try {
+        actors = await L.searchActors(q, ctrl.signal)
+        active = -1
+        if (document.activeElement === input) render()
+      } catch (e) {
+        if (e.name !== 'AbortError') close()
+      }
+    }, 150)
+  })
+  input.addEventListener('keydown', (e) => {
+    if (list.hidden || !actors.length) return
+    if (e.key === 'ArrowDown') active = (active + 1) % actors.length
+    else if (e.key === 'ArrowUp') active = (active - 1 + actors.length) % actors.length
+    else if (e.key === 'Enter' && active >= 0) return e.preventDefault(), pick(active)
+    else if (e.key === 'Escape') return close()
+    else return
+    e.preventDefault()
+    render()
+  })
+  input.addEventListener('blur', () => setTimeout(close, 120))
 }
 
 function renderTabs() {
@@ -398,7 +481,6 @@ function renderAll() {
   renderTabs()
   renderCatalog()
   renderBorrowed()
-  renderMembers()
 }
 
 function itemRow(item, extra = []) {
@@ -445,58 +527,35 @@ function renderCatalog() {
 function renderBorrowed() {
   const box = $('borrowed-list')
   if (!state.me) return box.replaceChildren(el('p', { class: 'empty' }, 'Sign in to see what you have out.'))
-  if (!L.isMember(state.snap, state.me)) return box.replaceChildren(el('p', { class: 'empty' }, `You aren't on this library's member list. Ask ${ownerAt()} to add you.`))
-  const mine = state.snap.loans.filter((l) => l.did === state.me)
-  const openUris = new Set(L.openLoansOf(state.snap, state.me).map((l) => l.uri))
-  const open = mine.filter((l) => openUris.has(l.uri))
-  const past = mine.filter((l) => !openUris.has(l.uri)).sort((a, b) => String(b.value.createdAt).localeCompare(String(a.value.createdAt)))
-  const kids = []
-  kids.push(el('h2', {}, 'Out with you'))
+  const open = L.openLoansOf(state.snap, state.me)
+  const history = [
+    ...state.snap.receipts.map((r) => ({ uri: r.value.subject?.uri, from: r.value.borrowedAt, to: r.value.returnedAt, by: 'returned' })),
+    ...L.closedLoansOf(state.snap, state.me).map((l) => ({ uri: l.value.subject?.uri, from: l.value.createdAt, to: state.snap.closed.get(l.uri).value.createdAt, by: 'checked in by the library' })),
+  ].sort((a, b) => String(b.to).localeCompare(String(a.to)))
+  const kids = [el('h2', {}, 'Out with you')]
   if (!open.length) kids.push(el('p', { class: 'empty' }, 'Nothing right now.'))
   else
     kids.push(
       el(
         'ul',
         { class: 'items' },
-        open.map((l) => {
-          const item = itemByUri(l.value.subject.uri)
-          return item ? itemRow(item, [el('button', { type: 'button', onclick: () => checkInMine(l) }, 'Check in')]) : null
-        }),
+        open.map((l) => itemRow(itemByUri(l.value.subject.uri), [el('button', { type: 'button', onclick: () => checkInMine(l) }, 'Check in')])),
       ),
     )
-  if (past.length) {
+  if (history.length) {
     kids.push(el('h2', {}, 'History'))
     kids.push(
       el(
         'ul',
         { class: 'history' },
-        past.map((l) => {
-          const item = itemByUri(l.value.subject.uri)
-          const end = l.value.returnedAt ? `returned ${fmtDate(l.value.returnedAt)}` : state.snap.closed.has(l.uri) ? 'checked in by the library' : 'no longer counted'
-          return el('li', {}, el('span', {}, item ? item.value.title : '(removed item)'), el('span', { class: 'meta' }, `${fmtDate(l.value.createdAt)}, ${end}`))
+        history.map((h) => {
+          const item = itemByUri(h.uri)
+          return el('li', {}, el('span', {}, item ? item.value.title : '(removed item)'), el('span', { class: 'meta' }, `${fmtDate(h.from)}, ${h.by} ${fmtDate(h.to)}`))
         }),
       ),
     )
   }
   box.replaceChildren(...kids)
-}
-
-function renderMembers() {
-  const list = $('member-list')
-  if (!isOwner()) return list.replaceChildren()
-  const members = [...state.snap.members.entries()]
-  if (!members.length) return list.replaceChildren(el('li', { class: 'empty' }, 'No members yet. You can always borrow from your own library.'))
-  list.replaceChildren(
-    ...members.map(([did, m]) => {
-      const n = L.openLoansOf(state.snap, did).length
-      return el(
-        'li',
-        { class: 'member' },
-        el('span', {}, el('strong', {}, at(did)), el('span', { class: 'meta' }, ` since ${fmtDate(m.value.createdAt)}${n ? ` · ${n} out` : ''}`)),
-        el('button', { type: 'button', class: 'quiet', onclick: () => removeMember(did, m) }, 'Remove'),
-      )
-    }),
-  )
 }
 
 // ── Owner actions ────────────────────────────────────────────────────────
@@ -505,16 +564,6 @@ async function removeItem(item) {
   if (!confirm(`Remove "${item.value.title}" from the catalog?`)) return
   await guarded(null, async () => {
     await L.removeItem(state.agent, state.me, item)
-    await refresh()
-  })
-}
-
-async function removeMember(did, m) {
-  const n = L.openLoansOf(state.snap, did).length
-  if (n) return notice(`${at(did)} has ${n} item${n === 1 ? '' : 's'} out. Check ${n === 1 ? 'it' : 'them'} in first, or they'll show as available.`)
-  if (!confirm(`Remove ${at(did)} from the member list?`)) return
-  await guarded(null, async () => {
-    await L.removeMember(state.agent, state.me, m)
     await refresh()
   })
 }
@@ -596,26 +645,12 @@ $('add-photo').addEventListener('change', (e) => {
 })
 $('add-form').addEventListener('submit', submitAdd)
 
-$('member-form').addEventListener('submit', async (e) => {
-  e.preventDefault()
-  const input = $('member-handle')
-  const status = $('member-status')
-  await guarded(status, async () => {
-    status.dataset.tone = 'plain'
-    status.textContent = 'Adding…'
-    const { id, existing } = await L.addMember(state.agent, state.me, state.snap, input.value)
-    input.value = ''
-    await refresh()
-    status.dataset.tone = 'good'
-    status.textContent = existing ? `@${id.handle ?? id.did} is already a member.` : `Added @${id.handle ?? id.did}.`
-  })
-})
-
 $('lib-form').addEventListener('submit', (e) => {
   e.preventDefault()
   const v = $('lib-input').value.trim().replace(/^@/, '')
   if (v) location.search = `?library=${encodeURIComponent(v)}`
 })
+attachTypeahead($('lib-input'), (handle) => (location.search = `?library=${encodeURIComponent(handle)}`))
 
 async function boot() {
   const param = new URLSearchParams(location.search).get('library')
