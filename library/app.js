@@ -46,11 +46,20 @@ const store = {
   },
 }
 
+const thisYear = (d) => d.getFullYear() === new Date().getFullYear()
 const fmtDate = (iso) => {
   const d = new Date(iso)
-  return isNaN(d) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' })
+  return isNaN(d) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: thisYear(d) ? undefined : 'numeric' })
+}
+// For stamps and the date card: "NOV 7", or "NOV 7 2025" from another year.
+const fmtStamp = (iso) => {
+  const d = new Date(iso)
+  if (isNaN(d)) return ''
+  const m = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()
+  return `${m} ${d.getDate()}${thisYear(d) ? '' : ' ' + d.getFullYear()}`
 }
 
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 const isOwner = () => !!state.me && state.lib && state.me === state.lib.did
 const at = (did) => '@' + L.handleOf(state.snap, did)
 const ownerAt = () => '@' + (state.lib.handle ?? state.lib.did)
@@ -64,19 +73,31 @@ function notice(msg) {
 
 const buzz = () => navigator.vibrate?.(60)
 
-function thumb(item, cls = 'thumb') {
+// A photo, or the title's first letter set as a tile.
+function thumb(item) {
   const src = item && L.blobUrl(state.lib, item.value?.photo)
-  return src ? el('img', { class: cls, src, alt: '', loading: 'lazy' }) : el('div', { class: `${cls} blank`, 'aria-hidden': 'true' })
+  if (src) return el('img', { class: 'thumb', src, alt: '', loading: 'lazy' })
+  const letter = String(item?.value?.title || '?').trim().charAt(0) || '?'
+  return el('span', { class: 'monogram', 'aria-hidden': 'true' }, letter)
 }
 
 function outLine(item) {
   const loans = state.snap.active.get(item.uri) ?? []
-  if (!loans.length) return 'Available.'
+  if (!loans.length) return 'On the shelf.'
   const [first, ...rest] = loans
   const who = first.did === state.me ? 'you' : at(first.did)
   let s = `Out with ${who} since ${fmtDate(first.value.createdAt)}.`
   if (rest.length) s += ` Also claimed by ${rest.map((l) => at(l.did)).join(', ')}.`
   return s
+}
+
+// The small typed status beside a code: IN, or OUT with who and since when.
+function statusTag(item) {
+  const loan = L.holderOf(state.snap, item)
+  if (!loan) return [el('span', { class: 'tag in' }, 'In')]
+  const who = loan.did === state.me ? 'you' : at(loan.did)
+  const extra = (state.snap.active.get(item.uri)?.length ?? 1) - 1
+  return [el('span', { class: 'tag out' }, `Out ${fmtStamp(loan.value.createdAt)}`), el('span', { class: 'tag-note' }, who + (extra ? ` +${extra}` : ''))]
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────
@@ -157,7 +178,7 @@ async function refresh() {
   }
   const n = state.snap.unreachable.length
   if (state.snap.indexError) notice(`Couldn't reach the backlink index (Constellation), so other people's checkouts may be missing: ${state.snap.indexError.message}`)
-  else if (n) notice(`Couldn't reach ${n} borrower repo${n === 1 ? '' : 's'}; some items may show as available when they aren't.`)
+  else if (n) notice(`Couldn't reach ${n} borrower repo${n === 1 ? '' : 's'}; some items may show as on the shelf when they aren't.`)
   else if (/^Couldn't reach/.test($('notice').textContent)) notice('')
   renderAll()
 }
@@ -171,7 +192,7 @@ async function guarded(statusEl, fn) {
     console.error(e)
     // A swapRecord guard tripped: the record changed since we read it.
     const msg = e?.error === 'InvalidSwap' ? 'That record changed somewhere else. Refresh and try again.' : e.message
-    if (statusEl) {
+    if (statusEl?.isConnected) {
       statusEl.textContent = `Error: ${msg}`
       statusEl.dataset.tone = 'bad'
     } else notice(`Error: ${msg}`)
@@ -246,60 +267,89 @@ class Scanner {
 }
 
 function cameraError(e) {
-  if (e?.name === 'NotAllowedError') return 'Camera permission was denied.'
+  if (e?.name === 'NotAllowedError') return 'Camera permission was denied. Type the code instead, or use a handheld scanner.'
   if (e?.name === 'NotFoundError') return 'No camera found. Type the code, or use a handheld scanner.'
   return `Camera unavailable: ${e?.message || e}`
 }
 
-async function toggleCamera(scanner, finder, button, status) {
-  if (scanner.running) {
-    scanner.stop()
-    finder.hidden = true
-    button.textContent = button.dataset.idle
-    return
-  }
-  finder.hidden = false
-  button.textContent = 'Starting…'
-  try {
-    await scanner.start()
-    button.textContent = 'Stop camera'
-  } catch (e) {
-    scanner.stop()
-    finder.hidden = true
-    button.textContent = button.dataset.idle
-    status.textContent = cameraError(e)
-    status.dataset.tone = 'bad'
-  }
-}
-
 const scanScanner = new Scanner($('scan-video'), (code) => onScan(code))
 const addScanner = new Scanner($('add-video'), (code) => {
-  addScanner.stop()
-  $('add-finder').hidden = true
-  $('add-cam').textContent = $('add-cam').dataset.idle
+  stopAddCamera()
   buzz()
   setAddCode(code)
 })
 
+async function startScanCamera() {
+  const start = $('scan-cam')
+  start.firstChild.textContent = 'Starting…'
+  try {
+    await scanScanner.start()
+    start.hidden = true
+    $('scan-stop').hidden = false
+  } catch (e) {
+    scanScanner.stop()
+    showStatus(cameraError(e), 'bad')
+  } finally {
+    start.firstChild.textContent = 'Tap to scan'
+  }
+}
+
+function stopScanCamera() {
+  scanScanner.stop()
+  $('scan-cam').hidden = false
+  $('scan-stop').hidden = true
+}
+
+async function toggleAddCamera() {
+  if (addScanner.running) return stopAddCamera()
+  $('add-finder').hidden = false
+  $('add-cam').textContent = 'Starting…'
+  try {
+    await addScanner.start()
+    $('add-cam').textContent = 'Stop'
+  } catch (e) {
+    stopAddCamera()
+    $('add-status').textContent = cameraError(e)
+    $('add-status').dataset.tone = 'bad'
+  }
+}
+
+function stopAddCamera() {
+  addScanner.stop()
+  $('add-finder').hidden = true
+  $('add-cam').textContent = $('add-cam').dataset.idle
+}
+
 // ── Scan tab: one scan checks out or checks in ───────────────────────────
 
-function showResult({ item, code, line, tone, actions = [] }) {
-  const box = $('scan-result')
-  box.replaceChildren(
+// A plain line where the slip will go: "Checking…", "Not in this catalog", errors.
+function showStatus(text, tone, actions = []) {
+  $('scan-hint').hidden = true
+  const p = el('p', { class: 'scan-status', 'data-tone': tone || null }, text)
+  const row = actions.length ? [el('div', { class: 'actions' }, actions.map(([label, fn]) => el('button', { type: 'button', onclick: fn }, label)))] : []
+  $('scan-result').replaceChildren(p, ...row)
+  return p
+}
+
+// The date slip: the item, an ink stamp for what just happened, one plain sentence.
+function showSlip({ item, ink, stamp, who, line, actions = [] }) {
+  $('scan-hint').hidden = true
+  const src = L.blobUrl(state.lib, item.value?.photo)
+  const slip = el(
+    'article',
+    { class: 'slip', 'data-ink': ink, 'aria-label': `${item.value.title}: ${line}` },
     el(
       'div',
-      { class: 'result', 'data-tone': tone || 'plain' },
-      item && L.blobUrl(state.lib, item.value?.photo) ? thumb(item, 'thumb big') : null,
-      el(
-        'div',
-        {},
-        el('p', { class: 'result-line' }, line),
-        item ? el('p', { class: 'result-title' }, item.value.title) : null,
-        el('p', { class: 'meta mono' }, item ? item.value.barcode : code),
-        actions.length ? el('div', { class: 'actions' }, actions.map(([label, fn]) => el('button', { type: 'button', onclick: fn }, label))) : null,
-      ),
+      { class: 'slip-head' },
+      src ? el('img', { class: 'slip-photo', src, alt: '' }) : null,
+      el('div', {}, el('p', { class: 'slip-title' }, item.value.title), el('p', { class: 'slip-code' }, item.value.barcode)),
     ),
+    el('div', { class: 'slip-mark' }, el('span', { class: 'stamp' }, stamp), who ? el('span', { class: 'slip-who' }, who) : null),
+    el('p', { class: 'slip-line' }, line),
+    actions.length ? el('div', { class: 'actions' }, actions.map(([label, fn]) => el('button', { type: 'button', onclick: fn }, label))) : null,
   )
+  $('scan-result').replaceChildren(slip)
+  slip.scrollIntoView({ block: 'nearest', behavior: reducedMotion() ? 'auto' : 'smooth' })
 }
 
 async function onScan(raw) {
@@ -307,30 +357,36 @@ async function onScan(raw) {
   const code = L.normalizeCode(raw)
   if (!code) return
   buzz()
-  showResult({ code, line: 'Checking…' })
-  await guarded($('scan-result').querySelector('.result-line'), async () => {
+  const status = showStatus(`Checking ${code}…`)
+  await guarded(status, async () => {
     await refresh() // act on fresh status, not what was on screen
     const d = L.decide(state.snap, code, state.me)
+    const today = fmtStamp(new Date().toISOString())
     switch (d.kind) {
       case 'unknown':
-        return showResult({ code, line: 'Not in this catalog.', actions: isOwner() ? [['Add it', () => startAdd(code)]] : [] })
-      case 'signed-out':
-        return showResult({ item: d.item, line: d.loan ? outLine(d.item) : 'Available. Sign in to check it out.' })
+        return showStatus(`${code} isn't in this catalog.`, null, isOwner() ? [['Add it to the catalog', () => startAdd(code)]] : [])
+      case 'signed-out': {
+        if (!d.loan) return showSlip({ item: d.item, ink: 'in', stamp: 'On shelf', line: 'Sign in to borrow it.' })
+        return showSlip({ item: d.item, ink: 'out', stamp: `Out ${fmtStamp(d.loan.value.createdAt)}`, who: at(d.loan.did), line: outLine(d.item) })
+      }
       case 'out':
-        return showResult({
+        return showSlip({
           item: d.item,
+          ink: 'out',
+          stamp: `Out ${fmtStamp(d.loan.value.createdAt)}`,
+          who: at(d.loan.did),
           line: outLine(d.item),
-          tone: 'warn',
-          actions: isOwner() ? [[`Check in for ${at(d.loan.did)}`, () => checkInFor(d.loan)]] : [],
+          actions: isOwner() ? [[`It's back: check in for ${at(d.loan.did)}`, () => checkInFor(d.loan)]] : [],
         })
       case 'checkout':
         await L.checkOut(state.agent, state.me, state.snap, d.item)
         await refresh()
-        return showResult({ item: d.item, line: 'Checked out to you.', tone: 'good' })
-      case 'checkin':
+        return showSlip({ item: d.item, ink: 'out', stamp: `Out ${today}`, who: 'to you', line: 'Checked out. Scan it again when you give it back.' })
+      case 'checkin': {
         const { deleted } = await L.checkIn(state.agent, state.me, d.loan)
         await refresh()
-        return showResult({ item: d.item, line: deleted ? 'Checked in. Thank you.' : 'Already checked in.', tone: 'good' })
+        return showSlip({ item: d.item, ink: 'in', stamp: `Returned ${today}`, line: deleted ? 'Checked in. Thank you.' : 'It was already checked in.' })
+      }
     }
   })
 }
@@ -341,7 +397,7 @@ async function checkInFor(loan) {
   await guarded(null, async () => {
     await L.checkInFor(state.agent, state.me, loan)
     await refresh()
-    if (item) showResult({ item, line: `Checked in for ${who}.`, tone: 'good' })
+    if (item) showSlip({ item, ink: 'in', stamp: `Returned ${fmtStamp(new Date().toISOString())}`, line: `Checked in for ${who}.` })
   })
 }
 
@@ -354,29 +410,36 @@ async function checkInMine(loan) {
 
 // ── Rendering ────────────────────────────────────────────────────────────
 
+// The bookplate: whose shelf this is. The handle, not the display name: it's
+// the identity the records hang on, and display names are often slogans.
 function renderHeader() {
-  const line = $('lib-line')
-  line.replaceChildren('Lending collection of ', el('strong', {}, ownerAt()))
+  const handle = state.lib.handle ?? state.lib.did
+  const name = $('lib-name')
+  // Let a long handle break after its dots rather than mid-word.
+  name.replaceChildren(...handle.split('.').flatMap((part, i, all) => (i < all.length - 1 ? [part + '.', el('wbr')] : [part])))
+  name.classList.toggle('long', handle.length > 16)
+  $('lib-line').textContent = 'Lending library'
+  document.title = `Library · ${handle}`
 }
 
 let accountKey = null
 function renderAccount() {
   // Rebuild only when something shown changes, so a refresh never wipes a
   // handle someone is halfway through typing.
-  const role = state.snap && isOwner() ? 'owner' : ''
+  const role = state.snap && isOwner() ? 'your library' : ''
   const key = `${state.me}|${state.myHandle}|${role}`
   if (key === accountKey) return
   accountKey = key
   const box = $('account')
   if (state.me) {
     box.replaceChildren(
-      el('span', {}, el('strong', {}, '@' + (state.myHandle ?? state.me)), role ? ` · ${role}` : ''),
+      el('span', { class: 'meta' }, 'Signed in as ', el('strong', {}, '@' + (state.myHandle ?? state.me)), role ? ` · ${role}` : ''),
       el('button', { type: 'button', class: 'link', onclick: signOut }, 'Sign out'),
     )
   } else {
     const input = el('input', { id: 'signin-handle', name: 'handle', placeholder: 'your.handle', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', 'aria-label': 'Your handle' })
     box.replaceChildren(
-      el('form', { class: 'row', onsubmit: (e) => (e.preventDefault(), signIn(input.value)) }, input, el('button', { type: 'submit' }, 'Sign in')),
+      el('form', { class: 'row', onsubmit: (e) => (e.preventDefault(), signIn(input.value)) }, input, el('button', { type: 'submit' }, 'Sign in to borrow')),
       el('p', { class: 'meta' }, 'Checkouts are public: each one is a record in your own repo.'),
     )
     attachTypeahead(input, (handle) => signIn(handle))
@@ -413,7 +476,7 @@ function attachTypeahead(input, onPick) {
         el(
           'li',
           { role: 'option', id: `${list.id}-${i}`, 'aria-selected': String(i === active), onmousedown: (e) => (e.preventDefault(), pick(i)) },
-          a.avatar ? el('img', { src: a.avatar, alt: '', loading: 'lazy' }) : el('span', { class: 'avatar blank', 'aria-hidden': 'true' }),
+          a.avatar ? el('img', { src: a.avatar, alt: '', loading: 'lazy' }) : el('span', { class: 'avatar', 'aria-hidden': 'true' }),
           el('span', { class: 'who' }, a.displayName ? el('strong', {}, a.displayName) : null, el('span', { class: 'meta' }, '@' + a.handle)),
         ),
       ),
@@ -452,27 +515,29 @@ function attachTypeahead(input, onPick) {
   input.addEventListener('blur', () => setTimeout(close, 120))
 }
 
+const tabs = () => [...document.querySelectorAll('[role=tab]')].filter((t) => !t.hidden)
+
 function renderTabs() {
   const owner = isOwner()
   for (const b of document.querySelectorAll('[role=tab]')) if (b.dataset.owner != null) b.hidden = !owner
+  const mine = state.me ? L.openLoansOf(state.snap, state.me).length : 0
+  $('count-borrowed').textContent = mine ? String(mine) : ''
+  $('count-catalog').textContent = state.snap.items.length ? String(state.snap.items.length) : ''
   const current = document.querySelector('[role=tab][aria-selected=true]')
   if (!current || current.hidden) showTab('scan')
 }
 
-function showTab(name) {
-  for (const b of document.querySelectorAll('[role=tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === name))
-  for (const p of document.querySelectorAll('[role=tabpanel]')) p.hidden = p.id !== `tab-${name}`
-  for (const [s, f, b] of [
-    [scanScanner, 'scan-finder', 'scan-cam'],
-    [addScanner, 'add-finder', 'add-cam'],
-  ]) {
-    if (s.running) {
-      s.stop()
-      $(f).hidden = true
-      $(b).textContent = $(b).dataset.idle
-    }
+function showTab(name, { focus = false } = {}) {
+  for (const b of document.querySelectorAll('[role=tab]')) {
+    const on = b.dataset.tab === name
+    b.setAttribute('aria-selected', String(on))
+    b.tabIndex = on ? 0 : -1
+    if (on && focus) b.focus()
   }
-  if (name === 'scan' && matchMedia('(pointer: fine)').matches) $('scan-code').focus({ preventScroll: true })
+  for (const p of document.querySelectorAll('[role=tabpanel]')) p.hidden = p.id !== `tab-${name}`
+  if (scanScanner.running && name !== 'scan') stopScanCamera()
+  if (addScanner.running && name !== 'add') stopAddCamera()
+  if (name === 'scan' && !focus && matchMedia('(pointer: fine)').matches) $('scan-code').focus({ preventScroll: true })
 }
 
 function renderAll() {
@@ -484,7 +549,6 @@ function renderAll() {
 }
 
 function itemRow(item, extra = []) {
-  const loan = L.holderOf(state.snap, item)
   return el(
     'li',
     { class: 'item' },
@@ -493,10 +557,14 @@ function itemRow(item, extra = []) {
       'div',
       {},
       el('p', { class: 'title' }, item.value.title || '(untitled)'),
-      el('p', { class: 'meta' }, el('span', { class: 'mono' }, item.value.barcode), ' · ', el('span', { class: loan ? 'out' : 'in' }, outLine(item))),
+      el('p', { class: 'item-meta' }, el('span', { class: 'code' }, item.value.barcode), ...statusTag(item)),
       extra.length ? el('div', { class: 'actions' }, extra) : null,
     ),
   )
+}
+
+function emptyState(lines, action) {
+  return el('div', { class: 'empty' }, lines.map((t) => el('p', {}, t)), action ? el('button', { type: 'button', class: 'primary', onclick: action[1] }, action[0]) : null)
 }
 
 function renderCatalog() {
@@ -504,19 +572,31 @@ function renderCatalog() {
   const all = [...state.snap.items].sort((a, b) => String(a.value.title).localeCompare(String(b.value.title)))
   const shown = q ? all.filter((i) => String(i.value.title).toLowerCase().includes(q) || String(i.value.barcode).includes(q)) : all
   const out = all.filter((i) => L.holderOf(state.snap, i)).length
-  $('catalog-count').textContent = all.length ? `${all.length} item${all.length === 1 ? '' : 's'}, ${out} out` : ''
+  const count = $('catalog-count')
+  count.hidden = !all.length
+  count.textContent = `${all.length} item${all.length === 1 ? '' : 's'} · ${out} out · ${all.length - out} on the shelf`
+  $('catalog-filter').hidden = all.length < 6
   const list = $('catalog-list')
   if (!all.length) {
-    list.replaceChildren(el('li', { class: 'empty' }, isOwner() ? 'Nothing in the catalog yet. Use Add to catalog your first item.' : 'Nothing in the catalog yet.'))
+    list.replaceChildren(
+      el(
+        'li',
+        {},
+        isOwner()
+          ? emptyState(['Your shelf is empty.', 'Add the first item: scan its barcode, take a photo, save.'], ['Add an item', () => showTab('add', { focus: true })])
+          : emptyState([`Nothing on ${ownerAt()}'s shelf yet.`]),
+      ),
+    )
     return
   }
+  if (!shown.length) return list.replaceChildren(el('li', {}, emptyState([`Nothing matches “${q}”.`])))
   list.replaceChildren(
     ...shown.map((item) => {
       const extra = []
       if (isOwner()) {
         const loan = L.holderOf(state.snap, item)
         if (loan?.did === state.me) extra.push(el('button', { type: 'button', onclick: () => checkInMine(loan) }, 'Check in'))
-        else if (loan) extra.push(el('button', { type: 'button', onclick: () => checkInFor(loan) }, `Check in for ${at(loan.did)}`))
+        else if (loan) extra.push(el('button', { type: 'button', onclick: () => checkInFor(loan) }, `It's back: check in for ${at(loan.did)}`))
         else extra.push(el('button', { type: 'button', class: 'quiet', onclick: () => removeItem(item) }, 'Remove'))
       }
       return itemRow(item, extra)
@@ -526,32 +606,43 @@ function renderCatalog() {
 
 function renderBorrowed() {
   const box = $('borrowed-list')
-  if (!state.me) return box.replaceChildren(el('p', { class: 'empty' }, 'Sign in to see what you have out.'))
+  if (!state.me) return box.replaceChildren(emptyState(['Sign in to see what you’ve borrowed.']))
   const open = L.openLoansOf(state.snap, state.me)
   const history = [
-    ...state.snap.receipts.map((r) => ({ uri: r.value.subject?.uri, from: r.value.borrowedAt, to: r.value.returnedAt, by: 'returned' })),
-    ...L.closedLoansOf(state.snap, state.me).map((l) => ({ uri: l.value.subject?.uri, from: l.value.createdAt, to: state.snap.closed.get(l.uri).value.createdAt, by: 'checked in by the library' })),
+    ...state.snap.receipts.map((r) => ({ uri: r.value.subject?.uri, from: r.value.borrowedAt, to: r.value.returnedAt, owner: false })),
+    ...L.closedLoansOf(state.snap, state.me).map((l) => ({ uri: l.value.subject?.uri, from: l.value.createdAt, to: state.snap.closed.get(l.uri).value.createdAt, owner: true })),
   ].sort((a, b) => String(b.to).localeCompare(String(a.to)))
   const kids = [el('h2', {}, 'Out with you')]
-  if (!open.length) kids.push(el('p', { class: 'empty' }, 'Nothing right now.'))
+  if (!open.length) kids.push(emptyState(['Nothing right now. To borrow, scan an item’s barcode on the Scan tab.']))
   else
     kids.push(
       el(
         'ul',
         { class: 'items' },
-        open.map((l) => itemRow(itemByUri(l.value.subject.uri), [el('button', { type: 'button', onclick: () => checkInMine(l) }, 'Check in')])),
+        open.map((l) => itemRow(itemByUri(l.value.subject.uri), [el('button', { type: 'button', onclick: () => checkInMine(l) }, 'Give it back')])),
       ),
     )
   if (history.length) {
-    kids.push(el('h2', {}, 'History'))
+    kids.push(el('h2', {}, 'Your card'))
     kids.push(
       el(
-        'ul',
-        { class: 'history' },
-        history.map((h) => {
-          const item = itemByUri(h.uri)
-          return el('li', {}, el('span', {}, item ? item.value.title : '(removed item)'), el('span', { class: 'meta' }, `${fmtDate(h.from)}, ${h.by} ${fmtDate(h.to)}`))
-        }),
+        'table',
+        { class: 'card' },
+        el('thead', {}, el('tr', {}, el('th', { scope: 'col' }, 'Out'), el('th', { scope: 'col' }, 'Back'), el('th', { scope: 'col' }, 'Item'))),
+        el(
+          'tbody',
+          {},
+          history.map((h) => {
+            const item = itemByUri(h.uri)
+            return el(
+              'tr',
+              {},
+              el('td', { class: 'date' }, fmtStamp(h.from)),
+              el('td', { class: 'date' }, fmtStamp(h.to)),
+              el('td', {}, item ? item.value.title : '(removed from the catalog)', h.owner ? el('span', { class: 'meta' }, ' · checked in by the library') : null),
+            )
+          }),
+        ),
       ),
     )
   }
@@ -580,10 +671,10 @@ async function setAddCode(raw) {
   const copies = state.snap?.items.filter((i) => L.normalizeCode(i.value.barcode) === code).length ?? 0
   const status = $('add-status')
   status.dataset.tone = 'plain'
-  status.textContent = copies ? `Already in the catalog (${copies}). Adding another copy.` : ''
+  status.textContent = copies ? `Already in the catalog (${copies}). This adds another copy.` : ''
   const isbn = L.isbnOf(code)
   if (isbn && !$('add-title').value) {
-    $('add-title').placeholder = 'Looking up title…'
+    $('add-title').placeholder = 'Looking up the title…'
     const title = await L.lookupIsbn(isbn)
     $('add-title').placeholder = ''
     if (title && !$('add-title').value && $('add-code').value === code) $('add-title').value = title
@@ -600,30 +691,49 @@ async function shrink(file, max = 1200) {
   return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not encode the photo'))), 'image/jpeg', 0.85))
 }
 
+function resetPhoto() {
+  const img = $('add-preview')
+  if (img.src) URL.revokeObjectURL(img.src)
+  img.removeAttribute('src')
+  img.hidden = true
+  $('add-photo-label').textContent = 'Take a photo'
+}
+
 async function submitAdd(e) {
   e.preventDefault()
   const status = $('add-status')
   await guarded(status, async () => {
     const file = $('add-photo').files[0]
     status.dataset.tone = 'plain'
-    status.textContent = file ? 'Uploading photo…' : 'Saving…'
+    status.textContent = file ? 'Uploading the photo…' : 'Saving…'
     const photo = file ? await shrink(file) : null
     const title = $('add-title').value
     await L.addItem(state.agent, state.me, { barcode: $('add-code').value, title, notes: $('add-notes').value, photo })
     $('add-form').reset()
-    $('add-preview').hidden = true
+    resetPhoto()
     await refresh()
     status.dataset.tone = 'good'
-    status.textContent = `Added: ${title.trim()}.`
+    status.textContent = `Added “${title.trim()}”. Scan the next one, or check the Catalog tab.`
   })
 }
 
 // ── Wiring ───────────────────────────────────────────────────────────────
 
 for (const b of document.querySelectorAll('[role=tab]')) b.addEventListener('click', () => showTab(b.dataset.tab))
+// Tabs pattern: arrows move between tabs, Home and End jump to the ends.
+document.querySelector('[role=tablist]').addEventListener('keydown', (e) => {
+  const list = tabs()
+  const i = list.indexOf(document.activeElement)
+  if (i < 0) return
+  const next = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: list.length - 1 }[e.key]
+  if (next == null) return
+  e.preventDefault()
+  showTab(list[(next + list.length) % list.length].dataset.tab, { focus: true })
+})
 
-$('scan-cam').addEventListener('click', () => toggleCamera(scanScanner, $('scan-finder'), $('scan-cam'), $('scan-result')))
-$('add-cam').addEventListener('click', () => toggleCamera(addScanner, $('add-finder'), $('add-cam'), $('add-status')))
+$('scan-cam').addEventListener('click', startScanCamera)
+$('scan-stop').addEventListener('click', stopScanCamera)
+$('add-cam').addEventListener('click', toggleAddCamera)
 
 // Handheld scanners type the code and press Enter, so this form is also the
 // fastest desk workflow.
@@ -638,10 +748,12 @@ $('catalog-filter').addEventListener('input', () => state.snap && renderCatalog(
 $('add-code').addEventListener('change', (e) => setAddCode(e.target.value))
 $('add-photo').addEventListener('change', (e) => {
   const f = e.target.files[0]
+  resetPhoto()
+  if (!f) return
   const img = $('add-preview')
-  if (img.src) URL.revokeObjectURL(img.src)
-  img.hidden = !f
-  if (f) img.src = URL.createObjectURL(f)
+  img.src = URL.createObjectURL(f)
+  img.hidden = false
+  $('add-photo-label').textContent = 'Retake'
 })
 $('add-form').addEventListener('submit', submitAdd)
 
@@ -663,7 +775,8 @@ async function boot() {
   }
   renderAccount()
   if (lib.status === 'rejected') {
-    $('lib-line').textContent = `Couldn't find a library at "${wanted}": ${lib.reason?.message || lib.reason}`
+    $('lib-name').textContent = 'No library here'
+    $('lib-line').textContent = `Couldn't find "${wanted}": ${lib.reason?.message || lib.reason}`
     $('lib-change').open = true
     return
   }
