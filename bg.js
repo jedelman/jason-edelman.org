@@ -2,7 +2,7 @@
 // Drawn only where WebGL runs; one still frame under prefers-reduced-motion.
 // No dependencies. The canvas sits behind everything (style.css, #bg).
 (() => {
-  const STRENGTH = 0.2; // peak opacity of the warm light over the dark page (0.06 was invisible on real screens)
+  const STRENGTH = 0.15; // peak opacity of the warm light (Jason picked 0.15; 0.06 was invisible on real screens)
   const SCALE = 0.3;     // the light is soft, so a small buffer the browser upscales is enough
   const FPS = 30;
 
