@@ -35,6 +35,15 @@
     .who form { display: flex; gap: 6px; }
     .who input { width: 170px; min-height: 30px; padding: 0 9px; background: var(--chip); border: 1px solid var(--desk-line); border-radius: 0; }
     .who button, .top .make { min-height: 30px; padding: 0 10px; border: 1px solid var(--desk-line); background: none; cursor: pointer; font-size: 12.5px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .combo { position: relative; display: inline-flex; min-width: 0; }
+    .combo > input { width: 100%; }
+    .typeahead { position: absolute; top: calc(100% + 3px); right: 0; z-index: 40; min-width: 100%; width: max-content; max-width: min(22rem, 92vw); list-style: none; margin: 0; padding: 0; background: var(--chip); color: var(--desk-ink); border: 1px solid var(--desk-line); box-shadow: 0 16px 36px -16px oklch(0% 0 0 / 0.45); }
+    .typeahead li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; min-height: 44px; min-width: 0; cursor: pointer; }
+    .typeahead li[aria-selected=true], .typeahead li:hover { background: var(--desk-2); }
+    .typeahead img, .typeahead .avatar { width: 28px; height: 28px; flex: none; border-radius: 50%; object-fit: cover; background: var(--desk-line); }
+    .typeahead .ta-who { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+    .typeahead .ta-who strong { font-weight: 600; font-size: 13.5px; color: var(--desk-ink); }
+    .typeahead .ta-who .ta-h { font-size: 12px; color: var(--desk-mute); }
     .who button.link { border: none; padding: 0; min-height: 0; text-decoration: underline; text-underline-offset: 0.15em; font-weight: 400; }
 
     /* ── The stage: one front page, fit to the screen ──────────────── */
@@ -60,7 +69,8 @@
       .brand span { display: none; }
       .who { min-width: 0; }
       .who > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .who input { width: 0; flex: 1 1 96px; min-width: 70px; }
+      .who .combo { flex: 1 1 96px; min-width: 70px; }
+      .who input { width: 100%; }
       .who form { min-width: 0; }
       .top .make { font-size: 0; padding: 0 9px; }
       .top .make::after { content: 'Make one'; font-size: 12.5px; }

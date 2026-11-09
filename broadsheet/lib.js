@@ -124,6 +124,19 @@ export async function profiles(dids) {
   return out
 }
 
+// Handle suggestions for a partial input, from Bluesky's public AppView.
+export async function searchActors(q, signal) {
+  const params = new URLSearchParams({ q, limit: '6' })
+  const { actors } = await getJson(`${APPVIEW}/xrpc/app.bsky.actor.searchActorsTypeahead?${params}`, { signal })
+  return actors.map((a) => ({
+    did: a.did,
+    handle: a.handle,
+    displayName: a.displayName || '',
+    // The CDN's thumbnail preset is ~30x smaller than the full avatar.
+    avatar: a.avatar ? a.avatar.replace('/img/avatar/', '/img/avatar_thumbnail/') : null,
+  }))
+}
+
 // ── Records ──────────────────────────────────────────────────────────────
 
 const shape = (r) => ({ uri: r.uri, cid: r.cid, rkey: r.uri.split('/').pop(), value: r.value })

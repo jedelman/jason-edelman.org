@@ -2,6 +2,7 @@
 import { BrowserOAuthClient } from '../../library/vendor/oauth-client-browser.js'
 import * as B from '../lib.js'
 import { renderPaper, el, fmtDate } from '../render.js'
+import { attachTypeahead } from '../typeahead.js'
 
 const API = '../../library/vendor/atproto-api.js'
 const POOL_TTL = 10 * 60e3
@@ -90,21 +91,19 @@ function renderAccount() {
     )
   } else {
     const input = el('input', { name: 'handle', placeholder: 'your.handle', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', 'aria-label': 'Your handle' })
-    box.replaceChildren(
-      el('form', {
-        onsubmit: async (e) => {
-          e.preventDefault()
-          const h = input.value.trim().replace(/^@/, '')
-          if (!h || !state.client) return
-          saveDraft()
-          try {
-            await state.client.signIn(h)
-          } catch (err) {
-            setStatus(`Sign-in failed: ${err.message}`, 'bad')
-          }
-        },
-      }, input, el('button', { type: 'submit', class: 'primary' }, 'Sign in')),
-    )
+    box.replaceChildren(el('form', { onsubmit: (e) => (e.preventDefault(), signIn(input.value)) }, input, el('button', { type: 'submit', class: 'primary' }, 'Sign in')))
+    attachTypeahead(input, (h) => signIn(h))
+  }
+}
+
+async function signIn(handle) {
+  const h = String(handle ?? '').trim().replace(/^@/, '')
+  if (!h || !state.client) return
+  saveDraft()
+  try {
+    await state.client.signIn(h) // redirects away; resolves only if the person comes back
+  } catch (err) {
+    setStatus(`Sign-in failed: ${err.message}`, 'bad')
   }
 }
 
@@ -488,6 +487,7 @@ function bindControls() {
     changed()
   })
   $('publish').addEventListener('click', publish)
+  attachTypeahead($('writer'), () => $('add-writer').requestSubmit())
   $('add-writer').addEventListener('submit', async (e) => {
     e.preventDefault()
     const h = $('writer').value.trim().replace(/^@/, '')

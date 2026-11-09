@@ -115,6 +115,10 @@ everything renders as text.
   `paper.css`: its type and grid.
 - `editor/editor.js`: the builder. OAuth and the `Agent` come from `../../library/vendor/`.
 - `newsstand/newsstand.js`: the newsstand. No SDK, no sign-in: everything it reads is public.
+- `typeahead.js`: handle suggestions (Bluesky's public AppView) as an ARIA combobox, on
+  every handle box: the editor's sign-in and "Add a writer", and the newsstand's "Yours
+  first". Arrow keys and Enter pick, Escape closes, Enter with nothing highlighted
+  submits what you typed.
 
 The services it calls: each author's PDS, plc.directory, the Bluesky relay,
 Constellation (the masthead index), Bluesky's public AppView (profiles) and image CDN,

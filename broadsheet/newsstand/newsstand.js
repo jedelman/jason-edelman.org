@@ -3,6 +3,7 @@
 // up and down through an editor's back issues; tap a story to zoom into it.
 import * as B from '../lib.js'
 import { renderPaper, expandedStory, el, fmtDate } from '../render.js'
+import { attachTypeahead } from '../typeahead.js'
 
 const WIDTHS = [820, 1040, 1280, 1560, 1880] // broadsheet widths to try; the best fit wins
 const PAD = 14
@@ -67,6 +68,7 @@ function renderWho() {
   } else {
     const input = el('input', { placeholder: 'your.handle', 'aria-label': 'Your handle', autocapitalize: 'none', autocomplete: 'username', spellcheck: 'false' })
     box.replaceChildren(el('form', { onsubmit: (e) => (e.preventDefault(), setReader(input.value)) }, input, el('button', { type: 'submit' }, 'Yours first')))
+    attachTypeahead(input, (h) => setReader(h))
   }
 }
 
