@@ -29,6 +29,7 @@ const STATIC = [
   'operator-field',
   'img',
   'library',
+  'broadsheet',
 ];
 
 // Subprojects: { name, dir, buildCmd, outDir, required }

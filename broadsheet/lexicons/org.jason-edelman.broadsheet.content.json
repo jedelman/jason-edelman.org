@@ -1,0 +1,114 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.broadsheet.content",
+  "description": "The content of a broadsheet edition: a front page of other people's site.standard.document records, picked and arranged by an editor. Used as the `content` of a site.standard.document whose `site` is the editor's broadsheet publication. Every slot points at the original document; nothing is copied.",
+  "defs": {
+    "main": {
+      "type": "object",
+      "required": [
+        "slots"
+      ],
+      "properties": {
+        "number": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "The edition's number in this broadsheet."
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 30000,
+          "maxGraphemes": 3000,
+          "description": "From the editor."
+        },
+        "slots": {
+          "type": "array",
+          "maxLength": 10,
+          "items": {
+            "type": "ref",
+            "ref": "#slot"
+          },
+          "description": "In render order: one lead, then up to two seconds, three features and four briefs."
+        },
+        "date": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10,
+          "description": "The editor's local date for this edition, YYYY-MM-DD."
+        },
+        "period": {
+          "type": "string",
+          "knownValues": [
+            "am",
+            "pm"
+          ],
+          "description": "Morning (am) or evening (pm) edition. Absent: the day's only edition. One edition per date and period; a revision keeps its date and period."
+        }
+      }
+    },
+    "slot": {
+      "type": "object",
+      "required": [
+        "role",
+        "item"
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "knownValues": [
+            "lead",
+            "second",
+            "feature",
+            "brief"
+          ]
+        },
+        "item": {
+          "type": "ref",
+          "ref": "com.atproto.repo.strongRef",
+          "description": "The site.standard.document picked, as it was when picked."
+        },
+        "headline": {
+          "type": "string",
+          "maxLength": 3000,
+          "maxGraphemes": 300,
+          "description": "The editor's headline, shown instead of the document's title on this page only."
+        },
+        "deck": {
+          "type": "string",
+          "maxLength": 6000,
+          "maxGraphemes": 600,
+          "description": "The editor's deck, shown instead of the document's description on this page only."
+        },
+        "via": {
+          "type": "ref",
+          "ref": "#via",
+          "description": "When the piece was reshared from another broadsheet: the edition it came from."
+        }
+      }
+    },
+    "via": {
+      "type": "object",
+      "required": [
+        "uri",
+        "cid"
+      ],
+      "description": "A reshare's credit.",
+      "properties": {
+        "uri": {
+          "type": "string",
+          "format": "at-uri",
+          "description": "The edition (a site.standard.document) the piece was reshared from."
+        },
+        "cid": {
+          "type": "string",
+          "format": "cid"
+        },
+        "masthead": {
+          "type": "string",
+          "maxLength": 2000,
+          "maxGraphemes": 200,
+          "description": "That broadsheet's name when reshared, for display."
+        }
+      }
+    }
+  }
+}

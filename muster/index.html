@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Muster</title>
+  <meta name="description" content="Public actions, posted by the people in them, counted by area and week. Areas, not addresses. No member lists. Built on atproto.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&family=Epilogue:wght@400;600;900&family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap">
+  <link rel="stylesheet" href="vendor/maplibre-gl.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      /* The site's field-notes palette */
+      --bg:       oklch(11% 0.006 145);
+      --surface:  oklch(16% 0.007 145);
+      --border:   oklch(23% 0.008 145);
+      --rule:     oklch(19% 0.007 145);
+      --text:     oklch(86% 0.010 145);
+      --muted:    oklch(60% 0.010 145);
+      --accent:   oklch(66% 0.12 145);
+      --link:     oklch(74% 0.10 145);
+      --warn:     oklch(76% 0.11 75);
+      --bad:      oklch(70% 0.15 25);
+
+      --font-display: 'Epilogue', 'Arial Narrow', sans-serif;
+      --font-body:    'Charis SIL', Charter, 'Bitstream Charter', Georgia, serif;
+      --font-typed:   'Courier Prime', 'Courier New', monospace;
+
+      --step--1: 0.8rem;
+      --step-0:  1rem;
+      --step-1:  1.25rem;
+      --step-2:  1.6rem;
+      --step-3:  2.2rem;
+
+      --space-2xs: 4px;  --space-xs: 8px;  --space-sm: 12px; --space-md: 16px;
+      --space-lg: 24px;  --space-xl: 32px; --space-2xl: 48px;
+
+      color-scheme: dark;
+    }
+
+    html { font-size: 17px; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+    body { font-family: var(--font-body); line-height: 1.65; padding: var(--space-xl) var(--space-md) var(--space-2xl); background: var(--bg); }
+    main { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; }
+    a { color: var(--link); text-underline-offset: 0.15em; }
+    strong { font-weight: 700; color: var(--text); }
+    [hidden] { display: none !important; }
+    .typed { font-family: var(--font-typed); }
+    .meta { color: var(--muted); font-size: var(--step--1); }
+
+    /* ── Masthead ──────────────────────────────────────────────────── */
+    .plate { display: flex; flex-direction: column; gap: var(--space-2xs); }
+    .plate-label {
+      font-family: var(--font-display); font-weight: 600; font-size: var(--step--1);
+      letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent);
+    }
+    .plate-label a { color: inherit; text-decoration: none; }
+    .plate h1 { font-family: var(--font-display); font-weight: 900; font-size: var(--step-3); line-height: 1.02; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+    .plate-sub { color: var(--muted); font-size: 0.95rem; max-width: 52ch; overflow-wrap: anywhere; }
+
+    /* ── Account ───────────────────────────────────────────────────── */
+    #account { margin-top: var(--space-lg); display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2xs) var(--space-md); }
+    #account form { flex: 1 1 100%; }
+    #account .meta { flex-basis: 100%; }
+
+    /* ── Controls ──────────────────────────────────────────────────── */
+    input, textarea, select, button { font: inherit; color: var(--text); }
+    input, textarea, select {
+      background: var(--surface); border: 1px solid var(--border); padding: 0 var(--space-sm);
+      min-height: 44px; width: 100%; min-width: 0; border-radius: 0;
+    }
+    textarea { padding: var(--space-xs) var(--space-sm); resize: vertical; }
+    input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+    input[type=date] { font-family: var(--font-typed); }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    button {
+      background: none; border: 1px solid var(--border); min-height: 44px; padding: 0 var(--space-md); cursor: pointer;
+      font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.03em; white-space: nowrap;
+      transition: border-color 120ms, color 120ms;
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button.primary, button[type=submit] { border-color: var(--accent); color: var(--accent); }
+    button.quiet { border-color: transparent; color: var(--muted); padding: 0 var(--space-xs); }
+    button.quiet:hover { color: var(--text); border-color: transparent; }
+    button.link { border: none; min-height: 0; padding: 0; color: var(--link); font-family: var(--font-body); font-weight: 400; font-size: 0.9rem; letter-spacing: 0; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    .row { display: flex; gap: var(--space-xs); align-items: stretch; }
+    .row > input { flex: 1; }
+    .combo { position: relative; flex: 1; min-width: 0; }
+
+    .notice {
+      margin-top: var(--space-md); padding: var(--space-xs) var(--space-sm); font-size: 0.9rem;
+      border: 1px solid color-mix(in oklch, var(--warn) 45%, transparent);
+      background: color-mix(in oklch, var(--warn) 7%, var(--bg));
+    }
+
+    /* ── The tally ─────────────────────────────────────────────────── */
+    .tally { margin-top: var(--space-xl); }
+    .tally dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .tally dl > div { padding: var(--space-sm) var(--space-sm) var(--space-xs) 0; display: flex; flex-direction: column-reverse; gap: 2px; min-width: 0; }
+    .tally dl > div + div { padding-left: var(--space-sm); border-left: 1px solid var(--rule); }
+    .tally dd { font-family: var(--font-display); font-weight: 900; font-size: var(--step-2); line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+    .tally dt { font-family: var(--font-typed); font-size: var(--step--1); color: var(--muted); letter-spacing: 0.02em; }
+    .tally .soon dd { color: var(--warn); }
+    .tally-scope { margin-top: var(--space-xs); color: var(--muted); font-size: var(--step--1); }
+    @media (max-width: 479px) {
+      .tally dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .tally dl > div:nth-child(3) { padding-left: 0; border-left: none; }
+      .tally dl > div:nth-child(n+3) { border-top: 1px solid var(--rule); }
+    }
+
+    /* ── Map ───────────────────────────────────────────────────────── */
+    .map { margin-top: var(--space-md); height: clamp(260px, 48vh, 440px); border: 1px solid var(--border); background: oklch(9% 0.004 145); }
+    .map.picking .maplibregl-canvas-container { cursor: crosshair; }
+    .maplibregl-ctrl-attrib { font-family: var(--font-body); font-size: 11px; }
+    .maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib a { background: color-mix(in oklch, var(--bg) 80%, transparent) !important; color: var(--muted) !important; }
+    .maplibregl-ctrl-group { background: var(--surface) !important; border: 1px solid var(--border); border-radius: 0 !important; box-shadow: none !important; }
+    .maplibregl-ctrl-group button { min-height: 0; width: 32px; height: 32px; border: none; }
+    .maplibregl-ctrl-group button + button { border-top: 1px solid var(--border) !important; }
+    .maplibregl-ctrl-icon { filter: invert(0.85); }
+    .map-hint { margin-top: var(--space-2xs); color: var(--muted); font-size: var(--step--1); }
+
+    /* ── Issue filter ──────────────────────────────────────────────── */
+    .issues { display: flex; flex-wrap: wrap; gap: var(--space-xs); margin-top: var(--space-md); }
+    .chip {
+      min-height: 32px; padding: 0 var(--space-sm); font-family: var(--font-typed); font-weight: 400; font-size: var(--step--1);
+      letter-spacing: 0; border-color: var(--border); color: var(--muted);
+    }
+    .chip[aria-pressed=true] { border-color: var(--accent); color: var(--text); background: color-mix(in oklch, var(--accent) 14%, transparent); }
+
+    /* ── Tabs ──────────────────────────────────────────────────────── */
+    [role=tablist] { display: flex; gap: var(--space-lg); margin-top: var(--space-xl); border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+    [role=tab] {
+      border: none; border-bottom: 2px solid transparent; margin-bottom: -1px; padding: 0; min-height: 44px;
+      color: var(--muted); font-size: 0.95rem; letter-spacing: 0.01em; display: inline-flex; align-items: center; gap: 6px;
+    }
+    [role=tab]:hover { color: var(--text); border-color: transparent; border-bottom-color: var(--border); }
+    [role=tab][aria-selected=true] { color: var(--text); border-bottom-color: var(--accent); }
+    [role=tab] .count { font-family: var(--font-typed); font-weight: 400; font-size: var(--step--1); color: var(--muted); }
+    [role=tabpanel] { display: flex; flex-direction: column; gap: var(--space-md); padding-top: var(--space-lg); }
+
+    /* ── Actions ───────────────────────────────────────────────────── */
+    .list { list-style: none; display: flex; flex-direction: column; }
+    .action { display: grid; grid-template-columns: 4.6rem minmax(0, 1fr); gap: var(--space-sm); padding: var(--space-md) 0; border-top: 1px solid var(--rule); }
+    .action:first-child { border-top: none; padding-top: 0; }
+    .action.lit { background: linear-gradient(90deg, color-mix(in oklch, var(--accent) 10%, transparent), transparent 70%); }
+    .stamp {
+      align-self: start; font-family: var(--font-typed); font-size: var(--step--1); line-height: 1.3; text-align: center;
+      border: 1px solid var(--border); padding: 6px 4px; color: var(--text); display: flex; flex-direction: column;
+    }
+    .stamp small { font-size: 0.7rem; color: var(--muted); }
+    .action.soon .stamp { border-color: color-mix(in oklch, var(--warn) 55%, transparent); color: var(--warn); }
+    .action h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-0); line-height: 1.3; overflow-wrap: anywhere; }
+    .action h3 button { all: unset; cursor: pointer; }
+    .action h3 button:hover { color: var(--accent); }
+    .action h3 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .action .meta { margin-top: 2px; overflow-wrap: anywhere; }
+    .action .note { margin-top: var(--space-2xs); font-size: 0.92rem; overflow-wrap: anywhere; }
+    .action .tags { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: var(--space-2xs); font-family: var(--font-typed); font-size: 0.76rem; color: var(--muted); }
+    .action .foot { display: flex; flex-wrap: wrap; gap: var(--space-2xs) var(--space-md); margin-top: var(--space-2xs); font-size: 0.9rem; align-items: baseline; }
+    .empty { color: var(--muted); }
+    .empty p + p { margin-top: var(--space-xs); }
+
+    /* ── Forms ─────────────────────────────────────────────────────── */
+    form.stack { display: flex; flex-direction: column; gap: var(--space-md); }
+    .field { display: flex; flex-direction: column; gap: var(--space-2xs); }
+    .field > label, .field > .label { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.02em; }
+    .field .meta { margin-top: -2px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); }
+    @media (max-width: 479px) { .two { grid-template-columns: 1fr; } }
+    .picked { font-family: var(--font-typed); font-size: var(--step--1); color: var(--muted); }
+    .picked.set { color: var(--accent); }
+    .warning { font-size: 0.9rem; border-left: 2px solid var(--warn); padding-left: var(--space-sm); }
+    .status { font-size: 0.9rem; min-height: 1.4em; }
+    .status[data-tone=bad] { color: var(--bad); }
+    .status[data-tone=ok] { color: var(--accent); }
+    .pills { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+    .pill { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); padding: 2px 4px 2px 10px; font-size: 0.85rem; overflow-wrap: anywhere; }
+    .pill button { min-height: 28px; padding: 0 8px; border: none; color: var(--muted); }
+
+    /* ── Desks ─────────────────────────────────────────────────────── */
+    .desk-card { border: 1px solid var(--border); padding: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs); }
+    .desk-card h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); line-height: 1.2; overflow-wrap: anywhere; }
+    .desk-card ul { list-style: none; font-size: 0.9rem; overflow-wrap: anywhere; }
+    .desk-card details summary { cursor: pointer; color: var(--link); font-size: 0.9rem; }
+    .section-title { font-family: var(--font-display); font-weight: 600; font-size: var(--step-0); margin-top: var(--space-md); }
+
+    /* ── Typeahead (shared with the library) ───────────────────────── */
+    .typeahead { position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 10; list-style: none; background: var(--surface); border: 1px solid var(--border); }
+    .typeahead li { display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-xs) var(--space-sm); cursor: pointer; min-width: 0; min-height: 44px; }
+    .typeahead li[aria-selected=true], .typeahead li:hover { background: var(--border); }
+    .typeahead img, .typeahead .avatar { width: 28px; height: 28px; flex: none; object-fit: cover; background: var(--bg); }
+    .typeahead .who { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
+    .typeahead .who .meta { font-size: 0.78rem; }
+
+    /* ── How it works ──────────────────────────────────────────────── */
+    .how { display: flex; flex-direction: column; gap: var(--space-md); max-width: 62ch; }
+    .how h3 { font-family: var(--font-display); font-weight: 600; font-size: var(--step-0); }
+    .how p + p { margin-top: var(--space-2xs); }
+
+    footer { margin-top: var(--space-2xl); padding-top: var(--space-md); border-top: 1px solid var(--border); color: var(--muted); font-size: var(--step--1); }
+    footer p { max-width: 62ch; }
+    footer p + p { margin-top: var(--space-xs); }
+
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+<main>
+  <header class="plate">
+    <p class="plate-label"><a href="./">Muster</a></p>
+    <h1 id="title">Open wire</h1>
+    <p class="plate-sub" id="subtitle">Public actions, posted by the people in them, counted by area and week.</p>
+  </header>
+
+  <section id="account" aria-label="Account"></section>
+  <p id="notice" class="notice" role="status" hidden></p>
+
+  <section class="tally" aria-labelledby="tally-scope">
+    <dl>
+      <div><dt>actions</dt><dd id="t-actions">–</dd></div>
+      <div><dt>areas</dt><dd id="t-areas">–</dd></div>
+      <div><dt>people, at least</dt><dd id="t-floor">–</dd></div>
+      <div class="soon"><dt>coming up</dt><dd id="t-soon">–</dd></div>
+    </dl>
+    <p class="tally-scope" id="tally-scope" aria-live="polite">Loading…</p>
+  </section>
+
+  <div id="map" class="map" role="region" aria-label="Map of actions"></div>
+  <p class="map-hint" id="map-hint">Move the map to count a region.</p>
+
+  <div class="issues" id="issues" role="group" aria-label="Filter by issue"></div>
+
+  <div role="tablist" aria-label="Muster">
+    <button type="button" role="tab" id="tabbtn-actions" aria-controls="tab-actions" data-tab="actions" aria-selected="true">Actions<span class="count" id="count-actions"></span></button>
+    <button type="button" role="tab" id="tabbtn-post" aria-controls="tab-post" data-tab="post" aria-selected="false" tabindex="-1">Post</button>
+    <button type="button" role="tab" id="tabbtn-desks" aria-controls="tab-desks" data-tab="desks" aria-selected="false" tabindex="-1">Desks</button>
+    <button type="button" role="tab" id="tabbtn-how" aria-controls="tab-how" data-tab="how" aria-selected="false" tabindex="-1">How it works</button>
+  </div>
+
+  <section role="tabpanel" id="tab-actions" aria-labelledby="tabbtn-actions">
+    <ul class="list" id="actions"></ul>
+  </section>
+
+  <section role="tabpanel" id="tab-post" aria-labelledby="tabbtn-post" hidden></section>
+
+  <section role="tabpanel" id="tab-desks" aria-labelledby="tabbtn-desks" hidden></section>
+
+  <section role="tabpanel" id="tab-how" aria-labelledby="tabbtn-how" hidden>
+    <div class="how">
+      <div>
+        <h3>Public and permanent</h3>
+        <p>Every action is a record in its poster's own atproto repo, as public as a Bluesky post and as permanent. Post only what the organizers already made public. Deleting a post removes it from Muster, but anything written to atproto may already have been copied elsewhere.</p>
+      </div>
+      <div>
+        <h3>Areas, not addresses</h3>
+        <p>A place is stored as a square about 5 km across, plus the name you give it. The organizers' own link carries the details. The tally counts areas about 20 by 30 km.</p>
+      </div>
+      <div>
+        <h3>No member lists</h3>
+        <p>Nobody signs up to a group here. Reading needs no account and writes nothing anywhere, though the servers it reads from see an IP address, like any website. The open wire finds posters through the relay's index of who has written an action.</p>
+      </div>
+      <div>
+        <h3>Desks are how collectives vouch</h3>
+        <p>Anyone can post to the open wire, so check the organizers' link before you go. A desk is a collective's public list of the posters it vouches for and the other desks it trusts. Open a desk to see only what it vouches for. A regional desk is a desk that includes local ones. Nobody runs the whole thing.</p>
+      </div>
+      <div>
+        <h3>The count is a floor</h3>
+        <p>A crowd is reported as a range (dozens, hundreds, thousands). The tally adds up the bottom of each range, so the real number is higher.</p>
+      </div>
+      <div>
+        <h3>What doesn't belong here</h3>
+        <p>Who is in a group. Plans that aren't public. Anything that could identify someone at risk. Coordination like that belongs somewhere private and encrypted, not on an open network.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <p>Muster runs in your browser with no server of its own. Actions and desks live in people's own atproto repos; the open wire finds them through the Bluesky relay's collection index. Map data from OpenStreetMap, tiles from OpenFreeMap.</p>
+  </footer>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

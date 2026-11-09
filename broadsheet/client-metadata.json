@@ -1,0 +1,19 @@
+{
+  "client_id": "https://jason-edelman.org/broadsheet/client-metadata.json",
+  "client_name": "Broadsheet",
+  "client_uri": "https://jason-edelman.org/broadsheet/newsstand/",
+  "redirect_uris": [
+    "https://jason-edelman.org/broadsheet/editor/"
+  ],
+  "scope": "atproto repo:site.standard.document repo:site.standard.publication repo:site.standard.graph.recommend",
+  "grant_types": [
+    "authorization_code",
+    "refresh_token"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_method": "none",
+  "application_type": "web",
+  "dpop_bound_access_tokens": true
+}
