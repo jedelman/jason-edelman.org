@@ -130,13 +130,16 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
 
   <div class="figure" id="ledger-figure">
     <h2 class="fig-title">The ledger</h2>
-    <p class="fig-sub">All of the page's numbers on one scale. The top block is what data centres add each year: electricity first, then hardware and construction at a 10% share, then the extra at a 25% share. The blocks below are what each lever avoids. The shaded band is the Base case's 2035 data-centre footprint, 358–473 Mt, so every bar can be read against it.</p>
+    <p class="fig-sub">Right of zero is what data centres add each year over their full life cycle: electricity, then hardware and construction at a 10% share, then the extra at a 25% share. Left of zero is what each lever avoids, as negative numbers. Rows are grouped by year and spaced to scale in time. The shaded band on the left mirrors the Base case's 2035 footprint, 358–473 Mt; a lever has to reach it to cancel the Base case. Diet and travel rows are for 1% of humanity, starting now. *On the 2050 diets of Springmann et al.</p>
     <div id="ledger" class="ledger" role="img" aria-label="Bar chart: emissions added by data centres over their full life cycle, and emissions avoided by AI applications, diet shift and active travel, in Mt CO2e a year."></div>
     <div class="legend" aria-label="Ledger legend">
       <span><i class="sq" style="background:var(--b-elec)"></i>Electricity (IEA)</span>
       <span><i class="sq" style="background:var(--b-hwlo)"></i>Hardware + construction, 10% share</span>
       <span><i class="sq" style="background:var(--b-hwhi)"></i>Extra at a 25% share</span>
-      <span><i class="sq band"></i>Base-case data centres, 2035</span>
+      <span><i class="sq" style="background:var(--s1)"></i>AI applications</span>
+      <span><i class="sq" style="background:var(--s2)"></i>Diet shift</span>
+      <span><i class="sq" style="background:var(--s3)"></i>Active travel</span>
+      <span><i class="sq band"></i>Base 2035, mirrored</span>
     </div>
   </div>
 
@@ -203,7 +206,18 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
         </tbody>
       </table>
     </div>
-    <p class="note">The IEA's <span class="num">180</span> Mt counts electricity only and leaves out backup generation. The 10–25% share comes from Google's own lifecycle study of its TPUs (manufacturing is about 10% of lifetime emissions on a grid-average basis) and from the IEA, which puts manufacturing at under 20% of a server's lifetime energy. Most chips are made in East Asia, where many grids lean on coal, so manufacturing's share of emissions runs above its share of energy. The IEA puts data-centre construction under 2% of life-cycle emissions. The 33% stress test matches industry Scope 3 estimates, which are mostly measured on cleaner grids or with renewable-purchase accounting. Hardware emissions are held constant per TWh out to 2035. Headwinds and High Efficiency show the IEA's 2030 values. The IEA says both cases peak by 2030, so their 2035 figures are at or below these.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>2030, Mt CO₂e per year</th><th class="n">Headwinds</th><th class="n">High Efficiency</th><th class="n">Base</th><th class="n">Lift-Off</th></tr></thead>
+        <tbody>
+          <tr><td>Electricity use (TWh)</td><td class="n">670</td><td class="n">800</td><td class="n">945</td><td class="n">1,260+</td></tr>
+          <tr><td>Electricity emissions (IEA)</td><td class="n">215</td><td class="n">265</td><td class="n">320</td><td class="n">~482</td></tr>
+          <tr><td>Hardware + construction, 10–25% share</td><td class="n">32–97</td><td class="n">39–116</td><td class="n">46–137</td><td class="n">61–182</td></tr>
+          <tr class="total"><td>Full life cycle</td><td class="n">247–312</td><td class="n">304–381</td><td class="n">366–457</td><td class="n">~543–664</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The IEA's <span class="num">180</span> Mt counts electricity only and leaves out backup generation. The 10–25% share comes from Google's own lifecycle study of its TPUs (manufacturing is about 10% of lifetime emissions on a grid-average basis) and from the IEA, which puts manufacturing at under 20% of a server's lifetime energy. Most chips are made in East Asia, where many grids lean on coal, so manufacturing's share of emissions runs above its share of energy. The IEA puts data-centre construction under 2% of life-cycle emissions. The 33% stress test matches industry Scope 3 estimates, which are mostly measured on cleaner grids or with renewable-purchase accounting. Hardware emissions are held constant per TWh out to 2035. In the 2035 table, Headwinds and High Efficiency show the IEA's 2030 values. The IEA gives no 2030 emissions figure for Lift-Off; ~482 Mt is derived from its statement that High Efficiency's 265 Mt is roughly 55% of Lift-Off's. The IEA says both cases peak by 2030, so their 2035 figures are at or below these.</p>
 
     <h3>Diet, corrected</h3>
     <div class="table-wrap">
@@ -264,7 +278,7 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
   <section id="sources" class="col">
     <h2>Sources</h2>
     <ol class="sources">
-      <li>IEA (2025), <a href="https://iea.blob.core.windows.net/assets/de9dea13-b07d-42c5-a398-d1b3ae17d866/EnergyandAI.pdf" target="_blank" rel="noopener">Energy and AI</a>. Executive summary pp. 14–17; hardware life cycle pp. 38–39; growth cases pp. 50–92; AI and emissions pp. 245–252.</li>
+      <li>IEA (2025), <a href="https://iea.blob.core.windows.net/assets/de9dea13-b07d-42c5-a398-d1b3ae17d866/EnergyandAI.pdf" target="_blank" rel="noopener">Energy and AI</a>. Executive summary pp. 14–17; hardware life cycle pp. 38–39; growth cases pp. 48–92; AI and emissions pp. 245–252.</li>
       <li>Eco-Business, <a href="https://www.eco-business.com/news/ais-energy-appetite-is-outpacing-deployment-of-ai-based-climate-solutions-iea/" target="_blank" rel="noopener">coverage of IEA, Key Questions on Energy and AI (April 2026)</a>.</li>
       <li>Schneider et al. (2025, Google), <a href="https://arxiv.org/abs/2502.01671" target="_blank" rel="noopener">Life-Cycle Emissions of AI Hardware</a>.</li>
       <li>Carbon Direct, <a href="https://www.carbon-direct.com/insights/understanding-the-carbon-footprint-of-ai-and-how-to-reduce-it" target="_blank" rel="noopener">Understanding the carbon footprint of AI</a> (Scope 3 at one-third to two-thirds of lifetime emissions).</li>
@@ -501,55 +515,52 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
   }
   var per = function (s) { return 180 * s / (1 - s) / 415; };
   var fmt = function (v) { return Math.round(v).toLocaleString('en-US'); };
-  var G = [
-    { o: 1, name: 'Data centres add, over the full life cycle' },
-    { o: 2, name: 'AI applications avoid, 2035' },
-    { o: 3, name: 'Diet shift avoids, 1% of humanity' },
-    { o: 4, name: 'Active travel avoids, 1% of humanity' }
+  var neg = function (v) { return '−' + fmt(v); };
+  var DOM = [-1600, 1600];
+
+  // Data centres: IEA electricity emissions plus hardware and construction at a 10-25% share.
+  function dc(name, short, twh, op, opHi, mark, note) {
+    var eLo = per(0.10) * twh, eHi = per(0.25) * twh, lo = op + eLo, hi = opHi + eHi;
+    var elec = op === opHi ? fmt(op) : fmt(op) + '–' + fmt(opHi);
+    var val = mark + fmt(lo) + '–' + fmt(hi);
+    return { side: 'add', name: name + ' · ' + val, short: short + ' ' + val,
+      segs: [
+        { x0: 0, x1: op, part: 'elec', tip: name + ': electricity ' + mark + elec + ' Mt' + (note ? ' (' + note + ')' : ' (IEA)') },
+        { x0: op, x1: lo, part: 'hwlo', tip: name + ': hardware and construction ' + fmt(eLo) + ' Mt at a 10% share' },
+        { x0: lo, x1: hi, part: 'hwhi', tip: name + ': hardware and construction ' + fmt(eHi) + ' Mt at a 25% share' }
+      ] };
+  }
+  function avoid(name, short, v, part, tip) {
+    return { side: 'avoid', name: name + ' · ' + neg(v), short: short + ' ' + neg(v),
+      segs: [{ x0: -v, x1: 0, part: part, tip: tip }] };
+  }
+  function none(name, short) { return { side: 'none', name: name, short: short, segs: [] }; }
+
+  var CLUSTERS = [
+    { year: 2024, rows: [
+      dc('Data centres', 'Data centres', 415, 180, 180, '', ''),
+      none('AI applications · marginal today (IEA)', 'AI: marginal today'),
+      avoid('Heavy meat-eaters → vegan', 'Heavy eaters → vegan', 233, 'diet', '1% of humanity: 82 M heavy meat-eaters go vegan, 2.84 t each (Scarborough et al. 2023)'),
+      avoid('Heavy meat-eaters → vegetarian', 'Heavy eaters → veg.', 182, 'diet', '1% of humanity: 82 M heavy meat-eaters go vegetarian, 2.22 t each (Scarborough et al. 2023)'),
+      avoid('Same, on 2014 data', 'Same, 2014 data', 101, 'diet', 'The same switch on 2014 data: 1.23 t each (Scarborough et al. 2014)'),
+      avoid('A random 1% → vegetarian*', 'Random 1% → veg.*', 61, 'diet', '82 M people at random go vegetarian: about 0.74 t each, on the 2050 diets of Springmann et al. 2016'),
+      avoid('One car trip a day → bike', 'Car trip → bike', 41, 'active', '1% of humanity swaps one car trip a day for cycling, 200 days a year: about 0.5 t each (Brand et al. 2021)')
+    ] },
+    { year: 2030, rows: [
+      dc('Headwinds', 'Headwinds', 670, 215, 215, '', ''),
+      dc('High Efficiency', 'High Eff.', 800, 265, 265, '', ''),
+      dc('Base', 'Base', 945, 320, 320, '', ''),
+      dc('Lift-Off', 'Lift-Off', 1260, 482, 482, '≈', "derived: the IEA puts High Efficiency's 265 Mt at roughly 55% of Lift-Off")
+    ] },
+    { year: 2035, rows: [
+      dc('Headwinds', 'Headwinds', 700, 215, 215, '≤', 'IEA 2030 value; the case peaks by 2030'),
+      dc('High Efficiency', 'High Eff.', 970, 265, 265, '≤', 'IEA 2030 value; the case peaks by 2030'),
+      dc('Base', 'Base', 1200, 300, 300, '', ''),
+      dc('Lift-Off', 'Lift-Off', 1700, 475, 500, '', ''),
+      avoid('AI, if widely adopted (IEA case)', 'AI, widely adopted', 1400, 'ai', 'IEA Widespread Adoption Case: 1,400 Mt in 2035, before rebound. The IEA says no momentum yet ensures it.'),
+      none('AI, on current momentum · could be marginal', 'AI, current momentum: marginal')
+    ] }
   ];
-  var rows = [], order = 0;
-  function seg(g, name, part, x0, x1, tip) {
-    rows.push({ kind: 'seg', group: g.name, gorder: g.o, name: name, order: order, part: part, x0: x0, x1: x1, tip: tip });
-  }
-  var anchored = {};
-  function label(g, name, xEnd, text) {
-    rows.push({ kind: 'label', group: g.name, gorder: g.o, name: name, order: order, xEnd: xEnd, valueLabel: text, anchor: !anchored[g.o] });
-    anchored[g.o] = true;
-  }
-  [
-    { name: '2024, today', twh: 415, op: 180, opHi: 180, upper: false },
-    { name: '2035 Headwinds', twh: 700, op: 215, opHi: 215, upper: true },
-    { name: '2035 High Efficiency', twh: 970, op: 265, opHi: 265, upper: true },
-    { name: '2035 Base', twh: 1200, op: 300, opHi: 300, upper: false },
-    { name: '2035 Lift-Off', twh: 1700, op: 475, opHi: 500, upper: false }
-  ].forEach(function (c) {
-    order++;
-    var eLo = per(0.10) * c.twh, eHi = per(0.25) * c.twh;
-    var lo = c.op + eLo, hi = c.opHi + eHi, pre = c.upper ? '≤' : '';
-    var elec = c.op === c.opHi ? fmt(c.op) : fmt(c.op) + '–' + fmt(c.opHi);
-    seg(G[0], c.name, 'elec', 0, c.op, c.name + ': electricity ' + pre + elec + ' Mt (IEA)');
-    seg(G[0], c.name, 'hwlo', c.op, lo, c.name + ': hardware and construction ' + fmt(eLo) + ' Mt at a 10% share');
-    seg(G[0], c.name, 'hwhi', lo, hi, c.name + ': hardware and construction ' + fmt(eHi) + ' Mt at a 25% share');
-    label(G[0], c.name, hi, pre + fmt(lo) + '–' + fmt(hi));
-  });
-  order++;
-  seg(G[1], 'If widely adopted (IEA case)', 'ai', 0, 1400, 'IEA Widespread Adoption Case: 1,400 Mt, before rebound');
-  label(G[1], 'If widely adopted (IEA case)', 1400, '1,400');
-  order++;
-  label(G[1], 'On current momentum', 0, 'could be marginal, says the IEA');
-  [
-    ['A random 1% go vegetarian', 61, '~61', 'about 0.74 t each (Springmann et al. 2016)'],
-    ['Heavy meat-eaters go vegetarian, 2014 data', 101, '101', '1.23 t each (Scarborough et al. 2014)'],
-    ['Heavy meat-eaters go vegetarian, 2023 data', 182, '182', '2.22 t each (Scarborough et al. 2023)'],
-    ['Heavy meat-eaters go vegan, 2023 data', 233, '233', '2.84 t each (Scarborough et al. 2023)']
-  ].forEach(function (d) {
-    order++;
-    seg(G[2], d[0], 'diet', 0, d[1], d[0] + ': ' + d[2] + ' Mt, ' + d[3]);
-    label(G[2], d[0], d[1], d[2]);
-  });
-  order++;
-  seg(G[3], 'One car trip a day becomes a bike ride', 'active', 0, 41, '82 M people, about 0.5 t each: ~41 Mt (Brand et al. 2021)');
-  label(G[3], 'One car trip a day becomes a bike ride', 41, '~41');
 
   var lastW = 0, timer = null;
   function tok(name, fallback) {
@@ -560,48 +571,74 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
     var W = Math.floor(host.clientWidth);
     if (!force && Math.abs(W - lastW) < 4) return;
     lastW = W;
+    var narrow = W < 600;
     var dark = (getComputedStyle(document.documentElement).colorScheme || '').indexOf('dark') >= 0;
     var ink = tok('--ink', '#121516'), ink2 = tok('--ink-2', '#464e52'), ink3 = tok('--ink-3', '#5f686c'), rule = tok('--rule', '#d6dcdd');
     var font = tok('--chart-font', 'system-ui, sans-serif'), mono = tok('--mono', 'ui-monospace, monospace');
-    var X = { field: 'x0', type: 'quantitative', scale: { domain: [0, 1650], nice: false },
-      axis: { values: [0, 400, 800, 1200, 1600], format: ',.0f', title: 'Mt CO₂e per year', titleColor: ink2, titleFont: font,
-        titleFontWeight: 400, titleFontSize: 12, labelColor: ink3, labelFont: mono, labelFontSize: 11, gridColor: rule,
-        domain: false, tickColor: rule } };
-    var Y = { field: 'name', type: 'nominal', sort: { field: 'order' }, axis: null };
+
+    // Time scale: rows cluster at their year; the gaps between clusters are proportional to the years between them.
+    var PPY = 40, ROW = narrow ? 19 : 20, d = ROW / PPY;
+    var segs = [], labels = [], bands = [];
+    CLUSTERS.forEach(function (c) {
+      var n = c.rows.length;
+      bands.push({ y0: c.year - (n / 2) * d - 0.12, y1: c.year + (n / 2) * d + 0.12 });
+      c.rows.forEach(function (r, i) {
+        var y = c.year + (i - (n - 1) / 2) * d;
+        r.segs.forEach(function (s) { segs.push({ y: y, x0: s.x0, x1: s.x1, part: s.part, tip: c.year + ' · ' + s.tip }); });
+        labels.push({ y: y, text: narrow ? r.short : r.name, side: r.side });
+      });
+    });
+    var top = bands[0].y0 - 0.5, bottom = bands[bands.length - 1].y1 + 0.2;
+    var H = Math.round((bottom - top) * PPY);
+    var Y = { type: 'quantitative', scale: { domain: [top, bottom], reverse: true, nice: false, zero: false } };
+    var X = { type: 'quantitative', scale: { domain: DOM, nice: false, zero: false } };
+    var fs = narrow ? 11 : 12;
+    function y(field) { var o = { field: field }; for (var k in Y) o[k] = Y[k]; return o; }
+    function x(field) { var o = { field: field }; for (var k in X) o[k] = X[k]; return o; }
+    function xd(v) { var o = { datum: v }; for (var k in X) o[k] = X[k]; return o; }
+
     var spec = {
       $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
       background: null,
-      padding: { left: 2, right: 8, top: 4, bottom: 4 },
-      data: { values: rows },
-      spacing: 16,
-      facet: { row: { field: 'group', type: 'nominal', sort: { field: 'gorder' }, title: null,
-        header: { labelOrient: 'top', labelAnchor: 'start', labelAlign: 'left', labelAngle: 0, labelPadding: 6,
-          labelColor: ink, labelFont: font, labelFontSize: 13, labelFontWeight: 600 } } },
-      resolve: { scale: { y: 'independent' } },
-      spec: {
-        width: Math.max(240, W - 12),
-        height: { step: 38 },
-        layer: [
-          { transform: [{ filter: "datum.kind === 'label' && datum.anchor" }], mark: { type: 'rect', color: ink, opacity: dark ? 0.12 : 0.07 },
-            encoding: { x: { datum: 358, type: 'quantitative', scale: { domain: [0, 1650], nice: false } }, x2: { datum: 473 } } },
-          { transform: [{ filter: "datum.kind === 'seg'" }], mark: { type: 'bar', height: 12, yOffset: 8 },
-            encoding: { x: X, x2: { field: 'x1' }, y: Y,
-              color: { field: 'part', type: 'nominal', legend: null, scale: {
-                domain: ['elec', 'hwlo', 'hwhi', 'ai', 'diet', 'active'],
-                range: [tok('--b-elec', '#1c5cab'), tok('--b-hwlo', '#3987e5'), tok('--b-hwhi', '#86b6ef'),
-                  tok('--s1', '#2a78d6'), tok('--s2', '#eb6834'), tok('--s3', '#1baf7a')] } },
-              tooltip: { field: 'tip', type: 'nominal' } } },
-          { transform: [{ filter: "datum.kind === 'label'" }],
-            mark: { type: 'text', align: 'left', baseline: 'middle', yOffset: -9, fontSize: 12, color: ink, font: font },
-            encoding: { x: { datum: 0, type: 'quantitative', scale: { domain: [0, 1650], nice: false } }, y: Y, text: { field: 'name' } } },
-          { transform: [{ filter: "datum.kind === 'label'" }],
-            mark: { type: 'text', align: 'left', baseline: 'middle', yOffset: 8, dx: 6, fontSize: 11.5, color: ink2, font: mono },
-            encoding: { x: { field: 'xEnd', type: 'quantitative', scale: { domain: [0, 1650], nice: false } }, y: Y, text: { field: 'valueLabel' } } }
-        ]
-      },
+      width: Math.max(260, W - 52),
+      height: H,
+      padding: { left: 2, right: 6, top: 18, bottom: 4 },
+      layer: [
+        { data: { values: bands }, mark: { type: 'rect', color: ink, opacity: dark ? 0.06 : 0.035 },
+          encoding: {
+            y: Object.assign(y('y0'), { axis: { values: [2024, 2030, 2035], format: 'd', title: null, domain: false, ticks: false, grid: false,
+              labelColor: ink, labelFont: font, labelFontSize: 13, labelFontWeight: 600, labelPadding: 6 } }),
+            y2: { field: 'y1' } } },
+        { data: { values: [{ a: -473, b: -358 }] }, mark: { type: 'rect', color: ink, opacity: dark ? 0.12 : 0.08 },
+          encoding: {
+            x: Object.assign(x('a'), { axis: { values: narrow ? [-1600, -800, 0, 800, 1600] : [-1600, -1200, -800, -400, 0, 400, 800, 1200, 1600],
+              format: ',.0f', title: 'Mt CO₂e per year', titleColor: ink2, titleFont: font, titleFontWeight: 400, titleFontSize: 12,
+              labelColor: ink3, labelFont: mono, labelFontSize: 11, gridColor: rule, gridOpacity: 0.7, domain: false, tickColor: rule } }),
+            x2: { field: 'b' } } },
+        { data: { values: [{ v: 0 }] }, mark: { type: 'rule', color: ink2, strokeWidth: 1.5 }, encoding: { x: x('v') } },
+        { data: { values: segs }, mark: { type: 'bar', height: narrow ? 9 : 10 },
+          encoding: { x: x('x0'), x2: { field: 'x1' }, y: y('y'),
+            color: { field: 'part', type: 'nominal', legend: null, scale: {
+              domain: ['elec', 'hwlo', 'hwhi', 'ai', 'diet', 'active'],
+              range: [tok('--b-elec', '#1c5cab'), tok('--b-hwlo', '#3987e5'), tok('--b-hwhi', '#86b6ef'),
+                tok('--s1', '#2a78d6'), tok('--s2', '#eb6834'), tok('--s3', '#1baf7a')] } },
+            tooltip: { field: 'tip', type: 'nominal' } } },
+        { data: { values: labels }, transform: [{ filter: "datum.side === 'add'" }],
+          mark: { type: 'text', align: 'right', baseline: 'middle', dx: -7, fontSize: fs, color: ink, font: font },
+          encoding: { x: xd(0), y: y('y'), text: { field: 'text' } } },
+        { data: { values: labels }, transform: [{ filter: "datum.side !== 'add'" }],
+          mark: { type: 'text', align: 'left', baseline: 'middle', dx: 7, fontSize: fs, color: ink, font: font },
+          encoding: { x: xd(0), y: y('y'), text: { field: 'text' } } },
+        { data: { values: [{ v: DOM[0], t: '← Avoided' }] },
+          mark: { type: 'text', align: 'left', baseline: 'bottom', dy: -6, fontSize: 12, fontWeight: 600, color: ink2, font: font },
+          encoding: { x: x('v'), y: { value: 0 }, text: { field: 't' } } },
+        { data: { values: [{ v: DOM[1], t: 'Added →' }] },
+          mark: { type: 'text', align: 'right', baseline: 'bottom', dy: -6, fontSize: 12, fontWeight: 600, color: ink2, font: font },
+          encoding: { x: x('v'), y: { value: 0 }, text: { field: 't' } } }
+      ],
       config: { view: { stroke: null }, font: font }
     };
-    window.vegaEmbed(host, spec, { actions: false, renderer: 'svg', logLevel: window.vega ? window.vega.Error : undefined, tooltip: { theme: dark ? 'dark' : 'light' } })
+    window.vegaEmbed(host, spec, { actions: false, renderer: 'svg', tooltip: { theme: dark ? 'dark' : 'light' } })
       .catch(function () { host.textContent = 'The chart could not be drawn. The tables below carry the same numbers.'; });
   }
   render(true);
