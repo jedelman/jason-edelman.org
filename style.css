@@ -403,6 +403,22 @@ section h2 {
   }
 }
 
+/* ── Wide screens: full width, cards in columns ─────────────────── */
+/* Text keeps a reading measure (#about p is 62ch); only the cards spread. */
+@media (min-width: 769px) {
+  main { max-width: 1440px; }
+  .projects-grid { grid-template-columns: repeat(2, 1fr); }
+  .readings-callout,
+  .journal-callout { max-width: 46rem; }
+}
+
+@media (min-width: 1100px) {
+  body { padding-left: 3rem; padding-right: 3rem; }
+  .projects-grid { grid-template-columns: repeat(3, 1fr); }
+  /* The two headliners share a row, each about a card and a half wide. */
+  .headliners { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 480px) {
   html { font-size: 16px; }
   body { padding: 2.5rem 1.1rem 5rem; }
