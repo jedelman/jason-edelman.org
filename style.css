@@ -123,6 +123,91 @@ section h2 {
 
 .about-col h2 { margin-bottom: 0.6rem; }
 
+/* ── Contact form (contact.js) ──────────────────────────────────── */
+/* Hidden until the script runs; without JavaScript, .contact-nojs shows instead. */
+.contact-form {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+  max-width: 34rem;
+  color-scheme: dark;
+}
+
+.contact-form[hidden] { display: none; }
+
+.contact-form label {
+  margin-top: 0.4rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent-dim);
+}
+
+.contact-form input:not([type="checkbox"]),
+.contact-form select,
+.contact-form textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 0.5rem 0.65rem;
+}
+
+.contact-form textarea { resize: vertical; min-height: 6rem; }
+
+.contact-form :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.contact-form .contact-check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+  font-size: 0.8rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.contact-check input { width: 1.05rem; height: 1.05rem; accent-color: var(--accent); }
+
+#about .contact-status {
+  min-height: 1.2em;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.contact-form button {
+  justify-self: start;
+  margin-top: 0.3rem;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--link);
+  background: transparent;
+  border: 1px solid var(--accent-dim);
+  border-radius: 3px;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+
+.contact-form button:hover:not(:disabled) {
+  color: var(--link-hover);
+  border-color: var(--accent);
+  background: oklch(18% 0.007 145);
+}
+
+.contact-form button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+#about .contact-nojs { margin-top: 1rem; font-size: 0.9rem; color: var(--muted); }
+
 /* ── Background: dappled light through conifers (bg.js) ─────────── */
 /* Only drawn where WebGL runs; a still frame under reduced motion. */
 #bg {

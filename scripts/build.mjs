@@ -29,6 +29,7 @@ const STATIC = [
   'operator-field',
   'img',
   'bg.js',
+  'contact.js',
   'library',
   'broadsheet',
 ];
