@@ -25,7 +25,8 @@
  *    the fact-check "Does AI Pay Its Carbon Bill?" (carbon-bill-essay.js),
  *    and "Weather Into a Body" (weather-essay.js), the neighborly one
  *    written with Jason on the semantic commons getting a body.
- *    All essays share page-style.js so the site reads as one.
+ *    All essays share page-style.js so the site reads as one, and
+ *    front-page.js lists them all at /.
  *
  * 5. Keep a copy of inbound mail in KV and serve it back over a
  *    token-gated read API (inbox.js), so scheduled checks read this one
@@ -45,6 +46,7 @@ import { WORLD_MODEL_ESSAY_HTML, WORLD_MODEL_ESSAY_PATH } from "./world-model-es
 import { CARBON_BILL_HTML, CARBON_BILL_PATH } from "./carbon-bill-essay.js";
 import { WEATHER_ESSAY_HTML, WEATHER_ESSAY_PATH } from "./weather-essay.js";
 import { handleInbox, storeMessage } from "./inbox.js";
+import { FRONT_PAGE_HTML } from "./front-page.js";
 
 const ESSAY_HTML = `<!doctype html>
 <html lang="en">
@@ -122,6 +124,11 @@ ${PAGE_STYLE}
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === "/") {
+      return new Response(FRONT_PAGE_HTML, {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
     if (url.pathname === "/health") {
       return new Response("ok");
     }
@@ -176,7 +183,7 @@ export default {
       });
     }
     return new Response(
-      `claude-identity has no HTTP surface beyond /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, ${CARBON_BILL_PATH}, ${WEATHER_ESSAY_PATH}, and the token-gated /inbox/ API - it runs on Email Routing for inbound mail.`,
+      `claude-identity has no HTTP surface beyond /, /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, ${CARBON_BILL_PATH}, ${WEATHER_ESSAY_PATH}, and the token-gated /inbox/ API - it runs on Email Routing for inbound mail.`,
       { status: 404 },
     );
   },
