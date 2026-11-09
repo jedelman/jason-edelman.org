@@ -45,13 +45,19 @@ into a receipt the next time they open it, which clears the stale backlink.
 
 | You scan an item… | Result |
 |---|---|
-| that you have out | checked in |
+| that you have a copy of | checked in: if you have a copy out, it's yours you're returning |
 | with a copy free | checked out to you |
-| with every copy out | shows who has it; the owner gets "Check in for @them" |
+| with every copy out | shows who has them; the owner gets one "Back from @them" button per borrower |
 | that isn't in the catalog | the owner gets "Add it" |
 
-Copies share a barcode. Handheld USB/Bluetooth scanners work too: they type the
-code into the field and press Enter.
+Copies share a barcode and are interchangeable: one title, a pool of copies.
+The catalog shows one row per title ("1 of 3 in · out: @alice, @bob"). A returned
+copy can't say whose it was, so when the owner checks one in for someone else,
+the owner picks the borrower. Per-copy labels (QR stickers that name one exact
+copy) are tabled until someone asks for them.
+
+Handheld USB/Bluetooth scanners work too: they type the code into the field and
+press Enter.
 
 ## Running it locally
 
