@@ -100,6 +100,34 @@ function statusTag(item) {
   return [el('span', { class: 'tag out' }, `Out ${fmtStamp(loan.value.createdAt)}`), el('span', { class: 'tag-note' }, who + (extra ? ` +${extra}` : ''))]
 }
 
+// "you", or the handle.
+const whoIs = (did) => (did === state.me ? 'you' : at(did))
+
+// Who holds a title's copies: "you", "@a, @b", "@a ×2".
+function holders(pool) {
+  const counts = new Map()
+  for (const l of pool.loans) counts.set(l.did, (counts.get(l.did) ?? 0) + 1)
+  return [...counts].map(([did, n]) => whoIs(did) + (n > 1 ? ` ×${n}` : '')).join(', ')
+}
+
+// One sentence on where a title's copies are.
+function poolLine(pool) {
+  const n = pool.copies.length
+  if (n === 1) return outLine(pool.copies[0])
+  if (pool.free.length) return `${pool.free.length} of ${n} copies on the shelf.`
+  return `All ${n} copies are out: ${pool.loans.map((l) => `${whoIs(l.did)} since ${fmtDate(l.value.createdAt)}`).join('; ')}.`
+}
+
+const shelfNote = (pool) => (pool.copies.length > 1 ? ` ${pool.free.length} of ${pool.copies.length} copies on the shelf now.` : '')
+
+// A copy that comes back can't say whose it was, so the owner picks: one
+// button per borrower (not the owner; their own scan returns their copy).
+function backButtons(pool) {
+  const oldest = new Map()
+  for (const l of pool.loans) if (l.did !== state.me && !oldest.has(l.did)) oldest.set(l.did, l)
+  return [...oldest.values()].map((l) => [`Back from ${at(l.did)}`, () => checkInFor(l)])
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────────
 
 async function initAuth() {
@@ -366,26 +394,28 @@ async function onScan(raw) {
       case 'unknown':
         return showStatus(`${code} isn't in this catalog.`, null, isOwner() ? [['Add it to the catalog', () => startAdd(code)]] : [])
       case 'signed-out': {
-        if (!d.loan) return showSlip({ item: d.item, ink: 'in', stamp: 'On shelf', line: 'Sign in to borrow it.' })
-        return showSlip({ item: d.item, ink: 'out', stamp: `Out ${fmtStamp(d.loan.value.createdAt)}`, who: at(d.loan.did), line: outLine(d.item) })
+        const n = d.pool.copies.length
+        if (d.pool.free.length) return showSlip({ item: d.item, ink: 'in', stamp: 'On shelf', line: n > 1 ? `${d.pool.free.length} of ${n} copies on the shelf. Sign in to borrow one.` : 'Sign in to borrow it.' })
+        return showSlip({ item: d.item, ink: 'out', stamp: `Out ${fmtStamp(d.loan.value.createdAt)}`, who: holders(d.pool), line: poolLine(d.pool) })
       }
       case 'out':
         return showSlip({
           item: d.item,
           ink: 'out',
           stamp: `Out ${fmtStamp(d.loan.value.createdAt)}`,
-          who: at(d.loan.did),
-          line: outLine(d.item),
-          actions: isOwner() ? [[`It's back: check in for ${at(d.loan.did)}`, () => checkInFor(d.loan)]] : [],
+          who: holders(d.pool),
+          line: poolLine(d.pool),
+          actions: isOwner() ? backButtons(d.pool) : [],
         })
-      case 'checkout':
+      case 'checkout': {
         await L.checkOut(state.agent, state.me, state.snap, d.item)
         await refresh()
-        return showSlip({ item: d.item, ink: 'out', stamp: `Out ${today}`, who: 'to you', line: 'Checked out. Scan it again when you give it back.' })
+        return showSlip({ item: d.item, ink: 'out', stamp: `Out ${today}`, who: 'to you', line: 'Checked out. Scan it again when you give it back.' + shelfNote(L.poolOf(state.snap, code)) })
+      }
       case 'checkin': {
         const { deleted } = await L.checkIn(state.agent, state.me, d.loan)
         await refresh()
-        return showSlip({ item: d.item, ink: 'in', stamp: `Returned ${today}`, line: deleted ? 'Checked in. Thank you.' : 'It was already checked in.' })
+        return showSlip({ item: d.item, ink: 'in', stamp: `Returned ${today}`, line: (deleted ? 'Checked in. Thank you.' : 'It was already checked in.') + shelfNote(L.poolOf(state.snap, code)) })
       }
     }
   })
@@ -397,7 +427,7 @@ async function checkInFor(loan) {
   await guarded(null, async () => {
     await L.checkInFor(state.agent, state.me, loan)
     await refresh()
-    if (item) showSlip({ item, ink: 'in', stamp: `Returned ${fmtStamp(new Date().toISOString())}`, line: `Checked in for ${who}.` })
+    if (item) showSlip({ item, ink: 'in', stamp: `Returned ${fmtStamp(new Date().toISOString())}`, line: `Checked in for ${who}.` + shelfNote(L.poolOf(state.snap, item.value.barcode)) })
   })
 }
 
@@ -522,7 +552,8 @@ function renderTabs() {
   for (const b of document.querySelectorAll('[role=tab]')) if (b.dataset.owner != null) b.hidden = !owner
   const mine = state.me ? L.openLoansOf(state.snap, state.me).length : 0
   $('count-borrowed').textContent = mine ? String(mine) : ''
-  $('count-catalog').textContent = state.snap.items.length ? String(state.snap.items.length) : ''
+  const titles = L.pools(state.snap).length
+  $('count-catalog').textContent = titles ? String(titles) : ''
   const current = document.querySelector('[role=tab][aria-selected=true]')
   if (!current || current.hidden) showTab('scan')
 }
@@ -567,14 +598,43 @@ function emptyState(lines, action) {
   return el('div', { class: 'empty' }, lines.map((t) => el('p', {}, t)), action ? el('button', { type: 'button', class: 'primary', onclick: action[1] }, action[0]) : null)
 }
 
+// One row per title. A single copy shows its own status; a pool shows how
+// many are in and who has the rest.
+function poolRow(pool, extra = []) {
+  const face = L.faceOf(pool)
+  const n = pool.copies.length
+  const status =
+    n === 1
+      ? statusTag(face)
+      : [
+          el('span', { class: pool.free.length ? 'tag in' : 'tag out' }, pool.free.length ? `${pool.free.length} of ${n} in` : `All ${n} out`),
+          pool.loans.length ? el('span', { class: 'tag-note' }, 'out: ' + holders(pool)) : null,
+        ]
+  return el(
+    'li',
+    { class: 'item' },
+    thumb(face),
+    el(
+      'div',
+      {},
+      el('p', { class: 'title' }, face.value.title || '(untitled)'),
+      el('p', { class: 'item-meta' }, el('span', { class: 'code' }, face.value.barcode), ...status),
+      extra.length ? el('div', { class: 'actions' }, extra) : null,
+    ),
+  )
+}
+
 function renderCatalog() {
   const q = $('catalog-filter').value.trim().toLowerCase()
-  const all = [...state.snap.items].sort((a, b) => String(a.value.title).localeCompare(String(b.value.title)))
-  const shown = q ? all.filter((i) => String(i.value.title).toLowerCase().includes(q) || String(i.value.barcode).includes(q)) : all
-  const out = all.filter((i) => L.holderOf(state.snap, i)).length
+  const title = (pool) => String(L.faceOf(pool).value.title)
+  const all = L.pools(state.snap).sort((a, b) => title(a).localeCompare(title(b)))
+  const shown = q ? all.filter((pool) => title(pool).toLowerCase().includes(q) || pool.code.includes(q)) : all
+  const copies = state.snap.items.length
+  const out = state.snap.items.filter((i) => L.holderOf(state.snap, i)).length
   const count = $('catalog-count')
-  count.hidden = !all.length
-  count.textContent = `${all.length} item${all.length === 1 ? '' : 's'} · ${out} out · ${all.length - out} on the shelf`
+  count.hidden = !copies
+  count.textContent =
+    (all.length === copies ? `${copies} item${copies === 1 ? '' : 's'}` : `${all.length} titles, ${copies} copies`) + ` · ${out} out · ${copies - out} on the shelf`
   $('catalog-filter').hidden = all.length < 6
   const list = $('catalog-list')
   if (!all.length) {
@@ -591,15 +651,18 @@ function renderCatalog() {
   }
   if (!shown.length) return list.replaceChildren(el('li', {}, emptyState([`Nothing matches “${q}”.`])))
   list.replaceChildren(
-    ...shown.map((item) => {
+    ...shown.map((pool) => {
       const extra = []
       if (isOwner()) {
-        const loan = L.holderOf(state.snap, item)
-        if (loan?.did === state.me) extra.push(el('button', { type: 'button', onclick: () => checkInMine(loan) }, 'Check in'))
-        else if (loan) extra.push(el('button', { type: 'button', onclick: () => checkInFor(loan) }, `It's back: check in for ${at(loan.did)}`))
-        else extra.push(el('button', { type: 'button', class: 'quiet', onclick: () => removeItem(item) }, 'Remove'))
+        const mine = pool.loans.find((l) => l.did === state.me)
+        if (mine) extra.push(el('button', { type: 'button', onclick: () => checkInMine(mine) }, 'Check in'))
+        for (const [label, fn] of backButtons(pool)) extra.push(el('button', { type: 'button', onclick: fn }, label))
+        if (pool.free.length) {
+          const newest = [...pool.free].sort((a, b) => String(b.value.createdAt).localeCompare(String(a.value.createdAt)))[0]
+          extra.push(el('button', { type: 'button', class: 'quiet', onclick: () => removeItem(newest, pool) }, pool.copies.length > 1 ? 'Remove a copy' : 'Remove'))
+        }
       }
-      return itemRow(item, extra)
+      return poolRow(pool, extra)
     }),
   )
 }
@@ -651,8 +714,10 @@ function renderBorrowed() {
 
 // ── Owner actions ────────────────────────────────────────────────────────
 
-async function removeItem(item) {
-  if (!confirm(`Remove "${item.value.title}" from the catalog?`)) return
+async function removeItem(item, pool) {
+  const n = pool?.copies.length ?? 1
+  const ask = n > 1 ? `Remove one copy of "${item.value.title}"? ${n - 1} will remain.` : `Remove "${item.value.title}" from the catalog?`
+  if (!confirm(ask)) return
   await guarded(null, async () => {
     await L.removeItem(state.agent, state.me, item)
     await refresh()
@@ -671,7 +736,7 @@ async function setAddCode(raw) {
   const copies = state.snap?.items.filter((i) => L.normalizeCode(i.value.barcode) === code).length ?? 0
   const status = $('add-status')
   status.dataset.tone = 'plain'
-  status.textContent = copies ? `Already in the catalog (${copies}). This adds another copy.` : ''
+  status.textContent = copies ? `Already in the catalog (${copies === 1 ? 'one copy' : copies + ' copies'}). This adds another copy to the pool.` : ''
   const isbn = L.isbnOf(code)
   if (isbn && !$('add-title').value) {
     $('add-title').placeholder = 'Looking up the title…'

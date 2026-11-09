@@ -244,26 +244,50 @@ export const openLoansOf = (snap, did) => [...snap.active.values()].flat().filte
 // My loans the owner has already checked in: tidy() turns them into receipts.
 export const closedLoansOf = (snap, did) => snap.loans.filter((l) => l.did === did && snap.closed.has(l.uri))
 
+// Copies share a barcode, and copies of a title are interchangeable: one
+// title, a pool of copies. -> { code, copies, loans (open, oldest first), free }
+export function poolOf(snap, rawCode) {
+  const code = normalizeCode(rawCode)
+  const copies = snap.items.filter((i) => normalizeCode(i.value?.barcode) === code)
+  return poolFrom(snap, code, copies)
+}
+
+function poolFrom(snap, code, copies) {
+  const loans = copies.flatMap((c) => snap.active.get(c.uri) ?? []).sort((a, b) => String(a.value.createdAt).localeCompare(String(b.value.createdAt)))
+  const free = copies.filter((c) => !holderOf(snap, c))
+  return { code, copies, loans, free }
+}
+
+// Every title in the catalog, one pool each.
+export function pools(snap) {
+  const groups = new Map()
+  for (const i of snap.items) {
+    const code = normalizeCode(i.value?.barcode)
+    if (!groups.has(code)) groups.set(code, [])
+    groups.get(code).push(i)
+  }
+  return [...groups].map(([code, copies]) => poolFrom(snap, code, copies))
+}
+
+// The copy a pool is shown by: one with a photo if there is one.
+export const faceOf = (pool) => pool.copies.find((c) => c.value?.photo) ?? pool.copies[0]
+
 // What one scan means. `me` is the signed-in DID, or null.
-//   checkin     I hold a copy: return it
+//   checkin     I have a copy out: this scan returns mine (Jason's rule)
 //   checkout    a copy is free: take it
 //   out         every copy is out with someone else
 //   signed-out  status only
 //   unknown     no item has this code
+// Every result carries the pool.
 export function decide(snap, rawCode, me) {
-  const code = normalizeCode(rawCode)
-  const copies = snap.items.filter((i) => normalizeCode(i.value?.barcode) === code)
-  if (!copies.length) return { kind: 'unknown', code }
-  if (me) {
-    for (const item of copies) {
-      const loan = (snap.active.get(item.uri) ?? []).find((l) => l.did === me)
-      if (loan) return { kind: 'checkin', item, loan }
-    }
-  }
-  const free = copies.find((i) => !holderOf(snap, i))
-  if (!me) return { kind: 'signed-out', item: free ?? copies[0], loan: free ? null : holderOf(snap, copies[0]) }
-  if (!free) return { kind: 'out', item: copies[0], loan: holderOf(snap, copies[0]) }
-  return { kind: 'checkout', item: free }
+  const pool = poolOf(snap, rawCode)
+  if (!pool.copies.length) return { kind: 'unknown', code: pool.code, pool }
+  const mine = me ? pool.loans.find((l) => l.did === me) : null
+  if (mine) return { kind: 'checkin', item: pool.copies.find((c) => c.uri === mine.value.subject.uri), loan: mine, pool }
+  const free = pool.free[0]
+  if (!me) return { kind: 'signed-out', item: free ?? faceOf(pool), loan: free ? null : pool.loans[0], pool }
+  if (!free) return { kind: 'out', item: faceOf(pool), loan: pool.loans[0], pool }
+  return { kind: 'checkout', item: free, pool }
 }
 
 // ── Writes (agent: an authenticated @atproto/api Agent; me: its DID) ─────
