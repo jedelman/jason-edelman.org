@@ -21,6 +21,7 @@ const state = {
   q: '', source: 'all', days: 14,
   board: {}, edits: {}, masthead: '', note: '', recommend: true,
   via: {}, // uri -> reshare credit { uri, cid, masthead }
+  editing: null, // a published edition being revised
   period: '', // '' (the day's edition), 'am' or 'pm'
   extra: [], // reshared pieces that didn't fit on the page, kept on the wire
   editingSlot: null,
@@ -410,13 +411,15 @@ function renderPaperNow() {
     masthead: state.masthead || 'Your broadsheet',
     number: state.editions.length + 1,
     date: B.localDate(),
-    period: state.period || null,
+    period: state.editing ? B.editionDay(state.editing.value).period : state.period || null,
+    ...(state.editing ? { number: state.editing.value.content.number, date: B.editionDay(state.editing.value).date } : {}),
     editor: state.me ? { handle: state.myHandle ?? null, displayName: '' } : null,
     note: state.note,
     slots,
   }, { wrap })
   const filled = Object.keys(state.board).length
-  $('publish').textContent = state.period ? `Publish the ${B.PERIODS[state.period].toLowerCase()}` : 'Publish'
+  $('publish').textContent = state.editing ? 'Update edition' : state.period ? `Publish the ${B.PERIODS[state.period].toLowerCase()}` : 'Publish'
+  $('period').disabled = !!state.editing
   $('publish').disabled = !filled
 }
 
@@ -460,9 +463,24 @@ function renderMine() {
           }
         },
       }, 'Delete')
-      return el('li', {}, el('a', { href: `../newsstand/?at=${handle}/${e.rkey}`, target: '_blank' }, e.value.title), del)
+      return el('li', {}, el('a', { href: `../newsstand/?at=${handle}/${e.rkey}`, target: '_blank' }, e.value.title), el('button', { type: 'button', onclick: () => openEdition(e) }, 'Revise'), del)
     }),
   )
+}
+
+// Load a published edition onto the page to revise it. Update edition writes
+// over it; it keeps its date, period, number and publish time.
+function openEdition(e) {
+  const c = B.readEditionContent(e.value.content)
+  const { board, edits, via } = B.boardFromSlots(c.slots)
+  Object.assign(state, { editing: e, board, edits, via, note: c.note })
+  $('note').value = c.note
+  const p = B.editionDay(e.value).period
+  $('period').value = p ?? ''
+  renderPaperNow()
+  renderWire()
+  setStatus(`Revising “${e.value.title}”. Update edition writes over it; Clear the page to stop.`)
+  scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function publish() {
@@ -473,20 +491,23 @@ async function publish() {
   try {
     const slots = B.slotsFromBoard(state.board, state.edits, state.via)
     const docs = new Map(slots.map((s) => [s.item.uri, state.byUri.get(s.item.uri)]))
-    const r = await B.publishEdition(state.agent, state.me, { masthead: state.masthead, note: state.note, slots, docs, recommend: state.recommend, period: state.period || null, date: B.localDate() })
+    const revising = state.editing
+    const r = await B.publishEdition(state.agent, state.me, { masthead: state.masthead, note: state.note, slots, docs, recommend: state.recommend, period: state.period || null, date: B.localDate() }, revising)
     const url = `../newsstand/?at=${state.myHandle ?? state.me}/${r.rkey}`
     store.del(draftKey())
-    Object.assign(state, { board: {}, edits: {}, via: {}, note: '' })
+    Object.assign(state, { board: {}, edits: {}, via: {}, note: '', editing: null })
+    $('period').value = state.period
+    renderPaperNow()
     $('note').value = ''
     $('status').replaceChildren(
-      `Published “${r.title}”${r.recommended ? `, and recommended ${r.recommended} piece${r.recommended === 1 ? '' : 's'}` : ''}. It’s frozen now. `,
+      `${revising ? 'Updated' : 'Published'} “${r.title}”${r.recommended ? `, and recommended ${r.recommended} piece${r.recommended === 1 ? '' : 's'}` : ''}. `,
       el('a', { href: url }, 'Read it'),
     )
     $('status').dataset.tone = 'ok'
     await loadMine()
   } catch (e) {
-    console.warn(e) // a refusal (say, a frozen edition) is news for the editor, not an error
-    setStatus(e.message, 'bad')
+    console.warn(e) // a refusal (say, an edition already out) is news for the editor, not an error
+    setStatus(e?.error === 'InvalidSwap' ? 'That edition changed somewhere else. Reload and try again.' : e.message, 'bad')
   }
   btn.disabled = !Object.keys(state.board).length
 }
@@ -505,7 +526,7 @@ function bindControls() {
     changed()
   })
   $('clear').addEventListener('click', () => {
-    Object.assign(state, { board: {}, edits: {}, via: {} })
+    Object.assign(state, { board: {}, edits: {}, via: {}, editing: null })
     setStatus('')
     changed()
   })

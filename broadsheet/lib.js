@@ -600,9 +600,9 @@ export async function listEditions(did) {
 
 const repo = (agent) => agent.com.atproto.repo
 
-// Publish an edition, which freezes it: one per day, or one morning and one
-// evening edition. (`existing` replaces an edition in place; the editor no
-// longer offers it, but it stays for corrections by hand.)
+// Publish an edition: one per day, or one morning and one evening edition.
+// With `existing`, revise that edition in place: it keeps its date, period,
+// number, title and publish time.
 // -> { uri, rkey, recommended, title }
 //   slots     from slotsFromBoard
 //   docs      Map uri -> normalized document, for the plaintext summary
@@ -622,7 +622,8 @@ export async function publishEdition(agent, me, { masthead, note = '', slots, do
     const d = editionDay(e.value)
     return d.date === date && d.period === (period || null)
   })
-  if (clash) throw new Error(`${period ? `The ${PERIODS[period].toLowerCase()}` : 'Today’s edition'} for ${longDate(date)} is already out, and published editions are frozen.${period ? '' : ' Publish a morning or evening edition instead.'}`)
+  if (clash) throw new Error(`${period ? `The ${PERIODS[period].toLowerCase()}` : 'Today’s edition'} for ${longDate(date)} is already out. Revise it from “Your editions”${period ? '' : ', or publish a morning or evening edition'}.`)
+  if (existing) period = PERIODS[existing.value.content?.period] ? existing.value.content.period : null
 
   // The masthead: one publication per editor, renamed when the name changes.
   let pub = await findMasthead(pds, me)

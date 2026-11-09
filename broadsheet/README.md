@@ -9,7 +9,7 @@ Front pages of standard.site writing, picked by people. Two rooms under
   **Back editions** is a calendar of an editor's issues (only days with an edition can
   be picked). **Reshare** sends a whole front page, or one story, to your own.
 - `editor/`: make a front page from the writers you follow, and publish it: the day's
-  edition, or a **morning** and an **evening** edition. Publishing freezes it.
+  edition, or a **morning** and an **evening** edition, and revise one after it's out.
 
 Plain browser JavaScript, no build step, no server. `broadsheet/` itself redirects to
 the newsstand.
@@ -32,10 +32,11 @@ when the masthead changes). Its `content` is an `org.jason-edelman.broadsheet.co
 and deck, and, for a reshare, a `via`: the edition it came from and that broadsheet's
 name, shown as "via The Atmosphere".
 
-**Editions are frozen.** One edition per date and period: the day's edition, the
-morning edition, the evening edition. Publishing a second one for the same slot is
-refused, and the editor offers no way to revise a published edition (delete is still
-there). Titles carry the period: "The Atmosphere, Morning Edition, November 9, 2026".
+**One edition per date and period:** the day's edition, the morning edition, the
+evening edition. Publishing a second one for the same slot is refused; revise the one
+that's out instead (Your editions → Revise), which writes over it and keeps its date,
+period, number and publish time. Titles carry the period: "The Atmosphere, Morning
+Edition, November 9, 2026".
 
 **Reshare** in the newsstand writes the picked pieces (with their slot and `via`) to a
 same-origin hand-off in localStorage; the editor takes them on load, onto the page

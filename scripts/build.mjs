@@ -29,7 +29,6 @@ const STATIC = [
   'operator-field',
   'img',
   'library',
-  'muster',
   'broadsheet',
 ];
 

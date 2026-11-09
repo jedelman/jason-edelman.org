@@ -41,7 +41,7 @@
             "am",
             "pm"
           ],
-          "description": "Morning (am) or evening (pm) edition. Absent: the day's only edition. One edition per date and period; published editions are frozen."
+          "description": "Morning (am) or evening (pm) edition. Absent: the day's only edition. One edition per date and period; a revision keeps its date and period."
         }
       }
     },
