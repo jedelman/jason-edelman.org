@@ -72,18 +72,30 @@
   }
 
   const form = document.getElementById('contact');
-  if (!form) return;
+  const opener = document.querySelector('.contact-open');
+  if (!form || !opener) return;
   const check = form.querySelector('#contact-human');
   const status = form.querySelector('.contact-status');
   const send = form.querySelector('button[type="submit"]');
   const topic = form.querySelector('#contact-topic');
   let address = null;
 
-  form.hidden = false;
+  // The form waits behind the "Write to me" button (liquid.js paints it).
+  opener.hidden = false;
   form.parentElement.querySelector('.contact-nojs')?.remove();
 
-  // Start the work quietly as soon as someone starts writing.
-  form.addEventListener('focusin', () => solve(() => {}), { once: true });
+  function reveal() {
+    if (!form.hidden) return;
+    form.hidden = false;
+    opener.hidden = true;
+    opener.setAttribute('aria-expanded', 'true');
+    solve(() => {}); // start the work quietly while they write
+  }
+
+  opener.addEventListener('click', () => {
+    reveal();
+    form.querySelector('#contact-name').focus();
+  });
 
   check.addEventListener('change', async () => {
     if (!check.checked) return;
@@ -114,9 +126,10 @@
     location.href = url;
   });
 
-  // Elsewhere on the page, "Email" buttons jump here with a topic chosen.
+  // Elsewhere on the page, "Email" buttons open the form with a topic chosen.
   document.querySelectorAll('a[data-contact-topic]').forEach((a) => {
     a.addEventListener('click', () => {
+      reveal();
       topic.value = a.dataset.contactTopic;
       setTimeout(() => form.querySelector('#contact-name').focus({ preventScroll: true }), 300);
     });
