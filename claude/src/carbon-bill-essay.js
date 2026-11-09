@@ -97,6 +97,7 @@ input[type=range] { width: 200px; max-width: 100%; accent-color: var(--ink); }
 .plot-wrap svg, .ledger svg { font-family: var(--chart-font); }
 .sq { width: 12px; height: 10px; border-radius: 2px; display: inline-block; }
 .sq.band { background: var(--ink); opacity: .12; }
+.dash { width: 18px; height: 0; border-top: 2px dashed; display: inline-block; }
 
 /* Findings */
 .findings { display: grid; gap: 24px; }
@@ -130,7 +131,7 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
 
   <div class="figure" id="ledger-figure">
     <h2 class="fig-title">The ledger</h2>
-    <p class="fig-sub">Right of zero is what data centres add each year over their full life cycle: electricity, then hardware and construction at a 10% share, then the extra at a 25% share. Left of zero is what each lever avoids, as negative numbers. Rows are grouped by year and spaced to scale in time. The shaded band on the left mirrors the Base case's 2035 footprint, 358–473 Mt; a lever has to reach it to cancel the Base case. Diet and travel rows are for 1% of humanity, starting now. *On the 2050 diets of Springmann et al.</p>
+    <p class="fig-sub">Time runs left to right, to scale. Above zero is what data centres add each year over their full life cycle: electricity, then hardware and construction at a 10% share, then the extra at a 25% share. Below zero is what each lever avoids, as negative numbers. The shaded band mirrors the Base case's 2035 footprint, 358–473 Mt; a lever has to reach it to cancel the Base case. The 2024 diet and travel bars are for 1% of humanity. The dashed lines carry them forward: on current trends diet savings stay near zero, and if 1% more of humanity switched each year they would grow as drawn, which is an assumption, not a forecast. *On the 2050 diets of Springmann et al.</p>
     <div id="ledger" class="ledger" role="img" aria-label="Bar chart: emissions added by data centres over their full life cycle, and emissions avoided by AI applications, diet shift and active travel, in Mt CO2e a year."></div>
     <div class="legend" aria-label="Ledger legend">
       <span><i class="sq" style="background:var(--b-elec)"></i>Electricity (IEA)</span>
@@ -140,6 +141,9 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
       <span><i class="sq" style="background:var(--s2)"></i>Diet shift</span>
       <span><i class="sq" style="background:var(--s3)"></i>Active travel</span>
       <span><i class="sq band"></i>Base 2035, mirrored</span>
+      <span><i class="dash" style="border-color:var(--s2)"></i>Diet, 1% more a year (assumption)</span>
+      <span><i class="dash" style="border-color:var(--s3)"></i>Cycling, 1% more a year (assumption)</span>
+      <span><i class="dash" style="border-color:var(--s2)"></i>along zero: diet on current trends</span>
     </div>
   </div>
 
@@ -185,7 +189,7 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
       </div>
       <div>
         <h3>Diet and active travel add to any point</h3>
-        <p>Changing diets and swapping car trips for cycling add next to nothing on the bottom axis. They don't compete with AI applications for anything, so they shift whichever point you pick upward. They share AI's weakness, too: each depends on adoption, and adoption depends on policy.</p>
+        <p>Changing diets and swapping car trips for cycling add next to nothing on the bottom axis. They don't compete with AI applications for anything, so they shift whichever point you pick upward. They share AI's weakness, too: each depends on adoption, and on current trends diets aren't changing. The share of Americans who call themselves vegetarian was 6% in 1999 and 4% in 2023, and the OECD and FAO project meat eaten per person worldwide to rise 2% by 2033. If 1% more of humanity switched diets every year from 2024, the savings would reach the Base-case band in the ledger by about 2029, and adding the same uptake of cycling would get there by about 2027. That pace is an assumption, not a forecast.</p>
       </div>
     </div>
   </section>
@@ -285,6 +289,8 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
       <li>Scarborough et al. (2014), <a href="https://www.oxfordmartin.ox.ac.uk/publications/dietary-greenhouse-gas-emissions-of-meat-eaters-fish-eaters-vegetarians-and-vegans-in-the-uk" target="_blank" rel="noopener">Dietary greenhouse gas emissions of meat-eaters, fish-eaters, vegetarians and vegans in the UK</a>, Climatic Change.</li>
       <li>Scarborough et al. (2023), <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC10365988/" target="_blank" rel="noopener">Vegans, vegetarians, fish-eaters and meat-eaters in the UK show discrepant environmental impacts</a>, Nature Food, Table 3.</li>
       <li>Springmann et al. (2016), <a href="https://www.pnas.org/doi/10.1073/pnas.1523119113" target="_blank" rel="noopener">Analysis and valuation of the health and climate change cobenefits of dietary change</a>, PNAS.</li>
+      <li>Gallup (2023), <a href="https://news.gallup.com/poll/510038/percentage-americans-vegetarian.aspx" target="_blank" rel="noopener">US vegetarian and vegan identification, 1999–2023</a>.</li>
+      <li>OECD and FAO (2024), <a href="https://www.fao.org/3/cd0991en/cd0991en.pdf" target="_blank" rel="noopener">OECD-FAO Agricultural Outlook 2024–2033</a>, chapter 6 (Meat).</li>
       <li>Brand et al. (2021), <a href="https://www.ox.ac.uk/news/2021-02-02-get-your-bike-study-shows-walking-cycling-and-e-biking-make-significant-impact" target="_blank" rel="noopener">The climate change mitigation impacts of active travel</a>, Global Environmental Change (University of Oxford summary).</li>
       <li>IPCC AR6 WGIII, <a href="https://www.ipcc.ch/report/ar6/wg3/chapter/chapter-8/" target="_blank" rel="noopener">Chapter 8: Urban systems and other settlements</a>, executive summary and §8.4.</li>
       <li>ITDP and UC Davis (2021), <a href="https://itdp.org/wp-content/uploads/2021/12/EN_Compact-Cities-BRIEF_SINGLEPAGE-1.pdf" target="_blank" rel="noopener">The Compact City Scenario: Electrified</a> (brief).</li>
@@ -516,23 +522,24 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
   var per = function (s) { return 180 * s / (1 - s) / 415; };
   var fmt = function (v) { return Math.round(v).toLocaleString('en-US'); };
   var neg = function (v) { return '−' + fmt(v); };
-  var DOM = [-1600, 1600];
+  var YDOM = [-1600, 1600];
+  var DIET = 61, CYCLE = 41;   // Mt avoided per 1% of humanity (random diet switch; one car trip a day by bike)
 
   // Data centres: IEA electricity emissions plus hardware and construction at a 10-25% share.
   function dc(name, short, twh, op, opHi, mark, note) {
     var eLo = per(0.10) * twh, eHi = per(0.25) * twh, lo = op + eLo, hi = opHi + eHi;
     var elec = op === opHi ? fmt(op) : fmt(op) + '–' + fmt(opHi);
     var val = mark + fmt(lo) + '–' + fmt(hi);
-    return { side: 'add', name: name + ' · ' + val, short: short + ' ' + val,
+    return { side: 'add', top: hi, name: name + ' · ' + val, short: short + ' ' + val,
       segs: [
-        { x0: 0, x1: op, part: 'elec', tip: name + ': electricity ' + mark + elec + ' Mt' + (note ? ' (' + note + ')' : ' (IEA)') },
-        { x0: op, x1: lo, part: 'hwlo', tip: name + ': hardware and construction ' + fmt(eLo) + ' Mt at a 10% share' },
-        { x0: lo, x1: hi, part: 'hwhi', tip: name + ': hardware and construction ' + fmt(eHi) + ' Mt at a 25% share' }
+        { v0: 0, v1: op, part: 'elec', tip: name + ': electricity ' + mark + elec + ' Mt' + (note ? ' (' + note + ')' : ' (IEA)') },
+        { v0: op, v1: lo, part: 'hwlo', tip: name + ': hardware and construction ' + fmt(eLo) + ' Mt at a 10% share' },
+        { v0: lo, v1: hi, part: 'hwhi', tip: name + ': hardware and construction ' + fmt(eHi) + ' Mt at a 25% share' }
       ] };
   }
-  function avoid(name, short, v, part, tip) {
-    return { side: 'avoid', name: name + ' · ' + neg(v), short: short + ' ' + neg(v),
-      segs: [{ x0: -v, x1: 0, part: part, tip: tip }] };
+  function avoid(name, short, v, part, tip, key) {
+    return { side: 'avoid', key: key, name: name + ' · ' + neg(v), short: short + ' ' + neg(v),
+      segs: [{ v0: -v, v1: 0, part: part, tip: tip }] };
   }
   function none(name, short) { return { side: 'none', name: name, short: short, segs: [] }; }
 
@@ -543,8 +550,8 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
       avoid('Heavy meat-eaters → vegan', 'Heavy eaters → vegan', 233, 'diet', '1% of humanity: 82 M heavy meat-eaters go vegan, 2.84 t each (Scarborough et al. 2023)'),
       avoid('Heavy meat-eaters → vegetarian', 'Heavy eaters → veg.', 182, 'diet', '1% of humanity: 82 M heavy meat-eaters go vegetarian, 2.22 t each (Scarborough et al. 2023)'),
       avoid('Same, on 2014 data', 'Same, 2014 data', 101, 'diet', 'The same switch on 2014 data: 1.23 t each (Scarborough et al. 2014)'),
-      avoid('A random 1% → vegetarian*', 'Random 1% → veg.*', 61, 'diet', '82 M people at random go vegetarian: about 0.74 t each, on the 2050 diets of Springmann et al. 2016'),
-      avoid('One car trip a day → bike', 'Car trip → bike', 41, 'active', '1% of humanity swaps one car trip a day for cycling, 200 days a year: about 0.5 t each (Brand et al. 2021)')
+      avoid('A random 1% → vegetarian*', 'Random 1% → veg.*', DIET, 'diet', '82 M people at random go vegetarian: about 0.74 t each, on the 2050 diets of Springmann et al. 2016', 'diet'),
+      avoid('One car trip a day → bike', 'Car trip → bike', CYCLE, 'active', '1% of humanity swaps one car trip a day for cycling, 200 days a year: about 0.5 t each (Brand et al. 2021)', 'cycle')
     ] },
     { year: 2030, rows: [
       dc('Headwinds', 'Headwinds', 670, 215, 215, '', ''),
@@ -575,67 +582,113 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
     var dark = (getComputedStyle(document.documentElement).colorScheme || '').indexOf('dark') >= 0;
     var ink = tok('--ink', '#121516'), ink2 = tok('--ink-2', '#464e52'), ink3 = tok('--ink-3', '#5f686c'), rule = tok('--rule', '#d6dcdd');
     var font = tok('--chart-font', 'system-ui, sans-serif'), mono = tok('--mono', 'ui-monospace, monospace');
+    var cDiet = tok('--s2', '#eb6834'), cCycle = tok('--s3', '#1baf7a');
 
-    // Time scale: rows cluster at their year; the gaps between clusters are proportional to the years between them.
-    var PPY = 40, ROW = narrow ? 19 : 20, d = ROW / PPY;
+    // Time runs left to right on a linear scale. Each year's columns sit side by side around it,
+    // and the scale is set so the widest clusters fit: the gaps between clusters stay proportional to time.
+    var plotW = Math.max(250, W - 62), H = narrow ? 500 : 540, fs = narrow ? 10.5 : 12;
+    var COL = narrow ? 12 : 17, BARW = narrow ? 7 : 10;
+    var half = function (n) { return n * COL / 2 + 4; };
+    var n24 = CLUSTERS[0].rows.length, n30 = CLUSTERS[1].rows.length, n35 = CLUSTERS[2].rows.length;
+    var padL = half(n24) + 6, padR = half(n35) + 8;
+    var ppy = (plotW - padL - padR) / 11;
+    var XDOM = [2024 - padL / ppy, 2035 + padR / ppy];
+    var ppm = H / (YDOM[1] - YDOM[0]);   // pixels per Mt
+    var gap = 9 / ppm;
+
     var segs = [], labels = [], bands = [];
     CLUSTERS.forEach(function (c) {
       var n = c.rows.length;
-      bands.push({ y0: c.year - (n / 2) * d - 0.12, y1: c.year + (n / 2) * d + 0.12 });
+      bands.push({ a: c.year - half(n) / ppy, b: c.year + half(n) / ppy });
       c.rows.forEach(function (r, i) {
-        var y = c.year + (i - (n - 1) / 2) * d;
-        r.segs.forEach(function (s) { segs.push({ y: y, x0: s.x0, x1: s.x1, part: s.part, tip: c.year + ' · ' + s.tip }); });
-        labels.push({ y: y, text: narrow ? r.short : r.name, side: r.side });
+        var x = c.year + (i - (n - 1) / 2) * COL / ppy;
+        r.segs.forEach(function (s) { segs.push({ x: x, v0: s.v0, v1: s.v1, part: s.part, tip: c.year + ' · ' + s.tip }); });
+        labels.push({ x: x, y: (r.side === 'add' ? r.top : 0) + gap, text: narrow ? r.short : r.name });
       });
     });
-    var top = bands[0].y0 - 0.5, bottom = bands[bands.length - 1].y1 + 0.2;
-    var H = Math.round((bottom - top) * PPY);
-    var Y = { type: 'quantitative', scale: { domain: [top, bottom], reverse: true, nice: false, zero: false } };
-    var X = { type: 'quantitative', scale: { domain: DOM, nice: false, zero: false } };
-    var fs = narrow ? 11 : 12;
-    function y(field) { var o = { field: field }; for (var k in Y) o[k] = Y[k]; return o; }
-    function x(field) { var o = { field: field }; for (var k in X) o[k] = X[k]; return o; }
-    function xd(v) { var o = { datum: v }; for (var k in X) o[k] = X[k]; return o; }
 
+    // Lifestyle projections. The current trend is sourced; the steady-uptake lines are an assumption.
+    var lines = [];
+    [['diet', DIET, 'Diet'], ['cycle', CYCLE, 'Cycling']].forEach(function (L) {
+      lines.push({ k: L[0], x: 2024, v: -L[1], tip: '2024: 1% of humanity has switched · ' + neg(L[1]) + ' Mt' });
+      for (var yr = 2025; yr <= 2035; yr++) {
+        var share = yr - 2023;
+        lines.push({ k: L[0], x: yr, v: -L[1] * share,
+          tip: yr + ': ' + share + '% of humanity has switched (' + L[2].toLowerCase() + ', assumption) · ' + neg(L[1] * share) + ' Mt' });
+      }
+    });
+    var trend = [{ x: 2024, v: 0 }, { x: 2035, v: 0 }];
+    var trendTip = 'Diet on current trends: no net switching. US vegetarians fell from 6% (1999) to 4% (2023), Gallup; world meat eaten per person rises 2% by 2033, OECD-FAO.';
+    var labX = 2035 - half(n35) / ppy - 3 / ppy;
+    var slope = function (k) { return Math.atan(k * ppm / ppy) * 180 / Math.PI; };   // label follows its line
+    var lineLabels = [
+      { x: labX, v: -DIET * (labX - 2023), a: slope(DIET), t: narrow ? 'Diet +1%/yr: ' + neg(DIET * 12) : 'Diet, 1% more switch each year: ' + neg(DIET * 12) + ' by 2035', c: cDiet, below: true },
+      { x: labX, v: -CYCLE * (labX - 2023), a: slope(CYCLE), t: narrow ? 'Cycling +1%/yr: ' + neg(CYCLE * 12) : 'Cycling, 1% more each year: ' + neg(CYCLE * 12) + ' by 2035', c: cCycle, below: false }
+    ];
+    var trendRoomL = 2024 + half(n24) / ppy, trendRoomR = 2030 - half(n30) / ppy;
+    var showTrendLabel = (trendRoomR - trendRoomL) * ppy >= 150;
+
+    var X = { type: 'quantitative', scale: { domain: XDOM, nice: false, zero: false } };
+    var Y = { type: 'quantitative', scale: { domain: YDOM, nice: false, zero: false } };
+    function xf(f) { return Object.assign({ field: f }, X); }
+    function yf(f) { return Object.assign({ field: f }, Y); }
+    function xd(v) { return Object.assign({ datum: v }, X); }
+    function yd(v) { return Object.assign({ datum: v }, Y); }
+
+    var layer = [
+      { data: { values: bands }, mark: { type: 'rect', color: ink, opacity: dark ? 0.06 : 0.035 },
+        encoding: {
+          x: Object.assign(xf('a'), { axis: { values: [2024, 2030, 2035], format: 'd', title: null, domain: false, ticks: false, grid: false,
+            labelColor: ink, labelFont: font, labelFontSize: 13, labelFontWeight: 600, labelPadding: 6 } }),
+          x2: { field: 'b' } } },
+      { data: { values: [{ a: -473, b: -358 }] }, mark: { type: 'rect', color: ink, opacity: dark ? 0.12 : 0.08 },
+        encoding: {
+          y: Object.assign(yf('a'), { axis: { values: narrow ? [-1600, -800, 0, 800, 1600] : [-1600, -1200, -800, -400, 0, 400, 800, 1200, 1600],
+            format: ',.0f', title: null, labelColor: ink3, labelFont: mono, labelFontSize: 11, gridColor: rule, gridOpacity: 0.7,
+            domain: false, ticks: false, labelPadding: 4 } }),
+          y2: { field: 'b' } } },
+      { data: { values: [{ v: 0 }] }, mark: { type: 'rule', color: ink2, strokeWidth: 1.5 }, encoding: { y: yf('v') } },
+      { data: { values: trend }, mark: { type: 'line', color: cDiet, strokeWidth: 2.5, strokeDash: [5, 4], opacity: 0.9 },
+        encoding: { x: xf('x'), y: yf('v'), tooltip: { value: trendTip } } },
+      { data: { values: lines }, transform: [{ filter: "datum.k === 'diet'" }],
+        mark: { type: 'line', color: cDiet, strokeWidth: 2, strokeDash: [6, 4], point: { filled: true, size: 22, color: cDiet } },
+        encoding: { x: xf('x'), y: yf('v'), tooltip: { field: 'tip', type: 'nominal' } } },
+      { data: { values: lines }, transform: [{ filter: "datum.k === 'cycle'" }],
+        mark: { type: 'line', color: cCycle, strokeWidth: 2, strokeDash: [6, 4], point: { filled: true, size: 22, color: cCycle } },
+        encoding: { x: xf('x'), y: yf('v'), tooltip: { field: 'tip', type: 'nominal' } } },
+      { data: { values: segs }, mark: { type: 'bar', width: BARW },
+        encoding: { x: xf('x'), y: yf('v0'), y2: { field: 'v1' },
+          color: { field: 'part', type: 'nominal', legend: null, scale: {
+            domain: ['elec', 'hwlo', 'hwhi', 'ai', 'diet', 'active'],
+            range: [tok('--b-elec', '#1c5cab'), tok('--b-hwlo', '#3987e5'), tok('--b-hwhi', '#86b6ef'),
+              tok('--s1', '#2a78d6'), cDiet, cCycle] } },
+          tooltip: { field: 'tip', type: 'nominal' } } },
+      { data: { values: labels },
+        mark: { type: 'text', angle: 270, align: 'left', baseline: 'middle', fontSize: fs, color: ink, font: font },
+        encoding: { x: xf('x'), y: yf('y'), text: { field: 'text' } } },
+      { data: { values: lineLabels.filter(function (l) { return l.below; }) },
+        mark: { type: 'text', align: 'right', baseline: 'top', dy: 6, fontSize: fs, fontWeight: 600, color: cDiet, font: font },
+        encoding: { x: xf('x'), y: yf('v'), angle: { field: 'a', type: 'quantitative', scale: null }, text: { field: 't' } } },
+      { data: { values: lineLabels.filter(function (l) { return !l.below; }) },
+        mark: { type: 'text', align: 'right', baseline: 'bottom', dy: -6, fontSize: fs, fontWeight: 600, color: cCycle, font: font },
+        encoding: { x: xf('x'), y: yf('v'), angle: { field: 'a', type: 'quantitative', scale: null }, text: { field: 't' } } },
+      { data: { values: [{ t: 'Added ↑' }] }, mark: { type: 'text', align: 'left', baseline: 'top', dx: 2, dy: 2, fontSize: 12, fontWeight: 600, color: ink2, font: font },
+        encoding: { x: xd(XDOM[0]), y: yd(YDOM[1]), text: { field: 't' } } },
+      { data: { values: [{ t: 'Avoided ↓' }] }, mark: { type: 'text', align: 'left', baseline: 'bottom', dx: 2, dy: -2, fontSize: 12, fontWeight: 600, color: ink2, font: font },
+        encoding: { x: xd(XDOM[0]), y: yd(YDOM[0]), text: { field: 't' } } }
+    ];
+    if (showTrendLabel) {
+      layer.push({ data: { values: [{ t: 'Diet on current trends: ≈0' }] },
+        mark: { type: 'text', align: 'center', baseline: 'bottom', dy: -6, fontSize: fs, fontWeight: 600, color: cDiet, font: font },
+        encoding: { x: xd((trendRoomL + trendRoomR) / 2), y: yd(0), text: { field: 't' } } });
+    }
     var spec = {
       $schema: 'https://vega.github.io/schema/vega-lite/v5.json',
       background: null,
-      width: Math.max(260, W - 52),
+      width: plotW,
       height: H,
-      padding: { left: 2, right: 6, top: 18, bottom: 4 },
-      layer: [
-        { data: { values: bands }, mark: { type: 'rect', color: ink, opacity: dark ? 0.06 : 0.035 },
-          encoding: {
-            y: Object.assign(y('y0'), { axis: { values: [2024, 2030, 2035], format: 'd', title: null, domain: false, ticks: false, grid: false,
-              labelColor: ink, labelFont: font, labelFontSize: 13, labelFontWeight: 600, labelPadding: 6 } }),
-            y2: { field: 'y1' } } },
-        { data: { values: [{ a: -473, b: -358 }] }, mark: { type: 'rect', color: ink, opacity: dark ? 0.12 : 0.08 },
-          encoding: {
-            x: Object.assign(x('a'), { axis: { values: narrow ? [-1600, -800, 0, 800, 1600] : [-1600, -1200, -800, -400, 0, 400, 800, 1200, 1600],
-              format: ',.0f', title: 'Mt CO₂e per year', titleColor: ink2, titleFont: font, titleFontWeight: 400, titleFontSize: 12,
-              labelColor: ink3, labelFont: mono, labelFontSize: 11, gridColor: rule, gridOpacity: 0.7, domain: false, tickColor: rule } }),
-            x2: { field: 'b' } } },
-        { data: { values: [{ v: 0 }] }, mark: { type: 'rule', color: ink2, strokeWidth: 1.5 }, encoding: { x: x('v') } },
-        { data: { values: segs }, mark: { type: 'bar', height: narrow ? 9 : 10 },
-          encoding: { x: x('x0'), x2: { field: 'x1' }, y: y('y'),
-            color: { field: 'part', type: 'nominal', legend: null, scale: {
-              domain: ['elec', 'hwlo', 'hwhi', 'ai', 'diet', 'active'],
-              range: [tok('--b-elec', '#1c5cab'), tok('--b-hwlo', '#3987e5'), tok('--b-hwhi', '#86b6ef'),
-                tok('--s1', '#2a78d6'), tok('--s2', '#eb6834'), tok('--s3', '#1baf7a')] } },
-            tooltip: { field: 'tip', type: 'nominal' } } },
-        { data: { values: labels }, transform: [{ filter: "datum.side === 'add'" }],
-          mark: { type: 'text', align: 'right', baseline: 'middle', dx: -7, fontSize: fs, color: ink, font: font },
-          encoding: { x: xd(0), y: y('y'), text: { field: 'text' } } },
-        { data: { values: labels }, transform: [{ filter: "datum.side !== 'add'" }],
-          mark: { type: 'text', align: 'left', baseline: 'middle', dx: 7, fontSize: fs, color: ink, font: font },
-          encoding: { x: xd(0), y: y('y'), text: { field: 'text' } } },
-        { data: { values: [{ v: DOM[0], t: '← Avoided' }] },
-          mark: { type: 'text', align: 'left', baseline: 'bottom', dy: -6, fontSize: 12, fontWeight: 600, color: ink2, font: font },
-          encoding: { x: x('v'), y: { value: 0 }, text: { field: 't' } } },
-        { data: { values: [{ v: DOM[1], t: 'Added →' }] },
-          mark: { type: 'text', align: 'right', baseline: 'bottom', dy: -6, fontSize: 12, fontWeight: 600, color: ink2, font: font },
-          encoding: { x: x('v'), y: { value: 0 }, text: { field: 't' } } }
-      ],
+      padding: { left: 2, right: 6, top: 6, bottom: 4 },
+      layer: layer,
       config: { view: { stroke: null }, font: font }
     };
     window.vegaEmbed(host, spec, { actions: false, renderer: 'svg', tooltip: { theme: dark ? 'dark' : 'light' } })
