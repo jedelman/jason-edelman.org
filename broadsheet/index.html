@@ -4,88 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Broadsheet</title>
-  <meta name="description" content="A front page of standard.site writing, edited by a person and syndicated from the authors' own sites.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..700&family=Epilogue:wght@400;600;900&display=swap">
-  <link rel="stylesheet" href="paper.css">
-  <style>
-    :root { --desk: oklch(91% 0.006 85); --desk-ink: oklch(35% 0.01 85); --desk-link: oklch(30% 0.02 85); color-scheme: light dark; }
-    @media (prefers-color-scheme: dark) { :root { --desk: oklch(11% 0.006 145); --desk-ink: oklch(62% 0.01 145); --desk-link: oklch(80% 0.04 145); } }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; background: var(--desk); }
-    body { padding: 20px 12px 56px; font-family: 'Epilogue', system-ui, sans-serif; color: var(--desk-ink); }
-    .bar, .after { max-width: 1240px; margin: 0 auto; display: flex; justify-content: space-between; align-items: baseline; gap: 8px 20px; flex-wrap: wrap; font-size: 12.5px; letter-spacing: 0.04em; }
-    .bar { margin-bottom: 14px; }
-    .bar a, .after a { color: var(--desk-link); }
-    .bar strong { font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; font-size: 12px; }
-    .after { margin-top: 28px; display: block; }
-    .after h2 { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600; margin: 0 0 8px; }
-    .after ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-family: 'Newsreader', Georgia, serif; font-size: 16px; letter-spacing: 0; }
-    .after p { max-width: 62ch; line-height: 1.55; letter-spacing: 0; font-size: 13px; }
-    .state { max-width: 40rem; margin: 12vh auto; text-align: center; font-family: 'Newsreader', Georgia, serif; font-size: 1.2rem; line-height: 1.5; }
-    .state h1 { font-weight: 800; font-size: 2.6rem; letter-spacing: -0.02em; margin: 0 0 12px; color: var(--desk-link); }
-    .state a { color: var(--desk-link); }
-    @media print { .bar, .after { display: none; } body { padding: 0; } }
-  </style>
+  <meta http-equiv="refresh" content="0; url=newsstand/">
+  <link rel="canonical" href="https://jason-edelman.org/broadsheet/newsstand/">
+  <style>body { font-family: Georgia, serif; background: #ece9e2; color: #222; padding: 2rem; } a { color: inherit; }</style>
 </head>
 <body>
-  <nav class="bar" aria-label="Broadsheet">
-    <a href="./"><strong>Broadsheet</strong></a>
-    <span><a href="edit.html" id="build">Make a front page</a></span>
-  </nav>
-  <main id="root"><p class="state">Setting type…</p></main>
-  <section class="after" id="after" hidden></section>
-  <script type="module">
-    import * as B from './lib.js'
-    import { renderPaper, el, fmtDate } from './render.js'
-
-    const root = document.getElementById('root')
-    const after = document.getElementById('after')
-    const ref = new URLSearchParams(location.search).get('at') || B.DEFAULT_EDITOR
-
-    function state(title, ...lines) {
-      root.replaceChildren(el('div', { class: 'state' }, el('h1', {}, title), ...lines.map((l) => el('p', {}, l))))
-    }
-
-    try {
-      const r = await B.loadEdition(ref)
-      if (!r.edition) {
-        state('No front page yet', 'Nothing has been published here. ', el('a', { href: 'edit.html' }, 'Make one from the writers you follow.'))
-      } else {
-        const paper = el('article', { class: 'paper' })
-        renderPaper(paper, {
-          masthead: r.pub?.name || r.edition.title,
-          number: r.edition.number,
-          publishedAt: r.edition.publishedAt,
-          editor: r.editor,
-          note: r.edition.note,
-          slots: r.slots,
-        })
-        paper.append(
-          el('footer', { class: 'colophon' },
-            el('span', {}, 'Picked by a person. Every piece links to its author’s own site.'),
-            el('span', {}, 'This edition is a standard.site document in the editor’s own repo.'),
-          ),
-        )
-        root.replaceChildren(paper)
-        document.title = r.edition.title
-        if (r.editor?.handle) document.getElementById('build').textContent = 'Make your own front page'
-        // The archive: this editor's other editions.
-        const all = await B.listEditions(r.did).catch(() => [])
-        const others = all.filter((e) => e.uri !== r.edition.uri)
-        if (others.length) {
-          after.replaceChildren(
-            el('h2', {}, `More from ${r.pub?.name ?? 'this broadsheet'}`),
-            el('ul', {}, others.slice(0, 30).map((e) => el('li', {}, el('a', { href: `?at=${r.did}/${e.rkey}` }, e.value.title), ' · ', fmtDate(e.value.publishedAt)))),
-          )
-          after.hidden = false
-        }
-      }
-    } catch (e) {
-      console.error(e)
-      state('Couldn’t load this front page', e.message)
-    }
-  </script>
+  <p>Broadsheet has two rooms: the <a href="newsstand/">newsstand</a>, where you read front pages, and the <a href="editor/">editor</a>, where you make one.</p>
+  <script>location.replace('newsstand/' + location.search)</script>
 </body>
 </html>

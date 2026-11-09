@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Newsstand · Broadsheet</title>
+  <meta name="description" content="Front pages of standard.site writing, edited by people. Swipe between editors, tap a story to read it.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..700&family=Epilogue:wght@400;600;900&display=swap">
+  <link rel="stylesheet" href="../paper.css">
+  <style>
+    :root {
+      --desk: oklch(90% 0.006 85); --desk-2: oklch(86% 0.008 85); --desk-ink: oklch(32% 0.01 85); --desk-mute: oklch(48% 0.01 85); --desk-line: oklch(78% 0.01 85);
+      --chip: oklch(96% 0.006 85); --chip-on: oklch(22% 0.01 85); --chip-on-ink: oklch(96% 0.006 85);
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --desk: oklch(12% 0.006 145); --desk-2: oklch(15% 0.006 145); --desk-ink: oklch(86% 0.01 145); --desk-mute: oklch(62% 0.01 145); --desk-line: oklch(26% 0.008 145); --chip: oklch(18% 0.007 145); --chip-on: oklch(88% 0.01 145); --chip-on-ink: oklch(14% 0.006 145); }
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--desk); color: var(--desk-ink); overflow: hidden; overscroll-behavior: none; }
+    body { font-family: 'Epilogue', system-ui, sans-serif; font-size: 14px; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100dvh; -webkit-font-smoothing: antialiased; }
+    [hidden] { display: none !important; }
+    a { color: inherit; }
+    button, input { font: inherit; color: inherit; }
+    :focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+    /* ── Top ───────────────────────────────────────────────────────── */
+    .top { display: flex; align-items: center; gap: 6px 16px; padding: 10px max(14px, env(safe-area-inset-left)) 8px; flex-wrap: wrap; }
+    .brand { font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; font-size: 12px; text-decoration: none; white-space: nowrap; }
+    .brand span { font-weight: 600; letter-spacing: 0.06em; text-transform: none; color: var(--desk-mute); margin-left: 6px; }
+    .who { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--desk-mute); }
+    .who strong { color: var(--desk-ink); font-weight: 600; }
+    .who form { display: flex; gap: 6px; }
+    .who input { width: 170px; min-height: 30px; padding: 0 9px; background: var(--chip); border: 1px solid var(--desk-line); border-radius: 0; }
+    .who button, .top .make { min-height: 30px; padding: 0 10px; border: 1px solid var(--desk-line); background: none; cursor: pointer; font-size: 12.5px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
+    .who button.link { border: none; padding: 0; min-height: 0; text-decoration: underline; text-underline-offset: 0.15em; font-weight: 400; }
+
+    /* ── The stage: one front page, fit to the screen ──────────────── */
+    .stage { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; outline: none; }
+    .slide { position: absolute; inset: 0; will-change: transform, opacity; }
+    .slide .paper-frame { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+    .slide .paper { max-width: none; box-shadow: 0 2px 0 oklch(0% 0 0 / 0.05), 0 24px 60px -28px oklch(0% 0 0 / 0.55); }
+    .slide .story { cursor: zoom-in; border-radius: 2px; transition: background 140ms; }
+    .slide .story:hover { background: color-mix(in oklch, var(--ink) 4%, transparent); }
+    .slide .story:focus-visible { outline: 3px solid var(--spot); outline-offset: 6px; }
+    .slide a { pointer-events: none; }
+    .state { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; font-family: 'Newsreader', Georgia, serif; font-size: 1.15rem; line-height: 1.5; }
+    .state h1 { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 10px; }
+    .state a { text-decoration: underline; text-underline-offset: 0.15em; }
+    .nav { position: absolute; top: 50%; translate: 0 -50%; z-index: 5; width: 44px; height: 64px; border: none; background: color-mix(in oklch, var(--desk) 70%, transparent); cursor: pointer; font-size: 26px; line-height: 1; color: var(--desk-ink); opacity: 0.75; }
+    .nav:hover { opacity: 1; }
+    .nav.prev { left: 6px; } .nav.next { right: 6px; }
+    .nav:disabled { opacity: 0; pointer-events: none; }
+    .hint { position: absolute; left: 50%; bottom: 10px; translate: -50% 0; z-index: 5; font-size: 12px; color: var(--desk-mute); background: color-mix(in oklch, var(--desk) 86%, transparent); padding: 4px 10px; width: max-content; max-width: 92%; text-align: center; pointer-events: none; transition: opacity 400ms; }
+    @media (pointer: coarse) { .nav { display: none; } }
+    @media (max-width: 560px) {
+      .top { flex-wrap: nowrap; gap: 8px; padding-top: max(8px, env(safe-area-inset-top)); }
+      .brand span { display: none; }
+      .who { min-width: 0; }
+      .who > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .who input { width: 0; flex: 1 1 96px; min-width: 70px; }
+      .who form { min-width: 0; }
+      .top .make { font-size: 0; padding: 0 9px; }
+      .top .make::after { content: 'Make one'; font-size: 12.5px; }
+    }
+
+    /* ── The rack ──────────────────────────────────────────────────── */
+    .rack { display: flex; align-items: center; gap: 6px; padding: 8px max(14px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-bottom)); overflow-x: auto; scrollbar-width: none; border-top: 1px solid var(--desk-line); background: var(--desk-2); }
+    .rack::-webkit-scrollbar { display: none; }
+    .rack .group { font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--desk-mute); padding: 0 4px 0 8px; white-space: nowrap; }
+    .rack .group:first-child { padding-left: 0; }
+    .chip { flex: none; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-height: 40px; padding: 5px 11px; border: 1px solid var(--desk-line); background: var(--chip); cursor: pointer; text-align: left; max-width: 220px; }
+    .chip b { font-family: 'Newsreader', Georgia, serif; font-weight: 700; font-size: 14.5px; line-height: 1.15; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip span { font-size: 11px; color: var(--desk-mute); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .chip[aria-current=true] { background: var(--chip-on); color: var(--chip-on-ink); border-color: var(--chip-on); }
+    .chip[aria-current=true] span { color: color-mix(in oklch, var(--chip-on-ink) 70%, transparent); }
+
+    /* ── Zoom: one story, expanded ─────────────────────────────────── */
+    .zoom { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
+    .zoom .backdrop { position: absolute; inset: 0; background: color-mix(in oklch, var(--desk) 72%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+    .zoom .card-frame { position: relative; width: min(46rem, 100%); max-height: 100%; display: flex; touch-action: pan-y; }
+    .zoom .paper.expanded { width: 100%; max-height: calc(100dvh - 92px); }
+    .zoom .zbar { position: absolute; left: 0; right: 0; bottom: max(10px, env(safe-area-inset-bottom)); display: flex; justify-content: center; align-items: center; gap: 10px; pointer-events: none; }
+    .zoom .zbar > * { pointer-events: auto; }
+    .zoom .zbar button { min-width: 40px; min-height: 36px; border: 1px solid var(--desk-line); background: var(--chip); cursor: pointer; font-size: 15px; }
+    .zoom .zbar .count { font-size: 12px; color: var(--desk-mute); min-width: 4.5em; text-align: center; background: var(--chip); padding: 8px 10px; border: 1px solid var(--desk-line); }
+    .zoom .close { position: absolute; top: 8px; right: 8px; z-index: 2; width: 36px; height: 36px; border: 1px solid var(--hair, #bbb); background: var(--paper, #fff); color: var(--ink, #111); cursor: pointer; font-size: 18px; line-height: 1; }
+
+    @media (prefers-reduced-motion: reduce) { .slide, .zoom * { transition: none !important; animation: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="./">Broadsheet<span>Newsstand</span></a>
+    <div class="who" id="who"></div>
+    <a class="make" href="../editor/">Make a front page</a>
+  </header>
+  <main class="stage" id="stage" tabindex="0" aria-roledescription="carousel" aria-label="Front pages">
+    <div class="state"><p>Gathering front pages…</p></div>
+  </main>
+  <nav class="rack" id="rack" aria-label="Editors"></nav>
+  <div class="zoom" id="zoom" hidden role="dialog" aria-modal="true" aria-label="Story"></div>
+  <script type="module" src="newsstand.js"></script>
+</body>
+</html>

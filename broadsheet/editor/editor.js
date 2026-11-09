@@ -1,16 +1,16 @@
 // The builder: a live front page with slots, and the wire of candidates.
-import { BrowserOAuthClient } from '../library/vendor/oauth-client-browser.js'
-import * as B from './lib.js'
-import { renderPaper, el, fmtDate } from './render.js'
+import { BrowserOAuthClient } from '../../library/vendor/oauth-client-browser.js'
+import * as B from '../lib.js'
+import { renderPaper, el, fmtDate } from '../render.js'
 
-const API = '../library/vendor/atproto-api.js'
+const API = '../../library/vendor/atproto-api.js'
 const POOL_TTL = 10 * 60e3
 const WINDOWS = [
   { days: 7, label: 'week' },
   { days: 14, label: '2 weeks' },
   { days: 45, label: '45 days' },
 ]
-const SOURCE_LABELS = { all: 'all', subscribed: 'subscriptions', followed: 'following', recommended: 'recommended', own: 'yours' }
+const SOURCE_LABELS = { all: 'all', subscribed: 'subscriptions', followed: 'following', recommended: 'recommended', added: 'added', own: 'yours' }
 
 const state = {
   client: null, session: null, agent: null, me: null, myHandle: null,
@@ -51,7 +51,7 @@ function setStatus(msg, tone = '') {
 // ── Auth ─────────────────────────────────────────────────────────────────
 
 async function initAuth() {
-  let clientId = new URL('client-metadata.json', import.meta.url).href
+  let clientId = new URL('../client-metadata.json', import.meta.url).href
   if (['127.0.0.1', '[::1]', 'localhost'].includes(location.hostname)) {
     const host = location.hostname === 'localhost' ? '127.0.0.1' : location.hostname
     const redirect = `http://${host}:${location.port}${location.pathname}`
@@ -166,6 +166,20 @@ async function loadWire({ fresh = false } = {}) {
   renderWire()
 }
 
+const addedKey = () => `broadsheet:added:${state.reader}`
+async function loadAdded() {
+  for (const h of store.get(addedKey()) ?? []) {
+    try {
+      const docs = await B.writerDocs(h, { days: 45 })
+      for (const d of docs) {
+        const have = state.byUri.get(d.uri)
+        if (have) have.sources = [...new Set([...have.sources, 'added'])]
+      }
+      acceptPool(B.rank([...state.docs, ...docs.filter((d) => !state.docs.some((x) => x.uri === d.uri))]))
+    } catch {}
+  }
+}
+
 function visibleDocs() {
   const since = Date.now() - state.days * 86400e3
   let docs = state.docs.filter((d) => Date.parse(d.publishedAt) >= since)
@@ -204,6 +218,7 @@ function card(d, used) {
   if (d.sources.includes('subscribed')) badges.push(el('span', { class: 'badge sub' }, 'subscribed'))
   if (d.recommendedBy.length) badges.push(el('span', { class: 'badge' }, `recommended by ${d.recommendedBy.length}`))
   if (d.sources.includes('own')) badges.push(el('span', { class: 'badge sub' }, 'yours'))
+  if (d.sources.includes('added')) badges.push(el('span', { class: 'badge sub' }, 'added'))
   const node = el(
     'li',
     { class: `card${used ? ' used' : ''}`, draggable: 'true', 'data-uri': d.uri },
@@ -411,7 +426,7 @@ function renderMine() {
           }
         },
       }, 'Delete')
-      return el('li', {}, el('a', { href: `./?at=${handle}/${e.rkey}`, target: '_blank' }, e.value.title), el('button', { type: 'button', onclick: () => openEdition(e) }, 'Revise'), del)
+      return el('li', {}, el('a', { href: `../newsstand/?at=${handle}/${e.rkey}`, target: '_blank' }, e.value.title), el('button', { type: 'button', onclick: () => openEdition(e) }, 'Revise'), del)
     }),
   )
 }
@@ -437,7 +452,7 @@ async function publish() {
     const slots = B.slotsFromBoard(state.board, state.edits)
     const docs = new Map(slots.map((s) => [s.item.uri, state.byUri.get(s.item.uri)]))
     const r = await B.publishEdition(state.agent, state.me, { masthead: state.masthead, note: state.note, slots, docs, recommend: state.recommend }, state.editing)
-    const url = `./?at=${state.myHandle ?? state.me}/${r.rkey}`
+    const url = `../newsstand/?at=${state.myHandle ?? state.me}/${r.rkey}`
     store.del(draftKey())
     Object.assign(state, { editing: null, board: {}, edits: {}, note: '' })
     $('note').value = ''
@@ -473,6 +488,28 @@ function bindControls() {
     changed()
   })
   $('publish').addEventListener('click', publish)
+  $('add-writer').addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const h = $('writer').value.trim().replace(/^@/, '')
+    if (!h) return
+    $('wire-status').textContent = `Reading @${h}…`
+    try {
+      const docs = await B.writerDocs(h, { days: 45 })
+      const fresh = docs.filter((d) => !state.byUri.has(d.uri))
+      for (const d of docs) {
+        const have = state.byUri.get(d.uri)
+        if (have) have.sources = [...new Set([...have.sources, 'added'])]
+      }
+      acceptPool(B.rank([...state.docs, ...fresh]))
+      const added = store.get(addedKey()) ?? []
+      if (!added.includes(h)) store.set(addedKey(), [...added, h])
+      $('writer').value = ''
+      $('wire-status').textContent = docs.length ? `Added ${docs.length} piece${docs.length === 1 ? '' : 's'} from @${h}.` : `@${h} has published nothing on standard.site in 45 days.`
+      if (docs.length) ((state.source = 'added'), renderWire())
+    } catch (err) {
+      $('wire-status').textContent = `Couldn't add @${h}: ${err.message}`
+    }
+  })
   let t
   $('q').addEventListener('input', (e) => {
     clearTimeout(t)
@@ -521,7 +558,7 @@ async function start() {
     }
     renderPaperNow()
   }
-  if (state.reader) loadWire()
+  if (state.reader) loadWire().then(loadAdded)
 }
 
 start()

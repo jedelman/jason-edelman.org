@@ -4,7 +4,7 @@
 // goes through an authenticated @atproto/api Agent passed in by the caller.
 //
 // An edition is a site.standard.document in the editor's own broadsheet
-// publication (a site.standard.publication whose url is BASE). Its content is
+// publication (a site.standard.publication whose url is BASE, the newsstand). Its content is
 // an org.jason-edelman.broadsheet.content: slots holding strong refs to the
 // documents picked. Readers that don't know the content type still see a
 // document with a title, a description and a plaintext list of headlines.
@@ -19,12 +19,13 @@ export const COL = {
   follow: 'app.bsky.graph.follow',
 }
 export const SCOPE = ['atproto', `repo:${COL.document}`, `repo:${COL.publication}`, `repo:${COL.recommend}`].join(' ')
-export const BASE = 'https://jason-edelman.org/broadsheet'
+export const BASE = 'https://jason-edelman.org/broadsheet/newsstand'
 export const DEFAULT_EDITOR = 'jason-edelman.org'
 export const HANDLE_RESOLVER = 'https://bsky.social'
 const RELAY = 'https://relay1.us-east.bsky.network'
 const APPVIEW = 'https://public.api.bsky.app'
 const PLC = 'https://plc.directory'
+const CONSTELLATION = 'https://constellation.microcosm.blue'
 const CDN = 'https://cdn.bsky.app/img'
 
 // The front page: how many of each slot, in render order.
@@ -652,4 +653,71 @@ export async function loadEdition(ref) {
     editor: prof.get(did) ?? null,
     slots,
   }
+}
+
+// ── A writer by handle ───────────────────────────────────────────────────
+
+// Recent documents from one repo, normalized, for adding a writer to the wire
+// by handle. -> [doc]
+export async function writerDocs(input, { days = 45, source = 'added' } = {}) {
+  const { did, pds } = await resolveActor(input)
+  const since = Date.now() - days * 86400e3
+  const recs = (await listRecords(pds, did, COL.document, 1, 100)).filter((r) => r.value?.content?.$type !== CONTENT && Date.parse(r.value?.publishedAt) >= since)
+  const sites = [...new Set(recs.map((r) => r.value.site).filter((x) => typeof x === 'string' && x.startsWith('at://')))]
+  const pubs = new Map()
+  const got = await pool(sites, 8, (u) => getRecord(u))
+  got.forEach((g, i) => g.ok && g.value && pubs.set(sites[i], readPublication(g.value)))
+  const prof = (await profiles([did]).catch(() => new Map())).get(did) ?? null
+  return recs
+    .map((r) => readDocument(r, pubs))
+    .filter(Boolean)
+    .map((d) => Object.assign(d, { sources: [source], recommendedBy: [], author: prof }))
+}
+
+// ── The newsstand ────────────────────────────────────────────────────────
+// Every broadsheet masthead on the network, found in one query: Constellation
+// indexes the url field of every site.standard.publication, so the mastheads
+// are the publications whose url is the newsstand's.
+
+export async function findMastheads(max = 5000) {
+  const out = []
+  let cursor
+  while (out.length < max) {
+    const q = new URLSearchParams({ target: BASE, collection: COL.publication, path: '.url', limit: '100' })
+    if (cursor) q.set('cursor', cursor)
+    const data = await getJson(`${CONSTELLATION}/links?${q}`)
+    out.push(...data.linking_records)
+    cursor = data.cursor
+    if (!cursor || !data.linking_records.length) break
+  }
+  return out
+}
+
+// The rack: editors with at least one edition, each with their editions newest
+// first. The reader's own broadsheet comes first, then the people they follow,
+// then everyone else, each group by its latest edition.
+// -> [{ did, handle, displayName, group: 'you'|'following'|'everyone', editions: [{ uri, cid, rkey, title, publishedAt, number }] }]
+export async function rack(readerDid = null) {
+  const [heads, follows] = await Promise.all([
+    findMastheads(),
+    readerDid
+      ? resolveDid(readerDid).then(({ pds }) => listRecords(pds, readerDid, COL.follow, 60)).then((rs) => new Set(rs.map((r) => r.value?.subject)))
+      : new Set(),
+  ])
+  const dids = [...new Set(heads.map((h) => h.did))]
+  const [got, prof] = await Promise.all([pool(dids, 8, (d) => listEditions(d)), profiles(dids).catch(() => new Map())])
+  const editors = []
+  got.forEach((g, i) => {
+    if (!g.ok || !g.value.length) return
+    const did = dids[i]
+    editors.push({
+      did,
+      handle: prof.get(did)?.handle ?? null,
+      displayName: prof.get(did)?.displayName ?? '',
+      group: did === readerDid ? 'you' : follows.has(did) ? 'following' : 'everyone',
+      editions: g.value.map((e) => ({ uri: e.uri, cid: e.cid, rkey: e.rkey, title: e.value.title, publishedAt: e.value.publishedAt, number: e.value.content?.number ?? null })),
+    })
+  })
+  const order = { you: 0, following: 1, everyone: 2 }
+  return editors.sort((a, b) => order[a.group] - order[b.group] || String(b.editions[0].publishedAt).localeCompare(String(a.editions[0].publishedAt)))
 }

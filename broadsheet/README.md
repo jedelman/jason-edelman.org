@@ -1,8 +1,15 @@
 # Broadsheet
 
-A front page of standard.site writing, picked by a person. Served at
-`jason-edelman.org/broadsheet/`: `index.html` reads an edition, `edit.html` builds one.
-Plain browser JavaScript, no build step, no server.
+Front pages of standard.site writing, picked by people. Two rooms under
+`jason-edelman.org/broadsheet/`:
+
+- `newsstand/` (an SPA): every front page from the editors you follow, then everyone
+  else. Swipe left and right between editors, up and down through an editor's back
+  issues; tap a story to zoom into it. No scrolling: each page is fit to the screen.
+- `editor/`: make a front page from the writers you follow, and publish it.
+
+Plain browser JavaScript, no build step, no server. `broadsheet/` itself redirects to
+the newsstand.
 
 Publishing on atproto is solved (Leaflet, pckt, GreenGale, WhiteWind, all writing
 `site.standard.document`). Curation wasn't. This is a curation tool: slots on a page,
@@ -14,12 +21,13 @@ copied but a short excerpt.
 
 An edition is a `site.standard.document` in the editor's own repo, in a broadsheet
 publication (a `site.standard.publication` whose `url` is
-`https://jason-edelman.org/broadsheet`, created on first publish and renamed when the
-masthead changes). Its `content` is an `org.jason-edelman.broadsheet.content`
+`https://jason-edelman.org/broadsheet/newsstand`, created on first publish and renamed
+when the masthead changes). Its `content` is an `org.jason-edelman.broadsheet.content`
 (`lexicons/`): an edition number, an editor's note, and up to ten slots, each a
 `com.atproto.repo.strongRef` to the picked document plus an optional editor's headline
-and deck. The edition's `path` is `/?at=<did>/<rkey>`, so its canonical URL is the
-reader page.
+and deck. The edition's `path` is `/?at=<did>/<rkey>`, so its canonical URL is the edition on the
+newsstand. Links people share use the handle: `newsstand/?at=handle/rkey`, or
+`?at=handle` for someone's latest.
 
 So editions move through the same ecosystem as everything else: a reader that doesn't
 know the content type still sees a document with a title, a description and a
@@ -52,7 +60,30 @@ from the `plaintext` fields in the content tree (Leaflet), cleaned of checkbox a
 list debris. Cover images come through Bluesky's image CDN (thumbnails for the wire
 and small slots), falling back to the thumbnail if the full size fails.
 
-Signed out, the builder browses `?as=<handle>`'s follows, or Jason's.
+Signed out, the editor browses `?as=<handle>`'s follows, or Jason's. **Add a writer by
+handle** pulls anyone's recent documents into the wire (remembered per reader), for
+writers you don't follow.
+
+## The newsstand
+
+Every masthead on the network comes from one query: Constellation indexes the `url`
+field of every `site.standard.publication`, so `links?target=<newsstand url>&
+collection=site.standard.publication&path=.url` lists them all. Each masthead's
+editions are then read from its owner's repo. The rack puts the reader first, then
+editors they follow (`?as=handle`, remembered), then everyone else, each by latest
+edition. Constellation is eventually consistent: in testing a new masthead appeared
+after 0 to 12 s and a deleted one dropped after about 12 s. A deep link to an edition
+the index hasn't caught up with is read directly.
+
+Each front page is laid out at several broadsheet widths (820 to 1880 px) and the one
+that comes out largest when scaled to fit the screen wins. The paper lays itself out by
+its frame's width (container queries, `cqi` units), and at 1400 px and up it turns
+landscape: features move into a third column. So phones get a portrait broadsheet and
+desktops a landscape one, both whole. A tap zooms a story out of its place on the page
+into a readable card (a FLIP animation from the story's position); swipe or arrow keys
+step between stories, and "Read it at …" stays pinned in view. Back, Escape or the
+backdrop close it. Keyboard: arrow keys for editors and issues, Enter on a focused
+story.
 
 ## The page
 
@@ -78,13 +109,16 @@ everything renders as text.
 
 ## Code
 
-- `lib.js`: discovery, normalizing, ranking, auto-fill, editions (publish, revise,
-  delete, load). No DOM; runs in Node.
-- `render.js`: the paper, for both pages. `paper.css`: its type and grid.
-- `edit.js`: the builder. OAuth and the `Agent` come from `../library/vendor/`.
+- `lib.js`: discovery, writers by handle, normalizing, ranking, auto-fill, editions
+  (publish, revise, delete, load), the masthead index and the rack. No DOM; runs in Node.
+- `render.js`: the paper (page and stand variants) and the expanded story.
+  `paper.css`: its type and grid.
+- `editor/editor.js`: the builder. OAuth and the `Agent` come from `../../library/vendor/`.
+- `newsstand/newsstand.js`: the newsstand. No SDK, no sign-in: everything it reads is public.
 
-The services it calls: each author's PDS, plc.directory, the Bluesky relay, Bluesky's
-public AppView (profiles) and image CDN, bsky.social (sign-in), Google Fonts.
+The services it calls: each author's PDS, plc.directory, the Bluesky relay,
+Constellation (the masthead index), Bluesky's public AppView (profiles) and image CDN,
+bsky.social (sign-in, editor only), Google Fonts.
 
 ## Tested (2026-11-09)
 
@@ -92,12 +126,22 @@ public AppView (profiles) and image CDN, bsky.social (sign-in), Google Fonts.
   as latest, edition numbering, masthead rename (one publication), revise in place, a
   stale revise refused, the guards; recommends with a mock agent (none written for
   real). Claude's existing standard.site records were left untouched.
-- Headless Chromium: the builder signed out on Jason's follows (wire, filters, search,
+- Headless Chromium: the editor signed out on Jason's follows (wire, filters, search,
   auto-fill, swap, editor's headline, remove, add, draft after reload; 1440 and 390
   px); signed in as Claude, publish, revise and delete through the UI (the test edition
   held only Jason's own document, in a masthead kept out of discovery); the reader on
   that edition, and on a full ten-piece edition assembled locally from real documents
   (never written), by day, by night, and at 390 px.
 
-Not yet tested: a real OAuth sign-in (needs a person's password), a real phone, and
-self-hosted PDSes that send no CORS headers (they show up as "couldn't be read").
+Newsstand (same day): the root redirect and the empty state; Claude's account published
+two one-piece test editions (Jason's own document, masthead kept out of discovery),
+Constellation indexed the masthead, and the real newsstand found it with no fakes;
+swipe up and down between its issues; tap to zoom, Escape to close. A full ten-piece
+edition, served locally and never written: fit with no scroll at 1440x900 (landscape
+layout, shown 692x763) and on an iPhone 13 (portrait, 270x529), zoom stepping, the
+Read link in view, arrow keys between editors, `?at=handle/rkey` in the address bar.
+Claude's repo was identical before and after.
+
+Not yet tested: a real OAuth sign-in (needs a person's password), a real phone (the
+iPhone runs were emulated), and self-hosted PDSes that send no CORS headers (they show
+up as "couldn't be read").

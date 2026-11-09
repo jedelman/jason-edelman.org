@@ -69,7 +69,12 @@ function leadSize(text) {
   return n < 32 ? '4.1rem' : n < 56 ? '3.5rem' : n < 90 ? '2.9rem' : '2.4rem'
 }
 
-const BODY = { lead: 900, second: 260, feature: 0, brief: 0 }
+// Excerpt lengths by slot: the editor and reader (page), the newsstand rack
+// (stand, kept short so a whole page fits a screen), and an expanded story.
+const BODY = {
+  page: { lead: 900, second: 260, feature: 0, brief: 0 },
+  stand: { lead: 520, second: 170, feature: 0, brief: 0 },
+}
 
 // The body minus an opening that just repeats the deck (many platforms use the
 // first sentence as the description).
@@ -86,8 +91,9 @@ function author(doc) {
   return c?.displayName || doc.author?.displayName || (doc.author?.handle ? '@' + doc.author.handle : '')
 }
 
-export function story(slot) {
+export function story(slot, variant = 'page') {
   const { role, doc } = slot
+  const lengths = BODY[variant] ?? BODY.page
   if (!doc) {
     return el('article', { class: `story ${role}` }, el('p', { class: 'gone' }, 'This piece is no longer available.'))
   }
@@ -95,7 +101,7 @@ export function story(slot) {
   const dek = slot.deck || doc.description
   const href = doc.url
   const wantArt = role !== 'brief' && doc.cover
-  const bodyText = BODY[role] ? excerpt(withoutLead(doc.text, dek) || (slot.deck ? doc.description : ''), BODY[role]) : ''
+  const bodyText = lengths[role] ? excerpt(withoutLead(doc.text, dek) || (slot.deck ? doc.description : ''), lengths[role]) : ''
   const a = (kids, cls) => (href ? el('a', { href, class: cls, target: '_blank', rel: 'noopener' }, kids) : el('span', { class: cls }, kids))
   const art = wantArt ? el('div', { class: 'art' }, a(img(doc.cover, role === 'lead' ? 'full' : 'thumb'))) : null
   const kids = [
@@ -116,13 +122,21 @@ export function story(slot) {
 // model: { masthead, number, publishedAt, editor: { handle, displayName }, note,
 //          slots: [{ role, doc, headline, deck, slotId?, label? }] }
 // edit (builder only): { wrap(slot, storyNode|null) -> Node }
-export function renderPaper(root, model, edit = null) {
+// variant: 'page' or 'stand'. Returns the slots as rendered; in the reader
+// each story carries data-i, its index in that list.
+export function renderPaper(root, model, edit = null, variant = 'page') {
   // In the reader, a piece its author deleted drops out; if that was the lead,
   // the next piece moves up.
   let filled = edit ? model.slots : model.slots.filter((s) => s.doc)
   if (!edit && filled.length && filled[0].role !== 'lead') filled = [{ ...filled[0], role: 'lead' }, ...filled.slice(1)]
   const byRole = (r) => filled.filter((s) => s.role === r)
-  const pieces = (r) => byRole(r).map((s) => (edit ? edit.wrap(s, s.doc ? story(s) : null) : story(s)))
+  const pieces = (r) =>
+    byRole(r).map((s) => {
+      if (edit) return edit.wrap(s, s.doc ? story(s) : null)
+      const n = story(s, variant)
+      n.dataset.i = String(filled.indexOf(s))
+      return n
+    })
   const pubs = new Set(model.slots.filter((s) => s.doc).map((s) => s.doc.pubName))
   const editor = model.editor?.handle ? '@' + model.editor.handle : model.editor?.displayName || ''
   const seconds = pieces('second')
@@ -130,6 +144,7 @@ export function renderPaper(root, model, edit = null) {
   const briefs = pieces('brief')
   const hasSeconds = edit ? true : seconds.length > 0
   root.replaceChildren(
+    ...[
     el(
       'header',
       { class: 'mast' },
@@ -146,8 +161,30 @@ export function renderPaper(root, model, edit = null) {
       features.length ? el('div', { class: 'features', style: { '--n': String(features.length) } }, features) : null,
       briefs.length ? el('div', { class: 'briefs', style: { '--n': String(briefs.length) } }, el('p', { class: 'briefs-label' }, 'Also worth your time'), briefs) : null,
     ),
+    ].filter(Boolean), // replaceChildren would print a null as the text "null"
   )
-  return root
+  return filled
 }
 
 export const ROLE_ORDER = LAYOUT.map((l) => l.role)
+
+// One story, expanded to read: the newsstand's zoom. A longer excerpt, the
+// cover at full size, and the way to the author's own site.
+export function expandedStory(slot) {
+  const { doc } = slot
+  if (!doc) return el('article', { class: 'story' }, el('p', { class: 'gone' }, 'This piece is no longer available.'))
+  const hed = slot.headline || doc.title
+  const dek = slot.deck || doc.description
+  const body = excerpt(withoutLead(doc.text, dek), 1300)
+  return el(
+    'article',
+    { class: 'story' },
+    el('p', { class: 'kicker', style: kickerColors(doc.pub?.accent) }, doc.pub?.icon ? img(doc.pub.icon, 'thumb') : null, el('span', {}, doc.pubName || 'standard.site')),
+    el('h2', { class: 'hed' }, hed),
+    dek ? el('p', { class: 'dek' }, excerpt(dek, 400)) : null,
+    doc.cover ? el('div', { class: 'art' }, img(doc.cover, 'full')) : null,
+    body ? el('p', { class: 'body' }, body) : null,
+    el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min read`) : null),
+    doc.url ? el('a', { class: 'read', href: doc.url, target: '_blank', rel: 'noopener' }, `Read it at ${host(doc.url)} →`) : null,
+  )
+}
