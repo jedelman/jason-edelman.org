@@ -1,7 +1,7 @@
 {
   "client_id": "https://jason-edelman.org/broadsheet/client-metadata.json",
   "client_name": "Broadsheet",
-  "client_uri": "https://jason-edelman.org/broadsheet/newsstand/",
+  "client_uri": "https://jason-edelman.org/broadsheet/",
   "redirect_uris": [
     "https://jason-edelman.org/broadsheet/editor/"
   ],
