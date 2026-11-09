@@ -14,7 +14,10 @@ const state = {
   cache: new Map(), // edition uri -> Promise(loadEdition result)
   slide: null, slots: [], current: null,
   zoom: null, busy: false,
+  tab: 'front', // 'front' or 'back' (back editions)
+  calMonth: null, calDay: null,
 }
+const INBOX = 'broadsheet:inbox' // reshares handed to the editor, same origin
 
 const $ = (id) => document.getElementById(id)
 const stage = $('stage')
@@ -40,7 +43,7 @@ const store = {
 }
 const EASE_IN = 'cubic-bezier(.2,.8,.2,1)'
 const EASE_OUT = 'cubic-bezier(.4,0,.6,1)'
-const mastheadOf = (e) => e.editions[0].title.replace(/, [A-Z][a-z]+ \d{1,2}, \d{4}$/, '')
+const mastheadOf = (e) => e.masthead || e.editions[0].title.replace(/(, (Morning|Evening) Edition)?, [A-Z][a-z]+ \d{1,2}, \d{4}$/, '')
 const whoOf = (e) => (e.handle ? '@' + e.handle : e.did.slice(0, 18) + '…')
 
 function message(title, ...lines) {
@@ -101,7 +104,7 @@ async function buildSlide(i, k) {
   }
   const paper = el('article', { class: 'paper' })
   slide.append(el('div', { class: 'paper-frame' }, paper))
-  const slots = renderPaper(paper, { masthead: r.pub?.name || r.edition.title, number: r.edition.number, publishedAt: r.edition.publishedAt, editor: r.editor, note: r.edition.note, slots: r.slots }, null, 'stand')
+  const slots = renderPaper(paper, { masthead: r.pub?.name || r.edition.title, number: r.edition.number, publishedAt: r.edition.publishedAt, date: r.edition.date, period: r.edition.period, editor: r.editor, note: r.edition.note, slots: r.slots }, null, 'stand')
   for (const s of paper.querySelectorAll('.story[data-i]')) {
     s.tabIndex = 0
     s.setAttribute('role', 'button')
@@ -147,6 +150,7 @@ async function show(i, dir = 0, axis = 'x') {
       await built.slide.animate([{ transform: `${fn}(${dir * dist}px)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 320, easing: EASE_IN }).finished
     }
     old?.remove()
+    if (state.i !== i) Object.assign(state, { calMonth: null, calDay: null })
     Object.assign(state, { slide: built.slide, slots: built.slots, current: built.r, i })
     updateChrome()
     prefetch()
@@ -226,6 +230,7 @@ function updateChrome() {
     el('button', { class: 'nav prev', type: 'button', 'aria-label': 'Previous front page', disabled: state.i === 0, onclick: () => go(-1) }, '‹'),
     el('button', { class: 'nav next', type: 'button', 'aria-label': 'Next front page', disabled: state.i === state.editors.length - 1, onclick: () => go(1) }, '›'),
   )
+  renderActions()
   const parts = []
   if (editor.editions.length > 1) parts.push(`Issue ${editor.editions.length - k} of ${editor.editions.length}: swipe ${k < editor.editions.length - 1 ? 'up for older' : 'down for newer'}`)
   if (!store.get('broadsheet:hinted')) parts.unshift('Swipe for more front pages · tap a story to read it')
@@ -255,7 +260,12 @@ function expand(i) {
   const paper = el('article', { class: 'paper expanded' }, expandedStory(slot))
   const frame = el('div', { class: 'paper-frame card-frame' }, el('button', { class: 'close', type: 'button', 'aria-label': 'Close', onclick: () => collapse() }, '×'), paper)
   const count = el('span', { class: 'count' }, `${i + 1} of ${state.slots.length}`)
-  const bar = el('div', { class: 'zbar' }, el('button', { type: 'button', 'aria-label': 'Previous story', onclick: () => step(-1) }, '‹'), count, el('button', { type: 'button', 'aria-label': 'Next story', onclick: () => step(1) }, '›'))
+  const bar = el('div', { class: 'zbar' },
+    el('button', { type: 'button', 'aria-label': 'Previous story', onclick: () => step(-1) }, '‹'),
+    count,
+    el('button', { type: 'button', 'aria-label': 'Next story', onclick: () => step(1) }, '›'),
+    el('button', { type: 'button', class: 'reshare', onclick: () => reshare([state.slots[state.zoom?.i ?? i]]) }, 'Reshare'),
+  )
   const backdrop = el('div', { class: 'backdrop', onclick: () => collapse() })
   z.replaceChildren(backdrop, frame, bar)
   z.hidden = false
@@ -314,7 +324,7 @@ addEventListener('popstate', () => state.zoom && collapse(true))
 
 let g = null
 stage.addEventListener('pointerdown', (e) => {
-  if (state.zoom || e.button > 0 || e.target.closest('.nav')) return
+  if (state.zoom || state.tab === 'back' || e.button > 0 || e.target.closest('.nav')) return
   g = { x: e.clientX, y: e.clientY, id: e.pointerId, target: e.target, moved: false }
   stage.setPointerCapture(e.pointerId)
 })
@@ -356,6 +366,10 @@ addEventListener('keydown', (e) => {
     return
   }
   if (!state.editors.length) return
+  if (state.tab === 'back') {
+    if (e.key === 'Escape') (setTab('front'), e.preventDefault())
+    return
+  }
   if (e.key === 'ArrowRight') go(1)
   else if (e.key === 'ArrowLeft') go(-1)
   else if (e.key === 'ArrowDown') issue(1)
@@ -371,6 +385,130 @@ addEventListener('resize', () => {
   resizeTimer = setTimeout(() => fit(state.slide), 120)
 })
 document.fonts?.addEventListener?.('loadingdone', () => fit(state.slide))
+
+// ── Actions: tabs and reshare ────────────────────────────────────────────
+
+function renderActions() {
+  const editor = state.editors[state.i]
+  if (!editor) return
+  const k = state.ed.get(editor.did) ?? 0
+  const ed = editor.editions[k]
+  const tab = (name, label) => el('button', { type: 'button', role: 'tab', 'aria-selected': String(state.tab === name), onclick: () => setTab(name) }, label)
+  $('actions').replaceChildren(
+    el('div', { class: 'tabs', role: 'tablist', 'aria-label': 'View' }, tab('front', 'Front page'), tab('back', `Back editions${editor.editions.length > 1 ? ` (${editor.editions.length})` : ''}`)),
+    el('span', { class: 'issue' }, [ed.number ? `No. ${ed.number}` : null, B.PERIODS[ed.period], B.longDate(ed.date)].filter(Boolean).join(' · ')),
+    el('span', { class: 'spacer' }),
+    el('button', { type: 'button', class: 'reshare', 'aria-label': 'Reshare this front page to yours', disabled: !state.slots.some((s) => s.doc), onclick: () => reshare(state.slots) }, el('span', { class: 'long' }, 'Reshare front page'), el('span', { class: 'short' }, 'Reshare')),
+  )
+}
+
+function setTab(name) {
+  state.tab = name
+  stage.querySelector('.back')?.remove()
+  if (name === 'back') renderBack()
+  renderActions()
+}
+
+// Hand pieces to the editor (same origin): it puts them on your page, each
+// credited "via" this broadsheet.
+function reshare(slots) {
+  const ed = state.current?.edition
+  const editor = state.editors[state.i]
+  const items = slots.filter((s) => s?.doc).map((s) => ({ uri: s.doc.uri, cid: s.doc.cid, role: s.role, via: { uri: ed.uri, cid: ed.cid, masthead: state.current.pub?.name || mastheadOf(editor) } }))
+  if (!items.length) return
+  let inbox = []
+  try {
+    inbox = JSON.parse(localStorage.getItem(INBOX)) || []
+  } catch {}
+  const have = new Set(inbox.map((x) => x.uri))
+  const fresh = items.filter((x) => !have.has(x.uri))
+  try {
+    localStorage.setItem(INBOX, JSON.stringify([...inbox, ...fresh]))
+  } catch {
+    return toast('Couldn’t reshare: this browser blocks storage.')
+  }
+  const n = items.length
+  toast(`${n === 1 ? 'Reshared to' : `Reshared ${n} pieces to`} your front page.`, el('a', { href: '../editor/' }, 'Open the editor →'))
+}
+
+let toastTimer
+function toast(msg, ...extra) {
+  const t = $('toast')
+  t.replaceChildren(msg, ...extra)
+  t.hidden = false
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => (t.hidden = true), 5000)
+}
+
+// ── Back editions: pick a day from a calendar of the editor's issues ─────
+
+const ym = (date) => date.slice(0, 7)
+const DOW = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+
+function renderBack() {
+  const editor = state.editors[state.i]
+  const eds = editor.editions.map((e, k) => ({ ...e, k }))
+  const byDay = new Map()
+  for (const e of eds) {
+    if (!byDay.has(e.date)) byDay.set(e.date, [])
+    byDay.get(e.date).push(e)
+  }
+  for (const list of byDay.values()) list.sort((a, b) => String(a.publishedAt).localeCompare(String(b.publishedAt)))
+  const months = [...new Set(eds.map((e) => ym(e.date)))].sort()
+  const current = editor.editions[state.ed.get(editor.did) ?? 0]
+  if (!state.calMonth || !months.includes(state.calMonth)) state.calMonth = ym(current.date)
+  if (!state.calDay || !byDay.has(state.calDay)) state.calDay = current.date
+  const [y, m] = state.calMonth.split('-').map(Number)
+  const first = new Date(y, m - 1, 1)
+  const days = new Date(y, m, 0).getDate()
+  const idx = months.indexOf(state.calMonth)
+  const go = (d) => ((state.calMonth = months[idx + d]), setTab('back'))
+  const open = (e) => {
+    state.ed.set(editor.did, e.k)
+    setTab('front')
+    show(state.i)
+  }
+  const cells = [...DOW.map((d) => el('span', { class: 'dow', 'aria-hidden': 'true' }, d))]
+  for (let i = 0; i < first.getDay(); i++) cells.push(el('span', { class: 'day' }))
+  for (let d = 1; d <= days; d++) {
+    const date = `${state.calMonth}-${String(d).padStart(2, '0')}`
+    const list = byDay.get(date)
+    if (!list) {
+      cells.push(el('span', { class: 'day' }, String(d)))
+      continue
+    }
+    const label = `${B.longDate(date)}: ${list.map((e) => B.PERIODS[e.period] ?? 'edition').join(' and ')}`
+    cells.push(
+      el('button', {
+        type: 'button', class: 'day', 'aria-label': label, 'aria-pressed': String(date === state.calDay),
+        onclick: () => (list.length === 1 ? open(list[0]) : ((state.calDay = date), setTab('back'))),
+      }, String(d), el('span', { class: 'marks', 'aria-hidden': 'true' }, list.map((e) => (e.period ? e.period.toUpperCase() : '•')).join(' '))),
+    )
+  }
+  const shown = (byDay.get(state.calDay) ?? []).length > 1 ? byDay.get(state.calDay) : eds.filter((e) => ym(e.date) === state.calMonth)
+  stage.append(
+    el('section', { class: 'back', 'aria-label': 'Back editions' },
+      el('div', { class: 'back-in' },
+        el('h2', {}, mastheadOf(editor)),
+        el('p', { class: 'sub' }, `${editor.editions.length} edition${editor.editions.length === 1 ? '' : 's'} edited by ${whoOf(editor)}. Pick a day to read what they picked.`),
+        el('div', { class: 'cal-head' },
+          el('button', { type: 'button', 'aria-label': 'Earlier month', disabled: idx <= 0, onclick: () => go(-1) }, '‹'),
+          el('b', {}, first.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })),
+          el('button', { type: 'button', 'aria-label': 'Later month', disabled: idx >= months.length - 1, onclick: () => go(1) }, '›'),
+        ),
+        el('div', { class: 'cal', role: 'group', 'aria-label': 'Days with editions' }, cells),
+        el('ul', { class: 'issues' },
+          shown.map((e) =>
+            el('li', {}, el('button', { type: 'button', class: e.uri === current.uri ? 'current' : '', onclick: () => open(e) },
+              el('b', {}, [B.longDate(e.date), B.PERIODS[e.period]].filter(Boolean).join(', ')),
+              el('span', {}, e.number ? `No. ${e.number}` : ''),
+            )),
+          ),
+        ),
+      ),
+    ),
+  )
+}
 
 // ── Start ────────────────────────────────────────────────────────────────
 
@@ -395,7 +533,7 @@ async function start() {
         const eds = await B.listEditions(did)
         if (eds.length) {
           const prof = (await B.profiles([did]).catch(() => new Map())).get(did)
-          editors.unshift({ did, handle: prof?.handle ?? null, displayName: prof?.displayName ?? '', group: 'linked', editions: eds.map((x) => ({ uri: x.uri, cid: x.cid, rkey: x.rkey, title: x.value.title, publishedAt: x.value.publishedAt, number: x.value.content?.number ?? null })) })
+          editors.unshift({ did, handle: prof?.handle ?? null, displayName: prof?.displayName ?? '', masthead: null, group: 'linked', editions: B.editionList(eds) })
           idx = 0
         }
       }

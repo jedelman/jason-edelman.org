@@ -1,7 +1,7 @@
 // Renders a broadsheet into a .paper element. Used by the reader and by the
 // builder's live preview; in the builder, `edit` wraps every slot (empty ones
 // included) with drop targets and a small toolbar.
-import { excerpt, LAYOUT } from './lib.js'
+import { excerpt, LAYOUT, PERIODS, dateOf } from './lib.js'
 
 export function el(tag, attrs = {}, ...kids) {
   const n = document.createElement(tag)
@@ -86,6 +86,17 @@ function withoutLead(text, dek) {
   return t
 }
 
+// "via The Atmosphere": a reshare's credit, linking to the edition it came from.
+function viaCredit(slot, link = false) {
+  const v = slot.via
+  if (!v) return null
+  const name = v.masthead || 'another broadsheet'
+  const [, , did, , rkey] = v.uri.split('/')
+  return link
+    ? el('span', { class: 'via' }, 'via ', el('a', { href: new URL(`./newsstand/?at=${did}/${rkey}`, import.meta.url).href }, name))
+    : el('span', { class: 'via' }, `via ${name}`)
+}
+
 function author(doc) {
   const c = doc.contributors.find((x) => x.displayName)
   return c?.displayName || doc.author?.displayName || (doc.author?.handle ? '@' + doc.author.handle : '')
@@ -111,7 +122,7 @@ export function story(slot, variant = 'page') {
     dek && role === 'brief' ? el('p', { class: 'dek' }, excerpt(dek, 110)) : null,
     art,
     bodyText ? el('p', { class: 'body' }, bodyText) : null,
-    role !== 'brief' ? el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min`) : null) : el('p', { class: 'byline' }, el('span', {}, fmtDate(doc.publishedAt))),
+    role !== 'brief' ? el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min`) : null, viaCredit(slot)) : el('p', { class: 'byline' }, el('span', {}, fmtDate(doc.publishedAt)), viaCredit(slot)),
     role === 'lead' || role === 'second' ? (href ? el('a', { class: 'more', href, target: '_blank', rel: 'noopener' }, `Continue at ${host(href)} →`) : null) : null,
   ]
   const node = el('article', { class: `story ${role}${art ? ' with-art' : ''}` }, kids)
@@ -148,7 +159,11 @@ export function renderPaper(root, model, edit = null, variant = 'page') {
     el(
       'header',
       { class: 'mast' },
-      el('div', { class: 'mast-top' }, el('span', {}, model.number ? `No. ${model.number}` : 'Broadsheet'), el('span', {}, fmtDate(model.publishedAt || new Date().toISOString(), true)), el('span', {}, 'Syndicated from standard.site')),
+      el('div', { class: 'mast-top' },
+        el('span', {}, [model.number ? `No. ${model.number}` : 'Broadsheet', PERIODS[model.period]].filter(Boolean).join(' · ')),
+        el('span', {}, model.date ? dateOf(model.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : fmtDate(model.publishedAt || new Date().toISOString(), true)),
+        el('span', {}, 'Syndicated from standard.site'),
+      ),
       el('h1', { class: 'mast-name' }, model.masthead || 'Broadsheet'),
       el('div', { class: 'mast-bottom' }, el('span', {}, ((n) => `${n} piece${n === 1 ? '' : 's'}`)(model.slots.filter((s) => s.doc).length)), el('span', {}, editor ? `Edited by ${editor}` : ''), el('span', {}, `${pubs.size} publication${pubs.size === 1 ? '' : 's'}`)),
     ),
@@ -184,7 +199,7 @@ export function expandedStory(slot) {
     dek ? el('p', { class: 'dek' }, excerpt(dek, 400)) : null,
     doc.cover ? el('div', { class: 'art' }, img(doc.cover, 'full')) : null,
     body ? el('p', { class: 'body' }, body) : null,
-    el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min read`) : null),
+    el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min read`) : null, viaCredit(slot, true)),
     doc.url ? el('a', { class: 'read', href: doc.url, target: '_blank', rel: 'noopener' }, `Read it at ${host(doc.url)} →`) : null,
   )
 }

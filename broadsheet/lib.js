@@ -40,8 +40,11 @@ export const ROLES = new Set(LAYOUT.map((l) => l.role))
 
 // ── Fetching ─────────────────────────────────────────────────────────────
 
-async function getJson(url, init) {
-  const res = await fetch(url, init)
+// Every read gives up after 15 s, so one server that never answers can't
+// stall a page (or the newsstand's navigation) behind it.
+const TIMEOUT = 15000
+async function getJson(url, init = {}) {
+  const res = await fetch(url, { ...init, signal: init.signal ?? AbortSignal.timeout(TIMEOUT) })
   if (!res.ok) {
     let msg = `HTTP ${res.status}`
     let error
@@ -491,6 +494,25 @@ export function tid(now = Date.now()) {
 
 export const editionPath = (did, rkey) => `/?at=${did}/${rkey}`
 
+// Morning and evening editions. An edition with no period is the day's only one.
+export const PERIODS = { am: 'Morning Edition', pm: 'Evening Edition' }
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+export const localDate = (d = new Date()) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+// "2026-11-09" -> a Date at local noon (safe from timezone edges).
+export const dateOf = (ymd) => {
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(y, m - 1, d, 12)
+}
+export const longDate = (ymd) => dateOf(ymd).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+// Which day and period an edition belongs to: the editor's own date when the
+// edition carries one, else the day it was published, where the reader is.
+export function editionDay(value) {
+  const c = value?.content ?? {}
+  const date = typeof c.date === 'string' && DATE_RE.test(c.date) ? c.date : localDate(new Date(value?.publishedAt))
+  return { date, period: PERIODS[c.period] ? c.period : null }
+}
+
 // The edition's content, cleaned, or null.
 export function readEditionContent(c) {
   if (c?.$type !== CONTENT || !Array.isArray(c.slots)) return null
@@ -502,13 +524,29 @@ export function readEditionContent(c) {
     const slot = { role: s.role, item: { uri: s.item.uri, cid: typeof s.item.cid === 'string' ? s.item.cid : '' } }
     if (str(s.headline, 300)) slot.headline = str(s.headline, 300)
     if (str(s.deck, 600)) slot.deck = str(s.deck, 600)
+    const via = readVia(s.via)
+    if (via) slot.via = via
     slots.push(slot)
   }
-  return { number: Number.isInteger(c.number) && c.number > 0 ? c.number : null, note: str(c.note, 3000), slots }
+  return {
+    number: Number.isInteger(c.number) && c.number > 0 ? c.number : null,
+    note: str(c.note, 3000),
+    date: typeof c.date === 'string' && DATE_RE.test(c.date) ? c.date : null,
+    period: PERIODS[c.period] ? c.period : null,
+    slots,
+  }
 }
 
-// The builder's state -> slots in render order.
-export function slotsFromBoard(board, edits = {}) {
+// A reshare's credit: the edition it came from, and that broadsheet's name.
+function readVia(v) {
+  if (parseAtUri(v?.uri)?.collection !== COL.document) return null
+  const out = { uri: v.uri, cid: typeof v.cid === 'string' ? v.cid : '' }
+  if (str(v.masthead, 200)) out.masthead = str(v.masthead, 200)
+  return out
+}
+
+// The builder's state -> slots in render order. via: uri -> reshare credit.
+export function slotsFromBoard(board, edits = {}, via = {}) {
   const out = []
   for (const s of SLOTS) {
     const it = board[s.id]
@@ -517,6 +555,8 @@ export function slotsFromBoard(board, edits = {}) {
     const e = edits[it.uri] ?? {}
     if (str(e.headline, 300)) slot.headline = str(e.headline, 300)
     if (str(e.deck, 600)) slot.deck = str(e.deck, 600)
+    const v = readVia(via[it.uri])
+    if (v) slot.via = v
     out.push(slot)
   }
   return out
@@ -526,6 +566,7 @@ export function slotsFromBoard(board, edits = {}) {
 export function boardFromSlots(slots) {
   const board = {}
   const edits = {}
+  const via = {}
   const next = {}
   for (const s of slots) {
     const i = next[s.role] ?? 0
@@ -534,12 +575,14 @@ export function boardFromSlots(slots) {
     next[s.role] = i + 1
     board[def.id] = { uri: s.item.uri, cid: s.item.cid }
     if (s.headline || s.deck) edits[s.item.uri] = { headline: s.headline ?? '', deck: s.deck ?? '' }
+    if (s.via) via[s.item.uri] = s.via
   }
-  return { board, edits }
+  return { board, edits, via }
 }
 
-export function editionTitle(masthead, date = new Date()) {
-  return `${masthead}, ${date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`
+// "The Atmosphere, Morning Edition, November 9, 2026"
+export function editionTitle(masthead, date = localDate(), period = null) {
+  return [masthead, PERIODS[period], longDate(date)].filter(Boolean).join(', ')
 }
 
 // My broadsheet publication (url === BASE), or null.
@@ -557,16 +600,29 @@ export async function listEditions(did) {
 
 const repo = (agent) => agent.com.atproto.repo
 
-// Publish (or, with `existing`, replace) an edition. -> { uri, rkey, recommended }
+// Publish an edition, which freezes it: one per day, or one morning and one
+// evening edition. (`existing` replaces an edition in place; the editor no
+// longer offers it, but it stays for corrections by hand.)
+// -> { uri, rkey, recommended, title }
 //   slots     from slotsFromBoard
 //   docs      Map uri -> normalized document, for the plaintext summary
-export async function publishEdition(agent, me, { masthead, note = '', slots, docs, recommend = true, discoverable = true }, existing = null) {
+//   period    null, 'am' or 'pm'
+//   date      the editor's local date, YYYY-MM-DD
+export async function publishEdition(agent, me, { masthead, note = '', slots, docs, recommend = true, discoverable = true, period = null, date = localDate() }, existing = null) {
   const name = str(masthead, 200)
   if (!name) throw new Error('Name the broadsheet.')
   if (!slots.length) throw new Error('Put at least one article on the page.')
   if (slots[0].role !== 'lead') throw new Error('Fill the lead slot first.')
   if (existing && existing.value?.content?.$type !== CONTENT) throw new Error('That record is not an edition.')
+  if (period && !PERIODS[period]) throw new Error('Unknown edition.')
+  if (!DATE_RE.test(date)) throw new Error('Bad date.')
   const { pds } = await resolveDid(me)
+  const editions = existing ? [] : await listEditions(me)
+  const clash = editions.find((e) => {
+    const d = editionDay(e.value)
+    return d.date === date && d.period === (period || null)
+  })
+  if (clash) throw new Error(`${period ? `The ${PERIODS[period].toLowerCase()}` : 'Today’s edition'} for ${longDate(date)} is already out, and published editions are frozen.${period ? '' : ' Publish a morning or evening edition instead.'}`)
 
   // The masthead: one publication per editor, renamed when the name changes.
   let pub = await findMasthead(pds, me)
@@ -579,10 +635,10 @@ export async function publishEdition(agent, me, { masthead, note = '', slots, do
     pub = { uri: data.uri, cid: data.cid }
   }
 
-  const prior = existing ? null : (await listEditions(me)).length
-  const content = { $type: CONTENT, slots }
-  const number = existing ? existing.value.content.number : prior + 1
+  const content = { $type: CONTENT, slots, date: existing ? existing.value.content.date ?? date : date }
+  const number = existing ? existing.value.content.number : editions.length + 1
   if (number) content.number = number
+  if (period) content.period = period
   if (str(note, 3000)) content.note = str(note, 3000)
   const rkey = existing?.rkey ?? tid()
   const headlines = slots.map((s) => {
@@ -593,7 +649,7 @@ export async function publishEdition(agent, me, { masthead, note = '', slots, do
     $type: COL.document,
     site: pub.uri,
     path: editionPath(me, rkey),
-    title: existing?.value?.title ?? editionTitle(name),
+    title: existing?.value?.title ?? editionTitle(name, date, period),
     description: str(note, 3000) || `${slots.length} pieces from ${new Set(slots.map((s) => docs.get(s.item.uri)?.pubName).filter(Boolean)).size} publications.`,
     textContent: headlines.join('\n'),
     tags: ['broadsheet'],
@@ -619,7 +675,7 @@ export async function publishEdition(agent, me, { masthead, note = '', slots, do
       }
     }
   }
-  return { uri: data.uri, rkey, recommended }
+  return { uri: data.uri, rkey, recommended, title: record.title }
 }
 
 // Delete one of my editions. Refuses any document that isn't an edition, so a
@@ -657,11 +713,11 @@ export async function loadEdition(ref) {
   const docs = await loadDocs(content.slots.map((s) => s.item.uri))
   const slots = content.slots.map((s) => {
     const doc = docs.get(s.item.uri) ?? null
-    return { role: s.role, headline: s.headline ?? '', deck: s.deck ?? '', uri: s.item.uri, doc, changed: !!doc && !!s.item.cid && doc.cid !== s.item.cid }
+    return { role: s.role, headline: s.headline ?? '', deck: s.deck ?? '', via: s.via ?? null, uri: s.item.uri, doc, changed: !!doc && !!s.item.cid && doc.cid !== s.item.cid }
   })
   return {
     did,
-    edition: { uri: rec.uri, cid: rec.cid, rkey: rec.rkey, value: rec.value, title: rec.value.title, publishedAt: rec.value.publishedAt, number: content.number, note: content.note },
+    edition: { uri: rec.uri, cid: rec.cid, rkey: rec.rkey, value: rec.value, title: rec.value.title, publishedAt: rec.value.publishedAt, number: content.number, note: content.note, ...editionDay(rec.value) },
     pub: pubRec ? readPublication(pubRec) : null,
     editor: prof.get(did) ?? null,
     slots,
@@ -687,6 +743,13 @@ export async function writerDocs(input, { days = 45, source = 'added' } = {}) {
     .map((d) => Object.assign(d, { sources: [source], recommendedBy: [], author: prof }))
 }
 
+// Editions as the newsstand lists them: newest first, with day and period.
+export function editionList(recs) {
+  return recs
+    .map((e) => ({ uri: e.uri, cid: e.cid, rkey: e.rkey, title: e.value.title, publishedAt: e.value.publishedAt, number: e.value.content?.number ?? null, ...editionDay(e.value) }))
+    .sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)))
+}
+
 // ── The newsstand ────────────────────────────────────────────────────────
 // Every broadsheet masthead on the network, found in one query: Constellation
 // indexes the url field of every site.standard.publication, so the mastheads
@@ -709,7 +772,8 @@ export async function findMastheads(max = 5000) {
 // The rack: editors with at least one edition, each with their editions newest
 // first. The reader's own broadsheet comes first, then the people they follow,
 // then everyone else, each group by its latest edition.
-// -> [{ did, handle, displayName, group: 'you'|'following'|'everyone', editions: [{ uri, cid, rkey, title, publishedAt, number }] }]
+// -> [{ did, handle, displayName, masthead, group: 'you'|'following'|'everyone',
+//       editions: [{ uri, cid, rkey, title, publishedAt, number, date, period }] }]
 export async function rack(readerDid = null) {
   const [heads, follows] = await Promise.all([
     findMastheads(),
@@ -718,7 +782,12 @@ export async function rack(readerDid = null) {
       : new Set(),
   ])
   const dids = [...new Set(heads.map((h) => h.did))]
-  const [got, prof] = await Promise.all([pool(dids, 8, (d) => listEditions(d)), profiles(dids).catch(() => new Map())])
+  const headOf = new Map(heads.map((h) => [h.did, h]))
+  const [got, prof, pubs] = await Promise.all([
+    pool(dids, 8, (d) => listEditions(d)),
+    profiles(dids).catch(() => new Map()),
+    pool(dids, 8, (d) => getRecord(`at://${d}/${COL.publication}/${headOf.get(d).rkey}`)),
+  ])
   const editors = []
   got.forEach((g, i) => {
     if (!g.ok || !g.value.length) return
@@ -727,8 +796,9 @@ export async function rack(readerDid = null) {
       did,
       handle: prof.get(did)?.handle ?? null,
       displayName: prof.get(did)?.displayName ?? '',
+      masthead: (pubs[i].ok && pubs[i].value ? readPublication(pubs[i].value)?.name : null) ?? null,
       group: did === readerDid ? 'you' : follows.has(did) ? 'following' : 'everyone',
-      editions: g.value.map((e) => ({ uri: e.uri, cid: e.cid, rkey: e.rkey, title: e.value.title, publishedAt: e.value.publishedAt, number: e.value.content?.number ?? null })),
+      editions: editionList(g.value),
     })
   })
   const order = { you: 0, following: 1, everyone: 2 }

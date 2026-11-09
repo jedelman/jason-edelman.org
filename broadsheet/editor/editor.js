@@ -11,7 +11,8 @@ const WINDOWS = [
   { days: 14, label: '2 weeks' },
   { days: 45, label: '45 days' },
 ]
-const SOURCE_LABELS = { all: 'all', subscribed: 'subscriptions', followed: 'following', recommended: 'recommended', added: 'added', own: 'yours' }
+const SOURCE_LABELS = { all: 'all', reshared: 'reshared', subscribed: 'subscriptions', followed: 'following', recommended: 'recommended', added: 'added', own: 'yours' }
+const INBOX = 'broadsheet:inbox' // reshares handed over from the newsstand
 
 const state = {
   client: null, session: null, agent: null, me: null, myHandle: null,
@@ -19,7 +20,9 @@ const state = {
   docs: [], byUri: new Map(), loading: true,
   q: '', source: 'all', days: 14,
   board: {}, edits: {}, masthead: '', note: '', recommend: true,
-  editing: null, // an existing edition being revised
+  via: {}, // uri -> reshare credit { uri, cid, masthead }
+  period: '', // '' (the day's edition), 'am' or 'pm'
+  extra: [], // reshared pieces that didn't fit on the page, kept on the wire
   editingSlot: null,
   editions: [],
 }
@@ -120,19 +123,49 @@ async function signOut() {
 
 const draftKey = () => `broadsheet:draft:${state.me ?? 'anon'}`
 function saveDraft() {
-  store.set(draftKey(), { masthead: state.masthead, note: state.note, board: state.board, edits: state.edits, recommend: state.recommend, editing: state.editing?.rkey ?? null })
+  store.set(draftKey(), { masthead: state.masthead, note: state.note, board: state.board, edits: state.edits, via: state.via, period: state.period, recommend: state.recommend })
 }
 function restoreDraft() {
   const d = store.get(draftKey())
-  if (!d) return false
-  Object.assign(state, { masthead: d.masthead ?? '', note: d.note ?? '', board: d.board ?? {}, edits: d.edits ?? {}, recommend: d.recommend ?? true })
-  return d.editing ?? null
+  if (!d) return
+  Object.assign(state, { masthead: d.masthead ?? '', note: d.note ?? '', board: d.board ?? {}, edits: d.edits ?? {}, via: d.via ?? {}, period: B.PERIODS[d.period] ? d.period : '', recommend: d.recommend ?? true })
+}
+
+// Reshares from the newsstand: onto the page where there's room (in the slot
+// they had there, if it's free), else onto the wire. Each keeps its credit.
+async function takeInbox() {
+  const items = store.get(INBOX)
+  store.del(INBOX)
+  if (!Array.isArray(items) || !items.length) return
+  const onPage = new Set(Object.values(state.board).map((b) => b.uri))
+  const left = []
+  let placed = 0
+  for (const it of items) {
+    if (typeof it?.uri !== 'string' || onPage.has(it.uri)) continue
+    if (it.via) state.via[it.uri] = it.via
+    const slot = B.SLOTS.find((s) => s.role === it.role && !state.board[s.id]) ?? B.SLOTS.find((s) => !state.board[s.id])
+    if (slot) {
+      state.board[slot.id] = { uri: it.uri, cid: it.cid }
+      onPage.add(it.uri)
+      placed++
+    } else left.push(it.uri)
+  }
+  const from = [...new Set(items.map((i) => i.via?.masthead).filter(Boolean))].join(', ')
+  setStatus(`Reshared ${placed} piece${placed === 1 ? '' : 's'}${from ? ` from ${from}` : ''} onto the page${left.length ? `; ${left.length} more on the wire under “reshared”` : ''}.`, 'ok')
+  saveDraft()
+  if (left.length) {
+    const docs = await B.loadDocs(left)
+    state.extra = [...docs.values()].filter(Boolean).map((d) => Object.assign(d, { sources: ['reshared'] }))
+    acceptPool(state.docs)
+  }
 }
 
 // ── The wire ─────────────────────────────────────────────────────────────
 
 function acceptPool(docs) {
-  state.docs = docs
+  const have = new Set(docs.map((d) => d.uri))
+  for (const d of docs) if (state.extra.some((x) => x.uri === d.uri)) d.sources = [...new Set([...d.sources, 'reshared'])]
+  state.docs = B.rank([...docs, ...state.extra.filter((x) => !have.has(x.uri))])
   for (const d of docs) state.byUri.set(d.uri, d)
   renderWire()
   renderPaperNow()
@@ -218,6 +251,7 @@ function card(d, used) {
   if (d.recommendedBy.length) badges.push(el('span', { class: 'badge' }, `recommended by ${d.recommendedBy.length}`))
   if (d.sources.includes('own')) badges.push(el('span', { class: 'badge sub' }, 'yours'))
   if (d.sources.includes('added')) badges.push(el('span', { class: 'badge sub' }, 'added'))
+  if (state.via[d.uri]) badges.push(el('span', { class: 'badge' }, `via ${state.via[d.uri].masthead ?? 'a broadsheet'}`))
   const node = el(
     'li',
     { class: `card${used ? ' used' : ''}`, draggable: 'true', 'data-uri': d.uri },
@@ -358,9 +392,9 @@ function renderPaperNow() {
     const it = state.board[s.id]
     const doc = it ? state.byUri.get(it.uri) ?? null : null
     const e = it ? state.edits[it.uri] ?? {} : {}
-    return { slotId: s.id, role: s.role, doc, headline: e.headline ?? '', deck: e.deck ?? '', changed: !!doc && !!it?.cid && doc.cid !== it.cid }
+    return { slotId: s.id, role: s.role, doc, headline: e.headline ?? '', deck: e.deck ?? '', via: it ? state.via[it.uri] ?? null : null, changed: !!doc && !!it?.cid && doc.cid !== it.cid }
   })
-  // Pieces on the page but not on the wire (an older draft, an edition being revised).
+  // Pieces on the page but not on the wire (an older draft, a reshare).
   const missing = Object.values(state.board).filter((b) => b && !state.byUri.has(b.uri)).map((b) => b.uri)
   if (missing.length && !missingFetch) {
     missingFetch = B.loadDocs(missing)
@@ -374,14 +408,15 @@ function renderPaperNow() {
   }
   renderPaper($('paper'), {
     masthead: state.masthead || 'Your broadsheet',
-    number: state.editing ? state.editing.value.content.number : state.editions.length + 1,
-    publishedAt: state.editing?.value?.publishedAt,
+    number: state.editions.length + 1,
+    date: B.localDate(),
+    period: state.period || null,
     editor: state.me ? { handle: state.myHandle ?? null, displayName: '' } : null,
     note: state.note,
     slots,
   }, { wrap })
   const filled = Object.keys(state.board).length
-  $('publish').textContent = state.editing ? 'Update edition' : 'Publish'
+  $('publish').textContent = state.period ? `Publish the ${B.PERIODS[state.period].toLowerCase()}` : 'Publish'
   $('publish').disabled = !filled
 }
 
@@ -425,45 +460,33 @@ function renderMine() {
           }
         },
       }, 'Delete')
-      return el('li', {}, el('a', { href: `../newsstand/?at=${handle}/${e.rkey}`, target: '_blank' }, e.value.title), el('button', { type: 'button', onclick: () => openEdition(e) }, 'Revise'), del)
+      return el('li', {}, el('a', { href: `../newsstand/?at=${handle}/${e.rkey}`, target: '_blank' }, e.value.title), del)
     }),
   )
-}
-
-function openEdition(e) {
-  const c = B.readEditionContent(e.value.content)
-  const { board, edits } = B.boardFromSlots(c.slots)
-  Object.assign(state, { editing: e, board, edits, note: c.note })
-  $('note').value = c.note
-  saveDraft()
-  renderPaperNow()
-  renderWire()
-  setStatus(`Revising “${e.value.title}”. Update edition writes over it.`)
-  scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 async function publish() {
   if (!state.agent) return setStatus('Sign in to publish.', 'bad')
   const btn = $('publish')
   btn.disabled = true
-  setStatus(state.editing ? 'Updating…' : 'Publishing…')
+  setStatus('Publishing…')
   try {
-    const slots = B.slotsFromBoard(state.board, state.edits)
+    const slots = B.slotsFromBoard(state.board, state.edits, state.via)
     const docs = new Map(slots.map((s) => [s.item.uri, state.byUri.get(s.item.uri)]))
-    const r = await B.publishEdition(state.agent, state.me, { masthead: state.masthead, note: state.note, slots, docs, recommend: state.recommend }, state.editing)
+    const r = await B.publishEdition(state.agent, state.me, { masthead: state.masthead, note: state.note, slots, docs, recommend: state.recommend, period: state.period || null, date: B.localDate() })
     const url = `../newsstand/?at=${state.myHandle ?? state.me}/${r.rkey}`
     store.del(draftKey())
-    Object.assign(state, { editing: null, board: {}, edits: {}, note: '' })
+    Object.assign(state, { board: {}, edits: {}, via: {}, note: '' })
     $('note').value = ''
     $('status').replaceChildren(
-      `Published${r.recommended ? `, and recommended ${r.recommended} piece${r.recommended === 1 ? '' : 's'}` : ''}. `,
+      `Published “${r.title}”${r.recommended ? `, and recommended ${r.recommended} piece${r.recommended === 1 ? '' : 's'}` : ''}. It’s frozen now. `,
       el('a', { href: url }, 'Read it'),
     )
     $('status').dataset.tone = 'ok'
     await loadMine()
   } catch (e) {
-    console.error(e)
-    setStatus(e?.error === 'InvalidSwap' ? 'That edition changed somewhere else. Reload and try again.' : e.message, 'bad')
+    console.warn(e) // a refusal (say, a frozen edition) is news for the editor, not an error
+    setStatus(e.message, 'bad')
   }
   btn.disabled = !Object.keys(state.board).length
 }
@@ -482,11 +505,12 @@ function bindControls() {
     changed()
   })
   $('clear').addEventListener('click', () => {
-    Object.assign(state, { board: {}, edits: {}, editing: null })
+    Object.assign(state, { board: {}, edits: {}, via: {} })
     setStatus('')
     changed()
   })
   $('publish').addEventListener('click', publish)
+  $('period').addEventListener('change', (e) => ((state.period = e.target.value), saveDraft(), renderPaperNow()))
   attachTypeahead($('writer'), () => $('add-writer').requestSubmit())
   $('add-writer').addEventListener('submit', async (e) => {
     e.preventDefault()
@@ -533,8 +557,10 @@ async function start() {
     setStatus(`Sign-in is unavailable right now: ${e.message}`, 'bad')
   }
   await setSession(session)
-  const editingRkey = restoreDraft()
+  restoreDraft()
+  await takeInbox()
   $('masthead').value = state.masthead
+  $('period').value = state.period
   $('note').value = state.note
   $('recommend').checked = state.recommend
   // Whose follows feed the wire: yours when signed in, else ?as=handle, else Jason's.
@@ -552,11 +578,6 @@ async function start() {
   renderPaperNow()
   if (state.me) {
     await loadMine()
-    if (editingRkey) {
-      const e = state.editions.find((x) => x.rkey === editingRkey)
-      if (e) state.editing = e
-    }
-    renderPaperNow()
   }
   if (state.reader) loadWire().then(loadAdded)
 }

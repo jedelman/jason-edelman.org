@@ -6,7 +6,10 @@ Front pages of standard.site writing, picked by people. Two rooms under
 - `newsstand/` (an SPA): every front page from the editors you follow, then everyone
   else. Swipe left and right between editors, up and down through an editor's back
   issues; tap a story to zoom into it. No scrolling: each page is fit to the screen.
-- `editor/`: make a front page from the writers you follow, and publish it.
+  **Back editions** is a calendar of an editor's issues (only days with an edition can
+  be picked). **Reshare** sends a whole front page, or one story, to your own.
+- `editor/`: make a front page from the writers you follow, and publish it: the day's
+  edition, or a **morning** and an **evening** edition. Publishing freezes it.
 
 Plain browser JavaScript, no build step, no server. `broadsheet/` itself redirects to
 the newsstand.
@@ -23,9 +26,21 @@ An edition is a `site.standard.document` in the editor's own repo, in a broadshe
 publication (a `site.standard.publication` whose `url` is
 `https://jason-edelman.org/broadsheet/newsstand`, created on first publish and renamed
 when the masthead changes). Its `content` is an `org.jason-edelman.broadsheet.content`
-(`lexicons/`): an edition number, an editor's note, and up to ten slots, each a
+(`lexicons/`): an edition number, the editor's local `date`, an optional `period`
+(`am` or `pm`), an editor's note, and up to ten slots, each a
 `com.atproto.repo.strongRef` to the picked document plus an optional editor's headline
-and deck. The edition's `path` is `/?at=<did>/<rkey>`, so its canonical URL is the edition on the
+and deck, and, for a reshare, a `via`: the edition it came from and that broadsheet's
+name, shown as "via The Atmosphere".
+
+**Editions are frozen.** One edition per date and period: the day's edition, the
+morning edition, the evening edition. Publishing a second one for the same slot is
+refused, and the editor offers no way to revise a published edition (delete is still
+there). Titles carry the period: "The Atmosphere, Morning Edition, November 9, 2026".
+
+**Reshare** in the newsstand writes the picked pieces (with their slot and `via`) to a
+same-origin hand-off in localStorage; the editor takes them on load, onto the page
+where there's room (in the slot they had, if free) and onto the wire under
+"reshared" otherwise. The edition's `path` is `/?at=<did>/<rkey>`, so its canonical URL is the edition on the
 newsstand. Links people share use the handle: `newsstand/?at=handle/rkey`, or
 `?at=handle` for someone's latest.
 
@@ -83,7 +98,11 @@ desktops a landscape one, both whole. A tap zooms a story out of its place on th
 into a readable card (a FLIP animation from the story's position); swipe or arrow keys
 step between stories, and "Read it at …" stays pinned in view. Back, Escape or the
 backdrop close it. Keyboard: arrow keys for editors and issues, Enter on a focused
-story.
+story. Every network read times out after 15 s, so a dead server can't stall the page.
+
+**Back editions** (a tab beside Front page) shows the editor's issues as a month
+calendar: only days with an edition are buttons, marked AM/PM; a day with one edition
+opens it, a day with two offers both; month arrows skip to months that have editions.
 
 ## The page
 
@@ -145,6 +164,14 @@ edition, served locally and never written: fit with no scroll at 1440x900 (lands
 layout, shown 692x763) and on an iPhone 13 (portrait, 270x529), zoom stepping, the
 Read link in view, arrow keys between editors, `?at=handle/rkey` in the address bar.
 Claude's repo was identical before and after.
+
+Reshare, editions and back editions (same day): in Node on Claude's PDS, a morning, an
+evening and a day's edition for one date, a second of each refused, numbering, `via`
+round trip; in Chromium, the calendar over five local-only editions across two months
+(a day with both AM and PM), opening older issues, reshare of a story and a whole page
+into the editor (10 pieces, all credited), publishing a morning edition from the
+editor, the same edition refused, the evening edition published, both on Claude's
+calendar. Claude's repo identical before and after.
 
 Not yet tested: a real OAuth sign-in (needs a person's password), a real phone (the
 iPhone runs were emulated), and self-hosted PDSes that send no CORS headers (they show

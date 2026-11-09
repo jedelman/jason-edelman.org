@@ -68,6 +68,7 @@
     .controls .row .grow { flex: 1; }
     .check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
     .check input { width: auto; min-height: 0; accent-color: oklch(70% 0.12 145); }
+    .check select { background: var(--surface); border: 1px solid var(--border); border-radius: 0; min-height: 36px; padding: 0 8px; color: var(--text); font-size: 13px; }
     .mine { max-width: 1240px; margin: 0 auto 14px; font-size: 13px; }
     .mine summary { cursor: pointer; color: var(--muted); }
     .mine ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -162,11 +163,18 @@
           <button type="button" id="clear" class="quiet">Clear the page</button>
           <span class="grow"></span>
           <label class="check"><input type="checkbox" id="recommend" checked> Recommend each pick</label>
+          <label class="check edition">Edition
+            <select id="period" aria-label="Which edition">
+              <option value="">Today’s</option>
+              <option value="am">Morning</option>
+              <option value="pm">Evening</option>
+            </select>
+          </label>
           <button type="button" class="primary" id="publish">Publish</button>
         </div>
         <p class="status row" id="status" role="status"></p>
       </div>
-      <details class="mine" id="mine" hidden><summary>Your editions</summary><ul id="mine-list"></ul></details>
+      <details class="mine" id="mine" hidden><summary>Your editions (published editions are frozen)</summary><ul id="mine-list"></ul></details>
       <div class="paper-frame"><article class="paper editing" id="paper"></article></div>
     </section>
     <aside class="wire-pane" aria-label="The wire">
