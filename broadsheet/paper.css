@@ -1,0 +1,163 @@
+/* The broadsheet: one sheet of warm paper, two typefaces, hairline rules.
+   Shared by the reader (index.html) and the builder's live preview. */
+
+.paper {
+  --paper:   oklch(96.5% 0.012 85);
+  --ink:     oklch(19% 0.012 85);
+  --ink-2:   oklch(38% 0.015 85);
+  --ink-3:   oklch(52% 0.015 85);
+  --hair:    oklch(82% 0.018 85);
+  --rule:    oklch(24% 0.012 85);
+  --spot:    oklch(47% 0.16 27);
+  --serif:   'Newsreader', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --sans:    'Epilogue', 'Helvetica Neue', Arial, sans-serif;
+  --gap:     clamp(16px, 2.4vw, 32px);
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--serif);
+  font-optical-sizing: auto;
+  font-size: 17px;
+  line-height: 1.5;
+  padding: clamp(18px, 3.5vw, 48px) clamp(16px, 4vw, 56px) clamp(24px, 4vw, 56px);
+  max-width: 1240px;
+  margin: 0 auto;
+  box-shadow: 0 1px 0 oklch(0% 0 0 / 0.04), 0 18px 50px -24px oklch(0% 0 0 / 0.45);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+  hanging-punctuation: first;
+}
+@media (prefers-color-scheme: dark) {
+  .paper:not(.day) {
+    --paper: oklch(18% 0.01 85);
+    --ink:   oklch(91% 0.01 85);
+    --ink-2: oklch(76% 0.012 85);
+    --ink-3: oklch(62% 0.012 85);
+    --hair:  oklch(32% 0.012 85);
+    --rule:  oklch(86% 0.01 85);
+    --spot:  oklch(70% 0.14 27);
+  }
+}
+.paper *, .paper *::before, .paper *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.paper a { color: inherit; text-decoration: none; }
+.paper a:hover .hed, .paper a.hed:hover { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 0.12em; }
+.paper img { display: block; width: 100%; height: auto; }
+
+/* ── Masthead ─────────────────────────────────────────────────────── */
+.mast { text-align: center; }
+.mast-top, .mast-bottom {
+  display: flex; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap;
+  font-family: var(--sans); font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2);
+}
+.mast-top { border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+.mast-name {
+  font-family: var(--serif); font-weight: 800; font-variation-settings: 'opsz' 72;
+  font-size: clamp(2.5rem, 8.5vw, 6.4rem); line-height: 0.95; letter-spacing: -0.03em;
+  padding: 0.16em 0 0.12em; overflow-wrap: anywhere;
+}
+.mast-bottom { border-top: 3px solid var(--rule); box-shadow: 0 -5px 0 -4px var(--rule); padding-top: 9px; margin-top: 2px; }
+.mast-bottom span:nth-child(2) { color: var(--ink); }
+
+.paper .note {
+  margin: var(--gap) auto 0; max-width: 46rem; text-align: center;
+  font-style: italic; font-size: 1.12rem; line-height: 1.5; color: var(--ink-2);
+}
+.paper .note::before { content: 'From the editor'; display: block; font-family: var(--sans); font-style: normal; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--spot); margin-bottom: 6px; }
+
+/* ── The front ────────────────────────────────────────────────────── */
+.front { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); column-gap: var(--gap); margin-top: var(--gap); }
+.front > .lead { grid-column: 1; }
+.front > .seconds { grid-column: 2; border-left: 1px solid var(--hair); padding-left: var(--gap); display: flex; flex-direction: column; gap: var(--gap); }
+.front > .seconds > :is(.story, .slot) + :is(.story, .slot) { border-top: 1px solid var(--hair); padding-top: var(--gap); }
+.front.solo > .lead { grid-column: 1 / -1; }
+.front > .features, .front > .briefs { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); }
+.front > .features { margin-top: var(--gap); padding-top: var(--gap); border-top: 3px solid var(--rule); }
+.front > .briefs { margin-top: var(--gap); padding-top: 14px; border-top: 1px solid var(--rule); }
+.front > .features > :is(.story, .slot), .front > .briefs > :is(.story, .slot) { padding: 0 calc(var(--gap) / 2); }
+.front > .features > :is(.story, .slot):first-child, .front > .briefs > :is(.story, .slot):nth-child(2) { padding-left: 0; }
+.front > .features > :is(.story, .slot):last-child, .front > .briefs > :is(.story, .slot):last-child { padding-right: 0; }
+.front > .features > :is(.story, .slot) + :is(.story, .slot), .front > .briefs > :is(.story, .slot) + :is(.story, .slot) { border-left: 1px solid var(--hair); }
+.briefs-label { grid-column: 1 / -1; font-family: var(--sans); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 10px; }
+
+/* ── A story ──────────────────────────────────────────────────────── */
+.story { display: flex; flex-direction: column; min-width: 0; }
+.kicker {
+  display: flex; align-items: center; gap: 7px; min-width: 0;
+  font-family: var(--sans); font-weight: 600; font-size: 11.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--k-day, var(--spot)); margin-bottom: 6px;
+}
+@media (prefers-color-scheme: dark) { .paper:not(.day) .kicker { color: var(--k-night, var(--spot)); } }
+.kicker img { width: 16px; height: 16px; flex: none; border-radius: 3px; object-fit: cover; }
+.kicker span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hed { font-weight: 700; letter-spacing: -0.012em; line-height: 1.08; text-wrap: balance; overflow-wrap: anywhere; }
+.dek { font-style: italic; color: var(--ink-2); line-height: 1.38; margin-top: 8px; text-wrap: pretty; overflow-wrap: anywhere; }
+.art { margin-top: 12px; overflow: hidden; background: color-mix(in oklch, var(--ink) 6%, var(--paper)); }
+.art img { width: 100%; height: 100%; object-fit: cover; }
+.body { margin-top: 12px; text-wrap: pretty; hyphens: auto; overflow-wrap: anywhere; }
+.byline { margin-top: 10px; font-family: var(--sans); font-size: 11.5px; letter-spacing: 0.04em; color: var(--ink-3); display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.byline .who { color: var(--ink-2); font-weight: 600; }
+.more { margin-top: 10px; font-family: var(--sans); font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--ink); width: max-content; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-bottom: 1px solid var(--hair); }
+.more:hover { border-color: var(--ink); }
+.gone { font-style: italic; color: var(--ink-3); }
+
+/* Lead */
+.lead .hed { font-size: var(--hed-size, 3.2rem); font-variation-settings: 'opsz' 72; letter-spacing: -0.022em; line-height: 1.02; }
+.lead .dek { font-size: 1.3rem; }
+.lead .art { aspect-ratio: 16 / 9; }
+.lead .body { columns: 2 15rem; column-gap: var(--gap); column-rule: 1px solid var(--hair); font-size: 1.02rem; }
+.lead .body::first-letter { float: left; font-weight: 700; font-size: 3.6em; line-height: 0.82; padding: 0.06em 0.08em 0 0; color: var(--ink); }
+.front.solo > .lead.with-art { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); column-gap: var(--gap); grid-template-areas: 'art kicker' 'art hed' 'art dek' 'art body' 'art byline' 'art more' 'art rest'; grid-template-rows: auto auto auto auto auto auto 1fr; }
+.front.solo > .lead.with-art > .art { grid-area: art; margin-top: 0; aspect-ratio: 4 / 3; align-self: start; }
+.front.solo > .lead.with-art > .kicker { grid-area: kicker; }
+.front.solo > .lead.with-art > .hed { grid-area: hed; }
+.front.solo > .lead.with-art > .dek { grid-area: dek; }
+.front.solo > .lead.with-art > .body { grid-area: body; columns: 1; }
+.front.solo > .lead.with-art > .byline { grid-area: byline; }
+.front.solo > .lead.with-art > .more { grid-area: more; }
+.lead:not(.with-art) .body { columns: 3 13rem; }
+
+/* Seconds */
+.second .hed { font-size: 1.55rem; font-variation-settings: 'opsz' 48; }
+.second .art { aspect-ratio: 3 / 2; order: -1; margin: 0 0 12px; }
+.second .body { font-size: 0.95rem; color: var(--ink-2); }
+
+/* Features */
+.feature .hed { font-size: 1.32rem; font-variation-settings: 'opsz' 36; }
+.feature .art { aspect-ratio: 4 / 3; order: -1; margin: 0 0 12px; }
+.feature .dek { font-size: 0.98rem; }
+
+/* Briefs */
+.brief .hed { font-size: 1.06rem; font-weight: 600; line-height: 1.2; font-variation-settings: 'opsz' 18; }
+.brief .dek { font-size: 0.9rem; font-style: normal; margin-top: 4px; }
+.brief .kicker { font-size: 10.5px; margin-bottom: 4px; }
+
+/* ── Colophon ─────────────────────────────────────────────────────── */
+.colophon { margin-top: calc(var(--gap) * 1.5); padding-top: 10px; border-top: 3px solid var(--rule); display: flex; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; font-family: var(--sans); font-size: 11.5px; color: var(--ink-3); letter-spacing: 0.03em; }
+.colophon a { border-bottom: 1px solid var(--hair); }
+
+/* ── Small screens ────────────────────────────────────────────────── */
+@media (max-width: 760px) {
+  .paper { font-size: 16px; }
+  .front { grid-template-columns: minmax(0, 1fr); }
+  .front > .lead, .front.solo > .lead { grid-column: 1; }
+  .front.solo > .lead.with-art { display: flex; }
+  .front.solo > .lead.with-art > .art { aspect-ratio: 16 / 9; margin-top: 12px; }
+  .front > .seconds { grid-column: 1; border-left: none; padding-left: 0; margin-top: var(--gap); padding-top: var(--gap); border-top: 1px solid var(--hair); }
+  .front > .features, .front > .briefs { grid-template-columns: minmax(0, 1fr); }
+  .front > .features > :is(.story, .slot), .front > .briefs > :is(.story, .slot) { padding: 0; }
+  .front > .features > :is(.story, .slot) + :is(.story, .slot), .front > .briefs > :is(.story, .slot) + :is(.story, .slot) { border-left: none; border-top: 1px solid var(--hair); padding-top: var(--gap); margin-top: var(--gap); }
+  .front > .briefs > :is(.story, .slot) + :is(.story, .slot) { padding-top: 12px; margin-top: 12px; }
+  .lead .hed { font-size: calc(var(--hed-size, 3.2rem) * 0.68); }
+  .lead .body, .lead:not(.with-art) .body { columns: 1; }
+  .mast-top span:nth-child(3), .mast-bottom span:nth-child(3) { display: none; }
+}
+
+/* ── Print: the broadsheet as paper ───────────────────────────────── */
+@media print {
+  @page { margin: 12mm; }
+  body { background: #fff !important; }
+  .paper, .paper:not(.day) { --paper: #fff; --ink: #000; --ink-2: #222; --ink-3: #444; --hair: #bbb; --rule: #000; box-shadow: none; max-width: none; padding: 0; }
+  .story { break-inside: avoid; }
+  .more { display: none; }
+}

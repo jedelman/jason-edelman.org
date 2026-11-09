@@ -30,6 +30,7 @@ const STATIC = [
   'img',
   'library',
   'muster',
+  'broadsheet',
 ];
 
 // Subprojects: { name, dir, buildCmd, outDir, required }
