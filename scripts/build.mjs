@@ -28,6 +28,7 @@ const STATIC = [
   'oauth',
   'operator-field',
   'img',
+  'bg.js',
   'library',
   'broadsheet',
 ];

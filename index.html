@@ -16,33 +16,51 @@
     </header>
 
     <section id="about">
-      <p>
-        I build agent systems — software that gives AI real agency inside hard
-        constraints, not a chat window bolted onto an app. <a href="/ask-siren/">Siren</a> answers
-        questions about Norfolk from the city's own open data, and the code, not the
-        model, writes the record of how she found each answer. <a href="https://bsky.app/profile/scout-two.bsky.social">Scout Two</a> is an
-        autonomous Bluesky agent with a self-updating, git-native harness: it polls
-        GitHub on an interval and restarts itself with new code. Written World lets an
-        LLM-backed "demiurge" generate a text-adventure world by proposing changes to a
-        graph, validated through the same schema gate as a player's own actions. Design
-        Patterns Skill gives an agent thirteen software pattern languages from C2's
-        Portland Pattern Repository, picked by the forces driving the design problem in
-        front of it. The throughline: constrain the model with a real schema or
-        validator, then let it act.
-      </p>
-      <p>
-        I was a software engineer from 2004 to 2014. From 2019–2026, my wife and I ran
-        <a href="https://grandiflorawine.com/">Grandiflora</a>, a natural wine bar in
-        Norfolk. I'm also a practicing astrologer — I use it as a lens on character
-        and timing, and I'm building software at that intersection.
-      </p>
-      <p>
-        My background in environmental education shapes how I think about collective
-        behavior and change. The commons framework — resources governed collectively
-        for shared benefit, as a practical alternative to both state control and
-        private enclosure — runs through the civic and infrastructure projects below;
-        agent systems are where I spend most of my technical attention right now.
-      </p>
+      <p class="lede">I show up, and I build.</p>
+      <div class="about-cols">
+        <div class="about-col">
+          <h2>Now</h2>
+          <p>
+            Most of my building lately is on the AT Protocol, where your records live in
+            your own repo instead of a company's database.
+            <a href="https://dream-of-the-earth.jason-edelman.org/">Dream of the Earth</a> is
+            an open world on the real Earth, in the browser: real terrain, biomes from the
+            real climate map, the real sun, moon and planets, and your Bluesky mutuals as
+            the other players. <a href="/broadsheet/">Broadsheet</a> lets anyone edit a
+            front page of standard.site writing and publish it from their own repo. The
+            <a href="/library/">Library</a> checks things in and out by barcode with no
+            server of its own: the catalog is the owner's record, and each loan is the
+            borrower's.
+          </p>
+        </div>
+        <div class="about-col">
+          <h2>Next</h2>
+          <p>
+            I'm moving back to Seattle, where I lived from 2008 to 2016, and applying for
+            two jobs there: Senior Policy Manager at OneAmerica, the immigrant-rights
+            organization, and President and CEO of Friends of Waterfront Park, with a case
+            for the waterfront as the city's place for physical democracy. In Norfolk,
+            <a href="/ask-siren/">Siren</a> answers questions about the city from its own
+            open data, and the code, not the model, writes the record of how she found
+            each answer.
+          </p>
+        </div>
+        <div class="about-col">
+          <h2>Before</h2>
+          <p>
+            I was a software engineer from 2004 to 2014. Environmental education, much of
+            it at Wilderness Awareness School in Washington, still shapes how I think about
+            collective behavior and change. From 2019 to 2026, my wife and I ran
+            <a href="https://grandiflorawine.com/">Grandiflora</a>, a natural wine bar in
+            Norfolk. The commons framework, resources governed collectively for shared
+            benefit as an alternative to both state control and private enclosure, runs
+            through all of it. I'm also a practicing astrologer. I build most of this with
+            Claude, and we wrote
+            <a href="https://claude.jason-edelman.org/weather-into-a-body">Weather Into a Body</a>
+            together, on Claude's site.
+          </p>
+        </div>
+      </div>
     </section>
 
     <section id="projects">
@@ -459,5 +477,6 @@
     </section>
 
   </main>
+  <script src="/bg.js" defer></script>
 </body>
 </html>
