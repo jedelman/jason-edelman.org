@@ -1,0 +1,12 @@
+{
+  "name": "muster-vendor",
+  "private": true,
+  "description": "Builds muster/vendor/: MapLibre GL, copied from npm. Run by hand; the site build only copies the output. Muster's atproto SDK comes from library/vendor.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "maplibre-gl": "6.16.0"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.muster.action",
+  "description": "One public action (a protest, a strike, a hearing packed, a blockade), posted to the repo of someone who was there or is organizing it. Public and permanent: only what the organizers already made public belongs here.",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["title", "date", "area", "createdAt"],
+        "properties": {
+          "title": { "type": "string", "maxLength": 1400, "maxGraphemes": 140, "description": "What it is, in a few words." },
+          "date": { "type": "string", "minLength": 10, "maxLength": 10, "description": "The calendar day it happens or happened where it happens, YYYY-MM-DD. No time and no zone: the link carries details." },
+          "area": { "type": "ref", "ref": "#area" },
+          "issues": {
+            "type": "array",
+            "maxLength": 4,
+            "items": { "type": "string", "maxLength": 320, "maxGraphemes": 32 },
+            "description": "Lowercase tags, e.g. 'ice', 'data centers'."
+          },
+          "crowd": {
+            "type": "string",
+            "knownValues": ["10+", "100+", "1000+", "10000+"],
+            "description": "A rough size: dozens, hundreds, thousands, tens of thousands. Never a count."
+          },
+          "link": { "type": "string", "format": "uri", "description": "The organizers' own announcement, or a report of the action." },
+          "note": { "type": "string", "maxLength": 3000, "maxGraphemes": 300 },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    },
+    "area": {
+      "type": "object",
+      "description": "Where, as an area, never an address.",
+      "required": ["geohash", "name"],
+      "properties": {
+        "geohash": { "type": "string", "minLength": 5, "maxLength": 5, "description": "A five-character geohash: a cell about 5 km across." },
+        "name": { "type": "string", "maxLength": 800, "maxGraphemes": 80, "description": "A town or neighbourhood, as people there say it." }
+      }
+    }
+  }
+}

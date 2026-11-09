@@ -1,0 +1,22 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.muster.desk",
+  "description": "A collective's public list: the people whose actions it vouches for, and the other desks it trusts. A desk shows its owner's actions, its vouched-for posters' actions, and those of every desk it includes, three levels down. A regional desk is a desk that includes local ones. Not a membership list: vouching for a poster says only that their posts are real.",
+  "defs": {
+    "main": {
+      "type": "record",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": ["name", "vouches", "includes", "createdAt"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 640, "maxGraphemes": 64 },
+          "about": { "type": "string", "maxLength": 3000, "maxGraphemes": 300 },
+          "vouches": { "type": "array", "maxLength": 1000, "items": { "type": "string", "format": "did" } },
+          "includes": { "type": "array", "maxLength": 50, "items": { "type": "string", "format": "at-uri" }, "description": "Other desks (org.jason-edelman.muster.desk records)." },
+          "createdAt": { "type": "string", "format": "datetime" }
+        }
+      }
+    }
+  }
+}

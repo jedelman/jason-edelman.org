@@ -1,0 +1,19 @@
+{
+  "client_id": "https://jason-edelman.org/muster/client-metadata.json",
+  "client_name": "Muster",
+  "client_uri": "https://jason-edelman.org/muster/",
+  "redirect_uris": [
+    "https://jason-edelman.org/muster/"
+  ],
+  "scope": "atproto repo:org.jason-edelman.muster.action repo:org.jason-edelman.muster.desk",
+  "grant_types": [
+    "authorization_code",
+    "refresh_token"
+  ],
+  "response_types": [
+    "code"
+  ],
+  "token_endpoint_auth_method": "none",
+  "application_type": "web",
+  "dpop_bound_access_tokens": true
+}
