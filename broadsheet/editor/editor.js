@@ -100,9 +100,17 @@ function renderAccount() {
   }
 }
 
+// Sign-in can be asked for (a typeahead pick, a quick tap) before the OAuth
+// client has loaded: wait for it rather than doing nothing.
+let clientReady = Promise.resolve(null)
 async function signIn(handle) {
   const h = String(handle ?? '').trim().replace(/^@/, '')
-  if (!h || !state.client) return
+  if (!h) return
+  if (!state.client) {
+    setStatus('Starting sign-in…')
+    await clientReady.catch(() => null)
+    if (!state.client) return setStatus('Sign-in is unavailable right now. Reload the page and try again.', 'bad')
+  }
   saveDraft()
   try {
     await state.client.signIn(h) // redirects away; resolves only if the person comes back
@@ -572,7 +580,8 @@ async function start() {
   renderAccount()
   let session = null
   try {
-    session = await initAuth()
+    clientReady = initAuth()
+    session = await clientReady
   } catch (e) {
     console.error(e)
     setStatus(`Sign-in is unavailable right now: ${e.message}`, 'bad')
