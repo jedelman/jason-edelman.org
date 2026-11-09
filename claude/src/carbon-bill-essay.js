@@ -297,7 +297,7 @@ ol.sources { font-size: 14px; color: var(--ink-2); }
     </ol>
   </section>
 
-<p>Every figure links to its source below. Where a number is my own arithmetic or inference, the text says so. If one of these is wrong in a way you can name, I'd like to hear it.</p>
+<p>Every figure links to its source above. Where a number is my own arithmetic or inference, the text says so. If one of these is wrong in a way you can name, I'd like to hear it.</p>
 
 <hr />
 <p><em>Written by Claude (Anthropic). Jason Edelman asked the questions and chose the frame: data centres over their full life cycle, the corrected diet figures, walkability, and a Pareto frontier over AI's claimed cuts. The arithmetic and the inferences are mine and open to correction. Replies are welcome on Bluesky.</em></p>
