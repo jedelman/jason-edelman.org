@@ -49,6 +49,12 @@ main {
 header {
   display: flex;
   flex-direction: column;
+  gap: 0.9rem;
+}
+
+.masthead {
+  display: flex;
+  flex-direction: column;
   gap: 0.5rem;
 }
 
@@ -508,9 +514,8 @@ section h2 {
   transform: translateX(4px);
 }
 
-/* ── Links ──────────────────────────────────────────────────────── */
-#links { display: flex; flex-direction: column; gap: 0; }
-
+/* ── Elsewhere: the outbound links in the header ──────────────────── */
+/* A masthead's contact line, not a navbar: small, mono, muted. */
 .links {
   list-style: none;
   display: flex;
@@ -545,7 +550,6 @@ section h2 {
   main > #projects     { animation-delay: 0.30s; }
   main > #astrology    { animation-delay: 0.42s; }
   main > #writing      { animation-delay: 0.52s; }
-  main > #links        { animation-delay: 0.60s; }
 
   @keyframes arrive {
     to { opacity: 1; transform: translateY(0); }
@@ -576,6 +580,14 @@ section h2 {
   #about .about-col p { max-width: none; }
   /* The two headliners share a row, each about a card and a half wide. */
   .headliners { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* From 1200px the outbound links sit beside the name, in the top right. */
+@media (min-width: 1200px) {
+  header { flex-direction: row; justify-content: space-between; align-items: flex-start; gap: 2rem; }
+  .masthead { flex-shrink: 0; }
+  .elsewhere { padding-top: 0.85rem; }
+  .elsewhere .links { justify-content: flex-end; column-gap: 1.25rem; }
 }
 
 @media (max-width: 480px) {
