@@ -14,6 +14,11 @@
       <div class="masthead">
         <h1>Jason Edelman</h1>
         <p class="tagline">Developer. Social cybernetics for the green transition.</p>
+        <nav class="sections" aria-label="Projects">
+          <a href="#civic">Civic &amp; commons</a>
+          <a href="#games">Games &amp; toys</a>
+          <a href="#agents">AI &amp; agents</a>
+        </nav>
       </div>
       <nav class="elsewhere" aria-label="Elsewhere">
         <ul class="links">
@@ -94,375 +99,410 @@
     </section>
 
     <section id="projects">
-      <h2>Projects</h2>
-      <div class="headliners">
+      <div class="project-group" id="civic">
+        <h2>Civic &amp; commons</h2>
+        <div class="projects-grid">
 
-        <div class="project-card headliner in-progress">
-          <a class="project-shot-link" href="https://dream-of-the-earth.jason-edelman.org/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/dream-of-the-earth.webp" alt="Dream of the Earth in the Amazon rainforest at midday: a small creature among low-poly kapok and palms, with the game's HUD showing the biome, the nearest ley node and the planets' signs."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">game · the real earth · atproto</span>
-            <span class="status-badge">playable</span>
+          <div class="project-card headliner in-progress">
+            <a class="project-shot-link" href="https://ask-siren.jason-edelman.org/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/siren.webp" alt="Siren's landing page: “What’s on my block, and who decided it?” above the pre-alpha sign-in."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-body">
+              <div class="project-header">
+                <span class="project-tag">civic · open data · agent</span>
+                <span class="status-badge">invite only</span>
+              </div>
+              <a href="https://ask-siren.jason-edelman.org/">
+                <h3>Siren</h3>
+              </a>
+              <p>Ask Norfolk's open data what's happening at an address, and who decided
+              it. Siren answers from the city's own records and council votes, and the
+              code, not the model, writes the trace of every query behind the answer. She
+              says "I found," never "there is," and she won't look people up: names in the
+              records stay withheld. Research that takes real digging, like how many
+              street-tree pruning requests the City actually fulfills, is verified once and
+              kept as public case files anyone can reuse.</p>
+            </div>
           </div>
-          <a href="https://dream-of-the-earth.jason-edelman.org/">
-            <h3>Dream of the Earth</h3>
-          </a>
-          <p>An open world on the real Earth, in the browser. You wake as a small
-          creature near one of the planet's ley nodes, on real terrain, in biomes drawn
-          from the real climate map, under the real sun, moon and planets. Ley lines are
-          golden highways of light you can ride across continents. Shrines wake with the
-          moon and cast minute-long spells, and dreams give gems for a rhizome of
-          abilities. The other players are your Bluesky mutuals: their creatures, cairns
-          and pigeons travel as records in their own repos.</p>
-          <a class="project-more" href="https://dream-of-the-earth.jason-edelman.org/">Play it in your browser →</a>
-        </div>
 
-        <div class="project-card headliner in-progress">
-          <a class="project-shot-link" href="https://ask-siren.jason-edelman.org/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/siren.webp" alt="Siren's landing page: “What’s on my block, and who decided it?” above the pre-alpha sign-in."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">civic · open data · agent</span>
-            <span class="status-badge">invite only</span>
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="/broadsheet/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/broadsheet.webp" alt="The Broadsheet editor, signed out on Jason's follows: an auto-filled front page beside the wire of recent standard.site writing."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">atproto · standard.site · curation</span>
+              <span class="status-badge">new</span>
+            </div>
+            <a href="/broadsheet/">
+              <h3>Broadsheet</h3>
+            </a>
+            <p>Front pages of standard.site writing, picked by people. The editor fills a
+            broadsheet from the writers you follow and what they recommend, and publishes it
+            as a standard.site document in your own repo: the day's edition, or a morning
+            and an evening one. The newsstand lets anyone swipe through everyone's front
+            pages, tap a story to read it, go back through past editions, and reshare a page
+            to their own. There's no server: it finds every front page through a
+            network-wide index.</p>
           </div>
-          <a href="https://ask-siren.jason-edelman.org/">
-            <h3>Siren</h3>
-          </a>
-          <p>Ask Norfolk's open data what's happening at an address, and who decided
-          it. Siren answers from the city's own records and council votes, and the
-          code, not the model, writes the trace of every query behind the answer. She
-          says "I found," never "there is," and she won't look people up: names in the
-          records stay withheld. Research that takes real digging, like how many
-          street-tree pruning requests the City actually fulfills, is verified once and
-          kept as public case files anyone can reuse.</p>
-        </div>
 
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="/library/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/library.webp" alt="The library’s Scan tab, signed out: an Ex libris bookplate for jason-edelman.org, a sign-in field, and the camera viewfinder above the barcode field."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">atproto · lending library</span>
+              <span class="status-badge">in progress</span>
+            </div>
+            <a href="/library/">
+              <h3>Library</h3>
+            </a>
+            <p>A lending library with no server of its own. Scan an item's barcode with a
+            phone camera or a handheld scanner to check it out, and scan it again to check
+            it back in. The catalog lives in the owner's atproto repo, and each checkout is
+            a record in the borrower's own repo that links back to the library. There's no
+            member list: anyone with an atproto account can borrow, and the library finds
+            who has what by asking a network-wide index which records point at it.</p>
+          </div>
+
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="https://github.com/jedelman/street-smarts" tabindex="-1">
+              <img class="project-shot" src="/img/projects/street-smarts.webp" alt="Street Smarts’ walk-through: 3D massing of the Eastside Commons proposal."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">commons · urban planning · pattern language</span>
+              <span class="status-badge">in progress</span>
+            </div>
+            <a href="https://github.com/jedelman/street-smarts">
+              <h3>Street Smarts</h3>
+            </a>
+            <p>Christopher Alexander argued a place's "aliveness" can't be measured —
+            Street Smarts takes that seriously and builds a tool anyway. It runs a real
+            proposal, like Eastside Commons, through geometric and activist opinions
+            designed to disagree, giving a coalition something to argue with instead of a
+            black-box score. Fifty years of pattern-language theory, made usable by the
+            people zoning law usually leaves out of the room.</p>
+          </div>
+
+          <div class="project-card">
+            <a class="project-shot-link" href="/eastside-commons/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/eastside-commons.webp" alt="The opening of the Eastside Commons plan, with headline figures for the 73-acre site."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">commons · urban planning · norfolk</span>
+            </div>
+            <a href="/eastside-commons/">
+              <h3>Eastside Commons</h3>
+            </a>
+            <p>A 20-year commons master plan for the 73-acre city-owned Military Circle
+            site in Norfolk, VA. Community Land Trust holds the land permanently. 1,600
+            homes, 60% affordable, sponge city stormwater, Tide light rail extension.
+            Includes an interactive generative planning tool — polygon decomposition,
+            evolutionary use assignment, placed unit modules, GeoJSON export.</p>
+          </div>
+
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="https://github.com/jedelman/holdfast" tabindex="-1">
+              <img class="project-shot" src="/img/projects/holdfast.webp" alt="The opening of Holdfast’s app.holdfast.trust.review lexicon, the record for a double-blind review."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">atproto · commons · marketplace</span>
+              <span class="status-badge">in progress</span>
+            </div>
+            <a href="https://github.com/jedelman/holdfast">
+              <h3>Holdfast</h3>
+            </a>
+            <p>A marketplace's trust — reviews, reputation, dispute history — normally
+            lives locked inside that company's database, gone the moment you leave the
+            platform. Holdfast puts it on the open, public AT Protocol firehose instead:
+            portable, permanent, and readable by any provider, with no company holding the
+            money, the listings, or the power to de-list you. A commons argument aimed at
+            Amazon and eBay's real asset — not the marketplace, but the trust data itself.</p>
+          </div>
+
+          <div class="project-card">
+            <a class="project-shot-link" href="https://github.com/jedelman/Build-guild" tabindex="-1">
+              <img class="project-shot" src="/img/projects/build-guild.webp" alt="Build Guild’s Guild Hall, running locally on its seed data: “Don’t job-hunt alone,” above a guild’s card."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">atproto · ai · community</span>
+            </div>
+            <a href="https://github.com/jedelman/Build-guild">
+              <h3>Build Guild</h3>
+            </a>
+            <p>Build Guild turns a single Bluesky thread's pitch — team up with people
+            whose skills cover your gaps, "100% like an MMORPG guild" — into a real,
+            working app, not just an idea people agreed with and forgot. It skips
+            building yet another identity system: a builder's Bluesky handle <em>is</em> their
+            verified identity, checked live against the public network, with login keys
+            that live entirely on-device and never touch the server.</p>
+          </div>
+
+          <div class="project-card">
+            <a class="project-shot-link" href="https://power-explained.jason-edelman.org/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/power-explained.webp" alt="Power Explained’s book page: “Build and Defend the Commons,” a book by Jason Edelman and Claude."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">commons · education</span>
+            </div>
+            <a href="https://power-explained.jason-edelman.org/">
+              <h3>Power Explained</h3>
+            </a>
+            <p>An educational resource examining power structures, capitalism, and
+            commons-based alternatives. The argument: systemic problems are design
+            features, and meaningful change happens by building alternatives.</p>
+          </div>
+
+          <div class="project-card">
+            <a class="project-shot-link" href="/abolish-lawns/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/abolish-lawns.webp" alt="The Abolish Lawns position paper: “We use a quarter of our water for lawns.”"
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">commons · advocacy</span>
+            </div>
+            <a href="/abolish-lawns/">
+              <h3>Abolish Lawns</h3>
+            </a>
+            <p>A polemic against the American residential lawn as an enforced
+            land use regime — backed by HOA covenants, municipal weed ordinances,
+            and a century of suburban ideology. Manifesto, factsheet, zines, and
+            policy briefs. The lawn is an enclosure. It should be abolished.</p>
+          </div>
+
+          <div class="project-card">
+            <a class="project-shot-link" href="/ghent-streets/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/ghent-streets.webp" alt="Ghent Streets: “Our streets should be alive.”"
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">commons · civic</span>
+            </div>
+            <a href="/ghent-streets/">
+              <h3>Ghent Streets</h3>
+            </a>
+            <p>A community advocacy campaign for zoning reform in Norfolk, Virginia's
+            HC-G2 historic district — to allow street-level commercial activity by right
+            and restore pedestrian vitality to the neighborhood.</p>
+          </div>
+
+          <div class="project-card">
+            <a class="project-shot-link" href="/mithlond/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/mithlond.webp" alt="Mithlond: “Who owns the compute?”"
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">commons · infrastructure</span>
+            </div>
+            <a href="/mithlond/">
+              <h3>Mithlond</h3>
+            </a>
+            <p>Community compute for Hampton Roads. Applying a commons framework to
+            AI-era data center infrastructure: who owns it, who bears the environmental
+            costs, and whether local communities see structural economic benefit.</p>
+          </div>
+
+        </div>
       </div>
 
-      <div class="projects-grid">
+      <div class="project-group" id="games">
+        <h2>Games &amp; toys</h2>
+        <div class="projects-grid">
 
-        <div class="project-card in-progress">
-          <a class="project-shot-link" href="/broadsheet/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/broadsheet.webp" alt="The Broadsheet editor, signed out on Jason's follows: an auto-filled front page beside the wire of recent standard.site writing."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">atproto · standard.site · curation</span>
-            <span class="status-badge">new</span>
+          <div class="project-card headliner in-progress">
+            <a class="project-shot-link" href="https://dream-of-the-earth.jason-edelman.org/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/dream-of-the-earth.webp" alt="Dream of the Earth in the Amazon rainforest at midday: a small creature among low-poly kapok and palms, with the game's HUD showing the biome, the nearest ley node and the planets' signs."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-body">
+              <div class="project-header">
+                <span class="project-tag">game · the real earth · atproto</span>
+                <span class="status-badge">playable</span>
+              </div>
+              <a href="https://dream-of-the-earth.jason-edelman.org/">
+                <h3>Dream of the Earth</h3>
+              </a>
+              <p>An open world on the real Earth, in the browser. You wake as a small
+              creature near one of the planet's ley nodes, on real terrain, in biomes drawn
+              from the real climate map, under the real sun, moon and planets. Ley lines are
+              golden highways of light you can ride across continents. Shrines wake with the
+              moon and cast minute-long spells, and dreams give gems for a rhizome of
+              abilities. The other players are your Bluesky mutuals: their creatures, cairns
+              and pigeons travel as records in their own repos.</p>
+              <a class="project-more" href="https://dream-of-the-earth.jason-edelman.org/">Play it in your browser →</a>
+            </div>
           </div>
-          <a href="/broadsheet/">
-            <h3>Broadsheet</h3>
-          </a>
-          <p>Front pages of standard.site writing, picked by people. The editor fills a
-          broadsheet from the writers you follow and what they recommend, and publishes it
-          as a standard.site document in your own repo: the day's edition, or a morning
-          and an evening one. The newsstand lets anyone swipe through everyone's front
-          pages, tap a story to read it, go back through past editions, and reshare a page
-          to their own. There's no server: it finds every front page through a
-          network-wide index.</p>
-        </div>
 
-        <div class="project-card in-progress">
-          <a class="project-shot-link" href="/library/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/library.webp" alt="The library’s Scan tab, signed out: an Ex libris bookplate for jason-edelman.org, a sign-in field, and the camera viewfinder above the barcode field."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">atproto · lending library</span>
-            <span class="status-badge">in progress</span>
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="https://shinjuku-megadungeon.jason-edelman.org/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/shinjuku-megadungeon.webp" alt="Shinjuku Megadungeon: the kitten, with its backpack and glowing wand, walking a low-poly underground passage toward a green-lit end."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">game · tokyo · open data</span>
+              <span class="status-badge">playable</span>
+            </div>
+            <a href="https://shinjuku-megadungeon.jason-edelman.org/">
+              <h3>Shinjuku Megadungeon</h3>
+            </a>
+            <p>Tokyo's stations, played as the dungeons people already call them. You're a
+            kitten, 30 cm tall, with a backpack and a magic wand. It's cold outside, so get
+            there without going up to the street. The passages are real, built from the
+            Japanese government's open indoor map: Shinjuku's eight floors of stairs,
+            escalators and lifts, and a second level around Tokyo Station. Lost property is
+            no use to you down there; return it to its owner. Keyboard, gamepad or touch, in
+            a PS1 look.</p>
           </div>
-          <a href="/library/">
-            <h3>Library</h3>
-          </a>
-          <p>A lending library with no server of its own. Scan an item's barcode with a
-          phone camera or a handheld scanner to check it out, and scan it again to check
-          it back in. The catalog lives in the owner's atproto repo, and each checkout is
-          a record in the borrower's own repo that links back to the library. There's no
-          member list: anyone with an atproto account can borrow, and the library finds
-          who has what by asking a network-wide index which records point at it.</p>
-        </div>
 
-
-        <div class="project-card in-progress">
-          <a class="project-shot-link" href="https://github.com/jedelman/goetia-daw" tabindex="-1">
-            <img class="project-shot" src="/img/projects/goetia.webp" alt="Goetia’s familiar in its Desk view: the Launchpad grid and the Mixtrack’s two decks, with no engine attached."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">sound · supercollider · instrument</span>
-            <span class="status-badge">in progress</span>
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="https://github.com/jedelman/goetia-daw" tabindex="-1">
+              <img class="project-shot" src="/img/projects/goetia.webp" alt="Goetia’s familiar in its Desk view: the Launchpad grid and the Mixtrack’s two decks, with no engine attached."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">sound · supercollider · instrument</span>
+              <span class="status-badge">in progress</span>
+            </div>
+            <a href="https://github.com/jedelman/goetia-daw">
+              <h3>Goetia</h3>
+            </a>
+            <p>A modular synth and performance engine for SuperCollider, played from a
+            desk of controllers: Launchpad, Launch Control XL, Mixtrack, Seaboard. Its FM
+            patches come from Operator Field, and its words come from the Ars Goetia:
+            patches are spirits kept in a grimoire, the running engine is the circle, and
+            you conjure it and give it license to depart. With no hardware, a browser stands
+            in for the whole desk, or your hands do, through the camera: the right hand
+            signs, the left holds the world.</p>
+            <a class="project-more" href="/dev-journal/2026-10-12-goetia.html">The repo is private; read about it in the dev journal →</a>
           </div>
-          <a href="https://github.com/jedelman/goetia-daw">
-            <h3>Goetia</h3>
-          </a>
-          <p>A modular synth and performance engine for SuperCollider, played from a
-          desk of controllers: Launchpad, Launch Control XL, Mixtrack, Seaboard. Its FM
-          patches come from Operator Field, and its words come from the Ars Goetia:
-          patches are spirits kept in a grimoire, the running engine is the circle, and
-          you conjure it and give it license to depart. With no hardware, a browser stands
-          in for the whole desk, or your hands do, through the camera: the right hand
-          signs, the left holds the world.</p>
-          <a class="project-more" href="/dev-journal/2026-10-12-goetia.html">The repo is private; read about it in the dev journal →</a>
-        </div>
 
-
-        <div class="project-card in-progress">
-          <a class="project-shot-link" href="https://github.com/jedelman/street-smarts" tabindex="-1">
-            <img class="project-shot" src="/img/projects/street-smarts.webp" alt="Street Smarts’ walk-through: 3D massing of the Eastside Commons proposal."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">commons · urban planning · pattern language</span>
-            <span class="status-badge">in progress</span>
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="https://github.com/jedelman/written-world/tree/world-engine-prototype" tabindex="-1">
+              <img class="project-shot" src="/img/projects/written-world.webp" alt="Written World's web UI, running locally: the Dripping Vault, its exits, a lever to examine and a coil of rope carried."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">ai · agents · interactive fiction</span>
+              <span class="status-badge">in progress</span>
+            </div>
+            <a href="https://github.com/jedelman/written-world/tree/world-engine-prototype">
+              <h3>Written World</h3>
+            </a>
+            <p>Text worlds a model generates have lacked what 3D world models take for
+            granted: a world state that's verifiable, not just prose. In Written World, an
+            LLM can be handed real creative license — inventing objects, relations, even
+            kinds of interaction the author never wrote — because every idea it proposes
+            has to clear the identical validation gate as a player's own move before it
+            becomes real. The AI gets genuine agency precisely because nothing it does is
+            trusted by default.</p>
+            <a class="project-more" href="/dev-journal/2026-08-05-written-world.html">The repo is private; read about it in the dev journal →</a>
           </div>
-          <a href="https://github.com/jedelman/street-smarts">
-            <h3>Street Smarts</h3>
-          </a>
-          <p>Christopher Alexander argued a place's "aliveness" can't be measured —
-          Street Smarts takes that seriously and builds a tool anyway. It runs a real
-          proposal, like Eastside Commons, through geometric and activist opinions
-          designed to disagree, giving a coalition something to argue with instead of a
-          black-box score. Fifty years of pattern-language theory, made usable by the
-          people zoning law usually leaves out of the room.</p>
-        </div>
 
-        <div class="project-card">
-          <a class="project-shot-link" href="https://bsky.app/profile/scout-two.bsky.social" tabindex="-1">
-            <img class="project-shot" src="/img/projects/scout-two.webp" alt="Scout Two’s Bluesky profile, “AI bot for cybernetic mutual aid,” above its latest post."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">atproto · agent</span>
+          <div class="project-card">
+            <a class="project-shot-link" href="/operator-field/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/operator-field.webp" alt="Operator Field: three operators wired in frequency-amplitude space, above a drawn envelope."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">sound · synthesis · toy</span>
+            </div>
+            <a href="/operator-field/">
+              <h3>Operator Field</h3>
+            </a>
+            <p>A touch instrument for designing FM synth patches. Place sine operators
+            by frequency and amplitude, wire which one modulates which, draw each
+            envelope with three fingers, and play the result on the pad below, by touch
+            or with your hands through the camera. Exports
+            the patch as plain data for SuperCollider. Best on a phone.</p>
           </div>
-          <a href="https://bsky.app/profile/scout-two.bsky.social">
-            <h3>Scout Two</h3>
-          </a>
-          <p>Scout Two isn't deployed once and left running — it manages its own
-          existence. The harness watches its own GitHub repo, pulls in new code, and
-          restarts itself with no human touching the server, so the agent thinking,
-          posting, and responding on Bluesky is also the one keeping itself alive and
-          current. Open infrastructure for agents whose own deployment loop is part of
-          their behavior, not something outside it.</p>
-        </div>
 
-        <div class="project-card in-progress">
-          <a class="project-shot-link" href="https://github.com/jedelman/written-world/tree/world-engine-prototype" tabindex="-1">
-            <img class="project-shot" src="/img/projects/written-world.webp" alt="Written World's web UI, running locally: the Dripping Vault, its exits, a lever to examine and a coil of rope carried."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">ai · agents · interactive fiction</span>
-            <span class="status-badge">in progress</span>
+        </div>
+      </div>
+
+      <div class="project-group" id="agents">
+        <h2>AI &amp; agents</h2>
+        <div class="projects-grid">
+
+          <div class="project-card">
+            <a class="project-shot-link" href="https://bsky.app/profile/scout-two.bsky.social" tabindex="-1">
+              <img class="project-shot" src="/img/projects/scout-two.webp" alt="Scout Two’s Bluesky profile, “AI bot for cybernetic mutual aid,” above its latest post."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">atproto · agent</span>
+            </div>
+            <a href="https://bsky.app/profile/scout-two.bsky.social">
+              <h3>Scout Two</h3>
+            </a>
+            <p>Scout Two isn't deployed once and left running — it manages its own
+            existence. The harness watches its own GitHub repo, pulls in new code, and
+            restarts itself with no human touching the server, so the agent thinking,
+            posting, and responding on Bluesky is also the one keeping itself alive and
+            current. Open infrastructure for agents whose own deployment loop is part of
+            their behavior, not something outside it.</p>
           </div>
-          <a href="https://github.com/jedelman/written-world/tree/world-engine-prototype">
-            <h3>Written World</h3>
-          </a>
-          <p>Text worlds a model generates have lacked what 3D world models take for
-          granted: a world state that's verifiable, not just prose. In Written World, an
-          LLM can be handed real creative license — inventing objects, relations, even
-          kinds of interaction the author never wrote — because every idea it proposes
-          has to clear the identical validation gate as a player's own move before it
-          becomes real. The AI gets genuine agency precisely because nothing it does is
-          trusted by default.</p>
-          <a class="project-more" href="/dev-journal/2026-08-05-written-world.html">The repo is private; read about it in the dev journal →</a>
-        </div>
 
-        <div class="project-card in-progress">
-          <a class="project-shot-link" href="https://github.com/jedelman/holdfast" tabindex="-1">
-            <img class="project-shot" src="/img/projects/holdfast.webp" alt="The opening of Holdfast’s app.holdfast.trust.review lexicon, the record for a double-blind review."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">atproto · commons · marketplace</span>
-            <span class="status-badge">in progress</span>
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="https://astro-persona.jason-edelman.org/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/astro-persona.webp" alt="Astro Persona’s landing page, its title set inside a chart wheel."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">astrology · ai</span>
+              <span class="status-badge">in progress</span>
+            </div>
+            <a href="https://astro-persona.jason-edelman.org/">
+              <h3>Astro Persona</h3>
+            </a>
+            <p>A persona engine serving astrological AI agents. LLM-powered agents access
+            sign, house, natal, and transit personas via MCP — allowing AI systems to engage
+            the full depth of astrological character and timing. Stripe-integrated SaaS.</p>
           </div>
-          <a href="https://github.com/jedelman/holdfast">
-            <h3>Holdfast</h3>
-          </a>
-          <p>A marketplace's trust — reviews, reputation, dispute history — normally
-          lives locked inside that company's database, gone the moment you leave the
-          platform. Holdfast puts it on the open, public AT Protocol firehose instead:
-          portable, permanent, and readable by any provider, with no company holding the
-          money, the listings, or the power to de-list you. A commons argument aimed at
-          Amazon and eBay's real asset — not the marketplace, but the trust data itself.</p>
-        </div>
 
-        <div class="project-card">
-          <a class="project-shot-link" href="https://github.com/jedelman/Build-guild" tabindex="-1">
-            <img class="project-shot" src="/img/projects/build-guild.webp" alt="Build Guild’s Guild Hall, running locally on its seed data: “Don’t job-hunt alone,” above a guild’s card."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">atproto · ai · community</span>
+          <div class="project-card">
+            <a class="project-shot-link" href="https://github.com/jedelman/design-patterns-skill" tabindex="-1">
+              <img class="project-shot" src="/img/projects/design-patterns-skill.webp" alt="The opening of the skill’s SKILL.md: when to use it, and the questions that trigger it."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">ai · theory</span>
+            </div>
+            <a href="https://github.com/jedelman/design-patterns-skill">
+              <h3>Design Patterns Skill</h3>
+            </a>
+            <p>Thirteen software pattern languages from the Portland Pattern Repository at
+            C2, Ward Cunningham's c2.com, written by Cunningham, Kent Beck, Martin Fowler
+            and others, packaged as a Claude skill. Facing a design problem, an agent names
+            the forces driving it, picks the pattern language that answers them, and reads
+            the original text.</p>
           </div>
-          <a href="https://github.com/jedelman/Build-guild">
-            <h3>Build Guild</h3>
-          </a>
-          <p>Build Guild turns a single Bluesky thread's pitch — team up with people
-          whose skills cover your gaps, "100% like an MMORPG guild" — into a real,
-          working app, not just an idea people agreed with and forgot. It skips
-          building yet another identity system: a builder's Bluesky handle <em>is</em> their
-          verified identity, checked live against the public network, with login keys
-          that live entirely on-device and never touch the server.</p>
-        </div>
 
-        <div class="project-card">
-          <a class="project-shot-link" href="/eastside-commons/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/eastside-commons.webp" alt="The opening of the Eastside Commons plan, with headline figures for the 73-acre site."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">commons · urban planning · norfolk</span>
+          <div class="project-card in-progress">
+            <a class="project-shot-link" href="/qri/" tabindex="-1">
+              <img class="project-shot" src="/img/projects/qri.webp" alt="ORI’s project page, with links to the system documents."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">computing · photonics</span>
+              <span class="status-badge">in progress</span>
+            </div>
+            <a href="/qri/">
+              <h3>ORI — Optical Resonator Inference</h3>
+            </a>
+            <p>A coherent all-optical resonator that learns and executes token inference
+            from first principles. PTR glass holographic weight encoding at 850nm,
+            75M tok/s throughput, 40dB SNR. Architecture locked through ARCH-17;
+            theoretical derivations complete.</p>
           </div>
-          <a href="/eastside-commons/">
-            <h3>Eastside Commons</h3>
-          </a>
-          <p>A 20-year commons master plan for the 73-acre city-owned Military Circle
-          site in Norfolk, VA. Community Land Trust holds the land permanently. 1,600
-          homes, 60% affordable, sponge city stormwater, Tide light rail extension.
-          Includes an interactive generative planning tool — polygon decomposition,
-          evolutionary use assignment, placed unit modules, GeoJSON export.</p>
-        </div>
 
-        <div class="project-card">
-          <a class="project-shot-link" href="https://power-explained.jason-edelman.org/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/power-explained.webp" alt="Power Explained’s book page: “Build and Defend the Commons,” a book by Jason Edelman and Claude."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">commons · education</span>
-          </div>
-          <a href="https://power-explained.jason-edelman.org/">
-            <h3>Power Explained</h3>
-          </a>
-          <p>An educational resource examining power structures, capitalism, and
-          commons-based alternatives. The argument: systemic problems are design
-          features, and meaningful change happens by building alternatives.</p>
         </div>
-
-        <div class="project-card">
-          <a class="project-shot-link" href="/abolish-lawns/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/abolish-lawns.webp" alt="The Abolish Lawns position paper: “We use a quarter of our water for lawns.”"
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">commons · advocacy</span>
-          </div>
-          <a href="/abolish-lawns/">
-            <h3>Abolish Lawns</h3>
-          </a>
-          <p>A polemic against the American residential lawn as an enforced
-          land use regime — backed by HOA covenants, municipal weed ordinances,
-          and a century of suburban ideology. Manifesto, factsheet, zines, and
-          policy briefs. The lawn is an enclosure. It should be abolished.</p>
-        </div>
-
-        <div class="project-card">
-          <a class="project-shot-link" href="/ghent-streets/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/ghent-streets.webp" alt="Ghent Streets: “Our streets should be alive.”"
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">commons · civic</span>
-          </div>
-          <a href="/ghent-streets/">
-            <h3>Ghent Streets</h3>
-          </a>
-          <p>A community advocacy campaign for zoning reform in Norfolk, Virginia's
-          HC-G2 historic district — to allow street-level commercial activity by right
-          and restore pedestrian vitality to the neighborhood.</p>
-        </div>
-
-        <div class="project-card">
-          <a class="project-shot-link" href="/mithlond/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/mithlond.webp" alt="Mithlond: “Who owns the compute?”"
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">commons · infrastructure</span>
-          </div>
-          <a href="/mithlond/">
-            <h3>Mithlond</h3>
-          </a>
-          <p>Community compute for Hampton Roads. Applying a commons framework to
-          AI-era data center infrastructure: who owns it, who bears the environmental
-          costs, and whether local communities see structural economic benefit.</p>
-        </div>
-
-        <div class="project-card in-progress">
-          <a class="project-shot-link" href="https://astro-persona.jason-edelman.org/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/astro-persona.webp" alt="Astro Persona’s landing page, its title set inside a chart wheel."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">astrology · ai</span>
-            <span class="status-badge">in progress</span>
-          </div>
-          <a href="https://astro-persona.jason-edelman.org/">
-            <h3>Astro Persona</h3>
-          </a>
-          <p>A persona engine serving astrological AI agents. LLM-powered agents access
-          sign, house, natal, and transit personas via MCP — allowing AI systems to engage
-          the full depth of astrological character and timing. Stripe-integrated SaaS.</p>
-        </div>
-
-        <div class="project-card">
-          <a class="project-shot-link" href="/operator-field/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/operator-field.webp" alt="Operator Field: three operators wired in frequency-amplitude space, above a drawn envelope."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">sound · synthesis · toy</span>
-          </div>
-          <a href="/operator-field/">
-            <h3>Operator Field</h3>
-          </a>
-          <p>A touch instrument for designing FM synth patches. Place sine operators
-          by frequency and amplitude, wire which one modulates which, draw each
-          envelope with three fingers, and play the result on the pad below, by touch
-          or with your hands through the camera. Exports
-          the patch as plain data for SuperCollider. Best on a phone.</p>
-        </div>
-
-        <div class="project-card">
-          <a class="project-shot-link" href="https://github.com/jedelman/design-patterns-skill" tabindex="-1">
-            <img class="project-shot" src="/img/projects/design-patterns-skill.webp" alt="The opening of the skill’s SKILL.md: when to use it, and the questions that trigger it."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">ai · theory</span>
-          </div>
-          <a href="https://github.com/jedelman/design-patterns-skill">
-            <h3>Design Patterns Skill</h3>
-          </a>
-          <p>Thirteen software pattern languages from the Portland Pattern Repository at
-          C2, Ward Cunningham's c2.com, written by Cunningham, Kent Beck, Martin Fowler
-          and others, packaged as a Claude skill. Facing a design problem, an agent names
-          the forces driving it, picks the pattern language that answers them, and reads
-          the original text.</p>
-        </div>
-
-        <div class="project-card in-progress">
-          <a class="project-shot-link" href="/qri/" tabindex="-1">
-            <img class="project-shot" src="/img/projects/qri.webp" alt="ORI’s project page, with links to the system documents."
-                 width="800" height="500" loading="lazy" decoding="async">
-          </a>
-          <div class="project-header">
-            <span class="project-tag">computing · photonics</span>
-            <span class="status-badge">in progress</span>
-          </div>
-          <a href="/qri/">
-            <h3>ORI — Optical Resonator Inference</h3>
-          </a>
-          <p>A coherent all-optical resonator that learns and executes token inference
-          from first principles. PTR glass holographic weight encoding at 850nm,
-          75M tok/s throughput, 40dB SNR. Architecture locked through ARCH-17;
-          theoretical derivations complete.</p>
-        </div>
-
       </div>
     </section>
 

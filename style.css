@@ -74,6 +74,32 @@ header h1:hover {
   color: oklch(98% 0.012 145);
 }
 
+/* Section links under the tagline: in-page, styled like the section labels they jump to. */
+.sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.4rem;
+  margin-top: 0.45rem;
+}
+
+.sections a {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.sections a:hover { color: var(--link-hover); border-bottom-color: var(--accent-dim); }
+
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
 .tagline {
   color: var(--muted);
   font-size: 0.82rem;
@@ -395,13 +421,12 @@ section h2 {
   border-radius: 2px;
 }
 
-/* Headliners: the two projects in front, each across the full column. */
-.headliners {
-  display: grid;
-  gap: 1.75rem;
-  margin-bottom: 1.75rem;
-}
+/* Sections: Civic & commons, Games & toys, AI & agents (linked from the header). */
+.project-group { scroll-margin-top: 1.5rem; }
+.project-group + .project-group { margin-top: 3.25rem; }
 
+/* A section's lead card (Siren, Dream of the Earth) spans the whole row. */
+.projects-grid .headliner { grid-column: 1 / -1; }
 .project-card.headliner { padding: 1.75rem; }
 .project-card.headliner .project-shot-link { margin: -1.75rem -1.75rem 1.4rem; }
 #projects .project-card.headliner h3 { font-size: 1.65rem; }
@@ -578,8 +603,19 @@ section h2 {
   .projects-grid { grid-template-columns: repeat(3, 1fr); }
   .about-cols { grid-template-columns: repeat(3, 1fr); gap: 1.75rem; }
   #about .about-col p { max-width: none; }
-  /* The two headliners share a row, each about a card and a half wide. */
-  .headliners { grid-template-columns: repeat(2, 1fr); }
+  /* Lead cards: the picture beside the words. */
+  .project-card.headliner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding: 0; }
+  .project-card.headliner .project-shot-link {
+    position: relative;
+    margin: 0;
+    border-bottom: 0;
+    border-right: 1px solid var(--border);
+  }
+  /* At least 16:10 of its half, taller if the words need it. (A padding box, not
+     aspect-ratio: aspect-ratio turns a min-height into a min-width and overflows.) */
+  .project-card.headliner .project-shot-link::before { content: ""; display: block; padding-top: 62.5%; }
+  .project-card.headliner .project-shot { position: absolute; inset: 0; height: 100%; aspect-ratio: auto; }
+  .project-card.headliner .project-body { align-self: center; padding: 1.75rem 2rem; }
 }
 
 /* From 1200px the outbound links sit beside the name, in the top right. */
