@@ -28,7 +28,6 @@ const STATIC = [
   'oauth',
   'operator-field',
   'img',
-  'bg.js',
   'contact.js',
   'liquid.js',
   'library',
