@@ -317,7 +317,11 @@
         <div class="projects-grid">
 
           <div class="project-card headliner in-progress">
-            <a class="project-shot-link" href="https://dream-of-the-earth.jason-edelman.org/" tabindex="-1">
+            <a class="project-shot-link trailer-link" href="/video/dream-of-the-earth-trailer.mp4"
+               data-trailer="/video/dream-of-the-earth-trailer.mp4" data-poster="/video/dream-of-the-earth-trailer.webp"
+               data-title="Dream of the Earth" data-play="https://dream-of-the-earth.jason-edelman.org/"
+               aria-label="Watch the Dream of the Earth trailer (17 seconds)">
+              <span class="trailer-cue" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Trailer · 0:17</span>
               <img class="project-shot" src="/img/projects/dream-of-the-earth.webp" alt="Dream of the Earth in the Amazon rainforest at midday: a small creature among low-poly kapok and palms, with the game's HUD showing the biome, the nearest ley node and the planets' signs."
                    width="800" height="500" loading="lazy" decoding="async">
             </a>
@@ -336,12 +340,16 @@
               moon and cast minute-long spells, and dreams give gems for a rhizome of
               abilities. The other players are your Bluesky mutuals: their creatures, cairns
               and pigeons travel as records in their own repos.</p>
-              <a class="project-more" href="https://dream-of-the-earth.jason-edelman.org/">Play it in your browser →</a>
+              <a class="play-button" href="https://dream-of-the-earth.jason-edelman.org/">Play it in your browser</a>
             </div>
           </div>
 
           <div class="project-card in-progress">
-            <a class="project-shot-link" href="https://shinjuku-megadungeon.jason-edelman.org/" tabindex="-1">
+            <a class="project-shot-link trailer-link" href="/video/shinjuku-megadungeon-trailer.mp4"
+               data-trailer="/video/shinjuku-megadungeon-trailer.mp4" data-poster="/video/shinjuku-megadungeon-trailer.webp"
+               data-title="Shinjuku Megadungeon" data-play="https://shinjuku-megadungeon.jason-edelman.org/"
+               aria-label="Watch the Shinjuku Megadungeon trailer (21 seconds)">
+              <span class="trailer-cue" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Trailer · 0:21</span>
               <img class="project-shot" src="/img/projects/shinjuku-megadungeon.webp" alt="Shinjuku Megadungeon: the kitten, with its backpack and glowing wand, walking a low-poly underground passage toward a green-lit end."
                    width="800" height="500" loading="lazy" decoding="async">
             </a>
@@ -359,6 +367,7 @@
             escalators and lifts, and a second level around Tokyo Station. Lost property is
             no use to you down there; return it to its owner. Keyboard, gamepad or touch, in
             a PS1 look.</p>
+            <a class="play-button" href="https://shinjuku-megadungeon.jason-edelman.org/">Play it in your browser</a>
           </div>
 
           <div class="project-card in-progress">
@@ -534,6 +543,18 @@
       </a>
     </section>
   </main>
+  <!-- The trailer player: a card's picture opens it (trailer.js); without JavaScript the picture opens the video itself. -->
+  <dialog id="trailer" class="trailer" aria-labelledby="trailer-title">
+    <div class="trailer-inner">
+      <div class="trailer-bar">
+        <h2 id="trailer-title">Trailer</h2>
+        <button type="button" class="trailer-close" aria-label="Close the trailer">&times;</button>
+      </div>
+      <video class="trailer-video" controls playsinline preload="none"></video>
+      <a class="play-button trailer-play" href="/">Play it in your browser</a>
+    </div>
+  </dialog>
+  <script src="/trailer.js" defer></script>
   <script src="/contact.js" defer></script>
   <script src="/liquid.js" defer></script>
   <script src="/bg.js" defer></script>

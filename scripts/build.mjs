@@ -33,6 +33,8 @@ const STATIC = [
   'liquid.js',
   'library',
   'broadsheet',
+  'trailer.js',
+  'video',
 ];
 
 // Subprojects: { name, dir, buildCmd, outDir, required }
