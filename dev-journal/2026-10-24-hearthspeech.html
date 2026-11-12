@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hearthspeech: A Game Played With a Familiar — Dev Journal</title>
+  <meta name="description" content="Hearthspeech is a small roguelike about a familiar that sees only what it pays for: Claude, compiling what you ask into machines that run on breath.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Hearthspeech: A Game Played With a Familiar</h1>
+        <p class="date">October 24–28, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          It started as a question to Claude: I have a gamepad, you have voice
+          mode, so what would it take to build a game you could build from my
+          voice while I play it? The answer became Hearthspeech, a small game
+          about a familiar that sees only what it pays for. You plant seeds at a
+          hearth while a hedge grows toward it, and wardens rise from the hedge
+          to hunt you.
+        </p>
+        <p>
+          The familiar is Claude, a glyph floating at your shoulder in a color
+          you choose. It gets no view of the world for free: only breath, the
+          rules and a small grammar. Every look costs breath, priced by how much
+          it sees, and shows in the world as rays of light running in to it.
+          What you ask for, it compiles into machines, never code: one trigger,
+          a few guards, a few effects. Machines run on the same breath, and a
+          validator is the only gate. Speaking to it takes you out of your body.
+          Your body goes gray, the camera follows the familiar, and the world
+          keeps moving at full speed, the way it does when people stop to talk
+          to their agents.
+        </p>
+
+        <figure>
+          <img src="/img/projects/hearthspeech-full.webp" width="1280" height="800"
+               alt="Hearthspeech in a glade: the familiar, a violet four-pointed star beside the player, looks around itself, and rays run in to it from the square it paid to see. Seeds, water and stones lie nearby. The side column lists its two machines and the ledger.">
+          <figcaption>A look costs four breath, and the rays show what the familiar paid to see. The ledger records every look and machine.</figcaption>
+        </figure>
+
+        <h2>Too easy, then a world that lied</h2>
+        <p>
+          In the first live playtest, a Claude Code session played the familiar
+          through a sidecar, with the page's own small database as the channel.
+          It spent seven of its twelve breath on a look, cut a gate through the
+          hedge, and I walked out. Then I won the whole run alone in about two
+          and a half minutes while the familiar was still thinking. The run was
+          too easy and the familiar too slow to matter.
+        </p>
+        <p>
+          The next day had the opposite problem. The familiar on the page
+          fizzled again and again at a seed sealed inside a ring of stone. Part
+          of the cause was a tool that reported a pull as working when the
+          terrain had blocked it. A familiar's honesty depends on the world's
+          honesty.
+        </p>
+
+        <h2>A roguelike with a home</h2>
+        <p>
+          So it became a roguelike in which advancement comes through the
+          familiar. Difficulty scales by structure: each day brings challenges
+          that need more sophisticated use of the familiar, and the game reads
+          outcomes, not actions, to point the next run. A day is three glades
+          joined by doors. Between days you come home to the day's door, a
+          grimoire lectern where machines are prepared for the first glade, and
+          pedestals for the familiar's lungs, senses, reach and hands, where you
+          set stones that style earns by rules kept hidden. The familiar gets
+          each run's raw record with no interpretation done for it, so what I
+          learn about my own play comes through what it tells me.
+        </p>
+        <p>
+          The prototype is a private Claude artifact, and the familiar on the
+          page runs on the viewer's own Claude, so a stranger without an account
+          would likely get only a scripted familiar. Opening it to strangers means
+          a server where each player brings their own agent as their familiar,
+          and different familiars compiling differently becomes the play. It's
+          a way to play with the familiar concept with no stakes.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>
