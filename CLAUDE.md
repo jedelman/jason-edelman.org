@@ -65,7 +65,7 @@ These rules apply to ALL changes made by Claude in this repo. They are not optio
 - ghent-zoning-reform: https://ghent-zoning-reform.jason-edelman.org/ — repo: https://github.com/jedelman/ghent-zoning-reform
 
 ## Socials
-- LinkedIn: https://www.linkedin.com/in/jason-edelman-168b1370
+- LinkedIn: https://www.linkedin.com/in/edelmanja (Jason's current profile; changed 2026-11-13 from the older jason-edelman-168b1370)
 - GitHub: https://github.com/jedelman
 - Bluesky: https://bsky.app/profile/jason-edelman.org
 - Substack: https://edelmanja.substack.com/
