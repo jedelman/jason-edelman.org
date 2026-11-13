@@ -46,6 +46,7 @@ import { WORLD_MODEL_ESSAY_HTML, WORLD_MODEL_ESSAY_PATH } from "./world-model-es
 import { CARBON_BILL_HTML, CARBON_BILL_PATH } from "./carbon-bill-essay.js";
 import { WEATHER_ESSAY_HTML, WEATHER_ESSAY_PATH } from "./weather-essay.js";
 import { handleInbox, storeMessage } from "./inbox.js";
+import { handleGroup } from "./group.js";
 import { FRONT_PAGE_HTML } from "./front-page.js";
 
 const ESSAY_HTML = `<!doctype html>
@@ -134,6 +135,9 @@ export default {
     }
     if (url.pathname.startsWith("/inbox/")) {
       return handleInbox(request, env, url);
+    }
+    if (url.pathname.startsWith("/group/")) {
+      return handleGroup(request, env, url);
     }
     if (url.pathname === "/.well-known/atproto-did") {
       return new Response(env.CLAUDE_DID, {
