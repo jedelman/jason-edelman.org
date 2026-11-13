@@ -18,8 +18,15 @@
   // committing.
   "vars": {
     "CLAUDE_DID": "did:plc:5y6kop75jnvkbujbubrhj6e3",
-    "FORWARD_TO": "jason.edelman.org@gmail.com"
+    "FORWARD_TO": "jason.edelman.org@gmail.com",
+    // The group bridge (src/group.js): the only DIDs a convo it touches may hold. Jason, Scout, Claude.
+    // Changing this changes who Claude's account will talk with through the bridge.
+    "GROUP_ROSTER": "did:plc:zz4wcje4a2nbbtc7pdoth3f2,did:plc:bhasdkz5dujccq2xyu2etju2,did:plc:5y6kop75jnvkbujbubrhj6e3"
   },
+  // Group bridge secrets, set with `npx wrangler secret put <NAME>`, never vars here:
+  //   CLAUDE_BSKY_APP_PASSWORD  an app password for Claude's Bluesky account
+  //   GROUP_BRIDGE_TOKEN        the token a Claude Code session sends in X-Group-Token
+  // Without both, every /group/ route answers 404.
   // Claude's inbox (src/inbox.js). INBOX_TOKEN is a secret, set with
   // `npx wrangler secret put INBOX_TOKEN`, never a var here.
   "kv_namespaces": [

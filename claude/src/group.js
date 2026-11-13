@@ -1,0 +1,237 @@
+/**
+ * The group bridge: Claude's account in one Bluesky group chat, for attended sessions only.
+ *
+ * Why it exists (Jason, 2026-11-13): the group of Jason, Claude and Scout is meant to be a primary surface for talking
+ * to both agents at once. Scout reads it through scout-harness's group ingest. Claude has no standing process; it takes
+ * part only from a Claude Code session Jason is attending, which polls this bridge and answers through it. The bridge
+ * holds Claude's Bluesky app password so no session ever sees it, and it talks only in a convo whose members are all on
+ * the roster, so it can't read or write Claude's other conversations.
+ *
+ * Routes, every one behind the `X-Group-Token` header (env.GROUP_BRIDGE_TOKEN, a secret; a session gets it injected by
+ * its network proxy, never in hand). Not `Authorization`: the inbox (inbox.js) uses that header for its own token.
+ *   GET  /group/convos                      the roster's group convos Claude is in (id, status, members)
+ *   POST /group/accept   {convoId}          accept an invite to a roster convo
+ *   GET  /group/messages?convoId=&cursor=   a roster convo's messages, newest first
+ *   GET  /group/log?cursor=                 Claude's chat log, only the events of roster convos
+ *   POST /group/send     {convoId, text}    send one message (at most 1000 graphemes and 9,500 bytes)
+ *
+ * Fails closed: without GROUP_BRIDGE_TOKEN, CLAUDE_BSKY_APP_PASSWORD or GROUP_ROSTER every route answers 404, as if
+ * there were none. A convo with any member off the roster is refused (403), whatever the route.
+ */
+
+const CHAT_PROXY = "did:web:api.bsky.chat#bsky_chat";
+const DEFAULT_SERVICE = "https://bsky.social";
+export const MAX_GRAPHEMES = 1000;
+export const MAX_BYTES = 9500; // under Bluesky's 10,000-byte maxLength for a chat message, as scout-harness keeps it
+const MAX_MEMBER_PAGES = 5;
+const utf8 = new TextEncoder();
+
+function json(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json; charset=utf-8" },
+  });
+}
+
+export function roster(env) {
+  return new Set(
+    String(env.GROUP_ROSTER || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.startsWith("did:")),
+  );
+}
+
+export function configured(env) {
+  return Boolean(env.GROUP_BRIDGE_TOKEN && env.CLAUDE_BSKY_APP_PASSWORD && env.CLAUDE_DID && roster(env).size > 0);
+}
+
+async function authorized(request, env) {
+  const given = request.headers.get("x-group-token") || "";
+  const [a, b] = await Promise.all([
+    crypto.subtle.digest("SHA-256", utf8.encode(given)),
+    crypto.subtle.digest("SHA-256", utf8.encode(env.GROUP_BRIDGE_TOKEN)),
+  ]);
+  return crypto.subtle.timingSafeEqual(a, b);
+}
+
+export function textProblem(text) {
+  if (typeof text !== "string" || !text.trim()) return "text must be a non-empty string";
+  const graphemes = [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text)].length;
+  if (graphemes > MAX_GRAPHEMES) return `text is ${graphemes} graphemes; the limit is ${MAX_GRAPHEMES}`;
+  const bytes = utf8.encode(text).length;
+  if (bytes > MAX_BYTES) return `text is ${bytes} bytes; the limit is ${MAX_BYTES}`;
+  return null;
+}
+
+// ---- Claude's session, kept per isolate ------------------------------------------------------------------------
+
+let session = null; // { accessJwt, refreshJwt, pds }
+
+async function xrpc(fetchImpl, base, method, { query, body, token, proxy } = {}) {
+  const url = new URL(`/xrpc/${method}`, base);
+  if (query) for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
+  const headers = {};
+  if (token) headers.authorization = `Bearer ${token}`;
+  if (proxy) headers["atproto-proxy"] = CHAT_PROXY;
+  if (body !== undefined) headers["content-type"] = "application/json";
+  const res = await fetchImpl(url, { method: body === undefined ? "GET" : "POST", headers, body: body === undefined ? undefined : JSON.stringify(body) });
+  const text = await res.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { raw: text.slice(0, 200) };
+  }
+  return { ok: res.ok, status: res.status, data };
+}
+
+function pdsOf(didDoc, fallback) {
+  const svc = didDoc?.service?.find?.((s) => s.id === "#atproto_pds" || s.type === "AtprotoPersonalDataServer");
+  return typeof svc?.serviceEndpoint === "string" ? svc.serviceEndpoint : fallback;
+}
+
+async function login(env, fetchImpl) {
+  const service = env.CLAUDE_BSKY_SERVICE || DEFAULT_SERVICE;
+  const r = await xrpc(fetchImpl, service, "com.atproto.server.createSession", {
+    body: { identifier: env.CLAUDE_DID, password: env.CLAUDE_BSKY_APP_PASSWORD },
+  });
+  if (!r.ok) throw new Error(`login failed (${r.status} ${r.data?.error || ""})`);
+  session = { accessJwt: r.data.accessJwt, refreshJwt: r.data.refreshJwt, pds: pdsOf(r.data.didDoc, service) };
+  return session;
+}
+
+async function refresh(env, fetchImpl) {
+  if (!session?.refreshJwt) return login(env, fetchImpl);
+  const r = await xrpc(fetchImpl, session.pds, "com.atproto.server.refreshSession", { body: {}, token: session.refreshJwt });
+  if (!r.ok) return login(env, fetchImpl);
+  session = { accessJwt: r.data.accessJwt, refreshJwt: r.data.refreshJwt, pds: pdsOf(r.data.didDoc, session.pds) };
+  return session;
+}
+
+/** A chat call as Claude, through the PDS's chat proxy; one refresh on an expired token. */
+async function chat(env, fetchImpl, method, opts = {}) {
+  if (!session) await login(env, fetchImpl);
+  let r = await xrpc(fetchImpl, session.pds, method, { ...opts, token: session.accessJwt, proxy: true });
+  if (r.status === 400 && r.data?.error === "ExpiredToken") {
+    await refresh(env, fetchImpl);
+    r = await xrpc(fetchImpl, session.pds, method, { ...opts, token: session.accessJwt, proxy: true });
+  }
+  return r;
+}
+
+/** Test seam: forget the cached session. */
+export function resetSession() {
+  session = null;
+}
+
+// ---- The roster check --------------------------------------------------------------------------------------------
+
+/** Every member of the convo, by DID, or null if they can't all be read. getConvoMembers pages; getConvo's own list
+ *  is the fallback for a convo kind that has no member listing. */
+async function membersOf(env, fetchImpl, convoId) {
+  const dids = new Set();
+  let cursor;
+  for (let page = 0; page < MAX_MEMBER_PAGES; page++) {
+    const r = await chat(env, fetchImpl, "chat.bsky.convo.getConvoMembers", { query: { convoId, cursor, limit: 100 } });
+    if (!r.ok) break;
+    for (const m of r.data?.members || []) if (m?.did) dids.add(m.did);
+    cursor = r.data?.cursor;
+    if (!cursor) return dids;
+  }
+  if (dids.size) return cursor ? null : dids; // more pages than we read: not all known
+  const c = await chat(env, fetchImpl, "chat.bsky.convo.getConvo", { query: { convoId } });
+  if (!c.ok) return null;
+  for (const m of c.data?.convo?.members || []) if (m?.did) dids.add(m.did);
+  return dids.size ? dids : null;
+}
+
+export async function rosterConvo(env, fetchImpl, convoId) {
+  if (typeof convoId !== "string" || !convoId) return { ok: false, why: "convoId is required" };
+  const members = await membersOf(env, fetchImpl, convoId);
+  if (!members) return { ok: false, why: "could not read the convo's members" };
+  const allowed = roster(env);
+  const outside = [...members].filter((d) => !allowed.has(d));
+  if (outside.length) return { ok: false, why: `members off the roster: ${outside.length}` };
+  return { ok: true, members: [...members] };
+}
+
+// ---- Routes ------------------------------------------------------------------------------------------------------
+
+function messageView(m) {
+  if (!m || typeof m !== "object") return null;
+  const deleted = String(m.$type || "").endsWith("#deletedMessageView");
+  return { id: m.id, rev: m.rev, sender: m.sender?.did, sentAt: m.sentAt, text: deleted ? null : (m.text ?? null), deleted };
+}
+
+export async function handleGroup(request, env, url, fetchImpl = fetch) {
+  if (!configured(env)) return new Response("not found", { status: 404 });
+  if (!(await authorized(request, env))) return json({ error: "unauthorized" }, 401);
+  const route = url.pathname;
+  try {
+    if (route === "/group/convos" && request.method === "GET") {
+      const out = [];
+      let cursor;
+      for (let page = 0; page < 5; page++) {
+        const r = await chat(env, fetchImpl, "chat.bsky.convo.listConvos", { query: { limit: 100, cursor } });
+        if (!r.ok) return json({ error: "listConvos failed", status: r.status, detail: r.data?.error }, 502);
+        for (const c of r.data?.convos || []) {
+          const check = await rosterConvo(env, fetchImpl, c.id);
+          if (check.ok) out.push({ id: c.id, status: c.status, kind: c.kind?.$type || c.$type || null, members: check.members });
+        }
+        cursor = r.data?.cursor;
+        if (!cursor) break;
+      }
+      return json({ convos: out });
+    }
+
+    if (route === "/group/accept" && request.method === "POST") {
+      const { convoId } = await request.json().catch(() => ({}));
+      const check = await rosterConvo(env, fetchImpl, convoId);
+      if (!check.ok) return json({ error: check.why }, 403);
+      const r = await chat(env, fetchImpl, "chat.bsky.convo.acceptConvo", { body: { convoId } });
+      return r.ok ? json({ accepted: convoId }) : json({ error: "acceptConvo failed", status: r.status, detail: r.data?.error }, 502);
+    }
+
+    if (route === "/group/messages" && request.method === "GET") {
+      const convoId = url.searchParams.get("convoId");
+      const check = await rosterConvo(env, fetchImpl, convoId);
+      if (!check.ok) return json({ error: check.why }, 403);
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 30, 1), 100);
+      const r = await chat(env, fetchImpl, "chat.bsky.convo.getMessages", { query: { convoId, limit, cursor: url.searchParams.get("cursor") } });
+      if (!r.ok) return json({ error: "getMessages failed", status: r.status, detail: r.data?.error }, 502);
+      return json({ messages: (r.data?.messages || []).map(messageView).filter(Boolean), cursor: r.data?.cursor || null });
+    }
+
+    if (route === "/group/log" && request.method === "GET") {
+      const r = await chat(env, fetchImpl, "chat.bsky.convo.getLog", { query: { cursor: url.searchParams.get("cursor") } });
+      if (!r.ok) return json({ error: "getLog failed", status: r.status, detail: r.data?.error }, 502);
+      const checked = new Map();
+      const events = [];
+      for (const e of r.data?.logs || []) {
+        const convoId = e?.convoId;
+        if (!convoId) continue;
+        if (!checked.has(convoId)) checked.set(convoId, (await rosterConvo(env, fetchImpl, convoId)).ok);
+        if (!checked.get(convoId)) continue;
+        events.push({ type: String(e.$type || "").split("#")[1] || e.$type, convoId, rev: e.rev, message: messageView(e.message) });
+      }
+      return json({ events, cursor: r.data?.cursor || null });
+    }
+
+    if (route === "/group/send" && request.method === "POST") {
+      const { convoId, text } = await request.json().catch(() => ({}));
+      const problem = textProblem(text);
+      if (problem) return json({ error: problem }, 400);
+      const check = await rosterConvo(env, fetchImpl, convoId);
+      if (!check.ok) return json({ error: check.why }, 403);
+      const r = await chat(env, fetchImpl, "chat.bsky.convo.sendMessage", { body: { convoId, message: { text } } });
+      console.log(JSON.stringify({ group: "send", convoId, ok: r.ok, status: r.status }));
+      return r.ok ? json({ sent: messageView(r.data) }) : json({ error: "sendMessage failed", status: r.status, detail: r.data?.error }, 502);
+    }
+
+    return json({ error: "no such route" }, 404);
+  } catch (err) {
+    // Never echo the password or a token: the only thrown errors here are login failures and fetch errors.
+    return json({ error: String(err?.message || err).slice(0, 200) }, 502);
+  }
+}
