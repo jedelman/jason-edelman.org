@@ -30,6 +30,7 @@ const STATIC = [
   'img',
   'contact.js',
   'liquid.js',
+  'workshop',
   'library',
   'broadsheet',
   'trailer.js',

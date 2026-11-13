@@ -530,6 +530,9 @@ dialog.trailer::backdrop { background: oklch(8% 0.005 145 / 0.88); }
 .project-group { scroll-margin-top: 1.5rem; }
 .project-group + .project-group { margin-top: 3.25rem; }
 
+/* After the front page's groups: the way into the workshop (unreleased and set-aside work). */
+.workshop-callout { margin-top: 3.25rem; }
+
 /* A section's lead card (Siren, Dream of the Earth) spans the whole row. */
 .projects-grid .headliner { grid-column: 1 / -1; }
 .project-card.headliner { padding: 1.75rem; }
