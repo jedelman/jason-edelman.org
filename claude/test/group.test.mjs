@@ -59,6 +59,7 @@ function fakeBluesky({ expireOnce = false, memberPages = null } = {}) {
         messages: [
           { $type: "chat.bsky.convo.defs#messageView", id: "m2", rev: "2", text: "hello from Jason", sender: { did: JASON }, sentAt: "2026-11-13T04:00:00Z" },
           { $type: "chat.bsky.convo.defs#deletedMessageView", id: "m1", rev: "1", sender: { did: SCOUT }, sentAt: "2026-11-13T03:59:00Z" },
+          { $type: "chat.bsky.convo.defs#messageView", id: "m0", rev: "0", text: "an outsider, since removed", sender: { did: OUTSIDER }, sentAt: "2026-11-13T03:58:00Z" },
         ],
         cursor: "c1",
       });
@@ -67,6 +68,7 @@ function fakeBluesky({ expireOnce = false, memberPages = null } = {}) {
         logs: [
           { $type: "chat.bsky.convo.defs#logCreateMessage", convoId: "room", rev: "5", message: { $type: "chat.bsky.convo.defs#messageView", id: "m5", text: "in the room", sender: { did: SCOUT } } },
           { $type: "chat.bsky.convo.defs#logCreateMessage", convoId: "leak", rev: "6", message: { $type: "chat.bsky.convo.defs#messageView", id: "m6", text: "someone else's", sender: { did: OUTSIDER } } },
+          { $type: "chat.bsky.convo.defs#logCreateMessage", convoId: "direct", rev: "7", message: { $type: "chat.bsky.convo.defs#messageView", id: "m7", text: "a DM", sender: { did: JASON } } },
         ],
         cursor: "log-2",
       });
@@ -202,4 +204,30 @@ test("a direct DM is never touched, even when both its members are on the roster
     assert.equal(r.status, 403, path);
     assert.match(r.data.error, /not a group/);
   }
+});
+
+test("an off-roster sender's message in a roster convo comes back without its text (drift-test, 2026-11-13)", async () => {
+  const r = await call("/group/messages?convoId=room");
+  const m0 = r.data.messages.find((m) => m.id === "m0");
+  assert.deepEqual(m0, { id: "m0", rev: "0", sender: OUTSIDER, sentAt: "2026-11-13T03:58:00Z", text: null, deleted: false, offRoster: true });
+  assert.ok(!r.text.includes("an outsider, since removed"));
+  assert.equal(r.data.messages.find((m) => m.id === "m2").offRoster, undefined);
+});
+
+test("log: a refused group is named with its reason; a direct DM is never mentioned", async () => {
+  const r = await call("/group/log");
+  assert.deepEqual(r.data.refused, [{ convoId: "leak", why: "members off the roster: 1" }]);
+  assert.ok(!r.text.includes("direct"));
+  assert.ok(!r.text.includes("a DM"));
+  assert.ok(!r.text.includes("someone else's"));
+});
+
+test("check: the room check as it stands, for a watcher", async () => {
+  const ok = await call("/group/check?convoId=room");
+  assert.equal(ok.status, 200);
+  assert.equal(ok.data.ok, true);
+  assert.deepEqual(new Set(ok.data.members), new Set([JASON, SCOUT, CLAUDE]));
+  assert.deepEqual((await call("/group/check?convoId=leak")).data, { ok: false, why: "members off the roster: 1" });
+  assert.deepEqual((await call("/group/check?convoId=direct")).data, { ok: false, why: "not a group convo" });
+  assert.equal((await call("/group/check?convoId=room", { token: "wrong" })).status, 401);
 });
