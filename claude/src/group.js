@@ -16,10 +16,13 @@
  *   POST /group/send     {convoId, text}    send one message (at most 1000 graphemes and 9,500 bytes)
  *
  * Fails closed: without GROUP_BRIDGE_TOKEN, CLAUDE_BSKY_APP_PASSWORD or GROUP_ROSTER every route answers 404, as if
- * there were none. A convo with any member off the roster is refused (403), whatever the route.
+ * there were none. A convo with any member off the roster is refused (403), whatever the route, and so is any convo that
+ * isn't a group: Claude's direct DMs, Jason's included, are never read or written here (found on the first live call,
+ * 2026-11-13, when the Claude–Jason DM was the only roster convo listed).
  */
 
 const CHAT_PROXY = "did:web:api.bsky.chat#bsky_chat";
+export const GROUP_KIND = "chat.bsky.convo.defs#groupConvo";
 const DEFAULT_SERVICE = "https://bsky.social";
 export const MAX_GRAPHEMES = 1000;
 export const MAX_BYTES = 9500; // under Bluesky's 10,000-byte maxLength for a chat message, as scout-harness keeps it
@@ -148,6 +151,9 @@ async function membersOf(env, fetchImpl, convoId) {
 
 export async function rosterConvo(env, fetchImpl, convoId) {
   if (typeof convoId !== "string" || !convoId) return { ok: false, why: "convoId is required" };
+  const c = await chat(env, fetchImpl, "chat.bsky.convo.getConvo", { query: { convoId } });
+  if (!c.ok) return { ok: false, why: "could not read the convo" };
+  if (c.data?.convo?.kind?.$type !== GROUP_KIND) return { ok: false, why: "not a group convo" };
   const members = await membersOf(env, fetchImpl, convoId);
   if (!members) return { ok: false, why: "could not read the convo's members" };
   const allowed = roster(env);
@@ -176,8 +182,9 @@ export async function handleGroup(request, env, url, fetchImpl = fetch) {
         const r = await chat(env, fetchImpl, "chat.bsky.convo.listConvos", { query: { limit: 100, cursor } });
         if (!r.ok) return json({ error: "listConvos failed", status: r.status, detail: r.data?.error }, 502);
         for (const c of r.data?.convos || []) {
+          if (c.kind?.$type !== GROUP_KIND) continue; // only groups, never a direct DM
           const check = await rosterConvo(env, fetchImpl, c.id);
-          if (check.ok) out.push({ id: c.id, status: c.status, kind: c.kind?.$type || c.$type || null, members: check.members });
+          if (check.ok) out.push({ id: c.id, status: c.status, members: check.members });
         }
         cursor = r.data?.cursor;
         if (!cursor) break;
