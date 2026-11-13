@@ -19,8 +19,9 @@ const ENV = { GROUP_BRIDGE_TOKEN: TOKEN, CLAUDE_BSKY_APP_PASSWORD: PASSWORD, CLA
 function fakeBluesky({ expireOnce = false, memberPages = null } = {}) {
   const calls = [];
   const convos = {
-    room: { id: "room", status: "accepted", members: [JASON, SCOUT, CLAUDE] },
-    leak: { id: "leak", status: "accepted", members: [JASON, CLAUDE, OUTSIDER] },
+    room: { id: "room", status: "accepted", members: [JASON, SCOUT, CLAUDE], kind: "group" },
+    leak: { id: "leak", status: "accepted", members: [JASON, CLAUDE, OUTSIDER], kind: "group" },
+    direct: { id: "direct", status: "accepted", members: [JASON, CLAUDE], kind: "direct" },
   };
   let expired = expireOnce;
   const fetchImpl = async (url, init = {}) => {
@@ -47,7 +48,12 @@ function fakeBluesky({ expireOnce = false, memberPages = null } = {}) {
       const c = convos[u.searchParams.get("convoId")];
       return c ? reply(200, { members: c.members.map((did) => ({ did })) }) : reply(400, { error: "InvalidConvo" });
     }
-    if (method === "chat.bsky.convo.listConvos") return reply(200, { convos: Object.values(convos).map((c) => ({ id: c.id, status: c.status })) });
+    const kindOf = (c) => ({ $type: `chat.bsky.convo.defs#${c.kind}Convo` });
+    if (method === "chat.bsky.convo.getConvo") {
+      const c = convos[u.searchParams.get("convoId")];
+      return c ? reply(200, { convo: { id: c.id, kind: kindOf(c), members: c.members.map((did) => ({ did })) } }) : reply(400, { error: "InvalidConvo" });
+    }
+    if (method === "chat.bsky.convo.listConvos") return reply(200, { convos: Object.values(convos).map((c) => ({ id: c.id, status: c.status, kind: kindOf(c) })) });
     if (method === "chat.bsky.convo.getMessages")
       return reply(200, {
         messages: [
@@ -182,4 +188,18 @@ test("accept: a roster convo only", async () => {
   const r = await call("/group/accept", { method: "POST", body: { convoId: "room" } });
   assert.equal(r.status, 200);
   assert.equal(r.data.accepted, "room");
+});
+
+test("a direct DM is never touched, even when both its members are on the roster (the first live call, 2026-11-13)", async () => {
+  const listed = await call("/group/convos");
+  assert.ok(!listed.data.convos.some((c) => c.id === "direct"));
+  for (const [path, opts] of [
+    ["/group/messages?convoId=direct", {}],
+    ["/group/send", { method: "POST", body: { convoId: "direct", text: "hi" } }],
+    ["/group/accept", { method: "POST", body: { convoId: "direct" } }],
+  ]) {
+    const r = await call(path, opts);
+    assert.equal(r.status, 403, path);
+    assert.match(r.data.error, /not a group/);
+  }
 });
