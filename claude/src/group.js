@@ -12,13 +12,18 @@
  *   GET  /group/convos                      the roster's group convos Claude is in (id, status, members)
  *   POST /group/accept   {convoId}          accept an invite to a roster convo
  *   GET  /group/messages?convoId=&cursor=   a roster convo's messages, newest first
- *   GET  /group/log?cursor=                 Claude's chat log, only the events of roster convos
+ *   GET  /group/log?cursor=                 Claude's chat log, only the events of roster convos, and the groups it refused
+ *   GET  /group/check?convoId=              whether a convo passes the room check now, and why not
  *   POST /group/send     {convoId, text}    send one message (at most 1000 graphemes and 9,500 bytes)
  *
  * Fails closed: without GROUP_BRIDGE_TOKEN, CLAUDE_BSKY_APP_PASSWORD or GROUP_ROSTER every route answers 404, as if
  * there were none. A convo with any member off the roster is refused (403), whatever the route, and so is any convo that
  * isn't a group: Claude's direct DMs, Jason's included, are never read or written here (found on the first live call,
  * 2026-11-13, when the Claude–Jason DM was the only roster convo listed).
+ *
+ * Within a convo that passes, a message whose sender is off the roster comes back with its text withheld (offRoster:
+ * true): someone outside the roster may have been a member earlier, and their words never pass through here either. Found
+ * on 2026-11-13, when the drift-test account joined, posted and left.
  */
 
 const CHAT_PROXY = "did:web:api.bsky.chat#bsky_chat";
@@ -164,10 +169,12 @@ export async function rosterConvo(env, fetchImpl, convoId) {
 
 // ---- Routes ------------------------------------------------------------------------------------------------------
 
-function messageView(m) {
+/** `allowed` is the roster (a Set); every caller passes it, so a missing one fails loudly rather than showing text. */
+function messageView(m, allowed) {
   if (!m || typeof m !== "object") return null;
   const deleted = String(m.$type || "").endsWith("#deletedMessageView");
-  return { id: m.id, rev: m.rev, sender: m.sender?.did, sentAt: m.sentAt, text: deleted ? null : (m.text ?? null), deleted };
+  const offRoster = !allowed.has(m.sender?.did);
+  return { id: m.id, rev: m.rev, sender: m.sender?.did, sentAt: m.sentAt, text: deleted || offRoster ? null : (m.text ?? null), deleted, ...(offRoster ? { offRoster: true } : {}) };
 }
 
 export async function handleGroup(request, env, url, fetchImpl = fetch) {
@@ -207,22 +214,36 @@ export async function handleGroup(request, env, url, fetchImpl = fetch) {
       const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 30, 1), 100);
       const r = await chat(env, fetchImpl, "chat.bsky.convo.getMessages", { query: { convoId, limit, cursor: url.searchParams.get("cursor") } });
       if (!r.ok) return json({ error: "getMessages failed", status: r.status, detail: r.data?.error }, 502);
-      return json({ messages: (r.data?.messages || []).map(messageView).filter(Boolean), cursor: r.data?.cursor || null });
+      const allowed = roster(env);
+      return json({ messages: (r.data?.messages || []).map((m) => messageView(m, allowed)).filter(Boolean), cursor: r.data?.cursor || null });
     }
 
     if (route === "/group/log" && request.method === "GET") {
       const r = await chat(env, fetchImpl, "chat.bsky.convo.getLog", { query: { cursor: url.searchParams.get("cursor") } });
       if (!r.ok) return json({ error: "getLog failed", status: r.status, detail: r.data?.error }, 502);
+      const allowed = roster(env);
       const checked = new Map();
       const events = [];
+      const refused = [];
       for (const e of r.data?.logs || []) {
         const convoId = e?.convoId;
         if (!convoId) continue;
-        if (!checked.has(convoId)) checked.set(convoId, (await rosterConvo(env, fetchImpl, convoId)).ok);
+        if (!checked.has(convoId)) {
+          const check = await rosterConvo(env, fetchImpl, convoId);
+          checked.set(convoId, check.ok);
+          // A group that fails the room check is named, with the reason, so a watcher can say so instead of going quiet.
+          // A direct DM is not: it was never this bridge's to mention.
+          if (!check.ok && check.why !== "not a group convo") refused.push({ convoId, why: check.why });
+        }
         if (!checked.get(convoId)) continue;
-        events.push({ type: String(e.$type || "").split("#")[1] || e.$type, convoId, rev: e.rev, message: messageView(e.message) });
+        events.push({ type: String(e.$type || "").split("#")[1] || e.$type, convoId, rev: e.rev, message: messageView(e.message, allowed) });
       }
-      return json({ events, cursor: r.data?.cursor || null });
+      return json({ events, refused, cursor: r.data?.cursor || null });
+    }
+
+    if (route === "/group/check" && request.method === "GET") {
+      const check = await rosterConvo(env, fetchImpl, url.searchParams.get("convoId"));
+      return json(check.ok ? { ok: true, members: check.members } : { ok: false, why: check.why });
     }
 
     if (route === "/group/send" && request.method === "POST") {
@@ -233,7 +254,7 @@ export async function handleGroup(request, env, url, fetchImpl = fetch) {
       if (!check.ok) return json({ error: check.why }, 403);
       const r = await chat(env, fetchImpl, "chat.bsky.convo.sendMessage", { body: { convoId, message: { text } } });
       console.log(JSON.stringify({ group: "send", convoId, ok: r.ok, status: r.status }));
-      return r.ok ? json({ sent: messageView(r.data) }) : json({ error: "sendMessage failed", status: r.status, detail: r.data?.error }, 502);
+      return r.ok ? json({ sent: messageView(r.data, roster(env)) }) : json({ error: "sendMessage failed", status: r.status, detail: r.data?.error }, 502);
     }
 
     return json({ error: "no such route" }, 404);
