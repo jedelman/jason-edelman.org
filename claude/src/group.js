@@ -173,8 +173,12 @@ export async function rosterConvo(env, fetchImpl, convoId) {
 function messageView(m, allowed) {
   if (!m || typeof m !== "object") return null;
   const deleted = String(m.$type || "").endsWith("#deletedMessageView");
-  const offRoster = !allowed.has(m.sender?.did);
-  return { id: m.id, rev: m.rev, sender: m.sender?.did, sentAt: m.sentAt, text: deleted || offRoster ? null : (m.text ?? null), deleted, ...(offRoster ? { offRoster: true } : {}) };
+  // No sender: one of the chat service's own notices (a member added or removed). Its text is withheld like an
+  // outsider's, since it can name one, but it is labelled for what it is (found on 2026-11-13, when two notices of
+  // drift-test's add and removal came back marked offRoster).
+  if (!m.sender?.did) return { id: m.id, rev: m.rev, sender: null, sentAt: m.sentAt, text: null, deleted, system: String(m.$type || "").split("#")[1] || "unknown" };
+  const offRoster = !allowed.has(m.sender.did);
+  return { id: m.id, rev: m.rev, sender: m.sender.did, sentAt: m.sentAt, text: deleted || offRoster ? null : (m.text ?? null), deleted, ...(offRoster ? { offRoster: true } : {}) };
 }
 
 export async function handleGroup(request, env, url, fetchImpl = fetch) {
