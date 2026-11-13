@@ -60,6 +60,7 @@ function fakeBluesky({ expireOnce = false, memberPages = null } = {}) {
           { $type: "chat.bsky.convo.defs#messageView", id: "m2", rev: "2", text: "hello from Jason", sender: { did: JASON }, sentAt: "2026-11-13T04:00:00Z" },
           { $type: "chat.bsky.convo.defs#deletedMessageView", id: "m1", rev: "1", sender: { did: SCOUT }, sentAt: "2026-11-13T03:59:00Z" },
           { $type: "chat.bsky.convo.defs#messageView", id: "m0", rev: "0", text: "an outsider, since removed", sender: { did: OUTSIDER }, sentAt: "2026-11-13T03:58:00Z" },
+          { $type: "chat.bsky.convo.defs#systemMessageView", id: "s1", rev: "00", text: "a member was removed", sentAt: "2026-11-13T03:57:00Z" },
         ],
         cursor: "c1",
       });
@@ -230,4 +231,10 @@ test("check: the room check as it stands, for a watcher", async () => {
   assert.deepEqual((await call("/group/check?convoId=leak")).data, { ok: false, why: "members off the roster: 1" });
   assert.deepEqual((await call("/group/check?convoId=direct")).data, { ok: false, why: "not a group convo" });
   assert.equal((await call("/group/check?convoId=room", { token: "wrong" })).status, 401);
+});
+
+test("a notice from the chat service itself (no sender) is labelled system, not offRoster, and its text withheld", async () => {
+  const r = await call("/group/messages?convoId=room");
+  assert.deepEqual(r.data.messages.find((m) => m.id === "s1"), { id: "s1", rev: "00", sender: null, sentAt: "2026-11-13T03:57:00Z", text: null, deleted: false, system: "systemMessageView" });
+  assert.ok(!r.text.includes("a member was removed"));
 });
