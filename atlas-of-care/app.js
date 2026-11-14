@@ -217,7 +217,7 @@ function pick(did) { picked = picked === did ? null : did; mark(); readout(nodes
 // ---- one person: what they say they do, who vouches for them, who they vouch for
 function renderPerson() {
   const box = el("profile"), n = picked && nodes.find(x => x.id === picked);
-  if (!n) { box.innerHTML = nodes.length ? `<h2>Who is here</h2><p>Pick someone in the graph to see what they do and who stands with them.</p>` : ""; box.hidden = !nodes.length; return; }
+  if (!n) { box.innerHTML = nodes.length ? `<h2>Who is here</h2><p>Pick someone in the graph to see what they do and what they vouch for.</p>` : ""; box.hidden = !nodes.length; return; }
   box.hidden = false;
   const mine = (IDX.from.get(n.id) || []).map(v => STORIES.findIndex(s => !s.gone && s.uri === v.subject)).filter(i => i >= 0);
   box.innerHTML = `<h2>${profileLink(n.id)}</h2>
@@ -261,8 +261,8 @@ function renderAccount() {
   el("notice").innerHTML = state.notice ? `<p class="notice">${esc(state.notice)}</p>` : "";
   el("account").innerHTML = state.me
     ? `<span>Signed in as <b>@${esc(state.handle || state.me)}</b>.</span> <button type="button" class="link" id="signout">Sign out</button>`
-    : state.authError ? `<span>Sign-in is unavailable right now. The map still works.</span>`
-    : `<form id="signin"><label for="handle">Sign in with your atproto handle. A Bluesky handle is one.</label> <input id="handle" name="handle" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="you.bsky.social"> <button type="submit">Sign in</button></form>`;
+    : state.authError ? `<span>Sign-in is unavailable right now. You can still read the page.</span>`
+    : `<form id="signin"><label for="handle">Sign in with your Bluesky handle. Any other atproto handle works too.</label> <input id="handle" name="handle" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="you.bsky.social"> <button type="submit">Sign in</button></form>`;
 }
 el("account").addEventListener("submit", async e => {
   e.preventDefault();
@@ -297,7 +297,7 @@ function renderAdd() {
       <label>A web address, if there is one
         <input id="addurl" name="url" inputmode="url" autocapitalize="none" spellcheck="false" placeholder="https://" maxlength="${A.MAX_URL}" value="${esc(state.urlDraft)}"></label></div>
     <div><button type="submit"${state.busy ? " disabled" : ""}>${state.busy ? "Saving" : "Add it"}</button></div>
-    <p class="warn">Say what you do, in your own words. It can only be about you: nobody here can say what someone else does. It is public, saved in your own account under your handle. Anyone signed in can ask for it to be taken down.</p>
+    <p class="warn">Say what you do, in your own words: one line of up to ${A.MAX_TEXT} characters, with no web address or @ in it. It can only be about you. It is public, and it is saved in your own Bluesky (atproto) account under your handle. Anyone signed in can ask for it to be taken down.</p>
   </form>`;
   if (!el("places").childElementCount) allPlaces().then(byName => { el("places").innerHTML = [...byName.values()].map(p => `<option value="${esc(p.name)}"></option>`).join(""); });
 }
@@ -305,7 +305,7 @@ function renderAdd() {
 function vouchForm() {
   const list = state.found ? STORIES.map((s, i) => [s, i]).filter(([s]) => !s.gone && s.did === state.found) : [];
   return `<form class="addform" id="vouchform" novalidate>
-    <p class="warn">A vouch affirms something someone has said they do: you know it to be so, and it holds your world together. A like says less: you are glad of it. You cannot say it for them. It has to be here already, in their words. Both are public under your handle.</p>
+    <p class="warn">A vouch affirms something someone has said they do: you know it to be so, and it holds your world together. A like says less: you are glad of it. You cannot write their sentence for them: it has to be on this page already, in their words. Both are public under your handle.</p>
     ${state.vouchErrors.length ? `<p class="errors" role="alert">${state.vouchErrors.map(esc).join(" ")}</p>` : ""}
     <div class="row"><label class="sr-only" for="vouchsubject">Their handle</label>
       <input id="vouchsubject" name="subject" autocapitalize="none" spellcheck="false" placeholder="their.handle" maxlength="253" value="${esc(state.vouchDraft)}">
@@ -361,7 +361,7 @@ function needSignIn(why) { state.notice = why; state.ask = state.ask || "who"; r
 async function affirm(i, kind) {   // kind: "vouch" or "like"
   const s = STORIES[i]; if (!s || s.gone) return;
   if (!state.agent) return needSignIn(`Sign in here to ${kind === "like" ? "like this" : "vouch"}.`);
-  if (s.did === state.me) { state.notice = "That one is yours."; return renderAccount(); }
+  if (s.did === state.me) { state.notice = "That one is yours, and you cannot like or vouch for your own."; return renderAccount(); }
   const built = (kind === "like" ? A.buildLike : A.buildVouch)({ uri: s.uri, cid: s.cid });
   if (!built.ok) { state.notice = "That could not be saved right now. Reload the page and try again."; return renderAccount(); }
   try {
@@ -442,7 +442,7 @@ async function requestTakedown(i) {
 function notePeople() {
   const said = STORIES.filter(s => !s.gone).length;
   el("communitynote").textContent = !people.loaded ? "Looking for what people have added."
-    : people.error ? "What people have added is not shown right now: the index that finds it, and the takedown requests against it, did not answer."
+    : people.error ? "What people have added cannot be shown right now. The outside index this page uses to find it, and to find takedown requests against it, did not answer."
     : (said ? `${plural(said, "thing", "things")} people say they do. ${plural(IDX.n, "vouch", "vouches")}. ${plural(IDX.nl, "like", "likes")}.` : "Nobody has added anything yet. The first question at the top of the page is how to start.")
       + (people.withheld ? ` ${people.withheld} withheld after a takedown request.` : "")
       + (people.unreachable ? ` ${people.unreachable} could not be read from their authors' servers.` : "");
@@ -484,20 +484,20 @@ async function loadPrior() {
 }
 
 const LIMITS = [
-  "Everything here is something a person said about themselves. Nobody has checked any of it. A vouch is another person saying it is so, and a like is someone being glad of it. Neither is proof.",
-  "The form makes every statement begin with I, and refuses a web address or an @ inside it. It cannot stop someone bending an I-statement to talk about somebody else. A takedown request is the remedy, and it works at once.",
-  "It is public. A statement, a vouch or a like is a record in the account of whoever made it, under their handle, and anyone can read it there whether or not this page shows it.",
-  "It is as full as the people who have found it. Whoever is missing from the graph is missing from this page, not from the world.",
+  "Everything here is something a person said about themselves, and this site does not check any of it. A vouch only means another person says it is so, and a like only means someone is glad of it.",
+  "The form makes every sentence begin with I, and will not save one with a web address or an @ in it. It cannot stop someone using a sentence that begins with I to talk about somebody else. If that happens, anyone signed in can ask for the sentence to be taken down, and it stops showing on this page straight away.",
+  "Everything you add is public. A sentence, a vouch or a like is a record in the account of whoever made it, under their handle, and anyone can read it there whether or not this page shows it.",
+  "The graph shows only the people who have found this page and added a sentence. A person who is not in it may be holding their world together all the same.",
   "Only people who have said what they do are drawn. Someone who only likes and vouches has no mark of their own.",
   "Saying what you do, liking, vouching and asking for a takedown all need an atproto account. Someone without one cannot do any of them here.",
-  "A vouch or a like is for one sentence as it stood. If the sentence is changed or removed, it stops counting. Whoever wrote the sentence can decline a vouch and it comes off this page at once, though the record stays in the voucher's own account.",
+  "A vouch or a like is for one sentence in the wording it had at the time. If the sentence is changed or removed, the vouch or like stops counting. Whoever wrote the sentence can decline a vouch, and it stops showing on this page straight away, though the record stays in the voucher's own account.",
   "Who you follow is read from Bluesky's public service, about the accounts here only. Follows kept anywhere else are not seen.",
-  "A place is optional, and it is a name from a list: a country, a US county, an Indian district or a European region. There is no map.",
-  "What people have added is found through Constellation, an outside index of atproto records. When that does not answer, none of it is shown.",
+  "A place is optional, and it is a name from a list: a country, a US county, an Indian district or a European region.",
+  "What people have added is found through Constellation, an outside index of atproto records. When Constellation does not answer, none of it is shown.",
 ];
 const SOURCES = [
   ["The index that finds what people have added: Constellation", "https://constellation.microcosm.blue/"],
-  ["Who you follow: Bluesky's public AppView", "https://docs.bsky.app/docs/api/app-bsky-graph-get-relationships"],
+  ["Who you follow: Bluesky's public service for reading the network (its AppView)", "https://docs.bsky.app/docs/api/app-bsky-graph-get-relationships"],
   ["Country names: Natural Earth, through the world-atlas package", "https://github.com/topojson/world-atlas"],
   ["United States county names: County Health Rankings & Roadmaps, 2025, and the US Census Bureau through the us-atlas package", "https://www.countyhealthrankings.org/"],
   ["India district names: geoBoundaries (Open Database License 1.0)", "https://www.geoboundaries.org/"],

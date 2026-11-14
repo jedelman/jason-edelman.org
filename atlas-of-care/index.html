@@ -271,7 +271,7 @@
       <button type="button" class="askbtn" data-ask="who" aria-pressed="false"><span class="q">Who holds your world together?</span><span class="a">Like or vouch for what they say they do</span></button>
     </div>
     <ol class="steps" id="steps" aria-label="How to use this page">
-      <li data-step="in"><button type="button" class="link" data-go="do">Sign in</button> with your Bluesky handle. Any atproto handle works.</li>
+      <li data-step="in"><button type="button" class="link" data-go="do">Sign in</button> with your Bluesky handle. Any other atproto handle works too.</li>
       <li data-step="say"><button type="button" class="link" data-go="do">Say what you do</button> in one line that starts with I. Say as many things as you like.</li>
       <li data-step="like"><button type="button" class="link" data-go="entries">Like</button> anything you are glad someone does.</li>
       <li data-step="vouch"><button type="button" class="link" data-go="entries">Vouch</button> for what you know holds your world together.</li>
@@ -296,7 +296,7 @@
     </div>
     <div class="under">
       <div class="legend"><div class="swatches" id="swatches"></div>
-        <p class="howgraph">Each mark is a person. Pick one to see what they do. Drag a mark to move it. To zoom, pinch, or hold Ctrl and scroll.</p></div>
+        <p class="howgraph">The graph shows everyone who has written a sentence. Each mark is a person: pick one to see what they do, or drag it to move it. To zoom, pinch, or hold Ctrl and scroll.</p></div>
       <div class="readout" id="readout" aria-live="polite"></div>
     </div>
   </div>
@@ -306,13 +306,13 @@
 
   <section id="connections" hidden>
     <h2>Who vouches for whom</h2>
-    <p>Each line is one person and everything they vouch for.</p>
+    <p>Each row is one person and everything they vouch for.</p>
     <ul class="conn" id="connlist"></ul>
   </section>
 
   <section id="entries">
     <h2>Everyone here</h2>
-    <p>What people say they do, each in their own words and each beginning with I. Like one if you are glad of it. Vouch for one if it holds your world together. Nobody has checked them, and nobody can say what someone else does. Anyone signed in can ask for one to be taken down, and whoever wrote it can decline a vouch.</p>
+    <p>Each sentence here is something a person says they do, in their own words, beginning with I. You can only write about yourself. Like a sentence if you are glad of it, and vouch for it if it holds your world together. This site does not check them. Anyone signed in can ask for one to be taken down, and whoever wrote it can decline a vouch.</p>
     <p class="count" id="communitynote"></p>
     <div class="stories" id="stories"></div>
   </section>
@@ -323,9 +323,9 @@
       There&rsquo;s a whole geography of tending, an atlas of people quietly holding the world together, that I think is more visible to the people that want to profit from the chaos of losing than it is to the vaster population who is protected by it. What if it was made visible?
       <footer>Jason Edelman, <a href="https://bsky.app/profile/jason-edelman.org/post/3n2blk3l4gc2i">on Bluesky</a>, 14 November 2026</footer>
     </blockquote>
-    <p class="how">This is a place for finding each other. It asks two things. What do you do to hold your world together? Who holds it together for you? An answer to the first is one sentence in your own words that begins with I: I feed the birds, I cook for my kids, I clean toilets. An answer to the second is a vouch for a sentence someone else has written. And anyone can like a sentence, whether or not they are in a position to vouch for it.</p>
-    <p class="how">So nobody here says what another person does. You say your own work, and you can affirm someone else's and be affirmed for yours. The graph draws that and nothing else: a mark for each person who has spoken, an amber line for a vouch, a green one for a like. People who hold each other up drift together.</p>
-    <p class="how">Anyone with an atproto account, such as a Bluesky handle, can add. Sign in and the page shows what the people you follow have said. Each sentence carries the handle of whoever wrote it, and nobody has checked it. Anyone signed in can ask for one to be taken down, and it comes off this page at once.</p>
+    <p class="how">This page is for finding each other. It asks two questions: what do you do to hold your world together, and who holds it together for you? You answer the first with one sentence in your own words that begins with I: I feed the birds, I cook for my kids, I clean toilets. The sentence is one line of up to 140 characters, and it can name a place from a list and carry a web address. You answer the second by vouching for a sentence someone else has written. A vouch says you know it to be so and it holds your world together. A like says only that you are glad of it, so you can like a sentence you are in no position to vouch for.</p>
+    <p class="how">You can only write about yourself. You say your own work, you can affirm someone else's, and they can affirm yours. The graph shows a mark for each person who has written a sentence, an amber arrow for a vouch and a green arrow for a like. Marks joined by an arrow pull toward each other, so people who vouch for and like each other's sentences end up close together.</p>
+    <p class="how">Anyone with an account on the AT Protocol network (atproto), which includes every Bluesky account, can add a sentence. When you sign in, the page shows what the people you follow have written. Each sentence shows the handle of whoever wrote it, and this site does not check what it says. Anyone signed in can ask for a sentence to be taken down, and it stops showing on this page straight away.</p>
   </section>
 
   <section class="limits" id="limits-section">
@@ -341,6 +341,7 @@
 
   <section class="sources" id="sources-section">
     <h2>Sources</h2>
+    <p>The outside services this page gets what people have added from, and where its list of place names comes from.</p>
     <ol id="sources"></ol>
   </section>
 </main>
