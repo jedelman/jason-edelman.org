@@ -102,6 +102,16 @@
     .contribute .pick, .contribute .placed { color: var(--text); margin: 0 0 10px; }
     .contribute .placed b { color: var(--bright); }
     #notice .notice { margin-top: 10px; }
+    /* Shown to someone signed in: the people they follow who are on the map, each with a way to vouch. */
+    .follows { border: 1px solid var(--accent-dim); background: var(--surface); padding: 14px 16px; margin-top: 10px; display: grid; gap: 10px; }
+    .follows h2 { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); }
+    .follows p { color: var(--soft); font-size: .92rem; max-width: 70ch; }
+    .flist { list-style: none; display: grid; gap: 0; max-width: 900px; }
+    .flist li { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--rule); overflow-wrap: anywhere; }
+    .flist li > div { flex: 1 1 16em; min-width: 0; }
+    .flist li span { color: var(--soft); font-size: .9rem; }
+    .flist .done { color: var(--muted); }
+    .flist button.vouch { min-height: 32px; border-color: var(--accent); color: var(--accent); }
     .askhere { margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 8px; }
     .scopes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
     .scopes .caps { margin-right: 6px; }
@@ -115,7 +125,6 @@
     .filters .grp { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
     .mark { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--bright); vertical-align: -1px; margin-right: 6px; }
     .mark.p { border-radius: 50%; border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
-    .mark.pv { border-radius: 0; border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
 
     .mapbox { position: relative; background: var(--sea); border: 1px solid var(--border); }
     .mapbox svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
@@ -132,6 +141,7 @@
     .pin.people .halo { fill: var(--warn); stroke: var(--bg); }
     .pin.people.sel .halo { stroke: var(--bright); }
     .pin.people.vouch .halo { fill: var(--warn); stroke: var(--bg); }
+    .pin .ring { fill: none; stroke: var(--warn); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
     .tie { stroke: var(--warn); stroke-width: 1; stroke-opacity: .7; vector-effect: non-scaling-stroke; pointer-events: none; }
     .tie.off { display: none; }
     .pin.off { display: none; }
@@ -148,7 +158,7 @@
     .swatches i.tint { background: var(--n2); }
     .swatches i.tie { height: 0; border-top: 1px solid var(--warn); }
     .swatches i.pinkey { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
-    .swatches i.pinkey.pv { border-radius: 0; }
+    .swatches i.pinkey.pv { outline-offset: 3px; margin: 0 4px; }
     .readout { background: var(--surface); border: 1px solid var(--border); padding: 12px 14px; min-height: 76px; color: var(--soft); font-size: .92rem; }
     .readout h3 { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--bright); margin-bottom: 4px; }
     .readout p { color: var(--soft); font-size: .92rem; }
@@ -207,6 +217,8 @@
     .story button { justify-self: start; min-height: 30px; padding: 0 10px; font-size: .74rem; color: var(--soft); }
     .story button:hover { color: var(--accent); }
     .story button.takedown:hover, .story button.remove:hover { color: var(--warn); border-color: var(--warn); }
+    .story button.vouch { border-color: var(--accent); color: var(--accent); }
+    .story button.link { min-height: 0; padding: 0; font-size: .8rem; color: var(--link); }
 
     .prior h3 { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--bright); margin: 1.4rem 0 .5rem; }
     .prior ul { list-style: none; max-width: 80ch; display: grid; gap: 12px; }
@@ -251,13 +263,14 @@
   <section class="asks" id="add" aria-label="Add to the map">
     <div class="askrow">
       <button type="button" class="askbtn" data-ask="do" aria-pressed="false"><span class="q">What do you do to hold your world together?</span><span class="a">Add a link to it</span></button>
-      <button type="button" class="askbtn" data-ask="who" aria-pressed="false"><span class="q">Who holds your world together?</span><span class="a">Vouch for an organisation or a person</span></button>
+      <button type="button" class="askbtn" data-ask="who" aria-pressed="false"><span class="q">Who holds your world together?</span><span class="a">Vouch for someone who is here</span></button>
     </div>
     <div id="notice" aria-live="polite"></div>
     <div class="contribute" id="contribute" hidden>
       <div class="account" id="account"></div>
       <div class="addbox" id="addbox"></div>
     </div>
+    <div class="follows" id="follows" aria-live="polite" hidden></div>
   </section>
 
   <div class="stage" id="map-stage">
@@ -289,7 +302,7 @@
 
   <section id="entries">
     <h2>Everyone here</h2>
-    <p>What people have added: a link to what they do in a place, or a vouch for an organisation or a person who holds their world together there. Each carries the handle of whoever added it. Nobody has checked them. Anyone signed in can ask for one to be taken down.</p>
+    <p>What people have added: a link to what they do, in a place. Under each, whoever says that person holds their world together. Each carries the handle of whoever added it. Nobody has checked them. Anyone signed in can ask for a link to be taken down, and whoever is vouched for can decline a vouch.</p>
     <p class="count" id="communitynote"></p>
     <div class="stories" id="stories"></div>
   </section>
@@ -300,9 +313,9 @@
       There&rsquo;s a whole geography of tending, an atlas of people quietly holding the world together, that I think is more visible to the people that want to profit from the chaos of losing than it is to the vaster population who is protected by it. What if it was made visible?
       <footer>Jason Edelman, <a href="https://bsky.app/profile/jason-edelman.org/post/3n2blk3l4gc2i">on Bluesky</a>, 14 November 2026</footer>
     </blockquote>
-    <p class="how">This is a map for finding each other. It asks two things. What do you do to hold your world together? Who holds it together for you? An answer to the first is a link to the thing you do. An answer to the second is a vouch for an organisation or a person. Both are set down in a place: a country, or a county of the United States, a district of India, a region of Europe.</p>
-    <p class="how">There is nothing on the map but those answers. Pick a place to see who is there. Follow a link to find them. Where someone who has added what they do also vouches for someone else, a line joins the two.</p>
-    <p class="how">Anyone with an atproto account, such as a Bluesky handle, can add. Each mark carries the handle of whoever added it, and nobody has checked it. Anyone signed in, including whoever is vouched for, can ask for one to be taken down, and it comes off this page at once.</p>
+    <p class="how">This is a map for finding each other. It asks two things. What do you do to hold your world together? Who holds it together for you? An answer to the first is a link to the thing you do, set down in a place: a country, or a county of the United States, a district of India, a region of Europe. An answer to the second is a vouch for someone else who has answered the first.</p>
+    <p class="how">So nobody is on this map who did not put themselves on it. There is nothing here but those answers. Pick a place to see who is there. Follow a link to find them. Where someone vouches for someone else, a line joins the two.</p>
+    <p class="how">Anyone with an atproto account, such as a Bluesky handle, can add. Sign in and the page shows which of the people you follow are already here, and asks whether they hold your world together. Each mark carries the handle of whoever added it, and nobody has checked it. Anyone signed in can ask for a link to be taken down, and it comes off this page at once.</p>
   </section>
 
   <section class="limits" id="limits-section">

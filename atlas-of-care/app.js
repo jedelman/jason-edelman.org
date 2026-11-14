@@ -1,7 +1,7 @@
 // Atlas of Care: a map for finding each other.
 //
 // There is nothing on it but what people have added: a link to what they do in a place, or
-// a vouch for an organisation or a person who holds their world together there. The map
+// a vouch for someone else who has added what they do. The map
 // itself only gives those somewhere to stand: countries, and inside the United States,
 // India and Europe, counties, districts and regions. The rules for what people add are in
 // atlas.js. Sign-in and the backlink index reuse the Library's code and its vendored SDK
@@ -17,8 +17,23 @@ const href = u => (/^https?:\/\//.test(u || "") ? esc(u) : "#");
 let WORLD, WNAMES;
 try { [WORLD, WNAMES] = await Promise.all([getJson("data/world.topo.json"), getJson("data/world.names.json")]); }
 catch (err) { el("readout").textContent = "The map could not be loaded. Try again in a moment."; throw err; }
-// Every mark on the map, filled in once the index has been asked (loadPeople).
+// Every mark on the map: the links people have added, filled in once the index has been
+// asked (loadPeople). VOUCHES are the vouches between accounts, one per voucher per account.
 const STORIES = [];
+let VOUCHES = [];
+// Read off the two lists whenever either changes: who vouches for each account that is on
+// the map, and who each voucher vouches for. A vouch for someone with no link of their own
+// does not count, so nobody is named here who has not put themselves here.
+let IDX = { by: new Map(), from: new Map(), n: 0 };
+function reindex() {
+  const here = new Set(STORIES.filter(s => !s.gone).map(s => s.did)), by = new Map(), from = new Map();
+  const standing = A.standingVouches(VOUCHES, here);
+  for (const v of standing) { (by.get(v.subject) || by.set(v.subject, []).get(v.subject)).push(v); (from.get(v.did) || from.set(v.did, []).get(v.did)).push(v); }
+  IDX = { by, from, n: standing.length };
+}
+const onMap = did => STORIES.some(s => !s.gone && s.did === did);
+const handleOf = did => (STORIES.find(s => s.did === did && s.handle) || VOUCHES.find(v => v.did === did && v.handle) || {}).handle || (did === state.me && state.handle) || did;
+const profileLink = did => `<a href="https://bsky.app/profile/${encodeURIComponent(did)}">@${esc(handleOf(did))}</a>`;
 
 // ---- the maps: the world by country, and three places that open to smaller units
 const W = 980, H = 520;
@@ -61,45 +76,27 @@ function zoomTo(f) {
 }
 
 // ---- what people have added
-const FKINDS = [["all", "Everything"], ["link", "What people do"], ["vouch", "Who people vouch for"]];
+const fkinds = () => [["all", "Everyone"], ["vouched", "Vouched for"], ...(state.me && state.follows ? [["follows", "People you follow"]] : [])];
 const where = s => esc(s.place);
-const passes = s => !s.gone && (fk === "all" || (fk === "link" ? !!s.link : !!s.vouch));
+const passes = s => !s.gone && (fk === "all" || (fk === "vouched" ? IDX.by.has(s.did) : !!state.follows && state.follows.has(s.did)));
 const when = iso => { const d = iso && new Date(iso); return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""; };
-// Everyone who vouches for the person behind a link, wherever they placed the vouch.
-function vouchedFor(did) {
-  const who = new Map();
-  for (const v of STORIES) if (v.vouch && !v.gone && v.subject === did) for (const p of v.vouchers) who.set(p.did, p.handle || p.did);
-  if (!who.size) return "";
-  return `\n  <p class="byline">Vouched for by ${[...who].slice(0, 8).map(([d, h]) => `<a href="https://bsky.app/profile/${encodeURIComponent(d)}">@${esc(h)}</a>`).join(", ")}${who.size > 8 ? ` and ${who.size - 8} more` : ""}.</p>`;
-}
-// A link someone added: a web address and a place, nothing of their own wording.
+const countPeople = n => (n === 1 ? "one person" : n + " people");
+// A link someone added: a web address and a place, nothing of their own wording. Under it,
+// everyone who vouches for the person behind it. Whoever it is about can decline a vouch.
 function linkCard(s, i) {
-  const mine = state.me && s.did === state.me;
+  const mine = state.me && s.did === state.me, vs = IDX.by.get(s.did) || [], iv = state.me && vs.some(v => v.did === state.me);
+  const vouched = !vs.length ? "" : `\n  <p class="byline vouched">${vs.length === 1 ? "One person says" : vs.length + " people say"} @${esc(s.by)} holds their world together: ${vs.slice(0, 8).map(v => profileLink(v.did) + (mine ? ` <button type="button" class="link decline" data-d="${esc(v.did)}">decline</button>` : "")).join(", ")}${vs.length > 8 ? ` and ${vs.length - 8} more` : ""}.</p>`;
   return `<article class="story people" id="story-${i}">
   <div class="caps">What someone does</div>
   <h3>${esc(s.title)}</h3>
   <p class="where">${esc(s.place)}</p>
   <p class="url"><a href="${href(s.url)}" rel="nofollow noopener">${esc(s.url)}</a></p>
-  <p class="byline">Added by <a href="https://bsky.app/profile/${encodeURIComponent(s.did)}">@${esc(s.by)}</a>${when(s.createdAt) ? ", " + when(s.createdAt) : ""}. Not checked by the atlas.</p>${vouchedFor(s.did)}
-  <div class="acts"><button type="button" class="show" data-i="${i}">Show on the map</button>${mine ? `<button type="button" class="remove" data-i="${i}">Remove</button>` : `<button type="button" class="takedown" data-i="${i}">Request takedown</button>`}</div></article>`;
-}
-// "Who holds your world together": one card for each organisation or person in each place,
-// with everyone who vouched.
-function vouchCard(s, i) {
-  const n = s.vouchers.length, mine = state.me && s.vouchers.some(v => v.did === state.me);
-  const who = s.vouchers.slice(0, 8).map(v => `<a href="https://bsky.app/profile/${encodeURIComponent(v.did)}">@${esc(v.handle || v.did)}</a>`).join(", ") + (n > 8 ? ` and ${n - 8} more` : "");
-  return `<article class="story people" id="story-${i}">
-  <div class="caps">Vouched for</div>
-  <h3>${s.isAccount ? `<a href="https://bsky.app/profile/${encodeURIComponent(s.subject)}">${esc(s.title)}</a>` : esc(s.title)}</h3>
-  <p class="where">${esc(s.place)}</p>
-  ${s.isAccount ? "" : `<p class="url"><a href="${href(s.subject)}" rel="nofollow noopener">${esc(s.subject)}</a></p>`}
-  <p class="byline">${n === 1 ? "One person says" : n + " people say"} this holds their world together: ${who}. Not checked by the atlas.</p>
-  <div class="acts"><button type="button" class="show" data-i="${i}">Show on the map</button>${mine ? `<button type="button" class="remove" data-i="${i}">Withdraw my vouch</button>` : `<button type="button" class="vouchtoo" data-i="${i}">I vouch too</button>`}<button type="button" class="takedown" data-i="${i}">Request takedown</button></div></article>`;
+  <p class="byline">Added by <a href="https://bsky.app/profile/${encodeURIComponent(s.did)}">@${esc(s.by)}</a>${when(s.createdAt) ? ", " + when(s.createdAt) : ""}. Not checked by the atlas.</p>${vouched}
+  <div class="acts"><button type="button" class="show" data-i="${i}">Show on the map</button>${mine ? `<button type="button" class="remove" data-i="${i}">Remove</button>`
+    : (iv ? `<button type="button" class="unvouch" data-d="${esc(s.did)}">Withdraw my vouch</button>` : `<button type="button" class="vouch" data-d="${esc(s.did)}">Vouch for @${esc(s.by)}</button>`) + `<button type="button" class="takedown" data-i="${i}">Request takedown</button>`}</div></article>`;
 }
 function renderCards() {
-  renderConnections();
-  const order = STORIES.map((s, i) => i).filter(i => !STORIES[i].gone);
-  el("stories").innerHTML = order.map(i => (STORIES[i].link ? linkCard(STORIES[i], i) : vouchCard(STORIES[i], i))).join("");
+  el("stories").innerHTML = STORIES.map((s, i) => (s.gone ? "" : linkCard(s, i))).join("");
 }
 function applyFilters() {
   if (pins) pins.classed("off", s => !passes(s));
@@ -107,27 +104,40 @@ function applyFilters() {
   document.querySelectorAll(".story").forEach(n => n.classList.toggle("off", !passes(STORIES[+n.id.slice(6)])));
   el("filters").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === fk));
 }
-el("filters").innerHTML = FKINDS.map(([key, l]) => `<button type="button" data-k="${key}" aria-pressed="${fk === key}">${l}</button>`).join("");
+// The filter buttons are rebuilt only when the list of them changes (signing in adds one).
+function renderFilters() {
+  const ks = fkinds(); if (!ks.some(([key]) => key === fk)) fk = "all";
+  if (el("filters").dataset.ks !== ks.map(x => x[0]).join()) { el("filters").dataset.ks = ks.map(x => x[0]).join(); el("filters").innerHTML = ks.map(([key, l]) => `<button type="button" data-k="${key}">${l}</button>`).join(""); }
+}
 el("filters").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; fk = b.dataset.k; draw(); applyFilters(); });
+// Everything on the page that depends on what people have added, redrawn together.
+function refresh() { reindex(); renderFilters(); renderAccount(); renderCards(); renderConnections(); drawPins(); draw(); renderFollows(); notePeople(); }
 function pinReadout(s) {
-  const last = s.link ? "What @" + esc(s.by) + " does." : `Vouched for by ${s.vouchers.length === 1 ? "one person" : s.vouchers.length + " people"}.`;
-  el("readout").innerHTML = `<h3>${esc(s.title)}</h3><p>${where(s)}</p><p>${last}</p>`;
+  const n = (IDX.by.get(s.did) || []).length;
+  el("readout").innerHTML = `<h3>${esc(s.title)}</h3><p>${where(s)}</p><p>What @${esc(s.by)} does.${n ? ` Vouched for by ${countPeople(n)}.` : ""}</p>`;
 }
 function selectStory(i, scroll) {
   if (pins) pins.classed("sel", s => STORIES.indexOf(s) === i);
   document.querySelectorAll(".story").forEach(n => n.classList.toggle("sel", +n.id.slice(6) === i));
   if (i == null) return;
-  if (scroll === "story") { if (!passes(STORIES[i])) { fk = "all"; applyFilters(); } el("story-" + i).scrollIntoView({ behavior: "smooth", block: "start" }); }
+  if (scroll === "story") { if (!passes(STORIES[i])) { fk = "all"; draw(); applyFilters(); } el("story-" + i).scrollIntoView({ behavior: "smooth", block: "start" }); }
   if (scroll === "map") {
     const s = STORIES[i], want = s.scope;   // an entry belongs to the map it was placed on
     if (scopeKey !== want) return setScope(want).then(() => selectStory(i, "map"));
     if (featureOf(s.unit)) { picked = s.unit; draw(); pins.classed("sel", x => x === s); }
     document.querySelector(".mapbox").scrollIntoView({ behavior: "smooth", block: "center" }); pinReadout(s); }
 }
+// Vouch, withdraw and decline buttons work the same wherever they sit.
+function vouchClick(e) {
+  const v = e.target.closest("button.vouch"); if (v) return vouchFor(v.dataset.d), true;
+  const u = e.target.closest("button.unvouch"); if (u) return unvouch(u.dataset.d), true;
+  const d = e.target.closest("button.decline"); if (d) return decline(d.dataset.d), true;
+  return false;
+}
 el("stories").addEventListener("click", e => {
+  if (vouchClick(e)) return;
   const b = e.target.closest("button.show"); if (b) return selectStory(+b.dataset.i, "map");
   const r = e.target.closest("button.remove"); if (r) return removeMine(+r.dataset.i);
-  const v = e.target.closest("button.vouchtoo"); if (v) return vouchToo(+v.dataset.i);
   const t = e.target.closest("button.takedown"); if (t) requestTakedown(+t.dataset.i);
 });
 
@@ -147,22 +157,23 @@ function buildMap() {
   drawPins();
 }
 function drawPins() {
-  const onMap = s => !s.gone && (scopeKey === "world" || s.scope === scopeKey);
-  const vis = STORIES.filter(onMap).map(s => ({ s, p: proj([s.lon, s.lat]) })).filter(o => o.p && o.p[0] >= 0 && o.p[0] <= W && o.p[1] >= 0 && o.p[1] <= H);
-  // A line from what someone does to whoever they vouch for, when both are on this map.
-  const shown = new Set(vis.map(o => o.s)), mine = new Map();
-  for (const s of shown) if (s.link) { if (!mine.has(s.did)) mine.set(s.did, []); mine.get(s.did).push(s); }
+  const onThisMap = s => !s.gone && (scopeKey === "world" || s.scope === scopeKey);
+  const vis = STORIES.filter(onThisMap).map(s => ({ s, p: proj([s.lon, s.lat]) })).filter(o => o.p && o.p[0] >= 0 && o.p[0] <= W && o.p[1] >= 0 && o.p[1] <= H);
+  // A line from what someone does to what each person they vouch for does, when both are on this map.
+  const mine = new Map();
+  for (const { s } of vis) (mine.get(s.did) || mine.set(s.did, []).get(s.did)).push(s);
   const joins = [];
-  for (const v of shown) if (v.vouch) for (const p of v.vouchers) for (const l of mine.get(p.did) || []) if (l.lon !== v.lon || l.lat !== v.lat) joins.push([l, v]);
+  for (const [did, vs] of IDX.from) for (const l of mine.get(did) || []) for (const v of vs) for (const m of mine.get(v.subject) || []) if (l.lon !== m.lon || l.lat !== m.lat) joins.push([l, m]);
   ties = gTies.selectAll("line").data(joins).join("line").attr("class", "tie")
     .attr("x1", d => proj([d[0].lon, d[0].lat])[0]).attr("y1", d => proj([d[0].lon, d[0].lat])[1])
     .attr("x2", d => proj([d[1].lon, d[1].lat])[0]).attr("y2", d => proj([d[1].lon, d[1].lat])[1]);
-  pins = gPins.selectAll("g.pin").data(vis.map(o => o.s), s => s.key).join("g").attr("class", s => "pin people" + (s.vouch ? " vouch" : "")).attr("tabindex", 0).attr("role", "button")
-    .attr("aria-label", s => (s.link ? `What ${s.by} does: ${s.title}, ${s.place}` : `${s.title}, ${s.place}, vouched for by ${s.vouchers.length}`)).attr("transform", s => `translate(${proj([s.lon, s.lat])})`);
+  const vn = s => (IDX.by.get(s.did) || []).length;
+  pins = gPins.selectAll("g.pin").data(vis.map(o => o.s), s => s.key).join("g").attr("class", s => "pin people" + (vn(s) ? " vouched" : "")).attr("tabindex", 0).attr("role", "button")
+    .attr("aria-label", s => `What ${s.by} does: ${s.title}, ${s.place}${vn(s) ? `, vouched for by ${countPeople(vn(s))}` : ""}`).attr("transform", s => `translate(${proj([s.lon, s.lat])})`);
   pins.selectAll("*").remove();
   pinInner = pins.append("g").attr("transform", `scale(${1 / k})`);
-  pinInner.filter(s => s.link).append("circle").attr("class", "halo").attr("r", 5.5);
-  pinInner.filter(s => s.vouch).append("rect").attr("class", "halo").attr("x", -5).attr("y", -5).attr("width", 10).attr("height", 10);
+  pinInner.filter(s => vn(s)).append("circle").attr("class", "ring").attr("r", 10);
+  pinInner.append("circle").attr("class", "halo").attr("r", 5.5);
   pinInner.append("circle").attr("r", 16).attr("fill", "transparent");
   pins.on("click", (e, s) => selectStory(STORIES.indexOf(s), "story"))
     .on("keydown", (e, s) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectStory(STORIES.indexOf(s), "story"); } })
@@ -201,7 +212,7 @@ function draw() {
   // The buttons are made once and only their state changes: rebuilding them under a
   // click that began as the search box lost focus would swallow the click.
   el("scopes").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.s === scopeKey));
-  el("swatches").innerHTML = `<span><i class="tint"></i>someone is here</span><span><i class="pinkey p"></i>what someone does</span><span><i class="pinkey pv"></i>someone vouched for</span>${ties && ties.size() ? `<span><i class="tie"></i>vouches for</span>` : ""}`;
+  el("swatches").innerHTML = `<span><i class="tint"></i>someone is here</span><span><i class="pinkey"></i>what someone does</span><span><i class="pinkey pv"></i>vouched for</span>${ties && ties.size() ? `<span><i class="tie"></i>vouches for</span>` : ""}`;
   hover(picked ? featureOf(picked) : null);
   profile();
 }
@@ -214,9 +225,9 @@ function profile() {
   const open = scopeKey === "world" && OPENS(picked);
   box.innerHTML = `<h2>${esc(nameOf(f))}</h2>
     ${open ? `<p><button type="button" class="open" data-s="${open}">Open ${SCOPES[open].label} by ${SCOPES[open].unit}</button></p>` : ""}
-    ${there.length ? `<ul class="here">` + there.map(([s, i]) => `<li><a href="#story-${i}" data-i="${i}"><i class="mark ${s.link ? "p" : "pv"}"></i>${esc(s.title)}</a> <span>${s.link ? "what @" + esc(s.by) + " does" : `vouched for by ${s.vouchers.length === 1 ? "one person" : s.vouchers.length + " people"}`}${s.scope !== scopeKey ? ", in " + esc(s.place) : ""}</span></li>`).join("") + `</ul>`
-      : `<p class="none">Nobody has added anything in this ${S.unit} yet. If you are here, or you know who holds it together, you can be the first.</p>`}
-    <p class="askhere"><button type="button" data-ask="do">Add what you do here</button> <button type="button" data-ask="who">Vouch for who holds it together</button></p>`;
+    ${there.length ? `<ul class="here">` + there.map(([s, i]) => `<li><a href="#story-${i}" data-i="${i}"><i class="mark p"></i>${esc(s.title)}</a> <span>what @${esc(s.by)} does${IDX.by.has(s.did) ? ", vouched for by " + countPeople(IDX.by.get(s.did).length) : ""}${s.scope !== scopeKey ? ", in " + esc(s.place) : ""}</span></li>`).join("") + `</ul>`
+      : `<p class="none">Nobody has added anything in this ${S.unit} yet. If you are here, you can be the first.</p>`}
+    <p class="askhere"><button type="button" data-ask="do">Add what you do here</button> <button type="button" data-ask="who">Vouch for someone who is here</button></p>`;
   renderAdd();
 }
 el("profile").addEventListener("click", e => {
@@ -248,7 +259,8 @@ async function setScope(key) {
 // ---- people: sign-in, adding a link, removing it, asking for one to be taken down.
 // The records live in people's own atproto accounts; this site stores nothing.
 // Sign-in follows the Library (../library/app.js).
-const state = { client: null, session: null, agent: null, me: null, handle: null, authError: false, notice: "", busy: false, draft: "", errors: [], ask: null, vouchDraft: "", vouchErrors: [] };
+const state = { client: null, session: null, agent: null, me: null, handle: null, authError: false, notice: "", busy: false, draft: "", errors: [], ask: null, vouchDraft: "", vouchErrors: [],
+  follows: null, followsError: false, followsAll: false };   // follows: the accounts on the map that the signed-in person follows; null until asked
 let people = { loaded: false, error: null, unreachable: 0, withheld: 0, unplaced: 0 };
 // A link carries a unit id, never a place name, so the name is looked up here.
 // A link whose unit this atlas doesn't have is not shown.
@@ -260,13 +272,6 @@ async function namesFor(scope) {
 async function display(e) {
   const name = (await namesFor(e.scope))[e.unit];
   return name ? { ...e, key: e.uri, by: e.handle || e.did, link: true, title: e.host, place: name, country: "" } : null;
-}
-// One entry for everyone who vouched for the same organisation or person in the same place.
-async function displayVouch(g) {
-  const name = (await namesFor(g.scope))[g.unit]; if (!name) return null;
-  let title = g.isAccount ? g.subject : A.hostOf(g.subject);
-  if (g.isAccount) { try { const id = await resolveDid(g.subject); if (id.handle) title = "@" + id.handle; } catch {} }
-  return { ...g, vouch: true, by: g.vouchers[0].handle || g.vouchers[0].did, title, place: name, country: "" };
 }
 
 async function initAuth() {
@@ -289,8 +294,9 @@ async function setSession(session) {
   // The SDK's Agent loads only once someone signs in; reading the map needs plain fetches only.
   if (session) Agent ??= (await import("../library/vendor/atproto-api.js")).Agent;
   state.session = session; state.agent = session ? new Agent(session) : null; state.me = session?.did ?? null; state.handle = null;
+  state.follows = null; state.followsError = false; state.followsAll = false;
   if (session) resolveDid(session.did).then(id => { state.handle = id.handle; renderAccount(); }).catch(() => {});
-  renderAccount(); renderCards(); applyFilters(); renderAdd();
+  refresh(); renderAdd(); loadFollows();
 }
 function renderAccount() {
   el("notice").innerHTML = state.notice ? `<p class="notice">${esc(state.notice)}</p>` : "";
@@ -314,19 +320,18 @@ el("account").addEventListener("click", async e => {
   try { await session?.signOut(); } catch {}
 });
 
-// The two questions at the top of the page open this panel. It needs three things in order:
-// an account, a place picked on the map, and then the link, case study or vouch itself.
+// The two questions at the top of the page open this panel. Both need an account. A link
+// also needs a place picked on the map; a vouch needs only the account it is for.
 function openAsk(ask) { state.ask = ask; renderAdd(); el("add").scrollIntoView({ behavior: "smooth", block: "start" }); }
 function renderAdd() {
   const box = el("addbox");
   el("contribute").hidden = !state.ask;
   document.querySelectorAll(".askbtn").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ask === state.ask)));
   if (!state.ask || !state.me) { box.innerHTML = ""; return; }
+  if (state.ask === "who") { box.innerHTML = vouchForm(); return; }
   const f = picked && featureOf(picked);
   if (!f) { box.innerHTML = `<p class="pick">Now pick a place on the map below. A country will do. Open the United States, India or Europe to pick a county, a district or a region.</p>`; return; }
-  const name = nameOf(f), placed = `<p class="placed">In <b>${esc(name)}</b>. Pick another place on the map to change it.</p>`;
-  if (state.ask === "who") { box.innerHTML = placed + vouchForm(); return; }
-  box.innerHTML = placed + `<form class="addform" id="addform" novalidate>
+  box.innerHTML = `<p class="placed">In <b>${esc(nameOf(f))}</b>. Pick another place on the map to change it.</p><form class="addform" id="addform" novalidate>
     <p class="warn">A link is a web address and this place, nothing else. It is public, saved in your own account under your handle. Add pages that are already public. Do not add one that locates a person who could be harmed by being found. Anyone signed in can ask for it to be taken down.</p>
     ${state.errors.length ? `<p class="errors" role="alert">${state.errors.map(esc).join(" ")}</p>` : ""}
     <div class="row"><label class="sr-only" for="addurl">Web address</label>
@@ -334,14 +339,15 @@ function renderAdd() {
       <button type="submit"${state.busy ? " disabled" : ""}>${state.busy ? "Saving" : "Add link"}</button></div>
   </form>`;
 }
-// A vouch: their atproto handle or their web address, and the place. Nothing of the voucher's own wording.
+// A vouch is for an account that has added what it does here, and holds nothing else.
 function vouchForm() {
   return `<form class="addform" id="vouchform" novalidate>
-    <p class="warn">A vouch says that an organisation or a person holds your world together in this place. It holds their atproto handle or their web address and the place, nothing else, and it is public under your handle. Vouch only for people and groups whose work is already public. They, or anyone signed in, can ask for it to be taken down, and it comes off at once.</p>
+    <p class="warn">A vouch says that someone holds your world together. It can only be for someone who has added what they do here, so nobody is named on this map who has not put themselves on it. It holds their account and nothing else, and it is public under your handle. They can decline it.</p>
     ${state.vouchErrors.length ? `<p class="errors" role="alert">${state.vouchErrors.map(esc).join(" ")}</p>` : ""}
-    <div class="row"><label class="sr-only" for="vouchsubject">Their handle or web address</label>
-      <input id="vouchsubject" name="subject" autocapitalize="none" spellcheck="false" placeholder="their.handle or https://" maxlength="${A.MAX_URL}" value="${esc(state.vouchDraft)}">
+    <div class="row"><label class="sr-only" for="vouchsubject">Their handle</label>
+      <input id="vouchsubject" name="subject" autocapitalize="none" spellcheck="false" placeholder="their.handle" maxlength="253" value="${esc(state.vouchDraft)}">
       <button type="submit"${state.busy ? " disabled" : ""}>${state.busy ? "Saving" : "Vouch"}</button></div>
+    <p>Or use the Vouch button on anyone's entry, further down the page.</p>
   </form>`;
 }
 document.querySelectorAll(".askbtn").forEach(b => b.addEventListener("click", () => { state.ask = state.ask === b.dataset.ask ? null : b.dataset.ask; renderAdd(); }));
@@ -355,43 +361,88 @@ el("contribute").addEventListener("submit", e => {
   if (e.target.id === "vouchform") { e.preventDefault(); addVouch(); }
 });
 
-// Put one vouch on the page: into the entry for that one in that place, or a new entry.
-async function showVouch(v) {
-  const key = `vouch:${v.subject}|${v.scope}|${v.unit}`, have = STORIES.find(s => s.key === key && !s.gone);
-  if (have) { if (!have.vouchers.some(x => x.did === v.did)) have.vouchers.push({ did: v.did, handle: v.handle, uri: v.uri, rkey: v.rkey }); return have; }
-  const shown = await displayVouch(A.groupVouches([v])[0]);
-  if (shown) STORIES.push(shown);
-  return shown;
+// ---- people you follow: shown to someone signed in, with an invitation to vouch.
+// Who they follow is asked of Bluesky's public service, about the accounts on this map only.
+let followsRun = 0;
+async function loadFollows() {
+  const me = state.me, run = ++followsRun;
+  if (!me || !people.loaded || people.error) return renderFollows();
+  let got, failed = false;
+  try { got = await A.loadFollowing(u => fetch(u).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }), me, STORIES.filter(s => !s.gone).map(s => s.did)); }
+  catch { got = new Set(); failed = true; }
+  if (run !== followsRun || state.me !== me) return;
+  state.follows = got; state.followsError = failed;
+  renderFilters(); applyFilters(); renderFollows();
 }
-async function writeVouch(input) {
-  const built = A.buildVouch(input);
-  if (!built.ok) return built;
-  const res = await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL.vouch, record: built.record });
-  const uri = res.data.uri;
-  await showVouch({ ...A.parseVouch(built.record), uri, rkey: uri.split("/").pop(), did: state.me, handle: state.handle });
-  return built;
+function renderFollows() {
+  const box = el("follows");
+  box.hidden = !state.me || !people.loaded || !!people.error;
+  if (box.hidden) return;
+  if (!state.follows) { box.innerHTML = `<h2>People you follow</h2><p>Looking for the people you follow.</p>`; return; }
+  if (state.followsError) { box.innerHTML = `<h2>People you follow</h2><p>Who you follow could not be checked right now. You can still vouch from anyone's entry, further down the page.</p>`; return; }
+  const byDid = new Map();
+  STORIES.forEach((s, i) => { if (!s.gone && state.follows.has(s.did)) (byDid.get(s.did) || byDid.set(s.did, []).get(s.did)).push([s, i]); });
+  if (!byDid.size) { box.innerHTML = `<h2>People you follow</h2><p>Nobody you follow on Bluesky has added what they do yet.</p>`; return; }
+  const rows = [...byDid], show = state.followsAll ? rows : rows.slice(0, 6);
+  box.innerHTML = `<h2>People you follow are here</h2>
+    <p>${rows.length === 1 ? "One person you follow has" : rows.length + " people you follow have"} added what they do. Do they hold your world together? A vouch is public, under your handle.</p>
+    <ul class="flist">${show.map(([did, list]) => { const iv = (IDX.by.get(did) || []).some(v => v.did === state.me);
+      return `<li><div>${profileLink(did)} <span>${list.map(([s, i]) => `<a href="#story-${i}" data-i="${i}">${esc(s.title)}</a> in ${esc(s.place)}`).join("; ")}</span></div>
+        ${iv ? `<span class="done">You vouch for them.</span> <button type="button" class="link unvouch" data-d="${esc(did)}">Withdraw</button>` : `<button type="button" class="vouch" data-d="${esc(did)}">Vouch</button>`}</li>`; }).join("")}</ul>
+    ${rows.length > show.length ? `<p><button type="button" class="link" id="followsall">Show all ${rows.length}</button></p>` : ""}`;
 }
+el("follows").addEventListener("click", e => {
+  if (vouchClick(e)) return;
+  if (e.target.id === "followsall") { state.followsAll = true; return renderFollows(); }
+  const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); }
+});
+
+// ---- vouching: one record in the voucher's account, pointing at the account vouched for
+function needSignIn(why) { state.notice = why; state.ask = state.ask || "who"; renderAccount(); renderAdd(); el("add").scrollIntoView({ behavior: "smooth", block: "start" }); }
+async function vouchFor(did) {
+  if (!state.agent) return needSignIn("Sign in here to vouch.");
+  if (did === state.me) { state.notice = "That is you."; return renderAccount(); }
+  if (!onMap(did)) { state.notice = "A vouch can only be for someone who has added what they do here."; return renderAccount(); }
+  if (VOUCHES.some(v => v.did === state.me && v.subject === did)) return;
+  const built = A.buildVouch({ subject: did });
+  if (!built.ok) { state.notice = built.errors.join(" "); return renderAccount(); }
+  try {
+    const res = await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL.vouch, record: built.record });
+    VOUCHES.push({ did: state.me, handle: state.handle, subject: did, createdAt: built.record.createdAt, records: [{ uri: res.data.uri, rkey: res.data.uri.split("/").pop() }] });
+    state.notice = `You vouch for @${handleOf(did)}. It is saved in your own account.`;
+  } catch (err) { state.notice = `It could not be saved: ${err.message}`; }
+  refresh();
+}
+// The form: a handle, turned into its account, which must already be on the map.
 async function addVouch() {
-  const f = picked && featureOf(picked); if (!f || !state.agent || state.busy) return;
-  const [lon, lat] = d3.geoCentroid(f), name = nameOf(f), raw = state.vouchDraft.trim();
+  if (!state.agent || state.busy) return;
+  const raw = state.vouchDraft.trim().replace(/^@/, "");
   state.busy = true; state.vouchErrors = []; renderAdd();
   try {
-    // A web address is kept as it is. Anything else is read as a handle and turned into its account.
-    const subject = /^https?:\/\//i.test(raw) ? raw : raw.startsWith("did:") ? raw : raw ? await resolveHandle(raw.replace(/^@/, "")) : "";
-    if (subject === state.me) throw new Error("That is you. Use the first question for your own work.");
-    const built = await writeVouch({ subject, scope: scopeKey, unit: picked, lat, lon });
-    if (!built.ok) { state.vouchErrors = built.errors; }
-    else { state.vouchDraft = ""; state.notice = `Vouch added in ${name}. It is saved in your own account.`; }
-  } catch (err) { state.vouchErrors = [/^That is you/.test(err.message) ? err.message : `It could not be saved: ${err.message}`]; }
-  state.busy = false; renderAccount(); renderCards(); drawPins(); draw(); notePeople();
+    const did = !raw ? "" : raw.startsWith("did:") ? raw : await resolveHandle(raw);
+    if (!A.vouchSubject(did)) state.vouchErrors = ["Give the handle of someone who has added what they do."];
+    else if (did === state.me) state.vouchErrors = ["That is you. Use the first question for your own work."];
+    else if (!onMap(did)) state.vouchErrors = [`@${raw} has not added what they do here. A vouch can only be for someone who has.`];
+    else { await vouchFor(did); state.vouchDraft = ""; }
+  } catch (err) { state.vouchErrors = [`That handle could not be found: ${err.message}`]; }
+  state.busy = false; renderAdd();
 }
-async function vouchToo(i) {
-  const s = STORIES[i]; if (!s?.vouch) return;
-  if (!state.agent) { state.notice = "Sign in here to vouch."; state.ask = "who"; renderAccount(); renderAdd(); return el("add").scrollIntoView({ behavior: "smooth", block: "start" }); }
-  if (s.subject === state.me) { state.notice = "That is you."; return renderAccount(); }
-  try { await writeVouch({ subject: s.subject, scope: s.scope, unit: s.unit, lat: s.lat, lon: s.lon }); state.notice = "Your vouch is added. It is saved in your own account."; }
-  catch (err) { state.notice = `It could not be saved: ${err.message}`; }
-  renderAccount(); renderCards(); drawPins(); draw(); notePeople();
+async function unvouch(did) {
+  const v = VOUCHES.find(x => x.did === state.me && x.subject === did); if (!v || !state.agent) return;
+  try {
+    for (const r of v.records) await state.agent.com.atproto.repo.deleteRecord({ repo: state.me, collection: A.COL.vouch, rkey: r.rkey });
+    VOUCHES = VOUCHES.filter(x => x !== v); state.notice = "Your vouch is withdrawn.";
+  } catch (err) { state.notice = `It could not be withdrawn: ${err.message}`; }
+  refresh();
+}
+// Whoever is vouched for can decline a vouch: a takedown request against each record behind it.
+async function decline(voucher) {
+  const v = VOUCHES.find(x => x.did === voucher && x.subject === state.me); if (!v || !state.agent) return;
+  try {
+    for (const r of v.records) { const built = A.buildTakedown(r.uri); if (built.ok) await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL.takedown, record: built.record }); }
+    VOUCHES = VOUCHES.filter(x => x !== v); people.withheld += v.records.length; state.notice = "Declined. That vouch is no longer shown here.";
+  } catch (err) { state.notice = `The request could not be saved: ${err.message}`; }
+  refresh();
 }
 
 async function addLink() {
@@ -405,41 +456,31 @@ async function addLink() {
     const uri = res.data.uri, shown = await display({ ...A.parseLink(built.record), uri, rkey: uri.split("/").pop(), did: state.me, handle: state.handle });
     if (shown) STORIES.push(shown);
     state.draft = ""; state.busy = false; state.notice = `Link added to ${name}. It is saved in your own account.`;
-    renderAccount(); renderCards(); drawPins(); draw(); notePeople();
+    refresh();
   } catch (err) { state.busy = false; state.errors = [`It could not be saved: ${err.message}`]; renderAdd(); }
 }
 async function removeMine(i) {
-  const s = STORIES[i]; if (!s?.by || !state.agent) return;
-  try {
-    if (s.vouch) {   // withdraw my own vouch; other people's stay
-      for (const v of s.vouchers.filter(v => v.did === state.me)) await state.agent.com.atproto.repo.deleteRecord({ repo: state.me, collection: A.COL.vouch, rkey: v.rkey });
-      s.vouchers = s.vouchers.filter(v => v.did !== state.me); if (!s.vouchers.length) s.gone = true;
-      state.notice = "Your vouch is withdrawn.";
-    } else {
-      if (s.did !== state.me) return;
-      await state.agent.com.atproto.repo.deleteRecord({ repo: state.me, collection: A.COL.link, rkey: s.rkey }); s.gone = true; state.notice = "Removed from your account and from the map.";
-    }
-  } catch (err) { state.notice = `It could not be removed: ${err.message}`; }
-  renderAccount(); renderCards(); drawPins(); draw(); notePeople();
+  const s = STORIES[i]; if (!s || s.did !== state.me || !state.agent) return;
+  try { await state.agent.com.atproto.repo.deleteRecord({ repo: state.me, collection: A.COL.link, rkey: s.rkey }); s.gone = true; state.notice = "Removed from your account and from the map."; }
+  catch (err) { state.notice = `It could not be removed: ${err.message}`; }
+  refresh();
 }
 // A takedown request is a record in the requester's account that points at the link.
 // The page stops showing the link at once.
 async function requestTakedown(i) {
-  const s = STORIES[i]; if (!s?.by) return;
-  if (!state.agent) { state.notice = "Sign in here to ask for this to be taken down."; state.ask = state.ask || "do"; renderAccount(); renderAdd(); return el("add").scrollIntoView({ behavior: "smooth", block: "start" }); }
-  // A vouch entry stands for one record per voucher, so each of them is asked to come down.
-  const uris = s.vouch ? s.vouchers.map(v => v.uri) : [s.uri];
+  const s = STORIES[i]; if (!s) return;
+  if (!state.agent) return needSignIn("Sign in here to ask for this to be taken down.");
   try {
-    for (const uri of uris) { const built = A.buildTakedown(uri); if (built.ok) await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL.takedown, record: built.record }); }
-    s.gone = true; people.withheld += uris.length; state.notice = "Takedown requested. It is no longer shown here.";
+    const built = A.buildTakedown(s.uri); if (built.ok) await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL.takedown, record: built.record });
+    s.gone = true; people.withheld += 1; state.notice = "Takedown requested. It is no longer shown here.";
   } catch (err) { state.notice = `The request could not be saved: ${err.message}`; }
-  renderAccount(); renderCards(); drawPins(); draw(); notePeople();
+  refresh();
 }
 function notePeople() {
-  const links = STORIES.filter(s => s.link && !s.gone).length, vouched = STORIES.filter(s => s.vouch && !s.gone).length;
+  const links = STORIES.filter(s => !s.gone).length;
   el("communitynote").textContent = !people.loaded ? "Looking for what people have added."
     : people.error ? "What people have added is not shown right now: the index that finds it, and the takedown requests against it, did not answer."
-    : (links || vouched ? `${links} ${links === 1 ? "link" : "links"} to what people do. ${vouched} vouched for.` : "Nobody has added anything yet. The two questions at the top of the page are how to start.")
+    : (links ? `${links} ${links === 1 ? "link" : "links"} to what people do. ${IDX.n} ${IDX.n === 1 ? "vouch" : "vouches"} between them.` : "Nobody has added anything yet. The first question at the top of the page is how to start.")
       + (people.withheld ? ` ${people.withheld} withheld after a takedown request.` : "")
       + (people.unreachable ? ` ${people.unreachable} could not be read from their authors' servers.` : "");
 }
@@ -450,23 +491,20 @@ async function loadPeople() {
   const have = new Set(STORIES.map(s => s.key));
   let unplaced = 0;
   for (const e of out.links) { if (have.has(e.uri)) continue; const shown = await display(e); if (shown) STORIES.push(shown); else unplaced++; }
-  for (const g of A.groupVouches(out.vouches)) { if (have.has(g.key)) continue; const shown = await displayVouch(g); if (shown) STORIES.push(shown); else unplaced++; }
+  const mine = VOUCHES.filter(v => !out.vouches.some(o => v.records.some(r => r.uri === o.uri)));   // written here before the index answered
+  VOUCHES = [...A.cleanVouches(out.vouches), ...mine];
   people = { loaded: true, error: out.error, unreachable: out.unreachable, withheld: out.withheld, unplaced };
-  notePeople(); renderCards(); drawPins(); draw();
+  refresh(); loadFollows();
 }
 
 // ---- who vouches for whom: the connections between people, read off the vouches
 function renderConnections() {
-  const by = new Map();
-  for (const s of STORIES) if (s.vouch && !s.gone) for (const v of s.vouchers) {
-    if (!by.has(v.did)) by.set(v.did, { label: v.handle || v.did, did: v.did, to: [] });
-    by.get(v.did).to.push(s);
-  }
-  el("connections").hidden = !by.size;
-  el("connlist").innerHTML = [...by.values()].sort((a, b) => b.to.length - a.to.length || a.label.localeCompare(b.label)).map(p =>
-    `<li><a href="https://bsky.app/profile/${encodeURIComponent(p.did)}">@${esc(p.label)}</a> vouches for ` + p.to.map(s =>
-      (s.isAccount ? `<a href="https://bsky.app/profile/${encodeURIComponent(s.subject)}">${esc(s.title)}</a>` : `<a href="${href(s.subject)}" rel="nofollow noopener">${esc(s.title)}</a>`) + ` <span>in ${esc(s.place)}</span>`).join(", ") + `.</li>`).join("");
+  el("connections").hidden = !IDX.from.size;
+  el("connlist").innerHTML = [...IDX.from].sort((a, b) => b[1].length - a[1].length || handleOf(a[0]).localeCompare(handleOf(b[0]))).map(([did, vs]) =>
+    `<li>${profileLink(did)} vouches for ${vs.map(v => { const i = STORIES.findIndex(s => !s.gone && s.did === v.subject), s = STORIES[i];
+      return `<a href="#story-${i}" data-i="${i}">@${esc(handleOf(v.subject))}</a> <span>in ${esc(s.place)}</span>`; }).join(", ")}.</li>`).join("");
 }
+el("connlist").addEventListener("click", e => { const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); } });
 
 // ---- prior work: what came before this atlas, each entry checked against the page it links to
 const PRIOR_KINDS = [["maps", "Maps and directories of care"], ["counting", "Counting unpaid work"], ["ideas", "Care, maintenance and repair"], ["commons", "Commons and counter-mapping"]];
@@ -486,7 +524,8 @@ const LIMITS = [
   "It is public. A link or a vouch is a record in the account of whoever added it, under their handle, and anyone can read it there whether or not this page shows it.",
   "It is as full as the people who have found it. An empty place on the map says nothing about who is there.",
   "Adding, vouching and asking for a takedown all need an atproto account. Someone without one cannot do any of them here.",
-  "A vouch puts an organisation or a person on a map without asking them. It can only point at a public account or a web address, it sits in a county or a district and never at an address, and it comes off as soon as anyone signed in asks.",
+  "A vouch can only be for an account that has added what it does here. Nobody is put on this map by someone else. Whoever is vouched for can decline a vouch and it comes off this page at once, though the record stays in the voucher's own account.",
+  "Who you follow is read from Bluesky's public service, about the accounts on this map only. Follows kept anywhere else are not seen.",
   "The finest places are US counties, Indian districts and European regions. Elsewhere it is the country. There is no street map.",
   "What people have added is found through Constellation, an outside index of atproto records. When that does not answer, none of it is shown.",
 ];
@@ -499,8 +538,7 @@ const SOURCES = [
 ];
 el("limits").innerHTML = LIMITS.map(t => `<li>${t}</li>`).join("");
 el("sources").innerHTML = SOURCES.map(([t, u]) => `<li><a href="${u}">${t}</a></li>`).join("");
-renderCards(); buildMap(); draw();
-renderAccount();
+buildMap(); refresh();
 initAuth().catch(() => { state.authError = true; renderAccount(); });
 loadPeople();
 loadPrior();
