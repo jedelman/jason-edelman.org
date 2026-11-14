@@ -72,9 +72,36 @@ export function textProblem(text) {
   return null;
 }
 
-// ---- Claude's session, kept per isolate ------------------------------------------------------------------------
+// ---- Claude's session: per isolate, and shared through KV ----------------------------------------------------------
+//
+// Bluesky allows 30 createSession calls per 5 minutes and 300 a day per account (docs.bsky.app, rate limits), and a
+// watcher polls every 15 s. A session kept only in an isolate's memory would log in again on every new isolate, and
+// running out would lock Claude's account out of logging in for a day, the inbox routine included (found 2026-11-14,
+// after a "login failed (500)"). So the session is also kept in KV (the INBOX namespace, one key; the same trust as the
+// app password secret beside it), read by a new isolate before it logs in, and replaced on every login and refresh.
+// Each login and refresh logs a line, so they can be counted in the Worker's logs.
 
+const SESSION_KEY = "group:claude-session";
+const SESSION_TTL_SECONDS = 7 * 24 * 3600;
 let session = null; // { accessJwt, refreshJwt, pds }
+
+async function loadStored(env) {
+  try {
+    const s = await env.INBOX?.get(SESSION_KEY, "json");
+    return s && typeof s.accessJwt === "string" && typeof s.refreshJwt === "string" && typeof s.pds === "string" ? s : null;
+  } catch {
+    return null;
+  }
+}
+
+async function keep(env, s, how) {
+  session = s;
+  console.log(JSON.stringify({ group: how }));
+  try {
+    await env.INBOX?.put(SESSION_KEY, JSON.stringify(s), { expirationTtl: SESSION_TTL_SECONDS });
+  } catch {}
+  return s;
+}
 
 async function xrpc(fetchImpl, base, method, { query, body, token, proxy } = {}) {
   const url = new URL(`/xrpc/${method}`, base);
@@ -105,23 +132,25 @@ async function login(env, fetchImpl) {
     body: { identifier: env.CLAUDE_DID, password: env.CLAUDE_BSKY_APP_PASSWORD },
   });
   if (!r.ok) throw new Error(`login failed (${r.status} ${r.data?.error || ""})`);
-  session = { accessJwt: r.data.accessJwt, refreshJwt: r.data.refreshJwt, pds: pdsOf(r.data.didDoc, service) };
-  return session;
+  return keep(env, { accessJwt: r.data.accessJwt, refreshJwt: r.data.refreshJwt, pds: pdsOf(r.data.didDoc, service) }, "login");
 }
 
 async function refresh(env, fetchImpl) {
   if (!session?.refreshJwt) return login(env, fetchImpl);
   const r = await xrpc(fetchImpl, session.pds, "com.atproto.server.refreshSession", { body: {}, token: session.refreshJwt });
   if (!r.ok) return login(env, fetchImpl);
-  session = { accessJwt: r.data.accessJwt, refreshJwt: r.data.refreshJwt, pds: pdsOf(r.data.didDoc, session.pds) };
-  return session;
+  return keep(env, { accessJwt: r.data.accessJwt, refreshJwt: r.data.refreshJwt, pds: pdsOf(r.data.didDoc, session.pds) }, "refresh");
 }
+
+/** A token the PDS no longer takes: expired, or revoked (a stored session another isolate has since refreshed). */
+const staleToken = (r) => r.status === 401 || (r.status === 400 && (r.data?.error === "ExpiredToken" || r.data?.error === "InvalidToken"));
 
 /** A chat call as Claude, through the PDS's chat proxy; one refresh on an expired token. */
 async function chat(env, fetchImpl, method, opts = {}) {
+  if (!session) session = await loadStored(env);
   if (!session) await login(env, fetchImpl);
   let r = await xrpc(fetchImpl, session.pds, method, { ...opts, token: session.accessJwt, proxy: true });
-  if (r.status === 400 && r.data?.error === "ExpiredToken") {
+  if (staleToken(r)) {
     await refresh(env, fetchImpl);
     r = await xrpc(fetchImpl, session.pds, method, { ...opts, token: session.accessJwt, proxy: true });
   }

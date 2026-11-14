@@ -238,3 +238,47 @@ test("a notice from the chat service itself (no sender) is labelled system, not 
   assert.deepEqual(r.data.messages.find((m) => m.id === "s1"), { id: "s1", rev: "00", sender: null, sentAt: "2026-11-13T03:57:00Z", text: null, deleted: false, system: "systemMessageView" });
   assert.ok(!r.text.includes("a member was removed"));
 });
+
+/** A KV namespace in memory, as INBOX is bound. */
+function fakeKV() {
+  const m = new Map();
+  return {
+    m,
+    get: async (k, type) => (m.has(k) ? (type === "json" ? JSON.parse(m.get(k)) : m.get(k)) : null),
+    put: async (k, v) => void m.set(k, v),
+  };
+}
+
+test("the session is kept in KV: a new isolate reuses it instead of logging in again (Bluesky: 300 logins a day)", async () => {
+  const INBOX = fakeKV();
+  const env = { ...ENV, INBOX };
+  const first = fakeBluesky();
+  assert.equal((await call("/group/convos", {}, env, first)).status, 200);
+  assert.equal(first.calls.filter((c) => c.method === "com.atproto.server.createSession").length, 1);
+  const stored = JSON.parse(INBOX.m.get("group:claude-session"));
+  assert.equal(stored.accessJwt, "access-1");
+  assert.ok(!INBOX.m.get("group:claude-session").includes(PASSWORD));
+  resetSession(); // a new isolate
+  const second = fakeBluesky();
+  assert.equal((await call("/group/convos", {}, env, second)).status, 200);
+  assert.equal(second.calls.filter((c) => c.method === "com.atproto.server.createSession").length, 0);
+});
+
+test("a refresh replaces the stored session; a stored session the PDS refuses is refreshed, then replaced by a login if need be", async () => {
+  const INBOX = fakeKV();
+  const env = { ...ENV, INBOX };
+  await call("/group/convos", {}, env, fakeBluesky());
+  resetSession();
+  const expired = fakeBluesky({ expireOnce: true });
+  assert.equal((await call("/group/messages?convoId=room", {}, env, expired)).status, 200);
+  assert.ok(expired.calls.some((c) => c.method === "com.atproto.server.refreshSession"));
+  assert.equal(JSON.parse(INBOX.m.get("group:claude-session")).accessJwt, "access-2");
+});
+
+test("a malformed stored session is ignored: the bridge logs in", async () => {
+  const INBOX = fakeKV();
+  INBOX.m.set("group:claude-session", JSON.stringify({ accessJwt: 1 }));
+  const bsky = fakeBluesky();
+  assert.equal((await call("/group/convos", {}, { ...ENV, INBOX }, bsky)).status, 200);
+  assert.equal(bsky.calls.filter((c) => c.method === "com.atproto.server.createSession").length, 1);
+});
