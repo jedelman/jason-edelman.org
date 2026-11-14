@@ -1,44 +1,46 @@
 # Atlas of Care
 
-A map of the work that keeps life going, served at `jason-edelman.org/atlas-of-care/`.
-Plain browser JavaScript, no build step for the page. Subtitle: "find each other."
+A map for finding each other, served at `jason-edelman.org/atlas-of-care/`. Plain
+browser JavaScript, no build step. Subtitle: "find each other."
 
-It has two parts:
+The page opens on two questions. "What do you do to hold your world together?" takes a
+link to it, in a place. "Who holds your world together?" takes a vouch for an
+organisation or a person, in a place. Those answers are the only things on the map:
 
-1. **Layers**: statistics tinted onto a map, in six groups ordered by how soon it is
-   felt when the work behind them stops. The world map has 29, most of them covering
-   150 to 215 countries. Three parts of it open to local units: US counties, Indian
-   districts and European NUTS-2 regions. Clicking a unit opens a profile of every
-   layer for that place, and of who is there.
-2. **What people add**: the page opens on two questions. "What do you do to hold your
-   world together?" takes a link to it, in a place. "Who holds your world together?"
-   takes a vouch for an organisation or a person. Those are the only marks on the map.
-   Each carries the handle of whoever added it, and anyone signed in can ask for one to
-   be taken down.
+- a place is tinted when someone is there, brighter the more there are;
+- a round amber mark is what someone does, a square one is someone vouched for;
+- a line joins what a person does to whoever they vouch for, when both are on the map;
+- picking a place, on the map or by name in the search box, lists who is there;
+- "Who vouches for whom" lists each person with everyone they vouch for, and a link's
+  card names whoever vouches for the person behind it.
 
-The atlas began the day with 56 researched case studies on the map. Jason dropped them
-on 2026-11-14 to put all of it on people finding each other. They are in this folder's
-git history (`data/entries.json` before that date).
+The world map is by country. Three parts of it open to smaller places: US counties,
+Indian districts and European NUTS-2 regions. Each entry carries the handle of whoever
+added it, and anyone signed in can ask for one to be taken down.
+
+**What was here before.** The atlas began 2026-11-14 as statistics tinted onto the map
+(29 world layers and local ones, from Our World in Data, the WHO, the ILO, County Health
+Rankings, NFHS-5 and Eurostat) with 56 researched case studies. Jason dropped the case
+studies and then the statistics the same day, to put all of it on people finding each
+other. Both are in this folder's git history: `data/entries.json`, `data/*.values.json`
+and `build/` before that date, with the rebuild steps in this README's history.
 
 It is styled to the rest of the site: the field-notes palette, Epilogue and Charis SIL,
-no rounded corners, shadows or gradients (`.impeccable.md`). One colour comes from
-outside the palette: the violet of the men's bars, because green against amber cannot
-be told apart with red-green colour blindness.
+no rounded corners, shadows or gradients (`.impeccable.md`).
 
 ## Files
 
 | File | What it is |
 |---|---|
 | `index.html` | Markup and styles. |
-| `app.js` | The map, layers, place profile, sign-in, adding a link, vouching and asking for a takedown. |
+| `app.js` | The map, the place search, who is in a place, who vouches for whom, sign-in, adding a link, vouching and asking for a takedown. |
 | `atlas.js` | The rules for links, vouches and takedown requests: building, checking and loading them. No DOM, so it runs in Node tests. |
 | `atlas.test.mjs` | `node --test atlas-of-care/atlas.test.mjs` |
 | `client-metadata.json` | The atproto OAuth client. Its scope is the three collections below. |
 | `lexicons/` | The schemas of a link, a vouch and a takedown request. |
 | `hidden.json` | What this page declines to show (`dids`, `uris`), and links it shows despite a takedown request (`keep`). |
-| `data/` | Map shapes, layer values and the prior-work list (`prior.json`). |
+| `data/` | Map shapes (`*.topo.json`, `in.geo.json`), the name of every place (`*.names.json`) and the prior-work list (`prior.json`). |
 | `vendor/` | d3 7.9.0 and topojson-client 3.1.0, checked in; `vendor/LICENSES.txt` has the notices. |
-| `build/` | The Python scripts that made `data/`. See "Rebuilding the data". |
 
 Sign-in and the backlink index reuse the Library's code: `app.js` imports
 `../library/lib.js` and the SDK under `../library/vendor/`. If the Library moves, this
@@ -127,12 +129,15 @@ delete it with the Remove button.
   organisation or person made by someone else.
 - **A takedown request needs an atproto account.** Someone without one cannot make one
   here.
-- **Constellation is a dependency.** If it does not answer, no links are shown and the
-  page says so. The layers still work.
+- **Constellation is a dependency.** If it does not answer, nothing is shown but the
+  bare map, and the page says so.
 - **No village or city level, and no street map.** The finest units are US counties,
   Indian districts and European regions. The map is drawn from boundary files with
   d3; there are no tiles.
-- **Local layers differ by country.** Each country's layers come from its own surveys.
+- **Lines need both ends.** A line is drawn only from someone who has added what they
+  do. A person who only vouches appears in "Who vouches for whom" and has no place of
+  their own on the map.
+- **Small island states are missing** from the world map (Natural Earth at 1:110m).
 - **Sign-in and writing were not tested end to end** when this was first committed:
   the rules are unit-tested and the page was tested against a simulated index and
   simulated accounts, but no real account signed in and wrote a record.
@@ -142,56 +147,21 @@ delete it with the Remove button.
 Serve the repo root and open `http://127.0.0.1:<port>/atlas-of-care/`. On a loopback
 address the app uses atproto's loopback OAuth client. Use `127.0.0.1`, not `localhost`.
 
-## Rebuilding the data
+## The map files
 
-The scripts in `build/` need Python 3 with `pycountry` and `shapely`.
+- `world.topo.json`: `world-atlas@2.0.2/countries-110m.json` (Natural Earth).
+  `world.names.json` maps each shape's numeric id to an ISO alpha-3 code and a name;
+  the alpha-3 code is the unit id a record carries. Kosovo, Somaliland and Northern
+  Cyprus have no ISO code and use `XKX`, `XSL` and `XNC`.
+- `us.topo.json`: `us-atlas@3.0.1/counties-10m.json`. Unit ids are county FIPS codes.
+- `in.geo.json`: geoBoundaries India ADM2 (commit `9469f09`), simplified with shapely
+  (`buffer(0)`, `simplify(0.012, preserve_topology=True)`, exterior rings clockwise for
+  d3-geo, coordinates to three places). Unit ids are geoBoundaries shape ids.
+- `eu.topo.json`: Eurostat GISCO `NUTS_RG_20M_2021_4326_LEVL_2`. Unit ids are NUTS ids.
 
-```bash
-D=<a new empty dir>
-g(){ curl -sSL --compressed -A "Mozilla/5.0" -o "$D/$1" "$2"; }
-O="https://ourworldindata.org/grapher"; Q="v=1&csvType=full&useColumnShortNames=true"
-g dom.csv   "$O/time-spend-in-domestic-work-female-vs-male.csv?$Q"
-g sfp.json  "https://api.db.nomics.world/v22/series/ILO/FOW_5SFP_SEX_RT?observations=1&limit=1000"
-g ste.csv   "https://rplumber.ilo.org/data/indicator/?id=EMP_2EMP_SEX_STE_NB_A&timefrom=2024&timeto=2024&format=.csv"
-g carer.csv "https://rplumber.ilo.org/data/indicator/?id=EIP_RCAR_SEX_RT_A&format=.csv"
-for p in life-expectancy:life share-of-children-immunized-dtp3:dtp3 births-attended-by-health-staff-sdgs:births \
-         share-of-women-using-modern-contraceptive-methods:contra children-sleeping-under-treated-bednet:nets \
-         terrestrial-protected-areas:protected; do g "owid_${p##*:}.csv" "$O/${p%%:*}.csv?$Q"; done
-for p in healthy-life-expectancy-at-birth:hale child-mortality:u5 maternal-mortality:mmr \
-         share-of-children-vaccinated-against-measles:measles prevalence-of-undernourishment:hunger \
-         share-of-children-younger-than-5-who-suffer-from-stunting:stunting \
-         proportion-using-safely-managed-drinking-water:water share-using-safely-managed-sanitation:sanitation \
-         access-to-clean-fuels-and-technologies-for-cooking:cleanfuel share-of-the-labor-force-employed-in-agriculture:agri \
-         universal-health-coverage-index:uhc share-of-out-of-pocket-expenditure-on-healthcare:oop \
-         forest-area-as-share-of-land-area:forest marine-protected-areas:marine; do g "owid_${p##*:}.csv" "$O/${p%%:*}.csv?$Q"; done
-# WHO Global Health Observatory (OData). The filter is SpatialDimType eq 'COUNTRY'.
-for c in HWF_0006 HWF_0001 WHS4_154 NUT_BF_EBF FAMILYPLANNINGUNPDUHC WSH_HYGIENE_BASIC; do
-  g "gho_$c.json" "https://ghoapi.azureedge.net/api/$c?\$filter=SpatialDimType%20eq%20'COUNTRY'"; done
-python3 -I build/build_data.py "$D" data/world.values.json
-curl -sSL -o data/world.topo.json https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json
-
-L=<a new empty dir>; G=<another new empty dir>
-h(){ curl -sSL --compressed -A "Mozilla/5.0" -o "$1" "$2"; }
-h $L/chr.csv   "https://www.countyhealthrankings.org/sites/default/files/media/document/analytic_data2025.csv"
-h $L/india.csv "https://raw.githubusercontent.com/SaiSiddhardhaKalla/NFHS/main/India.csv"
-E="https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data"
-h $L/eu_life.json   "$E/demo_r_mlifexp?format=JSON&sex=T&age=Y_LT1&lastTimePeriod=3"
-h $L/eu_infant.json "$E/demo_r_minfind?format=JSON&unit=RT&lastTimePeriod=3"
-h $L/eu_phys.json   "$E/hlth_rs_physreg?format=JSON&unit=P_HTHAB&lastTimePeriod=4"
-h $L/eu_emp.json    "$E/lfst_r_lfe2emprt?format=JSON&age=Y20-64&lastTimePeriod=2"
-h $G/us.json    "https://cdn.jsdelivr.net/npm/us-atlas@3.0.1/counties-10m.json"
-h $G/nuts2.json "https://gisco-services.ec.europa.eu/distribution/v2/nuts/topojson/NUTS_RG_20M_2021_4326_LEVL_2.json"
-B=https://media.githubusercontent.com/media/wmgeolab/geoBoundaries/9469f09/releaseData/gbOpen/IND
-h $G/ind_adm2.geojson "$B/ADM2/geoBoundaries-IND-ADM2_simplified.geojson"
-h $G/ind_adm1.geojson "$B/ADM1/geoBoundaries-IND-ADM1_simplified.geojson"
-python3 -I build/build_local.py $L $G pack
-cp pack/us.values.json pack/in.values.json pack/eu.values.json data/
-cp $G/us.json data/us.topo.json; cp $G/nuts2.json data/eu.topo.json
-```
-
-`pack/in.units.geojson` (7 MB) was then simplified to `data/in.geo.json` with shapely:
-`buffer(0)`, `simplify(0.012, preserve_topology=True)`, exterior rings turned
-clockwise (d3-geo needs that), coordinates rounded to three places.
+A unit id is written into people's records, so changing a boundary file's ids orphans
+whatever was placed there. The names files were written once, from the value files this
+folder used to hold.
 
 ## Prior work
 
@@ -205,28 +175,7 @@ do not claim it influenced this atlas.
 An organisation called Atlas of Care (formerly Atlas of Caregiving) used this name
 first. Its own About page says it shut down at the end of 2025. It is the first entry.
 
-## Data sources
+## Sources
 
-- Our World in Data: life expectancy and healthy life expectancy; child and maternal
-  mortality; UN SDG 5.4.1 (unpaid care and domestic work); WHO and UNICEF DTP3 and
-  measles coverage; births attended by skilled staff; undernourishment (FAO); stunting;
-  drinking water and sanitation (WHO/UNICEF JMP); clean cooking fuel; employment in
-  agriculture; universal health coverage index; out-of-pocket health spending; children
-  under treated nets; protected land and sea; forest area.
-- World Health Organization, Global Health Observatory: nursing and midwifery personnel
-  (`HWF_0006`); medical doctors (`HWF_0001`); antenatal care, four visits (`WHS4_154`);
-  exclusive breastfeeding (`NUT_BF_EBF`); family planning need met with modern methods
-  (`FAMILYPLANNINGUNPDUHC`, the 2024 estimate for all women); basic handwashing
-  facilities at home (`WSH_HYGIENE_BASIC`). The WHO's community health worker and
-  traditional birth attendant indicators returned no country rows on 2026-11-14.
-- International Labour Organization: status in employment (modelled estimates);
-  persons outside the labour force due to care responsibilities; subsistence foodstuff
-  production (from the DBnomics copy of February 2024; the ILO's current catalogue no
-  longer lists it).
-- United States: County Health Rankings & Roadmaps, 2025 analytic data.
-- India: National Family Health Survey 5 (2019-21) district fact sheets, from the CSV
-  compiled at github.com/SaiSiddhardhaKalla/NFHS. 687 of 709 surveyed districts were
-  matched to a boundary.
-- Europe: Eurostat regional statistics, NUTS 2.
-- Boundaries: Natural Earth through world-atlas and us-atlas; geoBoundaries (India,
-  Open Database License 1.0); Eurostat GISCO NUTS 2021.
+Boundaries only: Natural Earth through world-atlas and us-atlas; geoBoundaries (India,
+Open Database License 1.0); Eurostat GISCO NUTS 2021. The page lists them.
