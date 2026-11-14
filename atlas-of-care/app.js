@@ -275,7 +275,11 @@ function draw() {
     const ls = S.layers.filter(L => L.group === gk);
     return ls.length ? `<div class="lgroup"><div class="lg"><b>${gl}</b><span>${gw}</span></div>` + ls.map(L => `<button type="button" data-id="${L.id}" aria-pressed="${L.id === layer.id}">${esc(L.name)}</button>`).join("") + `</div>` : "";
   }).join("");
-  el("scopes").innerHTML = `<span class="caps">Map</span>` + Object.entries(SCOPES).map(([key, s]) => `<button type="button" data-s="${key}" aria-pressed="${key === scopeKey}">${key === "world" ? "World, by country" : s.label + ", by " + s.unit}</button>`).join("");
+  el("layersel").innerHTML = GROUPS.map(([gk, gl]) => {
+    const ls = S.layers.filter(L => L.group === gk);
+    return ls.length ? `<optgroup label="${gl}">` + ls.map(L => `<option value="${L.id}"${L.id === layer.id ? " selected" : ""}>${esc(L.name)}</option>`).join("") + `</optgroup>` : "";
+  }).join("");
+  el("scopes").innerHTML = `<span class="caps">Map</span>` + Object.entries(SCOPES).map(([key, s]) => `<button type="button" data-s="${key}" aria-pressed="${key === scopeKey}">${key === "world" ? "World" : s.label}<span class="by">, by ${s.unit}</span></button>`).join("");
   // rank
   el("rankhead").textContent = layer.rank; el("ranknote").textContent = S.units[0].toUpperCase() + S.units.slice(1) + " with a figure: " + S.ids(layer).length.toLocaleString("en") + ".";
   el("rankkey").hidden = !layer.gendered;
@@ -326,6 +330,7 @@ el("profile").addEventListener("click", e => {
   const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); }
 });
 el("layers").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; layer = S.layers.find(L => L.id === b.dataset.id); draw(); });
+el("layersel").addEventListener("change", e => { layer = S.layers.find(L => L.id === e.target.value); draw(); });
 el("scopes").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setScope(b.dataset.s); });
 
 async function setScope(key) {
@@ -407,7 +412,7 @@ function renderAdd() {
   const box = el("addbox"); if (!box) return;
   const f = picked && featureOf(picked); if (!f) { box.innerHTML = ""; return; }
   const name = S.nameOf(f);
-  if (!state.me) { box.innerHTML = `<h3>Know of something that keeps ${esc(name)} going?</h3><p>Sign in at the top of the page with an atproto handle, such as a Bluesky one, to add a link to it here.</p>`; return; }
+  if (!state.me) { box.innerHTML = `<h3>Know of something that keeps ${esc(name)} going?</h3><p><a href="#add">Sign in</a> with an atproto handle, such as a Bluesky one, to add a link to it here.</p>`; return; }
   box.innerHTML = `<h3>Add a link to ${esc(name)}</h3>
   <form class="addform" id="addform" novalidate>
     <p class="warn">A link is a web address and this place, nothing else. It is public, saved in your own account under your handle. Add pages that are already public. Do not add one that locates a person who could be harmed by being found. Anyone signed in can ask for it to be taken down.</p>
@@ -444,7 +449,7 @@ async function removeLink(i) {
 // The page stops showing the link at once.
 async function requestTakedown(i) {
   const s = STORIES[i]; if (!s?.by) return;
-  if (!state.agent) { state.notice = "Sign in at the top of the page to ask for a link to be taken down."; renderAccount(); return el("account").scrollIntoView({ behavior: "smooth", block: "center" }); }
+  if (!state.agent) { state.notice = "Sign in here to ask for a link to be taken down."; renderAccount(); return el("account").scrollIntoView({ behavior: "smooth", block: "center" }); }
   const built = A.buildTakedown(s.uri); if (!built.ok) return;
   try {
     await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL.takedown, record: built.record });
