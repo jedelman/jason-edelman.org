@@ -233,8 +233,9 @@
     .addform .errors { color: var(--text); border: 1px solid var(--warn); padding: 6px 10px; }
 
     /* ── Stories, interventions, links ─────────────────────────────── */
-    .stories { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: 1.25rem; margin-top: 1rem; align-items: start; }
-    .story { border: 1px solid var(--border); background: var(--surface); padding: 1.25rem; display: grid; gap: 8px; align-content: start; scroll-margin-top: 16px; min-width: 0; overflow-wrap: anywhere; }
+    /* Cards of very different heights: columns pack them without the blank bands a grid row leaves. */
+    .stories { columns: 340px; column-gap: 1.25rem; margin-top: 1rem; }
+    .story { border: 1px solid var(--border); background: var(--surface); padding: 1.25rem; display: grid; gap: 8px; align-content: start; scroll-margin-top: 16px; min-width: 0; overflow-wrap: anywhere; break-inside: avoid; margin-bottom: 1.25rem; }
     .story.off { display: none; }
     .story.sel { border-color: var(--accent); }
     .story.people { border-color: color-mix(in oklch, var(--warn) 45%, var(--border)); }

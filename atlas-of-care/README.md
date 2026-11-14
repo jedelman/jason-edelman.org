@@ -36,7 +36,7 @@ be told apart with red-green colour blindness.
 | `client-metadata.json` | The atproto OAuth client. Its scope is the three collections below. |
 | `lexicons/` | The schemas of a link, a case study and a takedown request. |
 | `hidden.json` | What this page declines to show (`dids`, `uris`), and links it shows despite a takedown request (`keep`). |
-| `data/` | Map shapes, layer values and the sourced entries. |
+| `data/` | Map shapes, layer values, the case studies' seed file (`entries.json`) and the prior-work list (`prior.json`). |
 | `vendor/` | d3 7.9.0 and topojson-client 3.1.0, checked in; `vendor/LICENSES.txt` has the notices. |
 | `build/` | The Python scripts that made `data/`. See "Rebuilding the data". |
 
@@ -196,6 +196,18 @@ clockwise (d3-geo needs that), coordinates rounded to three places.
 `build/merge_entries.py` adds researched entries to `data/entries.json` only when
 their quote is found in a saved copy of the source page. Do not add a sourced entry
 without fetching its source.
+
+## Prior work
+
+`data/prior.json` holds the works cited in the page's Prior work section. Each was
+checked against a page fetched on 2026-11-14: the publisher's, the project's own, or a
+catalogue record; `notes` says which, and what could not be confirmed. Four entries
+(Waring, Fisher and Tronto, Peluso, Mattern) rest on a catalogue or bibliographic record
+only and say so. Add a work only after opening its page. Describe what the work is;
+do not claim it influenced this atlas.
+
+An organisation called Atlas of Care (formerly Atlas of Caregiving) used this name
+first. Its own About page says it shut down at the end of 2025. It is the first entry.
 
 ## Data sources
 
