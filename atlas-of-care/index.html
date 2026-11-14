@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atlas of Care</title>
-  <meta name="description" content="What do you do to hold your world together, and who holds it together for you? A map for finding each other: what people say they do, in their own words, and who vouches for it, by country, county, district and region.">
+  <meta name="description" content="What do you do to hold your world together, and who holds it together for you? A place for finding each other: what people say they do, in their own words, and who vouches for it and likes it.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap">
@@ -27,12 +27,8 @@
       --link-hover: oklch(82% 0.09 145);
       --warn:       oklch(76% 0.11 75);   /* what people have added */
 
-      /* The map: water sits below the page, an empty place is the card surface, and a
-         place where someone is takes one green, brighter the more are there. */
+      /* The graph sits on a field darker than the page. */
       --sea:    oklch(8% 0.006 145);
-      --n1: oklch(30% 0.045 145);
-      --n2: oklch(42% 0.075 145);
-      --n3: oklch(56% 0.105 145);
 
       --font-display: 'Epilogue', 'Arial Narrow', sans-serif;
       --font-body:    'Charis SIL', Charter, 'Bitstream Charter', Georgia, serif;
@@ -97,11 +93,19 @@
     .askbtn:hover { border-color: var(--accent); }
     .askbtn:hover .q { color: var(--link-hover); }
     .askbtn[aria-pressed="true"] { background: var(--surface); border-color: var(--accent); color: var(--text); box-shadow: inset 0 -3px 0 var(--accent); }
-    .contribute { border: 1px solid var(--border); border-top: 0; background: var(--surface); padding: 14px 16px; display: grid; gap: 12px; }
+    .contribute { border: 1px solid var(--border); margin-top: 12px; background: var(--surface); padding: 14px 16px; display: grid; gap: 12px; }
     .contribute .addbox { margin: 0; border: 0; padding: 0; max-width: 820px; }
     .contribute .pick, .contribute .placed { color: var(--text); margin: 0 0 10px; }
     .contribute .placed b { color: var(--bright); }
     #notice .notice { margin-top: 10px; }
+    /* The instructions: four numbered steps, each ticked off as the person signed in does it. */
+    .steps { list-style: none; counter-reset: step; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 215px), 1fr)); gap: 10px 22px; margin-top: 14px; }
+    .steps li { counter-increment: step; position: relative; padding-left: 2.2em; color: var(--soft); font-size: .92rem; line-height: 1.4; }
+    .steps li::before { content: counter(step); position: absolute; left: 0; top: 0.05em; width: 1.6em; height: 1.6em; display: grid; place-items: center; font-family: var(--font-mono); font-size: .72rem; color: var(--accent); border: 1px solid var(--accent-dim); }
+    .steps li.done::before { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+    .steps button.link { font-family: var(--font-display); font-weight: 700; font-size: .95rem; color: var(--bright); text-decoration-color: var(--accent-dim); }
+    .steps button.link:hover { color: var(--link-hover); }
+    .howgraph { color: var(--muted); font-size: .82rem; max-width: 60ch; }
     /* Shown to someone signed in: the people they follow who are on the map, each with a way to vouch. */
     .follows { border: 1px solid var(--accent-dim); background: var(--surface); padding: 14px 16px; margin-top: 10px; display: grid; gap: 10px; }
     .follows h2 { font-family: var(--font-mono); font-size: 0.68rem; font-weight: 400; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent); }
@@ -110,46 +114,46 @@
     .flist li { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--rule); overflow-wrap: anywhere; }
     .flist li > div { flex: 1 1 16em; min-width: 0; }
     .flist li span { color: var(--soft); font-size: .9rem; }
+    .flist .rowacts { display: inline-flex; gap: 6px; }
+    .flist .rowacts button { min-height: 32px; padding: 0 12px; }
+    .profile .also { margin-top: 12px; max-width: 80ch; overflow-wrap: anywhere; }
+    /* Like and Vouch: green when you have, outlined when you have not. */
+    button.like b { font-weight: 700; font-variant-numeric: tabular-nums; margin-left: 4px; }
+    button.vouch, button.like { border-color: var(--accent-dim); color: var(--text); }
     .flist .said { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; line-height: 1.25; color: var(--bright); text-decoration: none; }
     .flist .said:hover { color: var(--link-hover); }
     .flist .done { color: var(--muted); }
     .flist button.vouch { min-height: 32px; border-color: var(--accent); color: var(--accent); }
-    .askhere { margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 8px; }
-    .scopes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-    .scopes .caps { margin-right: 6px; }
-    .scopes button, .filters button { min-height: 32px; padding: 0 10px; font-size: 0.78rem; }
-    /* ── The map, full width ───────────────────────────────────────── */
+    .filters button { min-height: 32px; padding: 0 10px; font-size: 0.78rem; }
+    /* ── The graph, full width ─────────────────────────────────────── */
     .stage { min-width: 0; }
     .maptop { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
-    .find { flex: 0 1 20em; display: flex; }
-    .find input { width: 100%; min-height: 32px; font-size: 0.9rem; }
+    .find { flex: 0 1 18em; display: flex; }
+    .find select { min-height: 32px; font-size: 0.9rem; }
     .filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-    .filters .grp { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-    .mark { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--bright); vertical-align: -1px; margin-right: 6px; }
-    .mark.p { border-radius: 50%; border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
 
     .mapbox { position: relative; background: var(--sea); border: 1px solid var(--border); }
     .mapbox svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
-    .unit { fill: var(--surface); stroke: var(--border); stroke-width: .5; vector-effect: non-scaling-stroke; }
-    .unit.n1 { fill: var(--n1); stroke: var(--bg); } .unit.n2 { fill: var(--n2); stroke: var(--bg); } .unit.n3 { fill: var(--n3); stroke: var(--bg); }
-    .unit.can { cursor: pointer; }
-    .unit.can:hover { stroke: var(--soft); }
-    .unit.sel { stroke: var(--bright); stroke-width: 2; }
-    .mesh { stroke: var(--bg); stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
-    .pin { cursor: pointer; }
-    .pin .halo { fill: var(--bg); stroke: var(--bright); stroke-width: 2; vector-effect: non-scaling-stroke; }
-    .pin .core { fill: var(--bright); }
-    .pin.sel .halo { fill: var(--bright); } .pin.sel .core { fill: var(--bg); }
-    .pin.people .halo { fill: var(--warn); stroke: var(--bg); }
-    .pin.people.sel .halo { stroke: var(--bright); }
-    .pin.people.vouch .halo { fill: var(--warn); stroke: var(--bg); }
-    .pin .ring { fill: none; stroke: var(--warn); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-    .tie { stroke: var(--warn); stroke-width: 1; stroke-opacity: .7; vector-effect: non-scaling-stroke; pointer-events: none; }
-    .tie.off { display: none; }
-    .pin.off { display: none; }
+    /* A person is an amber mark; a vouch is an amber line, a like a thinner green one. */
+    .node { cursor: pointer; }
+    .node .dot { fill: var(--warn); stroke: var(--bg); stroke-width: 2; }
+    .node text { font-family: var(--font-mono); font-size: 11px; fill: var(--soft); paint-order: stroke; stroke: var(--sea); stroke-width: 3px; pointer-events: none; }
+    .node:hover .dot, .node:focus-visible .dot { stroke: var(--bright); }
+    .node:focus-visible { outline: none; }
+    .node.sel .dot { stroke: var(--bright); stroke-width: 3; }
+    .node.sel text, .node.near text, .node:hover text { fill: var(--bright); }
+    .node.off { opacity: .22; }
+    .crowded .node text { display: none; }
+    .crowded .node.sel text, .crowded .node.near text, .crowded .node:hover text, .crowded .node:focus-visible text { display: block; }
+    .edge { stroke-linecap: square; pointer-events: none; }
+    .edge.vouch { stroke: var(--warn); stroke-width: 1.6; stroke-opacity: .75; }
+    .edge.like { stroke: var(--accent); stroke-width: 1; stroke-opacity: .5; }
+    .edge.lit { stroke-opacity: 1; stroke-width: 2.4; }
+    .edge.off { stroke-opacity: .1; }
+    .arrow.vouch path { fill: var(--warn); } .arrow.like path { fill: var(--accent); }
+    .graphempty { position: absolute; inset: 0; display: grid; place-items: center; padding: 1.5rem; text-align: center; color: var(--soft); font-size: 1.05rem; pointer-events: none; }
     .zoom { position: absolute; top: 8px; right: 8px; display: grid; gap: 4px; }
     .zoom button { width: 34px; min-height: 34px; padding: 0; background: var(--surface); font-size: 1rem; }
-    .loading { position: absolute; left: 12px; bottom: 8px; background: var(--surface); border: 1px solid var(--border); padding: 2px 10px; font-size: .85rem; }
 
     .under { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.25rem; margin-top: 12px; align-items: start; }
     @media (max-width: 760px) { .under { grid-template-columns: minmax(0, 1fr); } }
@@ -157,10 +161,9 @@
     .swatches { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--soft); }
     .swatches span { display: inline-flex; align-items: center; gap: 6px; }
     .swatches i { width: 18px; height: 12px; display: inline-block; }
-    .swatches i.tint { background: var(--n2); }
-    .swatches i.tie { height: 0; border-top: 1px solid var(--warn); }
-    .swatches i.pinkey { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
-    .swatches i.pinkey.pv { outline-offset: 3px; margin: 0 4px; }
+    .swatches i.dotkey { width: 12px; height: 12px; border-radius: 50%; background: var(--warn); }
+    .swatches i.linekey { height: 0; border-top: 2px solid var(--warn); }
+    .swatches i.linekey.like { border-top: 1px solid var(--accent); }
     .readout { background: var(--surface); border: 1px solid var(--border); padding: 12px 14px; min-height: 76px; color: var(--soft); font-size: .92rem; }
     .readout h3 { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--bright); margin-bottom: 4px; }
     .readout p { color: var(--soft); font-size: .92rem; }
@@ -176,8 +179,6 @@
     .profile { border-top: 1px solid var(--accent-dim); padding-top: 1.25rem; scroll-margin-top: 12px; }
     .profile > h2 { font-family: var(--font-display); font-weight: 900; font-size: 1.6rem; line-height: 1.05; letter-spacing: -0.02em; text-transform: none; color: var(--bright); margin-bottom: .4rem; }
     .profile > p { margin-bottom: 10px; }
-    .here { list-style: none; display: grid; gap: 4px; }
-    .here span { color: var(--muted); font-size: .85rem; }
     .profile p.none { color: var(--soft); max-width: 70ch; }
     .addbox { margin-top: 1.25rem; border-top: 1px solid var(--border); padding-top: 1rem; max-width: 760px; }
     .addbox h3 { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--bright); margin-bottom: 4px; }
@@ -208,8 +209,6 @@
     .story { border: 1px solid var(--border); background: var(--surface); padding: 1.25rem; display: grid; gap: 8px; align-content: start; scroll-margin-top: 16px; min-width: 0; overflow-wrap: anywhere; break-inside: avoid; margin-bottom: 1.25rem; }
     .story.off { display: none; }
     .story.sel { border-color: var(--accent); }
-    .story.people { border-color: color-mix(in oklch, var(--warn) 45%, var(--border)); }
-    .story.people .caps { color: var(--warn); }
     .story h3 { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; line-height: 1.2; letter-spacing: -0.01em; color: var(--bright); text-wrap: balance; }
     .story .where { font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
     .story .mode { font-size: .85rem; color: var(--soft); }
@@ -240,13 +239,12 @@
       html { font-size: 16px; }
       body { padding: 1.1rem 1.1rem 5rem; }
       .masthead .sections { margin-left: 0; }
-      .scopes .by, .scopes .caps { display: none; }
       .find { flex-basis: 100%; }
       .sections .more { display: none; }   /* the questions and the map come first on a small screen */
       .askbtn { padding: 10px 12px; }
       .askbtn .a { display: none; }
     }
-    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } .unit { transition: fill .25s; } }
+    @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; }  }
     @media (prefers-reduced-motion: reduce) { button { transition: none; } }
   </style>
 </head>
@@ -267,11 +265,17 @@
     </div>
   </header>
 
-  <section class="asks" id="add" aria-label="Add to the map">
+  <section class="asks" id="add" aria-label="Add yourself">
     <div class="askrow">
       <button type="button" class="askbtn" data-ask="do" aria-pressed="false"><span class="q">What do you do to hold your world together?</span><span class="a">Say it, starting with I</span></button>
-      <button type="button" class="askbtn" data-ask="who" aria-pressed="false"><span class="q">Who holds your world together?</span><span class="a">Vouch for what they say they do</span></button>
+      <button type="button" class="askbtn" data-ask="who" aria-pressed="false"><span class="q">Who holds your world together?</span><span class="a">Like or vouch for what they say they do</span></button>
     </div>
+    <ol class="steps" id="steps" aria-label="How to use this page">
+      <li data-step="in"><button type="button" class="link" data-go="do">Sign in</button> with your Bluesky handle. Any atproto handle works.</li>
+      <li data-step="say"><button type="button" class="link" data-go="do">Say what you do</button> in one line that starts with I. Say as many things as you like.</li>
+      <li data-step="like"><button type="button" class="link" data-go="entries">Like</button> anything you are glad someone does.</li>
+      <li data-step="vouch"><button type="button" class="link" data-go="entries">Vouch</button> for what you know holds your world together.</li>
+    </ol>
     <div id="notice" aria-live="polite"></div>
     <div class="contribute" id="contribute" hidden>
       <div class="account" id="account"></div>
@@ -280,36 +284,35 @@
     <div class="follows" id="follows" aria-live="polite" hidden></div>
   </section>
 
-  <div class="stage" id="map-stage">
+  <div class="stage" id="graph-stage">
     <div class="maptop">
-      <nav class="scopes" aria-label="Which map" id="scopes"></nav>
-      <div class="find"><label class="sr-only" for="placesearch">Find a place by name</label><input id="placesearch" list="places" autocomplete="off" spellcheck="false"><datalist id="places"></datalist></div>
+      <div class="filters" id="filters" aria-label="Who to show"></div>
+      <div class="find" hidden><label class="sr-only" for="placefilter">Show one place</label><select id="placefilter"></select></div>
     </div>
     <div class="mapbox">
-      <svg id="map" viewBox="0 0 980 520" role="img" aria-label="Map of what people have added, by place"></svg>
+      <svg id="graph" role="img" aria-label="The people here, joined by who vouches for and likes what they do. The same people are listed under Everyone here."></svg>
       <div class="zoom"><button type="button" id="zin" aria-label="Zoom in">+</button><button type="button" id="zout" aria-label="Zoom out">&minus;</button></div>
-      <p class="loading" id="loading" hidden>Loading the local map.</p>
+      <p class="graphempty" id="graphempty"></p>
     </div>
     <div class="under">
-      <div class="legend">
-        <div class="swatches" id="swatches"></div>
-        <div class="filters" id="filters" aria-label="Filter the marks"></div>
-      </div>
+      <div class="legend"><div class="swatches" id="swatches"></div>
+        <p class="howgraph">Each mark is a person. Pick one to see what they do. Drag a mark to move it. To zoom, pinch, or hold Ctrl and scroll.</p></div>
       <div class="readout" id="readout" aria-live="polite"></div>
     </div>
   </div>
+  <datalist id="places"></datalist>
 
   <section id="profile" class="profile" aria-live="polite"></section>
 
   <section id="connections" hidden>
     <h2>Who vouches for whom</h2>
-    <p>Each line is one person and everyone they say holds their world together.</p>
+    <p>Each line is one person and everything they vouch for.</p>
     <ul class="conn" id="connlist"></ul>
   </section>
 
   <section id="entries">
     <h2>Everyone here</h2>
-    <p>What people say they do, each in their own words and each beginning with I. Under each, whoever vouches for it. Nobody has checked them, and nobody can say what someone else does. Anyone signed in can ask for one to be taken down, and whoever wrote it can decline a vouch.</p>
+    <p>What people say they do, each in their own words and each beginning with I. Like one if you are glad of it. Vouch for one if it holds your world together. Nobody has checked them, and nobody can say what someone else does. Anyone signed in can ask for one to be taken down, and whoever wrote it can decline a vouch.</p>
     <p class="count" id="communitynote"></p>
     <div class="stories" id="stories"></div>
   </section>
@@ -320,9 +323,9 @@
       There&rsquo;s a whole geography of tending, an atlas of people quietly holding the world together, that I think is more visible to the people that want to profit from the chaos of losing than it is to the vaster population who is protected by it. What if it was made visible?
       <footer>Jason Edelman, <a href="https://bsky.app/profile/jason-edelman.org/post/3n2blk3l4gc2i">on Bluesky</a>, 14 November 2026</footer>
     </blockquote>
-    <p class="how">This is a map for finding each other. It asks two things. What do you do to hold your world together? Who holds it together for you? An answer to the first is one sentence in your own words that begins with I: I feed the birds, I cook for my kids, I clean toilets. It is set down in a place: a country, or a county of the United States, a district of India, a region of Europe. An answer to the second is a vouch for a sentence someone else has written.</p>
-    <p class="how">So nobody here says what another person does. You say your own work, and you can affirm someone else's and be affirmed for yours. There is nothing on the map but that. Pick a place to see who is there. Where someone vouches for what someone else does, a line joins the two.</p>
-    <p class="how">Anyone with an atproto account, such as a Bluesky handle, can add. Sign in and the page shows what the people you follow have said, and asks whether you vouch for it. Each sentence carries the handle of whoever wrote it, and nobody has checked it. Anyone signed in can ask for one to be taken down, and it comes off this page at once.</p>
+    <p class="how">This is a place for finding each other. It asks two things. What do you do to hold your world together? Who holds it together for you? An answer to the first is one sentence in your own words that begins with I: I feed the birds, I cook for my kids, I clean toilets. An answer to the second is a vouch for a sentence someone else has written. And anyone can like a sentence, whether or not they are in a position to vouch for it.</p>
+    <p class="how">So nobody here says what another person does. You say your own work, and you can affirm someone else's and be affirmed for yours. The graph draws that and nothing else: a mark for each person who has spoken, an amber line for a vouch, a green one for a like. People who hold each other up drift together.</p>
+    <p class="how">Anyone with an atproto account, such as a Bluesky handle, can add. Sign in and the page shows what the people you follow have said. Each sentence carries the handle of whoever wrote it, and nobody has checked it. Anyone signed in can ask for one to be taken down, and it comes off this page at once.</p>
   </section>
 
   <section class="limits" id="limits-section">
@@ -342,9 +345,8 @@
   </section>
 </main>
 
-<noscript><p style="padding:16px">The atlas needs JavaScript to draw its maps.</p></noscript>
+<noscript><p style="padding:16px">The atlas needs JavaScript to show who is here.</p></noscript>
 <script src="vendor/d3.min.js"></script>
-<script src="vendor/topojson-client.min.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
