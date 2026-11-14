@@ -116,6 +116,44 @@ for key, since in (("life", 2020), ("dtp3", 2020), ("births", 2005), ("contra", 
             d[a3] = {"y": int(r["year"]), "v": round(float(r[col]), 1)}
     layers[key] = d
 
+# More of the world: Our World in Data grapher exports (file owid_<key>.csv) and WHO Global Health
+# Observatory OData downloads (file gho_<CODE>.json), latest year per country, nothing older than `since`.
+MORE_OWID = [  # key, since, multiplier, decimals
+    ("hale", 2015, 1, 1), ("u5", 2015, 10, 1), ("mmr", 2015, 1, 0), ("measles", 2020, 1, 0), ("hunger", 2015, 1, 1),
+    ("stunting", 2010, 1, 1), ("water", 2015, 1, 0), ("sanitation", 2015, 1, 0), ("cleanfuel", 2020, 1, 0),
+    ("agri", 2018, 1, 1), ("uhc", 2020, 1, 0), ("oop", 2018, 1, 0), ("forest", 2015, 1, 1), ("marine", 2020, 1, 1),
+]
+for key, since, mult, dec in MORE_OWID:
+    rows = list(csv.DictReader(open(os.path.join(src, "owid_%s.csv" % key), encoding="utf-8-sig")))
+    col = [c for c in rows[0] if c not in ("entity", "code", "year", "owid_region") and not c.endswith("annotations")][0]
+    d = {}
+    for r in rows:
+        a3 = r["code"]
+        if len(a3) != 3 or not num(a3) or r[col] == "" or not (since <= int(r["year"]) <= 2025):
+            continue
+        if a3 not in d or int(r["year"]) > d[a3]["y"]:
+            d[a3] = {"y": int(r["year"]), "v": round(float(r[col]) * mult, dec)}
+    layers[key] = d
+
+MORE_WHO = [  # key, indicator code, since, keep(row), decimals, newest year allowed
+    ("nurses", "HWF_0006", 2015, lambda r: True, 1, 2025),
+    ("doctors", "HWF_0001", 2015, lambda r: True, 1, 2025),
+    ("anc4", "WHS4_154", 2010, lambda r: True, 0, 2025),
+    ("ebf", "NUT_BF_EBF", 2010, lambda r: r.get("Dim1Type") is None, 0, 2025),
+    ("fp", "FAMILYPLANNINGUNPDUHC", 2024, lambda r: r.get("Dim2") == "MARITALSTATUS_TOTL", 0, 2024),
+    ("handwash", "WSH_HYGIENE_BASIC", 2015, lambda r: r.get("Dim1") == "RESIDENCEAREATYPE_TOTL", 0, 2025),
+]
+for key, code, since, keep, dec, newest in MORE_WHO:
+    rows = json.load(open(os.path.join(src, "gho_%s.json" % code), encoding="utf-8"))["value"]
+    d = {}
+    for r in rows:
+        a3, y, v = r.get("SpatialDim"), r.get("TimeDim"), r.get("NumericValue")
+        if r.get("SpatialDimType") != "COUNTRY" or v is None or not a3 or not num(a3) or not keep(r) or not (since <= y <= newest):
+            continue
+        if a3 not in d or y > d[a3]["y"]:
+            d[a3] = {"y": y, "v": round(float(v), dec)}
+    layers[key] = d
+
 codes = sorted({a for L in layers.values() for a in L})
 meta = {a: {"n": name(a), "id": num(a)} for a in codes}
 json.dump({"countries": meta, "layers": layers}, open(out, "w"), separators=(",", ":"), ensure_ascii=False)
