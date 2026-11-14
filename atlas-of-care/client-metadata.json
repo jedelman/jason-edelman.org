@@ -5,7 +5,7 @@
   "redirect_uris": [
     "https://jason-edelman.org/atlas-of-care/"
   ],
-  "scope": "atproto repo:org.jason-edelman.atlas.statement repo:org.jason-edelman.atlas.vouch repo:org.jason-edelman.atlas.takedown",
+  "scope": "atproto repo:org.jason-edelman.atlas.statement repo:org.jason-edelman.atlas.vouch repo:org.jason-edelman.atlas.like repo:org.jason-edelman.atlas.takedown",
   "grant_types": [
     "authorization_code",
     "refresh_token"

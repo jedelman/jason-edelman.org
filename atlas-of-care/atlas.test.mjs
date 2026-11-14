@@ -1,27 +1,22 @@
 // node --test atlas-of-care/atlas.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildStatement, parseStatement, cleanStatement, withI, buildTakedown, parseTakedown, loadCommunity, cleanUrl, statementUri, subjectUri, buildVouch, parseVouch, cleanVouches, standingVouches, loadFollowing, COL, ATLAS_DID, SCOPE, MAX_URL, MAX_TEXT } from './atlas.js'
+import { buildStatement, parseStatement, cleanStatement, withI, buildTakedown, parseTakedown, loadCommunity, cleanUrl, statementUri, subjectUri, buildVouch, parseVouch, buildLike, parseLike, cleanVouches, standingVouches, cleanLikes, standingLikes, loadFollowing, COL, ATLAS_DID, SCOPE, MAX_URL, MAX_TEXT } from './atlas.js'
 
-const good = { text: 'feed the birds', scope: 'us', unit: '35039', lat: 36.5123, lon: -106.6987 }
+const good = { text: 'feed the birds', scope: 'us', unit: '35039' }
 const uriOf = (did, rkey) => `at://${did}/${COL.statement}/${rkey}`
 const CID1 = 'bafyreib2rxk3rybk3aobmv5cjuql3bm2twh4jo5uxgf5kpqcsgz7soitae'
 const CID2 = 'bafyreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku'
 
-test('scope covers the three collections and nothing else', () => {
-  assert.equal(SCOPE, 'atproto repo:org.jason-edelman.atlas.statement repo:org.jason-edelman.atlas.vouch repo:org.jason-edelman.atlas.takedown')
+test('scope covers the four collections and nothing else', () => {
+  assert.equal(SCOPE, 'atproto repo:org.jason-edelman.atlas.statement repo:org.jason-edelman.atlas.vouch repo:org.jason-edelman.atlas.like repo:org.jason-edelman.atlas.takedown')
 })
 
-test('a statement record holds one sentence that begins with I, and a place', () => {
+test('a statement record holds one sentence that begins with I, and a place if one was picked', () => {
   const r = buildStatement(good, new Date('2026-11-14T15:00:00Z'))
-  assert.equal(r.ok, true)
-  assert.deepEqual(Object.keys(r.record).sort(), ['$type', 'atlas', 'createdAt', 'lat', 'lon', 'scope', 'text', 'unit'])
-  assert.equal(r.record.text, 'I feed the birds')
-  assert.equal(r.record.$type, COL.statement)
-  assert.equal(r.record.atlas, ATLAS_DID)
-  assert.equal(r.record.lat, '36.51')
-  assert.equal(r.record.lon, '-106.70')
-  for (const v of Object.values(r.record)) assert.equal(typeof v, 'string') // no floats in atproto records
+  assert.deepEqual(r.record, { $type: COL.statement, atlas: ATLAS_DID, text: 'I feed the birds', createdAt: '2026-11-14T15:00:00.000Z', scope: 'us', unit: '35039' })
+  assert.deepEqual(buildStatement({ text: 'feed the birds' }, new Date('2026-11-14T15:00:00Z')).record, { $type: COL.statement, atlas: ATLAS_DID, text: 'I feed the birds', createdAt: '2026-11-14T15:00:00.000Z' })
+  for (const v of Object.values(r.record)) assert.equal(typeof v, 'string')
 })
 
 test('the I is supplied by the form and never doubled', () => {
@@ -47,12 +42,12 @@ test('a statement has to begin with I and stay one short line about no one else'
   assert.equal(buildStatement({ ...good, text: '' }).ok, false)
 })
 
-test('buildStatement says what is missing and ignores anything else', () => {
-  assert.deepEqual(buildStatement({ ...good, unit: '' }).errors, ['Pick a place on the map first.'])
+test('half a place is refused, and anything else passed in is ignored', () => {
+  assert.deepEqual(buildStatement({ ...good, unit: '' }).errors, ['Pick the place from the list, or leave it out.'])
   assert.equal(buildStatement({ ...good, scope: 'mars' }).ok, false)
-  assert.equal(buildStatement({ ...good, lat: undefined }).ok, false)
-  const r = buildStatement({ ...good, title: 'hello', about: 'someone else', unitName: 'anything' })
-  assert.equal('title' in r.record || 'about' in r.record || 'unitName' in r.record, false)
+  assert.equal(buildStatement({ text: 'feed the birds', scope: 'us' }).ok, false)
+  const r = buildStatement({ ...good, title: 'hello', about: 'someone else', unitName: 'anything', lat: 1, lon: 2 })
+  assert.deepEqual(Object.keys(r.record).sort(), ['$type', 'atlas', 'createdAt', 'scope', 'text', 'unit'])
 })
 
 test('cleanUrl accepts ordinary addresses and drops the fragment', () => {
@@ -72,18 +67,21 @@ test('a unit id cannot smuggle text', () => {
   assert.equal(buildStatement({ ...good, unit: 'x'.repeat(65) }).ok, false)
 })
 
-test('parseStatement round-trips a built record', () => {
+test('parseStatement round-trips a built record, with or without a place', () => {
   const { record } = buildStatement({ ...good, url: 'https://example.org/acequia' }, new Date('2026-11-14T15:00:00Z'))
-  assert.deepEqual(parseStatement(record), { text: 'I feed the birds', url: 'https://example.org/acequia', host: 'example.org', scope: 'us', unit: '35039', lat: 36.51, lon: -106.7, createdAt: '2026-11-14T15:00:00.000Z' })
-  assert.equal(parseStatement(buildStatement(good).record).url, null)
+  assert.deepEqual(parseStatement(record), { text: 'I feed the birds', url: 'https://example.org/acequia', host: 'example.org', scope: 'us', unit: '35039', createdAt: '2026-11-14T15:00:00.000Z' })
+  const bare = parseStatement(buildStatement({ text: 'feed the birds' }).record)
+  assert.deepEqual([bare.url, bare.scope, bare.unit], [null, null, null])
 })
 
-test('parseStatement returns only its own fields, drops a bad address, and keeps markup as plain text', () => {
+test('parseStatement returns only its own fields, drops a bad address or place, and keeps markup as plain text', () => {
   const { record } = buildStatement(good)
-  const e = parseStatement({ ...record, text: 'I <img src=x onerror=alert(1)>', url: 'javascript:alert(1)', about: 'someone else', unitName: 'anything' })
-  assert.deepEqual(Object.keys(e).sort(), ['createdAt', 'host', 'lat', 'lon', 'scope', 'text', 'unit', 'url'])
-  assert.equal(e.url, null)
+  const e = parseStatement({ ...record, text: 'I <img src=x onerror=alert(1)>', url: 'javascript:alert(1)', unit: 'two words', lat: '36.51', lon: '-106.70', about: 'someone else', unitName: 'anything' })
+  assert.deepEqual(Object.keys(e).sort(), ['createdAt', 'host', 'scope', 'text', 'unit', 'url'])
+  assert.deepEqual([e.url, e.scope, e.unit], [null, null, null])
   assert.equal(e.text, 'I <img src=x onerror=alert(1)>')   // the page escapes it; it is never markup
+  assert.equal(parseStatement({ ...record, scope: 'mars' }).unit, null)
+  assert.equal(parseStatement({ ...record, unit: 7 }).scope, null)
 })
 
 test('parseStatement rejects records that are not statements for this atlas', () => {
@@ -93,11 +91,6 @@ test('parseStatement rejects records that are not statements for this atlas', ()
   assert.equal(parseStatement({ ...record, atlas: 'did:plc:someoneelse' }), null)
   assert.equal(parseStatement({ ...record, text: 'She feeds the birds' }), null)
   assert.equal(parseStatement({ ...record, text: undefined }), null)
-  assert.equal(parseStatement({ ...record, lat: '191' }), null)
-  assert.equal(parseStatement({ ...record, lat: true }), null)
-  assert.equal(parseStatement({ ...record, unit: 'two words' }), null)
-  assert.equal(parseStatement({ ...record, unit: 7 }), null)
-  assert.equal(parseStatement({ ...record, scope: 'mars' }), null)
 })
 
 test('a takedown points at one statement on this map and carries nothing else', () => {
@@ -168,7 +161,7 @@ test('keep overrides a takedown request; hidden dids and uris are never shown', 
 
 test('loadCommunity fails closed when any index query fails', async () => {
   const a = buildStatement(good).record
-  for (const failIndex of [COL.statement, COL.vouch, COL.takedown]) {
+  for (const failIndex of [COL.statement, COL.vouch, COL.like, COL.takedown]) {
     const out = await loadCommunity(fakeIo({ [L('did:plc:aaa', '1')]: a }, { failIndex }))
     assert.equal(out.statements.length, 0)
     assert.equal(out.error.message, 'index down')
@@ -235,6 +228,37 @@ test('vouches load with the rest; a takedown withholds one, and so does the hidd
   assert.equal(out.vouches[0].subject, TENDER)
   assert.equal(out.withheld, 1)
   assert.equal(subjectUri(`at://did:plc:aaa/${COL.vouch}/1`), `at://did:plc:aaa/${COL.vouch}/1`)
+})
+
+// ── Likes ────────────────────────────────────────────────────────────────────
+
+test('a like is the same pointer as a vouch, in its own collection', () => {
+  const r = buildLike(vouch, new Date('2026-11-14T15:00:00Z'))
+  assert.deepEqual(r.record, { $type: COL.like, atlas: ATLAS_DID, subject: { uri: TENDER, cid: CID1 }, createdAt: '2026-11-14T15:00:00.000Z' })
+  assert.deepEqual(parseLike(r.record), { subject: TENDER, cid: CID1, createdAt: '2026-11-14T15:00:00.000Z' })
+  assert.equal(parseLike(buildVouch(vouch).record), null)   // a vouch is not a like
+  assert.equal(parseVouch(r.record), null)                  // and a like is not a vouch
+  assert.equal(buildLike({ uri: 'did:plc:tender', cid: CID1 }).ok, false)
+})
+
+test('a liker counts once per statement, never for their own, and only while the statement reads as it did', () => {
+  const base = { ...parseLike(buildLike(vouch).record) }
+  const clean = cleanLikes([
+    { ...base, did: 'did:plc:aaa', uri: 'k1', rkey: '1' }, { ...base, did: 'did:plc:aaa', uri: 'k2', rkey: '2' },
+    { ...base, did: 'did:plc:tender', uri: 'k3', rkey: '3' }, { ...base, did: 'did:plc:bbb', uri: 'k4', rkey: '4' },
+  ])
+  assert.deepEqual(clean.map((v) => v.did), ['did:plc:aaa', 'did:plc:bbb'])
+  assert.equal(standingLikes(clean, new Map([[TENDER, CID1]])).length, 2)
+  assert.equal(standingLikes(clean, new Map([[TENDER, CID2]])).length, 0)
+})
+
+test('likes load with the rest, and not from or for a hidden account', async () => {
+  const K = (did, rkey) => `${did}/${COL.like}/${rkey}`
+  const rec = buildLike(vouch).record
+  const recs = { [K('did:plc:aaa', '1')]: rec, [K('did:plc:bad', '2')]: rec, [K('did:plc:ccc', '3')]: buildLike({ uri: uriOf('did:plc:bad', 's9'), cid: CID1 }).record, [V('did:plc:bbb', '4')]: buildVouch(vouch).record }
+  const out = await loadCommunity(fakeIo(recs), { dids: ['did:plc:bad'] })
+  assert.deepEqual(out.likes.map((v) => v.did), ['did:plc:aaa'])
+  assert.deepEqual(out.vouches.map((v) => v.did), ['did:plc:bbb'])
 })
 
 // ── Who you follow ───────────────────────────────────────────────────────────

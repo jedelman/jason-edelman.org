@@ -1,12 +1,11 @@
-// Atlas of Care: a map for finding each other.
+// Atlas of Care: a place for finding each other.
 //
 // There is nothing on it but what people have added: one sentence about what they do, in
-// their own words and beginning with "I", set down in a place; or a vouch for a sentence
-// someone else has written. Nobody can say what another person does. The map
-// itself only gives those somewhere to stand: countries, and inside the United States,
-// India and Europe, counties, districts and regions. The rules for what people add are in
-// atlas.js. Sign-in and the backlink index reuse the Library's code and its vendored SDK
-// (../library/), so this folder depends on that one.
+// their own words and beginning with "I"; a vouch for a sentence someone else has written;
+// or a like for one. Nobody can say what another person does. The page draws the people
+// as a graph, joined by their vouches and likes, and lists what each of them says. The
+// rules for what people add are in atlas.js. Sign-in and the backlink index reuse the
+// Library's code and its vendored SDK (../library/), so this folder depends on that one.
 import * as A from "./atlas.js";
 import { backlinks, resolveDid, resolveHandle, getRecord, HANDLE_RESOLVER } from "../library/lib.js";
 
@@ -15,267 +14,214 @@ const getJson = p => fetch(here(p)).then(r => { if (!r.ok) throw new Error(`${p}
 const el = id => document.getElementById(id);
 const esc = t => String(t == null ? "" : t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const href = u => (/^https?:\/\//.test(u || "") ? esc(u) : "#");
-let WORLD, WNAMES;
-try { [WORLD, WNAMES] = await Promise.all([getJson("data/world.topo.json"), getJson("data/world.names.json")]); }
-catch (err) { el("readout").textContent = "The map could not be loaded. Try again in a moment."; throw err; }
-// Every mark on the map: what people have said they do, filled in once the index has been
-// asked (loadPeople). VOUCHES are the vouches for those statements, one per voucher each.
+
+// What people have said they do, filled in once the index has been asked (loadPeople), and
+// the vouches and likes for those statements, one per person each.
 const STORIES = [];
-let VOUCHES = [];
-// Read off the two lists whenever either changes: who vouches for each statement, and what
-// each voucher vouches for. A vouch counts only for a statement that is on the map and still
-// reads as it did when it was vouched for.
-let IDX = { by: new Map(), from: new Map(), n: 0 };
+let VOUCHES = [], LIKES = [];
+// Read off the lists whenever any changes. A vouch or a like counts only for a statement
+// that is shown and still reads as it did when it was vouched for or liked.
+let IDX = { by: new Map(), from: new Map(), likes: new Map(), likeFrom: new Map(), n: 0, nl: 0 };
 function reindex() {
-  const current = new Map(STORIES.filter(s => !s.gone && s.cid).map(s => [s.uri, s.cid])), by = new Map(), from = new Map();
-  const standing = A.standingVouches(VOUCHES, current);
-  for (const v of standing) { (by.get(v.subject) || by.set(v.subject, []).get(v.subject)).push(v); (from.get(v.did) || from.set(v.did, []).get(v.did)).push(v); }
-  IDX = { by, from, n: standing.length };
+  const current = new Map(STORIES.filter(s => !s.gone && s.cid).map(s => [s.uri, s.cid]));
+  const group = (list, key) => { const m = new Map(); for (const v of list) (m.get(v[key]) || m.set(v[key], []).get(v[key])).push(v); return m; };
+  const sv = A.standingVouches(VOUCHES, current), sl = A.standingLikes(LIKES, current);
+  IDX = { by: group(sv, "subject"), from: group(sv, "did"), likes: group(sl, "subject"), likeFrom: group(sl, "did"), n: sv.length, nl: sl.length };
 }
 const vouchesFor = s => IDX.by.get(s.uri) || [];
+const likesFor = s => IDX.likes.get(s.uri) || [];
 const iVouch = s => !!state.me && vouchesFor(s).some(v => v.did === state.me);
-const onMap = did => STORIES.some(s => !s.gone && s.did === did);
-const handleOf = did => (STORIES.find(s => s.did === did && s.handle) || VOUCHES.find(v => v.did === did && v.handle) || {}).handle || (did === state.me && state.handle) || did;
+const iLike = s => !!state.me && likesFor(s).some(v => v.did === state.me);
+const isHere = did => STORIES.some(s => !s.gone && s.did === did);
+const handleOf = did => (STORIES.find(s => s.did === did && s.handle) || VOUCHES.find(v => v.did === did && v.handle) || LIKES.find(v => v.did === did && v.handle) || {}).handle || (did === state.me && state.handle) || did;
 const profileLink = did => `<a href="https://bsky.app/profile/${encodeURIComponent(did)}">@${esc(handleOf(did))}</a>`;
-
-// ---- the maps: the world by country, and three places that open to smaller units
-const W = 980, H = 520;
-const wkey = f => (f.id != null ? String(f.id) : "name:" + f.properties.name);
-const SCOPES = {
-  world: { label: "World", units: "countries", unit: "country", ready: true,
-    features: topojson.feature(WORLD, WORLD.objects.countries).features.filter(f => f.id !== "010"),
-    idOf: f => WNAMES[wkey(f)]?.a3, names: Object.fromEntries(Object.values(WNAMES).map(m => [m.a3, m.n])),
-    projection: fs => d3.geoEqualEarth().fitExtent([[6, 6], [W - 6, H - 6]], { type: "FeatureCollection", features: fs }) },
-  us: { label: "United States", units: "counties", unit: "county", files: ["data/us.topo.json", "data/us.names.json"],
-    build: ([t, n]) => ({ features: topojson.feature(t, t.objects.counties).features, mesh: topojson.mesh(t, t.objects.states, (a, b) => a !== b), names: n }),
-    idOf: f => f.id, projection: fs => d3.geoAlbersUsa().fitExtent([[10, 10], [W - 10, H - 10]], { type: "FeatureCollection", features: fs }) },
-  in: { label: "India", units: "districts", unit: "district", files: ["data/in.geo.json", "data/in.names.json"],
-    build: ([g, n]) => ({ features: g.features, names: n }),
-    idOf: f => f.id, projection: fs => d3.geoMercator().fitExtent([[10, 10], [W - 10, H - 10]], { type: "FeatureCollection", features: fs }) },
-  eu: { label: "Europe", units: "regions", unit: "region", files: ["data/eu.topo.json", "data/eu.names.json"],
-    build: ([t, n]) => ({ features: topojson.feature(t, t.objects[Object.keys(t.objects)[0]]).features.map(f => (f.id = f.properties.NUTS_ID, f)), names: n }),
-    idOf: f => f.id, projection: () => d3.geoConicConformal().rotate([-12, 0]).parallels([40, 62]).fitExtent([[10, 10], [W - 10, H - 10]],
-      { type: "MultiPoint", coordinates: [[-24, 64], [-10, 36], [34, 35], [32, 70], [10, 71]] }) },
-};
-const EUROPE = new Set("AUT BEL BGR HRV CYP CZE DNK EST FIN FRA DEU GRC HUN IRL ITA LVA LTU LUX MLT NLD POL PRT ROU SVK SVN ESP SWE NOR CHE ISL".split(" "));
-const OPENS = a3 => (a3 === "USA" ? "us" : a3 === "IND" ? "in" : EUROPE.has(a3) ? "eu" : null);
-
-const svg = d3.select("#map");
-const g = svg.append("g"), gUnits = g.append("g"), gMesh = g.append("path").attr("fill", "none").attr("class", "mesh"), gTies = g.append("g"), gPins = g.append("g");
-let scopeKey = "world", S = SCOPES.world, picked = null, proj, pathGen, shapes, pins, ties, pinInner, k = 1;
-let fk = "all";   // which marks show: all, link ("what I do") or vouch ("who holds my world together")
-const zoom = d3.zoom().scaleExtent([1, 16]).translateExtent([[0, 0], [W, H]])
-  .filter(e => (e.type === "wheel" ? e.ctrlKey || k > 1 : e.touches ? e.touches.length > 1 || k > 1 : !e.button))
-  .on("zoom", e => { k = e.transform.k; g.attr("transform", e.transform); if (pinInner) pinInner.attr("transform", `scale(${1 / k})`);
-    svg.style("touch-action", k > 1 ? "none" : "pan-y"); });
-svg.call(zoom).on("dblclick.zoom", null);
-d3.select("#zin").on("click", () => svg.transition().duration(200).call(zoom.scaleBy, 1.8));
-d3.select("#zout").on("click", () => svg.transition().duration(200).call(zoom.scaleBy, 1 / 1.8));
-const featureOf = id => S.features.find(f => S.idOf(f) === id);
-const nameOf = f => S.names[S.idOf(f)] || (f.properties && (f.properties.name || f.properties.NAME_LATN)) || "Unnamed";
-function zoomTo(f) {
-  const [[x0, y0], [x1, y1]] = pathGen.bounds(f), kk = Math.max(1, Math.min(12, 0.5 / Math.max((x1 - x0) / W, (y1 - y0) / H)));
-  svg.transition().duration(350).call(zoom.transform, d3.zoomIdentity.translate(W / 2, H / 2).scale(kk).translate(-(x0 + x1) / 2, -(y0 + y1) / 2));
-}
-
-// ---- what people have added
-const fkinds = () => [["all", "Everyone"], ["vouched", "Vouched for"], ...(state.me && state.follows ? [["follows", "People you follow"]] : [])];
-const where = s => esc(s.place);
-const passes = s => !s.gone && (fk === "all" || (fk === "vouched" ? IDX.by.has(s.uri) : !!state.follows && state.follows.has(s.did)));
-const when = iso => { const d = iso && new Date(iso); return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""; };
 const countPeople = n => (n === 1 ? "one person" : n + " people");
-// The button that goes with one statement, wherever it is shown.
-const vouchButton = (s, i, short) => (iVouch(s)
-  ? (short ? `<span class="done">You vouch for this.</span> ` : "") + `<button type="button" class="${short ? "link " : ""}unvouch" data-i="${i}">${short ? "Withdraw" : "Withdraw my vouch"}</button>`
-  : `<button type="button" class="vouch" data-i="${i}">Vouch</button>`);
-// What someone says they do: their own sentence, and a place. Under it, everyone who vouches
-// for it. Whoever wrote it can decline a vouch.
-function linkCard(s, i) {
-  const mine = state.me && s.did === state.me, vs = vouchesFor(s);
-  const vouched = !vs.length ? "" : `\n  <p class="byline vouched">${vs.length === 1 ? "One person vouches" : vs.length + " people vouch"} for this: ${vs.slice(0, 8).map(v => profileLink(v.did) + (mine ? ` <button type="button" class="link decline" data-d="${esc(v.did)}" data-i="${i}">decline</button>` : "")).join(", ")}${vs.length > 8 ? ` and ${vs.length - 8} more` : ""}.</p>`;
-  return `<article class="story people" id="story-${i}">
-  <h3>${esc(s.text)}</h3>
-  <p class="where">${profileLink(s.did)} · ${esc(s.place)}${when(s.createdAt) ? " · " + when(s.createdAt) : ""}</p>${s.url ? `\n  <p class="url"><a href="${href(s.url)}" rel="nofollow noopener">${esc(s.url)}</a></p>` : ""}${vouched}
-  <div class="acts">${mine ? "" : vouchButton(s, i)}<button type="button" class="show" data-i="${i}">Show on the map</button>${mine ? `<button type="button" class="remove" data-i="${i}">Remove</button>` : `<button type="button" class="takedown" data-i="${i}">Request takedown</button>`}</div></article>`;
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const when = iso => { const d = iso && new Date(iso); return d && !Number.isNaN(d.getTime()) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : ""; };
+
+// ---- places: a statement may name one, picked from a list. There is no map.
+// The lists are the countries of the world, the counties of the United States, the
+// districts of India and the regions of Europe; a record carries the list and the unit's id.
+const LISTS = ["world", "us", "in", "eu"];
+const unitNames = {};
+function namesFor(scope) {
+  if (!unitNames[scope]) unitNames[scope] = getJson(`data/${scope}.names.json`).catch(() => ({}));
+  return unitNames[scope];
 }
-function renderCards() {
-  el("stories").innerHTML = STORIES.map((s, i) => (s.gone ? "" : linkCard(s, i))).join("");
+let placeIndex;   // every place by its name, for the form: loaded the first time the form opens
+function allPlaces() {
+  placeIndex ??= Promise.all(LISTS.map(namesFor)).then(sets => {
+    const byName = new Map();
+    sets.forEach((names, k) => { for (const [unit, name] of Object.entries(names)) if (!byName.has(name.toLowerCase())) byName.set(name.toLowerCase(), { scope: LISTS[k], unit, name }); });
+    return byName;
+  });
+  return placeIndex;
 }
-function applyFilters() {
-  if (pins) pins.classed("off", s => !passes(s));
-  if (ties) ties.classed("off", d => !passes(d[0]) || !passes(d[1]));
-  document.querySelectorAll(".story").forEach(n => n.classList.toggle("off", !passes(STORIES[+n.id.slice(6)])));
-  el("filters").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === fk));
+const placeKey = s => (s.scope ? s.scope + ":" + s.unit : "");
+async function display(e) {
+  const place = e.scope ? (await namesFor(e.scope))[e.unit] || null : null;
+  return { ...e, cid: e.recordCid || null, key: e.uri, by: e.handle || e.did, place };
 }
-// The filter buttons are rebuilt only when the list of them changes (signing in adds one).
+
+// ---- filters: which statements show, in the graph and in the list
+let fk = "all", fp = "";   // fk: all, vouched, or follows. fp: a place key, or "" for everywhere
+const fkinds = () => [["all", "Everyone"], ["vouched", "Vouched for"], ...(state.me && state.follows ? [["follows", "People you follow"]] : [])];
+const passes = s => !s.gone && (fk === "all" || (fk === "vouched" ? IDX.by.has(s.uri) : !!state.follows && state.follows.has(s.did))) && (!fp || placeKey(s) === fp);
+// The filter buttons are rebuilt only when the list of them changes (signing in adds one),
+// and the place list only when the places do: rebuilding a control under a click swallows it.
 function renderFilters() {
   const ks = fkinds(); if (!ks.some(([key]) => key === fk)) fk = "all";
   if (el("filters").dataset.ks !== ks.map(x => x[0]).join()) { el("filters").dataset.ks = ks.map(x => x[0]).join(); el("filters").innerHTML = ks.map(([key, l]) => `<button type="button" data-k="${key}">${l}</button>`).join(""); }
+  const tally = new Map(); for (const s of STORIES) if (!s.gone && s.place) tally.set(placeKey(s), [s.place, (tally.get(placeKey(s))?.[1] || 0) + 1]);
+  if (fp && !tally.has(fp)) fp = "";
+  const opts = [...tally].sort((a, b) => a[1][0].localeCompare(b[1][0])), sig = opts.map(([key, [, n]]) => key + n).join();
+  const sel = el("placefilter"); sel.parentElement.hidden = !opts.length;
+  if (sel.dataset.sig !== sig) { sel.dataset.sig = sig; sel.innerHTML = `<option value="">Everywhere</option>` + opts.map(([key, [name, n]]) => `<option value="${esc(key)}">${esc(name)} (${n})</option>`).join(""); }
+  sel.value = fp;
 }
-el("filters").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; fk = b.dataset.k; draw(); applyFilters(); });
-// Everything on the page that depends on what people have added, redrawn together.
-function refresh() { reindex(); renderFilters(); renderAccount(); renderCards(); renderConnections(); drawPins(); draw(); renderFollows(); notePeople(); }
-function pinReadout(s) {
-  const n = vouchesFor(s).length;
-  el("readout").innerHTML = `<h3>${esc(s.text)}</h3><p>@${esc(s.by)}, ${where(s)}.${n ? ` ${n === 1 ? "One person vouches" : n + " people vouch"} for this.` : ""}</p>`;
+function applyFilters() {
+  document.querySelectorAll(".story").forEach(n => n.classList.toggle("off", !passes(STORIES[+n.id.slice(6)])));
+  el("filters").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === fk));
+  dimGraph();
 }
-function selectStory(i, scroll) {
-  if (pins) pins.classed("sel", s => STORIES.indexOf(s) === i);
+el("filters").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; fk = b.dataset.k; applyFilters(); });
+el("placefilter").addEventListener("change", e => { fp = e.target.value; applyFilters(); });
+
+// ---- what people say they do
+const likeButton = (s, i) => { const n = likesFor(s).length, on = iLike(s); return `<button type="button" class="like" data-i="${i}" aria-pressed="${on}">${on ? "Liked" : "Like"}${n ? ` <b>${n}</b>` : ""}</button>`; };
+const vouchButton = (s, i) => (iVouch(s) ? `<button type="button" class="unvouch" data-i="${i}" aria-pressed="true">Vouched</button>` : `<button type="button" class="vouch" data-i="${i}">Vouch</button>`);
+// Their own sentence. Under it, everyone who vouches for it and how many like it. Whoever
+// wrote it can decline a vouch.
+function card(s, i) {
+  const mine = state.me && s.did === state.me, vs = vouchesFor(s), nl = likesFor(s).length;
+  const vouched = !vs.length ? "" : `\n  <p class="byline vouched">${vs.length === 1 ? "One person vouches" : vs.length + " people vouch"} for this: ${vs.slice(0, 8).map(v => profileLink(v.did) + (mine ? ` <button type="button" class="link decline" data-d="${esc(v.did)}" data-i="${i}">decline</button>` : "")).join(", ")}${vs.length > 8 ? ` and ${vs.length - 8} more` : ""}.</p>`;
+  return `<article class="story" id="story-${i}">
+  <h3>${esc(s.text)}</h3>
+  <p class="where">${profileLink(s.did)}${s.place ? " · " + esc(s.place) : ""}${when(s.createdAt) ? " · " + when(s.createdAt) : ""}</p>${s.url ? `\n  <p class="url"><a href="${href(s.url)}" rel="nofollow noopener">${esc(s.url)}</a></p>` : ""}${vouched}${mine && nl ? `\n  <p class="byline">${plural(nl, "like", "likes")}.</p>` : ""}
+  <div class="acts">${mine ? "" : likeButton(s, i) + vouchButton(s, i)}<button type="button" class="show" data-d="${esc(s.did)}">Show in the graph</button>${mine ? `<button type="button" class="remove" data-i="${i}">Remove</button>` : `<button type="button" class="takedown" data-i="${i}">Request takedown</button>`}</div></article>`;
+}
+function renderCards() { el("stories").innerHTML = STORIES.map((s, i) => (s.gone ? "" : card(s, i))).join(""); }
+// One statement as a row with its buttons: for people you follow, a handle looked up, and the person picked in the graph.
+const statementRow = (s, i) => `<li><div><a class="said" href="#story-${i}" data-i="${i}">${esc(s.text)}</a> <span>${profileLink(s.did)}${s.place ? " · " + esc(s.place) : ""}</span></div> ${s.did === state.me ? "" : `<span class="rowacts">${likeButton(s, i)}${vouchButton(s, i)}</span>`}</li>`;
+function showStory(i) {
+  if (!passes(STORIES[i])) { fk = "all"; fp = ""; renderFilters(); applyFilters(); }
   document.querySelectorAll(".story").forEach(n => n.classList.toggle("sel", +n.id.slice(6) === i));
-  if (i == null) return;
-  if (scroll === "story") { if (!passes(STORIES[i])) { fk = "all"; draw(); applyFilters(); } el("story-" + i).scrollIntoView({ behavior: "smooth", block: "start" }); }
-  if (scroll === "map") {
-    const s = STORIES[i], want = s.scope;   // an entry belongs to the map it was placed on
-    if (scopeKey !== want) return setScope(want).then(() => selectStory(i, "map"));
-    if (featureOf(s.unit)) { picked = s.unit; draw(); pins.classed("sel", x => x === s); }
-    document.querySelector(".mapbox").scrollIntoView({ behavior: "smooth", block: "center" }); pinReadout(s); }
+  el("story-" + i)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-// Vouch, withdraw and decline buttons work the same wherever they sit.
-function vouchClick(e) {
-  const v = e.target.closest("button.vouch"); if (v) return vouchFor(+v.dataset.i), true;
-  const u = e.target.closest("button.unvouch"); if (u) return unvouch(+u.dataset.i), true;
-  const d = e.target.closest("button.decline"); if (d) return decline(d.dataset.d, +d.dataset.i), true;
+// Like, vouch, withdraw, decline and "go to it" work the same wherever they sit.
+function actClick(e) {
+  const b = e.target.closest("button, a[data-i]"); if (!b) return false;
+  const i = +b.dataset.i;
+  if (b.matches("a[data-i]")) { e.preventDefault(); showStory(i); return true; }
+  if (b.classList.contains("like")) return toggleLike(i), true;
+  if (b.classList.contains("vouch")) return vouchFor(i), true;
+  if (b.classList.contains("unvouch")) return unvouch(i), true;
+  if (b.classList.contains("decline")) return decline(b.dataset.d, i), true;
   return false;
 }
 el("stories").addEventListener("click", e => {
-  if (vouchClick(e)) return;
-  const b = e.target.closest("button.show"); if (b) return selectStory(+b.dataset.i, "map");
+  if (actClick(e)) return;
+  const b = e.target.closest("button.show"); if (b) { pick(b.dataset.d); return document.querySelector(".mapbox").scrollIntoView({ behavior: "smooth", block: "center" }); }
   const r = e.target.closest("button.remove"); if (r) return removeMine(+r.dataset.i);
   const t = e.target.closest("button.takedown"); if (t) requestTakedown(+t.dataset.i);
 });
+// Everything on the page that depends on what people have added, redrawn together.
+function refresh() { reindex(); renderFilters(); renderAccount(); renderCards(); renderConnections(); drawGraph(); applyFilters(); renderPerson(); renderFollows(); notePeople(); }
 
-// ---- map
-function buildMap() {
-  proj = S.projection(S.features); pathGen = d3.geoPath(proj);
-  svg.call(zoom.transform, d3.zoomIdentity);
-  shapes = gUnits.selectAll("path").data(S.features, f => scopeKey + ":" + S.idOf(f) + ":" + wkey(f)).join("path").attr("d", pathGen)
-    .on("pointerenter", (e, f) => { if (e.pointerType === "mouse") hover(f); })
-    .on("pointerleave", e => { if (e.pointerType === "mouse") hover(picked ? featureOf(picked) : null); })
-    .on("click", (e, f) => { const id = S.idOf(f); if (!id) return; picked = picked === id ? null : id; selectStory(null); draw();
-      // Someone in the middle of adding stays with the form; otherwise go to who is there.
-      if (picked) el(state.ask && state.me ? "add" : "profile").scrollIntoView({ behavior: "smooth", block: "nearest" }); });
-  gMesh.attr("d", S.mesh ? pathGen(S.mesh) : null);
-  el("places").innerHTML = Object.values(S.names).sort((a, b) => a.localeCompare(b)).map(n => `<option value="${esc(n)}"></option>`).join("");
-  el("placesearch").value = ""; el("placesearch").placeholder = `Find a ${S.unit}`;
-  drawPins();
-}
-function drawPins() {
-  const onThisMap = s => !s.gone && (scopeKey === "world" || s.scope === scopeKey);
-  const vis = STORIES.filter(onThisMap).map(s => ({ s, p: proj([s.lon, s.lat]) })).filter(o => o.p && o.p[0] >= 0 && o.p[0] <= W && o.p[1] >= 0 && o.p[1] <= H);
-  // A line from what someone does to each thing they vouch for, when both are on this map.
-  const mine = new Map(), shown = new Map(vis.map(o => [o.s.uri, o.s]));
-  for (const { s } of vis) (mine.get(s.did) || mine.set(s.did, []).get(s.did)).push(s);
-  const joins = [];
-  for (const [did, vs] of IDX.from) for (const l of mine.get(did) || []) for (const v of vs) { const m = shown.get(v.subject); if (m && (l.lon !== m.lon || l.lat !== m.lat)) joins.push([l, m]); }
-  ties = gTies.selectAll("line").data(joins).join("line").attr("class", "tie")
-    .attr("x1", d => proj([d[0].lon, d[0].lat])[0]).attr("y1", d => proj([d[0].lon, d[0].lat])[1])
-    .attr("x2", d => proj([d[1].lon, d[1].lat])[0]).attr("y2", d => proj([d[1].lon, d[1].lat])[1]);
-  const vn = s => vouchesFor(s).length;
-  pins = gPins.selectAll("g.pin").data(vis.map(o => o.s), s => s.key).join("g").attr("class", s => "pin people" + (vn(s) ? " vouched" : "")).attr("tabindex", 0).attr("role", "button")
-    .attr("aria-label", s => `${s.by}: ${s.text}, ${s.place}${vn(s) ? `, vouched for by ${countPeople(vn(s))}` : ""}`).attr("transform", s => `translate(${proj([s.lon, s.lat])})`);
-  pins.selectAll("*").remove();
-  pinInner = pins.append("g").attr("transform", `scale(${1 / k})`);
-  pinInner.filter(s => vn(s)).append("circle").attr("class", "ring").attr("r", 10);
-  pinInner.append("circle").attr("class", "halo").attr("r", 5.5);
-  pinInner.append("circle").attr("r", 16).attr("fill", "transparent");
-  pins.on("click", (e, s) => selectStory(STORIES.indexOf(s), "story"))
-    .on("keydown", (e, s) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectStory(STORIES.indexOf(s), "story"); } })
-    .on("pointerenter", (e, s) => { if (e.pointerType === "mouse") pinReadout(s); });
-  applyFilters();
-}
-// The country an entry stands in: its own unit on the world map, otherwise the country
-// its county, district or region lies inside.
-function countryOf(s) {
-  if (s.scope === "world") return s.unit;
-  if (s.country3 === undefined) { const w = SCOPES.world, f = w.features.find(x => d3.geoContains(x, [s.lon, s.lat])); s.country3 = (f && w.idOf(f)) || null; }
-  return s.country3;
-}
-// How many entries stand in each unit of the map being shown. On the world map, something
-// placed in a county or a district counts for its country.
-function counts() {
-  const n = new Map();
-  for (const s of STORIES) {
-    if (!passes(s)) continue;
-    const id = s.scope === scopeKey ? s.unit : scopeKey === "world" ? countryOf(s) : null;
-    if (id) n.set(id, (n.get(id) || 0) + 1);
+// ---- the graph: one mark for each person who has said what they do, joined to the people
+// whose statements they vouch for (amber) or like (green). It settles by itself: marks
+// push apart, lines pull together, so circles of people who affirm each other gather.
+const narrow = matchMedia("(max-width: 640px)").matches, still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const W = narrow ? 440 : 980, H = narrow ? 460 : 520;
+const svg = d3.select("#graph").attr("viewBox", `0 0 ${W} ${H}`);
+// An arrowhead for each kind of line: it points at whoever is vouched for or liked.
+svg.append("defs").selectAll("marker").data(["vouch", "like"]).join("marker").attr("id", d => "arrow-" + d).attr("class", d => "arrow " + d)
+  .attr("viewBox", "0 0 10 10").attr("refX", 9).attr("refY", 5).attr("markerWidth", 7).attr("markerHeight", 7).attr("orient", "auto").attr("markerUnits", "userSpaceOnUse")
+  .append("path").attr("d", "M0,1 L10,5 L0,9 z");
+const gAll = svg.append("g"), gEdges = gAll.append("g"), gNodes = gAll.append("g");
+let k = 1, picked = null, sim = null, nodeSel = null, edgeSel = null, nodes = [], edges = [];
+const zoom = d3.zoom().scaleExtent([0.5, 6])
+  .filter(e => (e.type === "wheel" ? e.ctrlKey || k !== 1 : e.touches ? e.touches.length > 1 || k !== 1 : !e.button))
+  .on("zoom", e => { k = e.transform.k; gAll.attr("transform", e.transform); svg.style("touch-action", k !== 1 ? "none" : "pan-y"); });
+svg.call(zoom).on("dblclick.zoom", null);
+d3.select("#zin").on("click", () => svg.transition().duration(200).call(zoom.scaleBy, 1.6));
+d3.select("#zout").on("click", () => svg.transition().duration(200).call(zoom.scaleBy, 1 / 1.6));
+const radius = n => 7 + 2.2 * Math.sqrt(2 * n.vouched + n.liked);
+function drawGraph() {
+  const at = new Map(nodes.map(n => [n.id, n])), byDid = new Map();
+  for (const s of STORIES) if (!s.gone) (byDid.get(s.did) || byDid.set(s.did, { id: s.did, said: [], vouched: 0, liked: 0 }).get(s.did)).said.push(s);
+  for (const n of byDid.values()) {
+    for (const s of n.said) { n.vouched += vouchesFor(s).length; n.liked += likesFor(s).length; }
+    const was = at.get(n.id); n.x = was ? was.x : W / 2 + (Math.random() - 0.5) * 120; n.y = was ? was.y : H / 2 + (Math.random() - 0.5) * 120;
   }
-  return n;
+  const author = new Map(STORIES.filter(s => !s.gone).map(s => [s.uri, s.did])), pairs = new Map();
+  const join = (list, kind) => { for (const v of list) { const to = author.get(v.subject); if (!to || !byDid.has(v.did) || to === v.did) continue;
+    const key = v.did + ">" + to, e = pairs.get(key) || pairs.set(key, { source: v.did, target: to, vouch: 0, like: 0 }).get(key); e[kind]++; } };
+  join([...IDX.from.values()].flat(), "vouch"); join([...IDX.likeFrom.values()].flat(), "like");
+  nodes = [...byDid.values()]; edges = [...pairs.values()];
+  if (picked && !byDid.has(picked)) picked = null;
+  el("graphempty").hidden = nodes.length > 0;
+  edgeSel = gEdges.selectAll("line").data(edges, e => e.source + ">" + e.target).join("line").attr("class", e => "edge " + (e.vouch ? "vouch" : "like")).attr("marker-end", e => `url(#arrow-${e.vouch ? "vouch" : "like"})`);
+  nodeSel = gNodes.selectAll("g.node").data(nodes, n => n.id).join(enter => { const g = enter.append("g").attr("class", "node").attr("tabindex", 0).attr("role", "button"); g.append("circle").attr("class", "dot"); g.append("text"); return g; });
+  nodeSel.attr("aria-label", n => `${handleOf(n.id)}: ${plural(n.said.length, "thing", "things")}${n.vouched ? `, ${plural(n.vouched, "vouch", "vouches")}` : ""}${n.liked ? `, ${plural(n.liked, "like", "likes")}` : ""}`)
+    .on("click", (e, n) => pick(n.id)).on("keydown", (e, n) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(n.id); } })
+    .on("pointerenter", (e, n) => { if (e.pointerType === "mouse") readout(n); }).on("pointerleave", e => { if (e.pointerType === "mouse") readout(nodes.find(n => n.id === picked)); })
+    .call(d3.drag().on("start", (e, n) => { if (!still && !e.active) sim.alphaTarget(0.25).restart(); n.fx = n.x; n.fy = n.y; })
+      .on("drag", (e, n) => { n.fx = e.x; n.fy = e.y; if (still) { n.x = e.x; n.y = e.y; place(); } })
+      .on("end", (e, n) => { if (!still && !e.active) sim.alphaTarget(0); n.fx = null; n.fy = null; }));
+  nodeSel.select("circle").attr("r", radius);
+  nodeSel.select("text").attr("x", n => radius(n) + 5).attr("y", 4).text(n => "@" + handleOf(n.id));
+  svg.classed("crowded", nodes.length > 40);   // past this, a name shows only for whoever is picked or under the pointer
+  if (sim) sim.stop();
+  sim = d3.forceSimulation(nodes).force("link", d3.forceLink(edges).id(n => n.id).distance(e => (e.vouch ? 100 : 150)).strength(e => (e.vouch ? 0.5 : 0.18)))
+    .force("charge", d3.forceManyBody().strength(narrow ? -260 : -520).distanceMax(420)).force("x", d3.forceX(W / 2).strength(0.035)).force("y", d3.forceY(H / 2).strength(narrow ? 0.04 : 0.07))
+    .force("collide", d3.forceCollide(n => radius(n) + 16)).on("tick", place);
+  if (still) { sim.stop(); for (let i = 0; i < 240; i++) sim.tick(); place(); }
+  mark(); el("swatches").innerHTML = `<span><i class="dotkey"></i>someone who has said what they do</span><span><i class="linekey vouch"></i>vouches for</span><span><i class="linekey like"></i>likes</span><span>a mark grows with the vouches and likes it is given</span>`;
+  readout(nodes.find(n => n.id === picked));
 }
-let tally = new Map();
-function hover(f) {
-  const r = el("readout");
-  if (!f || !S.idOf(f)) { r.textContent = `Pick a ${S.unit} to see who is there.`; return; }
-  const n = tally.get(S.idOf(f)) || 0;
-  r.textContent = `${nameOf(f)}: ${n ? (n === 1 ? "one here" : n + " here") : "nobody yet"}.`;
+function place() {
+  for (const n of nodes) { const r = radius(n); n.x = Math.max(r + 4, Math.min(W - r - 4, n.x)); n.y = Math.max(r + 4, Math.min(H - r - 4, n.y)); }
+  nodeSel.attr("transform", n => `translate(${n.x},${n.y})`);
+  // A line stops at the edge of the mark it points to, so its arrowhead shows.
+  edgeSel.each(function (e) {
+    const dx = e.target.x - e.source.x, dy = e.target.y - e.source.y, d = Math.hypot(dx, dy) || 1, r = radius(e.target) + 3;
+    d3.select(this).attr("x1", e.source.x).attr("y1", e.source.y).attr("x2", e.target.x - (dx / d) * r).attr("y2", e.target.y - (dy / d) * r);
+  });
 }
-function draw() {
-  tally = counts();
-  shapes.attr("class", f => { const id = S.idOf(f), n = id ? tally.get(id) || 0 : 0; return "unit" + (id ? " can" : "") + (n >= 5 ? " n3" : n >= 2 ? " n2" : n ? " n1" : "") + (picked && picked === id ? " sel" : ""); });
-  shapes.filter(f => picked && S.idOf(f) === picked).raise();
-  // The buttons are made once and only their state changes: rebuilding them under a
-  // click that began as the search box lost focus would swallow the click.
-  el("scopes").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.s === scopeKey));
-  el("swatches").innerHTML = `<span><i class="tint"></i>someone is here</span><span><i class="pinkey"></i>what someone says they do</span><span><i class="pinkey pv"></i>vouched for</span>${ties && ties.size() ? `<span><i class="tie"></i>vouches for</span>` : ""}`;
-  hover(picked ? featureOf(picked) : null);
-  profile();
+// Whoever is picked, and the people joined to them, stand out; filtered-out people fade.
+function mark() {
+  if (!nodeSel) return;
+  const near = new Set(picked ? [picked] : []);
+  for (const e of edges) { const a = e.source.id || e.source, b = e.target.id || e.target; if (a === picked) near.add(b); if (b === picked) near.add(a); }
+  nodeSel.classed("sel", n => n.id === picked).classed("near", n => picked && near.has(n.id) && n.id !== picked);
+  edgeSel.classed("lit", e => picked && ((e.source.id || e.source) === picked || (e.target.id || e.target) === picked));
 }
+function dimGraph() { if (nodeSel) { nodeSel.classed("off", n => !n.said.some(passes)); edgeSel.classed("off", e => !e.source.said?.some(passes) || !e.target.said?.some(passes)); } }
+function readout(n) {
+  el("readout").innerHTML = !nodes.length ? "" : !n ? "Pick someone to see what they do."
+    : `<h3>@${esc(handleOf(n.id))}</h3><p>${n.said.length === 1 ? esc(n.said[0].text) : plural(n.said.length, "thing", "things") + " they say they do"}.${n.vouched ? ` ${plural(n.vouched, "vouch", "vouches")}.` : ""}${n.liked ? ` ${plural(n.liked, "like", "likes")}.` : ""}</p>`;
+}
+function pick(did) { picked = picked === did ? null : did; mark(); readout(nodes.find(n => n.id === picked)); renderPerson(); }
 
-// ---- one place: who is there
-function profile() {
-  const box = el("profile"), f = picked && featureOf(picked);
-  if (!f) { box.innerHTML = `<h2>Who is here</h2><p>Pick a ${S.unit} on the map, or find one by name, to see who is there and to add yourself or vouch for someone.</p>`; return renderAdd(); }
-  const there = STORIES.map((s, i) => [s, i]).filter(([s]) => !s.gone && ((s.scope === scopeKey && s.unit === picked) || (scopeKey === "world" && countryOf(s) === picked)));
-  const open = scopeKey === "world" && OPENS(picked);
-  box.innerHTML = `<h2>${esc(nameOf(f))}</h2>
-    ${open ? `<p><button type="button" class="open" data-s="${open}">Open ${SCOPES[open].label} by ${SCOPES[open].unit}</button></p>` : ""}
-    ${there.length ? `<ul class="here">` + there.map(([s, i]) => `<li><a href="#story-${i}" data-i="${i}"><i class="mark p"></i>${esc(s.text)}</a> <span>@${esc(s.by)}${vouchesFor(s).length ? ", vouched for by " + countPeople(vouchesFor(s).length) : ""}${s.scope !== scopeKey ? ", in " + esc(s.place) : ""}</span></li>`).join("") + `</ul>`
-      : `<p class="none">Nobody has added anything in this ${S.unit} yet. If you are here, you can be the first.</p>`}
-    <p class="askhere"><button type="button" data-ask="do">Say what you do here</button></p>`;
-  renderAdd();
+// ---- one person: what they say they do, who vouches for them, who they vouch for
+function renderPerson() {
+  const box = el("profile"), n = picked && nodes.find(x => x.id === picked);
+  if (!n) { box.innerHTML = nodes.length ? `<h2>Who is here</h2><p>Pick someone in the graph to see what they do and who stands with them.</p>` : ""; box.hidden = !nodes.length; return; }
+  box.hidden = false;
+  const mine = (IDX.from.get(n.id) || []).map(v => STORIES.findIndex(s => !s.gone && s.uri === v.subject)).filter(i => i >= 0);
+  box.innerHTML = `<h2>${profileLink(n.id)}</h2>
+    <ul class="flist">${n.said.map(s => statementRow(s, STORIES.indexOf(s))).join("")}</ul>
+    ${mine.length ? `<p class="also">Vouches for ${mine.map(i => `${profileLink(STORIES[i].did)}: <a href="#story-${i}" data-i="${i}">${esc(STORIES[i].text)}</a>`).join("; ")}.</p>` : ""}`;
 }
-el("profile").addEventListener("click", e => {
-  const ask = e.target.closest(".askhere button"); if (ask) return openAsk(ask.dataset.ask);
-  const o = e.target.closest("button.open"); if (o) return setScope(o.dataset.s);
-  const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); }
-});
-el("scopes").innerHTML = `<span class="caps">Map</span>` + Object.entries(SCOPES).map(([key, s]) => `<button type="button" data-s="${key}" aria-pressed="${key === scopeKey}">${s.label}<span class="by">, by ${s.unit}</span></button>`).join("");
-el("scopes").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setScope(b.dataset.s); });
-el("placesearch").addEventListener("change", e => {
-  const want = e.target.value.trim().toLowerCase(); if (!want) return;
-  const f = S.features.find(x => S.idOf(x) && nameOf(x).toLowerCase() === want) || S.features.find(x => S.idOf(x) && nameOf(x).toLowerCase().startsWith(want));
-  if (!f) { el("readout").textContent = `No ${S.unit} by that name on this map.`; return; }
-  picked = S.idOf(f); draw(); zoomTo(f);
-});
+el("profile").addEventListener("click", actClick);
 
-async function setScope(key) {
-  const T = SCOPES[key];
-  if (!T.ready) {
-    el("loading").hidden = false;
-    try { Object.assign(T, T.build(await Promise.all(T.files.map(getJson)))); T.ready = true; }
-    catch (err) { el("loading").textContent = "That map could not be loaded."; return; }
-    el("loading").hidden = true;
-  }
-  scopeKey = key; S = T; picked = null;
-  buildMap(); draw();
-}
-
-// ---- people: sign-in, adding a link, removing it, asking for one to be taken down.
+// ---- people: sign-in, saying what you do, removing it, asking for one to be taken down.
 // The records live in people's own atproto accounts; this site stores nothing.
 // Sign-in follows the Library (../library/app.js).
-const state = { client: null, session: null, agent: null, me: null, handle: null, authError: false, notice: "", busy: false, draft: "", urlDraft: "", errors: [], ask: null, vouchDraft: "", vouchErrors: [], found: null,
-  follows: null, followsError: false, followsAll: false };   // follows: the accounts on the map that the signed-in person follows; null until asked
-let people = { loaded: false, error: null, unreachable: 0, withheld: 0, unplaced: 0 };
-// A statement carries a unit id, never a place name, so the name is looked up here.
-// One whose unit this atlas doesn't have is not shown.
-const unitNames = { world: SCOPES.world.names };
-async function namesFor(scope) {
-  if (!unitNames[scope]) unitNames[scope] = (async () => SCOPES[scope].names || await getJson(`data/${scope}.names.json`))().catch(() => ({}));
-  return unitNames[scope];
-}
-async function display(e) {
-  const name = (await namesFor(e.scope))[e.unit];
-  return name ? { ...e, cid: e.recordCid || null, key: e.uri, by: e.handle || e.did, place: name } : null;
-}
+const state = { client: null, session: null, agent: null, me: null, handle: null, authError: false, notice: "", busy: false, draft: "", urlDraft: "", placeDraft: "", errors: [], ask: null, vouchDraft: "", vouchErrors: [], found: null,
+  follows: null, followsError: false, followsAll: false };   // follows: the accounts here that the signed-in person follows; null until asked
+let people = { loaded: false, error: null, unreachable: 0, withheld: 0 };
 
 async function initAuth() {
   const { BrowserOAuthClient } = await import("../library/vendor/oauth-client-browser.js");
@@ -323,8 +269,7 @@ el("account").addEventListener("click", async e => {
   try { await session?.signOut(); } catch {}
 });
 
-// The two questions at the top of the page open this panel. Both need an account. Saying
-// what you do also needs a place picked on the map.
+// The two questions at the top of the page open this panel. Both need an account.
 function openAsk(ask) { state.ask = ask; renderAdd(); el("add").scrollIntoView({ behavior: "smooth", block: "start" }); }
 function renderAdd() {
   const box = el("addbox");
@@ -332,51 +277,48 @@ function renderAdd() {
   document.querySelectorAll(".askbtn").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ask === state.ask)));
   if (!state.ask || !state.me) { box.innerHTML = ""; return; }
   if (state.ask === "who") { box.innerHTML = vouchForm(); return; }
-  const f = picked && featureOf(picked);
-  if (!f) { box.innerHTML = `<p class="pick">Now pick a place on the map below. A country will do. Open the United States, India or Europe to pick a county, a district or a region.</p>`; return; }
-  box.innerHTML = `<p class="placed">In <b>${esc(nameOf(f))}</b>. Pick another place on the map to change it.</p><form class="addform" id="addform" novalidate>
+  box.innerHTML = `<form class="addform" id="addform" novalidate>
     ${state.errors.length ? `<p class="errors" role="alert">${state.errors.map(esc).join(" ")}</p>` : ""}
     <div class="row say"><label class="i" for="addtext">I</label>
       <input id="addtext" name="text" autocomplete="off" placeholder="feed the birds" maxlength="${A.MAX_TEXT}" value="${esc(state.draft)}"></div>
     <p class="eg">I feed the birds. I cook for my kids. I clean toilets.</p>
-    <div class="row"><label class="sr-only" for="addurl">A web address, if there is one</label>
-      <input id="addurl" name="url" inputmode="url" autocapitalize="none" spellcheck="false" placeholder="A web address, if there is one" maxlength="${A.MAX_URL}" value="${esc(state.urlDraft)}">
-      <button type="submit"${state.busy ? " disabled" : ""}>${state.busy ? "Saving" : "Add it"}</button></div>
-    <p class="warn">Say what you do, in your own words. It can only be about you: nobody here can say what someone else does. It is public, saved in your own account under your handle, and placed in ${esc(nameOf(f))}, never at an address. Anyone signed in can ask for it to be taken down.</p>
+    <div class="two"><label>Where, if you want to say
+        <input id="addplace" name="place" list="places" autocomplete="off" spellcheck="false" placeholder="A country, county, district or region" value="${esc(state.placeDraft)}"></label>
+      <label>A web address, if there is one
+        <input id="addurl" name="url" inputmode="url" autocapitalize="none" spellcheck="false" placeholder="https://" maxlength="${A.MAX_URL}" value="${esc(state.urlDraft)}"></label></div>
+    <div><button type="submit"${state.busy ? " disabled" : ""}>${state.busy ? "Saving" : "Add it"}</button></div>
+    <p class="warn">Say what you do, in your own words. It can only be about you: nobody here can say what someone else does. It is public, saved in your own account under your handle. Anyone signed in can ask for it to be taken down.</p>
   </form>`;
+  if (!el("places").childElementCount) allPlaces().then(byName => { el("places").innerHTML = [...byName.values()].map(p => `<option value="${esc(p.name)}"></option>`).join(""); });
 }
 // A vouch is for one thing one person has said they do. This finds a person's by their handle.
 function vouchForm() {
   const list = state.found ? STORIES.map((s, i) => [s, i]).filter(([s]) => !s.gone && s.did === state.found) : [];
   return `<form class="addform" id="vouchform" novalidate>
-    <p class="warn">A vouch affirms something someone has said they do. You cannot say it for them: it has to be on the map already, in their words. A vouch holds nothing but a pointer to their sentence, and it is public under your handle. They can decline it.</p>
+    <p class="warn">A vouch affirms something someone has said they do: you know it to be so, and it holds your world together. A like says less: you are glad of it. You cannot say it for them. It has to be here already, in their words. Both are public under your handle.</p>
     ${state.vouchErrors.length ? `<p class="errors" role="alert">${state.vouchErrors.map(esc).join(" ")}</p>` : ""}
     <div class="row"><label class="sr-only" for="vouchsubject">Their handle</label>
       <input id="vouchsubject" name="subject" autocapitalize="none" spellcheck="false" placeholder="their.handle" maxlength="253" value="${esc(state.vouchDraft)}">
       <button type="submit"${state.busy ? " disabled" : ""}>${state.busy ? "Looking" : "Find what they do"}</button></div>
-    ${list.length ? `<ul class="flist">${list.map(([s, i]) => statementRow(s, i)).join("")}</ul>` : `<p>Or use the Vouch button on anything in the list further down the page.</p>`}
+    ${list.length ? `<ul class="flist">${list.map(([s, i]) => statementRow(s, i)).join("")}</ul>` : `<p>Or use the Like and Vouch buttons on anything in the list further down the page.</p>`}
   </form>`;
 }
-// One statement as a row with its vouch button: used for people you follow and for a handle looked up.
-const statementRow = (s, i) => `<li><div><a class="said" href="#story-${i}" data-i="${i}">${esc(s.text)}</a> <span>${profileLink(s.did)} · ${esc(s.place)}</span></div> ${s.did === state.me ? "" : vouchButton(s, i, true)}</li>`;
 document.querySelectorAll(".askbtn").forEach(b => b.addEventListener("click", () => { state.ask = state.ask === b.dataset.ask ? null : b.dataset.ask; renderAdd(); }));
 el("contribute").addEventListener("input", e => {
   const t = e.target;
   if (t.id === "addtext") state.draft = t.value;
   else if (t.id === "addurl") state.urlDraft = t.value;
+  else if (t.id === "addplace") state.placeDraft = t.value;
   else if (t.id === "vouchsubject") state.vouchDraft = t.value;
 });
 el("contribute").addEventListener("submit", e => {
   if (e.target.id === "addform") { e.preventDefault(); addStatement(); }
   if (e.target.id === "vouchform") { e.preventDefault(); findPerson(); }
 });
-el("contribute").addEventListener("click", e => {
-  if (vouchClick(e)) return;
-  const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); }
-});
+el("contribute").addEventListener("click", actClick);
 
-// ---- people you follow: shown to someone signed in, with an invitation to vouch.
-// Who they follow is asked of Bluesky's public service, about the accounts on this map only.
+// ---- people you follow: shown to someone signed in, with an invitation to like and vouch.
+// Who they follow is asked of Bluesky's public service, about the accounts here only.
 let followsRun = 0;
 async function loadFollows() {
   const me = state.me, run = ++followsRun;
@@ -393,38 +335,45 @@ function renderFollows() {
   box.hidden = !state.me || !people.loaded || !!people.error;
   if (box.hidden) return;
   if (!state.follows) { box.innerHTML = `<h2>People you follow</h2><p>Looking for the people you follow.</p>`; return; }
-  if (state.followsError) { box.innerHTML = `<h2>People you follow</h2><p>Who you follow could not be checked right now. You can still vouch from anyone's entry, further down the page.</p>`; return; }
+  if (state.followsError) { box.innerHTML = `<h2>People you follow</h2><p>Who you follow could not be checked right now. You can still like and vouch from the list further down the page.</p>`; return; }
   const rows = STORIES.map((s, i) => [s, i]).filter(([s]) => !s.gone && state.follows.has(s.did));
   if (!rows.length) { box.innerHTML = `<h2>People you follow</h2><p>Nobody you follow on Bluesky has said what they do here yet.</p>`; return; }
   const who = new Set(rows.map(([s]) => s.did)).size, show = state.followsAll ? rows : rows.slice(0, 6);
   box.innerHTML = `<h2>People you follow are here</h2>
-    <p>${who === 1 ? "One person you follow has" : who + " people you follow have"} said what they do. Does it hold your world together? A vouch affirms it, in public, under your handle.</p>
+    <p>${who === 1 ? "One person you follow has" : who + " people you follow have"} said what they do. Like it if you are glad of it. Vouch if it holds your world together.</p>
     <ul class="flist">${show.map(([s, i]) => statementRow(s, i)).join("")}</ul>
     ${rows.length > show.length ? `<p><button type="button" class="link" id="followsall">Show all ${rows.length}</button></p>` : ""}`;
 }
-el("follows").addEventListener("click", e => {
-  if (vouchClick(e)) return;
-  if (e.target.id === "followsall") { state.followsAll = true; return renderFollows(); }
-  const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); }
-});
+el("follows").addEventListener("click", e => { if (actClick(e)) return; if (e.target.id === "followsall") { state.followsAll = true; renderFollows(); } });
 
-// ---- vouching: one record in the voucher's account, pointing at one statement as it stands
+// ---- liking and vouching: one record in your own account, pointing at one statement as it stands
 function needSignIn(why) { state.notice = why; state.ask = state.ask || "who"; renderAccount(); renderAdd(); el("add").scrollIntoView({ behavior: "smooth", block: "start" }); }
-async function vouchFor(i) {
+async function affirm(i, kind) {   // kind: "vouch" or "like"
   const s = STORIES[i]; if (!s || s.gone) return;
-  if (!state.agent) return needSignIn("Sign in here to vouch.");
-  if (s.did === state.me) { state.notice = "That one is yours. A vouch is for what someone else does."; return renderAccount(); }
-  if (iVouch(s)) return;
-  const built = A.buildVouch({ uri: s.uri, cid: s.cid });
-  if (!built.ok) { state.notice = "That could not be vouched for right now. Reload the page and try again."; return renderAccount(); }
+  if (!state.agent) return needSignIn(`Sign in here to ${kind === "like" ? "like this" : "vouch"}.`);
+  if (s.did === state.me) { state.notice = "That one is yours."; return renderAccount(); }
+  const built = (kind === "like" ? A.buildLike : A.buildVouch)({ uri: s.uri, cid: s.cid });
+  if (!built.ok) { state.notice = "That could not be saved right now. Reload the page and try again."; return renderAccount(); }
   try {
-    const res = await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL.vouch, record: built.record });
-    VOUCHES.push({ did: state.me, handle: state.handle, subject: s.uri, cid: s.cid, createdAt: built.record.createdAt, records: [{ uri: res.data.uri, rkey: res.data.uri.split("/").pop() }] });
-    state.notice = `You vouch for what @${s.by} does. It is saved in your own account.`;
+    const res = await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL[kind], record: built.record });
+    (kind === "like" ? LIKES : VOUCHES).push({ did: state.me, handle: state.handle, subject: s.uri, cid: s.cid, createdAt: built.record.createdAt, records: [{ uri: res.data.uri, rkey: res.data.uri.split("/").pop() }] });
+    state.notice = kind === "like" ? "" : `You vouch for what @${s.by} does. It is saved in your own account.`;
   } catch (err) { state.notice = `It could not be saved: ${err.message}`; }
   refresh(); renderAdd();
 }
-// The form: a handle, turned into its account, whose statements are then listed to vouch for.
+async function withdraw(i, kind) {
+  const s = STORIES[i], list = kind === "like" ? LIKES : VOUCHES, v = s && list.find(x => x.did === state.me && x.subject === s.uri); if (!v || !state.agent) return;
+  try {
+    for (const r of v.records) await state.agent.com.atproto.repo.deleteRecord({ repo: state.me, collection: A.COL[kind], rkey: r.rkey });
+    if (kind === "like") LIKES = LIKES.filter(x => x !== v); else VOUCHES = VOUCHES.filter(x => x !== v);
+    state.notice = kind === "like" ? "" : "Your vouch is withdrawn.";
+  } catch (err) { state.notice = `It could not be withdrawn: ${err.message}`; }
+  refresh(); renderAdd();
+}
+const vouchFor = i => (STORIES[i] && iVouch(STORIES[i]) ? undefined : affirm(i, "vouch"));
+const unvouch = i => withdraw(i, "vouch");
+const toggleLike = i => (STORIES[i] && iLike(STORIES[i]) ? withdraw(i, "like") : affirm(i, "like"));
+// The form: a handle, turned into its account, whose statements are then listed.
 async function findPerson() {
   if (!state.agent || state.busy) return;
   const raw = state.vouchDraft.trim().replace(/^@/, "");
@@ -433,18 +382,10 @@ async function findPerson() {
     const did = !raw ? "" : raw.startsWith("did:") ? raw : await resolveHandle(raw);
     if (!did) state.vouchErrors = ["Give someone's handle."];
     else if (did === state.me) state.vouchErrors = ["That is you. Use the first question to say what you do."];
-    else if (!onMap(did)) state.vouchErrors = [`@${raw} has not said what they do here. Only they can.`];
+    else if (!isHere(did)) state.vouchErrors = [`@${raw} has not said what they do here. Only they can.`];
     else state.found = did;
   } catch (err) { state.vouchErrors = [`That handle could not be found: ${err.message}`]; }
   state.busy = false; renderAdd();
-}
-async function unvouch(i) {
-  const s = STORIES[i], v = s && VOUCHES.find(x => x.did === state.me && x.subject === s.uri); if (!v || !state.agent) return;
-  try {
-    for (const r of v.records) await state.agent.com.atproto.repo.deleteRecord({ repo: state.me, collection: A.COL.vouch, rkey: r.rkey });
-    VOUCHES = VOUCHES.filter(x => x !== v); state.notice = "Your vouch is withdrawn.";
-  } catch (err) { state.notice = `It could not be withdrawn: ${err.message}`; }
-  refresh(); renderAdd();
 }
 // Whoever wrote a statement can decline a vouch for it: a takedown request against each record behind it.
 async function decline(voucher, i) {
@@ -457,22 +398,23 @@ async function decline(voucher, i) {
 }
 
 async function addStatement() {
-  const f = picked && featureOf(picked); if (!f || !state.agent || state.busy) return;
-  const [lon, lat] = d3.geoCentroid(f), name = nameOf(f);
-  const built = A.buildStatement({ text: state.draft, url: state.urlDraft, scope: scopeKey, unit: picked, lat, lon });
+  if (!state.agent || state.busy) return;
+  const wanted = state.placeDraft.trim(), found = wanted ? (await allPlaces()).get(wanted.toLowerCase()) : null;
+  if (wanted && !found) { state.errors = ["That place is not on the list. Pick one from the list, or leave it out."]; return renderAdd(); }
+  const built = A.buildStatement({ text: state.draft, url: state.urlDraft, ...(found ? { scope: found.scope, unit: found.unit } : {}) });
   if (!built.ok) { state.errors = built.errors; return renderAdd(); }
   state.busy = true; state.errors = []; renderAdd();
   try {
     const res = await state.agent.com.atproto.repo.createRecord({ repo: state.me, collection: A.COL.statement, record: built.record });
     const uri = res.data.uri, shown = await display({ ...A.parseStatement(built.record), uri, rkey: uri.split("/").pop(), did: state.me, handle: state.handle, recordCid: res.data.cid });
-    if (shown) STORIES.push(shown);
-    state.draft = ""; state.urlDraft = ""; state.busy = false; state.notice = `Added in ${name}. It is saved in your own account.`;
+    STORIES.push(shown); picked = state.me;
+    state.draft = ""; state.urlDraft = ""; state.placeDraft = ""; state.busy = false; state.notice = "Added. It is saved in your own account.";
     refresh(); renderAdd();
   } catch (err) { state.busy = false; state.errors = [`It could not be saved: ${err.message}`]; renderAdd(); }
 }
 async function removeMine(i) {
   const s = STORIES[i]; if (!s || s.did !== state.me || !state.agent) return;
-  try { await state.agent.com.atproto.repo.deleteRecord({ repo: state.me, collection: A.COL.statement, rkey: s.rkey }); s.gone = true; state.notice = "Removed from your account and from the map."; }
+  try { await state.agent.com.atproto.repo.deleteRecord({ repo: state.me, collection: A.COL.statement, rkey: s.rkey }); s.gone = true; state.notice = "Removed from your account and from this page."; }
   catch (err) { state.notice = `It could not be removed: ${err.message}`; }
   refresh();
 }
@@ -488,23 +430,24 @@ async function requestTakedown(i) {
   refresh();
 }
 function notePeople() {
-  const links = STORIES.filter(s => !s.gone).length;
+  const said = STORIES.filter(s => !s.gone).length;
   el("communitynote").textContent = !people.loaded ? "Looking for what people have added."
     : people.error ? "What people have added is not shown right now: the index that finds it, and the takedown requests against it, did not answer."
-    : (links ? `${links} ${links === 1 ? "thing" : "things"} people say they do. ${IDX.n} ${IDX.n === 1 ? "vouch" : "vouches"}.` : "Nobody has added anything yet. The first question at the top of the page is how to start.")
+    : (said ? `${plural(said, "thing", "things")} people say they do. ${plural(IDX.n, "vouch", "vouches")}. ${plural(IDX.nl, "like", "likes")}.` : "Nobody has added anything yet. The first question at the top of the page is how to start.")
       + (people.withheld ? ` ${people.withheld} withheld after a takedown request.` : "")
       + (people.unreachable ? ` ${people.unreachable} could not be read from their authors' servers.` : "");
+  el("graphempty").textContent = !people.loaded ? "Looking for who is here." : people.error ? "Who is here cannot be shown right now." : "Nobody is here yet. Say what you do, and you will be the first.";
 }
 async function loadPeople() {
   notePeople();
   let hidden = {}; try { hidden = await getJson("hidden.json"); } catch {}
   const out = await A.loadCommunity({ backlinks, resolveDid, getRecord }, hidden);
   const have = new Set(STORIES.map(s => s.key));
-  let unplaced = 0;
-  for (const e of out.statements) { if (have.has(e.uri)) continue; const shown = await display(e); if (shown) STORIES.push(shown); else unplaced++; }
-  const mine = VOUCHES.filter(v => !out.vouches.some(o => v.records.some(r => r.uri === o.uri)));   // written here before the index answered
-  VOUCHES = [...A.cleanVouches(out.vouches), ...mine];
-  people = { loaded: true, error: out.error, unreachable: out.unreachable, withheld: out.withheld, unplaced };
+  for (const e of out.statements) if (!have.has(e.uri)) STORIES.push(await display(e));
+  const fresh = (mine, got) => mine.filter(v => !got.some(o => v.records.some(r => r.uri === o.uri)));   // written here before the index answered
+  VOUCHES = [...A.cleanVouches(out.vouches), ...fresh(VOUCHES, out.vouches)];
+  LIKES = [...A.cleanLikes(out.likes), ...fresh(LIKES, out.likes)];
+  people = { loaded: true, error: out.error, unreachable: out.unreachable, withheld: out.withheld };
   refresh(); loadFollows();
 }
 
@@ -513,9 +456,9 @@ function renderConnections() {
   el("connections").hidden = !IDX.from.size;
   el("connlist").innerHTML = [...IDX.from].sort((a, b) => b[1].length - a[1].length || handleOf(a[0]).localeCompare(handleOf(b[0]))).map(([did, vs]) =>
     `<li>${profileLink(did)} vouches for ${vs.map(v => { const i = STORIES.findIndex(s => !s.gone && s.uri === v.subject), s = STORIES[i];
-      return `@${esc(s.by)}: <a href="#story-${i}" data-i="${i}">${esc(s.text)}</a> <span>in ${esc(s.place)}</span>`; }).join("; ")}.</li>`).join("");
+      return `@${esc(s.by)}: <a href="#story-${i}" data-i="${i}">${esc(s.text)}</a>`; }).join("; ")}.</li>`).join("");
 }
-el("connlist").addEventListener("click", e => { const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); } });
+el("connlist").addEventListener("click", actClick);
 
 // ---- prior work: what came before this atlas, each entry checked against the page it links to
 const PRIOR_KINDS = [["maps", "Maps and directories of care"], ["counting", "Counting unpaid work"], ["ideas", "Care, maintenance and repair"], ["commons", "Commons and counter-mapping"]];
@@ -531,26 +474,28 @@ async function loadPrior() {
 }
 
 const LIMITS = [
-  "Everything here is something a person said about themselves. Nobody has checked any of it. A vouch is another person saying it is so, and nothing more.",
+  "Everything here is something a person said about themselves. Nobody has checked any of it. A vouch is another person saying it is so, and a like is someone being glad of it. Neither is proof.",
   "The form makes every statement begin with I, and refuses a web address or an @ inside it. It cannot stop someone bending an I-statement to talk about somebody else. A takedown request is the remedy, and it works at once.",
-  "It is public. A statement or a vouch is a record in the account of whoever wrote it, under their handle, and anyone can read it there whether or not this page shows it.",
-  "It is as full as the people who have found it. An empty place on the map says nothing about who is there.",
-  "Saying what you do, vouching and asking for a takedown all need an atproto account. Someone without one cannot do any of them here.",
-  "A vouch is for one sentence as it stood. If the sentence is changed or removed, the vouch stops counting. Whoever wrote the sentence can decline a vouch and it comes off this page at once, though the record stays in the voucher's own account.",
-  "Who you follow is read from Bluesky's public service, about the accounts on this map only. Follows kept anywhere else are not seen.",
-  "The finest places are US counties, Indian districts and European regions. Elsewhere it is the country. There is no street map.",
+  "It is public. A statement, a vouch or a like is a record in the account of whoever made it, under their handle, and anyone can read it there whether or not this page shows it.",
+  "It is as full as the people who have found it. Whoever is missing from the graph is missing from this page, not from the world.",
+  "Only people who have said what they do are drawn. Someone who only likes and vouches has no mark of their own.",
+  "Saying what you do, liking, vouching and asking for a takedown all need an atproto account. Someone without one cannot do any of them here.",
+  "A vouch or a like is for one sentence as it stood. If the sentence is changed or removed, it stops counting. Whoever wrote the sentence can decline a vouch and it comes off this page at once, though the record stays in the voucher's own account.",
+  "Who you follow is read from Bluesky's public service, about the accounts here only. Follows kept anywhere else are not seen.",
+  "A place is optional, and it is a name from a list: a country, a US county, an Indian district or a European region. There is no map.",
   "What people have added is found through Constellation, an outside index of atproto records. When that does not answer, none of it is shown.",
 ];
 const SOURCES = [
-  ["Country shapes: Natural Earth, 1:110m, through the world-atlas package. Small island states are missing from the world map.", "https://github.com/topojson/world-atlas"],
-  ["United States counties: US Census Bureau cartographic boundaries, through the us-atlas package", "https://github.com/topojson/us-atlas"],
-  ["India districts: geoBoundaries (Open Database License 1.0)", "https://www.geoboundaries.org/"],
-  ["Europe regions: Eurostat GISCO, NUTS 2021, level 2", "https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics"],
   ["The index that finds what people have added: Constellation", "https://constellation.microcosm.blue/"],
+  ["Who you follow: Bluesky's public AppView", "https://docs.bsky.app/docs/api/app-bsky-graph-get-relationships"],
+  ["Country names: Natural Earth, through the world-atlas package", "https://github.com/topojson/world-atlas"],
+  ["United States county names: County Health Rankings & Roadmaps, 2025, and the US Census Bureau through the us-atlas package", "https://www.countyhealthrankings.org/"],
+  ["India district names: geoBoundaries (Open Database License 1.0)", "https://www.geoboundaries.org/"],
+  ["Europe region names: Eurostat GISCO, NUTS 2021, level 2", "https://ec.europa.eu/eurostat/web/gisco/geodata/statistical-units/territorial-units-statistics"],
 ];
 el("limits").innerHTML = LIMITS.map(t => `<li>${t}</li>`).join("");
 el("sources").innerHTML = SOURCES.map(([t, u]) => `<li><a href="${u}">${t}</a></li>`).join("");
-buildMap(); refresh();
+refresh();
 initAuth().catch(() => { state.authError = true; renderAccount(); });
 loadPeople();
 loadPrior();

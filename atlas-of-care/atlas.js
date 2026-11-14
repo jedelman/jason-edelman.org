@@ -1,16 +1,19 @@
 // Atlas of Care: what people add to the map. No DOM and no SDK import, so it
 // runs in the browser and in Node tests alike.
 //
-// The marks on the map are only what people add, and there are three kinds of record:
+// Everything on the page is what people add, and there are four kinds of record:
 //
 //   statement  "what do you do to hold your world together": one sentence in
-//              the person's own words that begins with "I", and a place. It
-//              may carry a web address. Nobody can write one about someone else:
-//              it sits in the repo of whoever says it, and it has to say "I".
+//              the person's own words that begins with "I". It may name a
+//              place and carry a web address. Nobody can write one about
+//              someone else: it sits in the repo of whoever says it, and it
+//              has to say "I".
 //   vouch      "who holds your world together": a pointer at one statement, by
 //              its address and its content hash, and nothing else. It affirms
 //              that sentence as it stood. If the sentence is changed or
 //              removed, the vouch no longer counts.
+//   like       the same pointer, saying less: glad you do this. Anyone can
+//              like a statement they are in no position to vouch for.
 //   takedown   a request that one statement or vouch come off the page. It
 //              points at the record and carries no text.
 //
@@ -20,17 +23,16 @@
 // this DID?" The index only says where to look. Each record it reports is read
 // from its author's own PDS, so a deleted one 404s and drops out.
 //
-// A statement is placed in an administrative unit (a country, a county, a
-// district, a region), never at an address. Its coordinates are the centre of
-// that unit, rounded.
+// A statement's place, if it gives one, is an administrative unit picked from a
+// list (a country, a county, a district, a region), never an address.
 //
 // A takedown request is honoured at once: the record stops being shown here.
 // The site's own hidden.json can list it under `keep` to show it again after a
 // request has been looked at and turned down.
 
 export const NS = 'org.jason-edelman.atlas'
-export const COL = { statement: `${NS}.statement`, vouch: `${NS}.vouch`, takedown: `${NS}.takedown` }
-// Granular OAuth scope: this app can touch its own three collections, nothing else.
+export const COL = { statement: `${NS}.statement`, vouch: `${NS}.vouch`, like: `${NS}.like`, takedown: `${NS}.takedown` }
+// Granular OAuth scope: this app can touch its own four collections, nothing else.
 export const SCOPE = ['atproto', ...Object.values(COL).map((c) => `repo:${c}`)].join(' ')
 // jason-edelman.org. Records point here so the index can find them.
 export const ATLAS_DID = 'did:plc:zz4wcje4a2nbbtc7pdoth3f2'
@@ -66,12 +68,8 @@ export function cleanUrl(s) {
 
 export const hostOf = (url) => new URL(url).hostname.replace(/^www\./, '')
 
-const coord = (s, lim) => {
-  if (typeof s !== 'string' && typeof s !== 'number') return null
-  if (s === '') return null
-  const n = Number(s)
-  return Number.isFinite(n) && Math.abs(n) <= lim ? n : null
-}
+// A place is a unit on one of the atlas's lists, or nothing.
+const placeOf = (scope, unit) => (SCOPES.includes(scope) && typeof unit === 'string' && UNIT.test(unit) ? { scope, unit } : null)
 
 // One sentence that begins with "I". Returns it tidied, or null.
 //
@@ -96,7 +94,7 @@ export const withI = (rest) => {
 }
 
 // What the form collects -> a statement record to write, or the reasons it can't be.
-// atproto records hold no floats, so coordinates are strings.
+// A place is optional; half a place (a list without a unit) is an error.
 export function buildStatement(input, now = new Date()) {
   const errors = []
   const text = cleanStatement(withI(input.text))
@@ -104,28 +102,28 @@ export function buildStatement(input, now = new Date()) {
   const rawUrl = String(input.url ?? '').trim()
   const url = rawUrl ? cleanUrl(rawUrl) : null
   if (rawUrl && !url) errors.push('The web address has to be a full one that starts with https:// or http://. It can be left out.')
-  const lat = coord(input.lat, 90)
-  const lon = coord(input.lon, 180)
-  if (!SCOPES.includes(input.scope) || !UNIT.test(String(input.unit ?? '')) || lat == null || lon == null) errors.push('Pick a place on the map first.')
+  const wantsPlace = input.scope != null || input.unit != null
+  const place = wantsPlace ? placeOf(input.scope, input.unit == null ? input.unit : String(input.unit)) : null
+  if (wantsPlace && !place) errors.push('Pick the place from the list, or leave it out.')
   if (errors.length) return { ok: false, errors }
-  const record = { $type: COL.statement, atlas: ATLAS_DID, text, scope: input.scope, unit: String(input.unit), lat: lat.toFixed(2), lon: lon.toFixed(2), createdAt: now.toISOString() }
+  const record = { $type: COL.statement, atlas: ATLAS_DID, text, createdAt: now.toISOString() }
   if (url) record.url = url
+  if (place) Object.assign(record, place)
   return { ok: true, record }
 }
 
 // A record read from someone's repo -> a checked statement, or null if it isn't one.
 // Anyone can write anything into their own repo, so nothing is trusted here. A web
-// address that does not pass is dropped; the statement still stands.
+// address or a place that does not pass is dropped; the statement still stands.
+// Records written while the atlas had a map also held coordinates, now ignored.
 export function parseStatement(value) {
   if (!value || typeof value !== 'object' || value.$type !== COL.statement || value.atlas !== ATLAS_DID) return null
   const text = cleanStatement(value.text)
-  const lat = coord(value.lat, 90)
-  const lon = coord(value.lon, 180)
-  if (!text || lat == null || lon == null) return null
-  if (!SCOPES.includes(value.scope) || typeof value.unit !== 'string' || !UNIT.test(value.unit)) return null
+  if (!text) return null
   const url = value.url == null ? null : cleanUrl(value.url)
+  const place = placeOf(value.scope, value.unit)
   const created = new Date(typeof value.createdAt === 'string' ? value.createdAt : NaN)
-  return { text, url, host: url ? hostOf(url) : null, scope: value.scope, unit: value.unit, lat, lon, createdAt: Number.isNaN(created.getTime()) ? null : created.toISOString() }
+  return { text, url, host: url ? hostOf(url) : null, scope: place ? place.scope : null, unit: place ? place.unit : null, createdAt: Number.isNaN(created.getTime()) ? null : created.toISOString() }
 }
 
 // at://did/<the statement collection>/rkey, and nothing else.
@@ -135,20 +133,21 @@ export function statementUri(s) {
   return m && DID.test(m[1]) && m[2] === COL.statement && RKEY.test(m[3]) ? s : null
 }
 
-// A vouch record to write, or the reason it can't be. It points at one
+// A vouch or a like to write, or the reason it can't be. Both point at one
 // statement by address and content hash, the way atproto pins a record.
-export function buildVouch(input, now = new Date()) {
+function buildRef(collection, input, now) {
   const uri = statementUri(input.uri)
   const cid = typeof input.cid === 'string' && CID.test(input.cid) ? input.cid : null
-  if (!uri || !cid) return { ok: false, errors: ['A vouch is for something someone has said they do here.'] }
-  return { ok: true, record: { $type: COL.vouch, atlas: ATLAS_DID, subject: { uri, cid }, createdAt: now.toISOString() } }
+  if (!uri || !cid) return { ok: false, errors: ['That has to be something someone has said they do here.'] }
+  return { ok: true, record: { $type: collection, atlas: ATLAS_DID, subject: { uri, cid }, createdAt: now.toISOString() } }
 }
+export const buildVouch = (input, now = new Date()) => buildRef(COL.vouch, input, now)
+export const buildLike = (input, now = new Date()) => buildRef(COL.like, input, now)
 
-// A vouch record read from someone's repo -> a checked vouch, or null. Vouches
-// written before 2026-11-14 pointed at an account or a web address; they are
-// no longer vouches.
-export function parseVouch(value) {
-  if (!value || typeof value !== 'object' || value.$type !== COL.vouch || value.atlas !== ATLAS_DID) return null
+// A vouch or like read from someone's repo -> checked, or null. Vouches written
+// before 2026-11-14 pointed at an account or a web address; they are no longer vouches.
+function parseRef(collection, value) {
+  if (!value || typeof value !== 'object' || value.$type !== collection || value.atlas !== ATLAS_DID) return null
   const s = value.subject
   if (!s || typeof s !== 'object') return null
   const subject = statementUri(s.uri)
@@ -156,9 +155,11 @@ export function parseVouch(value) {
   const created = new Date(typeof value.createdAt === 'string' ? value.createdAt : NaN)
   return { subject, cid: s.cid, createdAt: Number.isNaN(created.getTime()) ? null : created.toISOString() }
 }
+export const parseVouch = (value) => parseRef(COL.vouch, value)
+export const parseLike = (value) => parseRef(COL.like, value)
 
-// One vouch per voucher per statement, however many records they wrote, and
-// nobody's vouch for their own statement. `records` keeps every record behind
+// One vouch (or like) per person per statement, however many records they wrote,
+// and nobody's vouch or like for their own statement. `records` keeps every record behind
 // it, so withdrawing or declining reaches all of them.
 export function cleanVouches(vouches) {
   const seen = new Map()
@@ -172,10 +173,12 @@ export function cleanVouches(vouches) {
   return [...seen.values()]
 }
 
-// The vouches that count: those for a statement that is on the map and still
+// The vouches (or likes) that count: those for a statement that is shown and still
 // reads as it did when it was vouched for. `current` maps a statement's address
 // to its content hash.
 export const standingVouches = (vouches, current) => vouches.filter((v) => current.get(v.subject) === v.cid)
+export const cleanLikes = cleanVouches
+export const standingLikes = standingVouches
 
 // Which of `dids` the account `me` follows on Bluesky. getJson fetches a URL
 // and returns its JSON; the AppView takes at most 30 accounts a call. Returns
@@ -235,26 +238,27 @@ const unique = (refs) => {
   return refs.filter((r) => r && typeof r.did === 'string' && typeof r.rkey === 'string' && !seen.has(r.did + '/' + r.rkey) && seen.add(r.did + '/' + r.rkey))
 }
 
-// What people have added that this page will show, newest first: statements and vouches.
+// What people have added that this page will show, newest first: statements, vouches and likes.
 // io: { backlinks, resolveDid, getRecord } from ../library/lib.js (or fakes in tests).
 // hidden: { dids: [], uris: [], keep: [] } from hidden.json.
 //
-// It fails closed. If the index can't be asked about any of the three kinds of
+// It fails closed. If the index can't be asked about any of the four kinds of
 // record, nothing is shown, because something that someone asked to have removed
 // might otherwise come back.
 export async function loadCommunity(io, hidden = {}) {
   const hideDid = new Set(hidden.dids || [])
   const hideUri = new Set(hidden.uris || [])
   const keep = new Set(hidden.keep || [])
-  let linkRefs, vouchRefs, downRefs
+  let linkRefs, vouchRefs, likeRefs, downRefs
   try {
-    ;[linkRefs, vouchRefs, downRefs] = await Promise.all([
+    ;[linkRefs, vouchRefs, likeRefs, downRefs] = await Promise.all([
       io.backlinks(ATLAS_DID, COL.statement, '.atlas', MAX_RECORDS),
       io.backlinks(ATLAS_DID, COL.vouch, '.atlas', MAX_RECORDS),
+      io.backlinks(ATLAS_DID, COL.like, '.atlas', MAX_RECORDS),
       io.backlinks(ATLAS_DID, COL.takedown, '.atlas', MAX_RECORDS),
     ])
   } catch (error) {
-    return { statements: [], vouches: [], withheld: 0, unreachable: 0, error }
+    return { statements: [], vouches: [], likes: [], withheld: 0, unreachable: 0, error }
   }
   const read = (collection, parse) => async (r) => {
     const id = await io.resolveDid(r.did)
@@ -263,10 +267,12 @@ export async function loadCommunity(io, hidden = {}) {
   }
   const wantLinks = unique(linkRefs).filter((r) => !hideDid.has(r.did))
   const wantVouches = unique(vouchRefs).filter((r) => !hideDid.has(r.did))
+  const wantLikes = unique(likeRefs).filter((r) => !hideDid.has(r.did))
   const downs = unique(downRefs)
-  const [gotLinks, gotVouches, gotDowns] = await Promise.all([
+  const [gotLinks, gotVouches, gotLikes, gotDowns] = await Promise.all([
     pool(wantLinks, 8, read(COL.statement, parseStatement)),
     pool(wantVouches, 8, read(COL.vouch, parseVouch)),
+    pool(wantLikes, 8, read(COL.like, parseLike)),
     pool(downs, 8, read(COL.takedown, parseTakedown)),
   ])
   const asked = new Set()
@@ -292,5 +298,6 @@ export async function loadCommunity(io, hidden = {}) {
   const statements = collect(gotLinks, wantLinks, COL.statement)
   // Nobody shows as vouched for if they are on the hidden list.
   const vouches = collect(gotVouches, wantVouches, COL.vouch).filter((v) => !hideDid.has(v.subject.split('/')[2]))
-  return { statements, vouches, withheld, unreachable, error: null }
+  const likes = collect(gotLikes, wantLikes, COL.like).filter((v) => !hideDid.has(v.subject.split('/')[2]))
+  return { statements, vouches, likes, withheld, unreachable, error: null }
 }

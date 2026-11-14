@@ -4,17 +4,13 @@
   "defs": {
     "main": {
       "type": "record",
-      "description": "What someone does to hold their world together, on the Atlas of Care: one sentence in their own words that begins with \"I\", and a place. It lives in the repo of whoever says it, so nobody writes one about someone else. It is placed in an administrative unit, not at an address.",
+      "description": "What someone does to hold their world together, on the Atlas of Care: one sentence in their own words that begins with \"I\". It lives in the repo of whoever says it, so nobody writes one about someone else. It may name a place, as an administrative unit picked from a list, never an address.",
       "key": "tid",
       "record": {
         "type": "object",
         "required": [
           "atlas",
           "text",
-          "scope",
-          "unit",
-          "lat",
-          "lon",
           "createdAt"
         ],
         "properties": {
@@ -43,22 +39,12 @@
               "in",
               "eu"
             ],
-            "description": "Which of the atlas's maps the unit belongs to."
+            "description": "Optional, with unit. Which of the atlas's lists of places the unit is on."
           },
           "unit": {
             "type": "string",
             "maxLength": 64,
-            "description": "The unit's id on that map: ISO alpha-3 country, US county FIPS, geoBoundaries shape id, or NUTS-2 code."
-          },
-          "lat": {
-            "type": "string",
-            "maxLength": 12,
-            "description": "Latitude of the unit's centre, as a decimal string with two places."
-          },
-          "lon": {
-            "type": "string",
-            "maxLength": 12,
-            "description": "Longitude of the unit's centre, as a decimal string with two places."
+            "description": "Optional, with scope. The unit's id on that list."
           },
           "createdAt": {
             "type": "string",
