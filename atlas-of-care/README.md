@@ -12,20 +12,26 @@ It has three parts:
 2. **Sourced entries** (`data/entries.json`): stories and interventions, each resting
    on a page that was fetched and quoted. A ring marks maintenance (it has to be done
    again); a diamond marks leverage (a bounded act that changes what follows).
-3. **Entries people add**: anyone with an atproto account can add what they do in a
-   place. Those are drawn in ochre and carry their author's handle.
+3. **Links people add**: anyone with an atproto account can add a link to a place: a
+   web address and a location, nothing else. Those are the amber dots, and each carries
+   the handle of whoever added it. Anyone signed in can ask for a link to be taken down.
+
+It is styled to the rest of the site: the field-notes palette, Epilogue and Charis SIL,
+no rounded corners, shadows or gradients (`.impeccable.md`). One colour comes from
+outside the palette: the violet of the men's bars, because green against amber cannot
+be told apart with red-green colour blindness.
 
 ## Files
 
 | File | What it is |
 |---|---|
 | `index.html` | Markup and styles. |
-| `app.js` | The map, layers, place profile, sign-in and the add form. |
-| `atlas.js` | The rules for added entries: building, checking and loading them. No DOM, so it runs in Node tests. |
+| `app.js` | The map, layers, place profile, sign-in, adding a link and asking for a takedown. |
+| `atlas.js` | The rules for links and takedown requests: building, checking and loading them. No DOM, so it runs in Node tests. |
 | `atlas.test.mjs` | `node --test atlas-of-care/atlas.test.mjs` |
-| `client-metadata.json` | The atproto OAuth client. Its scope is one collection. |
-| `lexicons/` | The schema of an added entry. |
-| `hidden.json` | DIDs and record URIs this page declines to show. |
+| `client-metadata.json` | The atproto OAuth client. Its scope is the two collections below. |
+| `lexicons/` | The schemas of a link and of a takedown request. |
+| `hidden.json` | What this page declines to show (`dids`, `uris`), and links it shows despite a takedown request (`keep`). |
 | `data/` | Map shapes, layer values and the sourced entries. |
 | `vendor/` | d3 7.9.0 and topojson-client 3.1.0, checked in; `vendor/LICENSES.txt` has the notices. |
 | `build/` | The Python scripts that made `data/`. See "Rebuilding the data". |
@@ -34,54 +40,78 @@ Sign-in and the backlink index reuse the Library's code: `app.js` imports
 `../library/lib.js` and the SDK under `../library/vendor/`. If the Library moves, this
 breaks.
 
-The services it calls: Google Fonts; then, for added entries, Constellation
+The services it calls: Google Fonts; then, for links people add, Constellation
 (backlinks), plc.directory (DID documents), each author's PDS (their records), and
 bsky.social (handle resolution at sign-in). No code loads from a CDN at runtime.
 
-## Entries people add
+## What people can add
+
+Two things, and neither carries any text of the person's own.
 
 | Record | Repo | Meaning |
 |---|---|---|
-| `org.jason-edelman.atlas.entry` | the author's | One thing they do to keep a place going. |
+| `org.jason-edelman.atlas.link` | whoever added it | A web address and a place. |
+| `org.jason-edelman.atlas.takedown` | whoever asked | A request that one link come off the page. It points at the link and gives no reason. |
 
-Nobody keeps a list of contributors and this site stores nothing. Every entry names
-the atlas's DID (`did:plc:zz4wcje4a2nbbtc7pdoth3f2`, jason-edelman.org) in its `atlas`
-field. [Constellation](https://constellation.microcosm.blue/) answers "which entry
-records point at this DID?", and each one it reports is read from its author's own
-PDS. Deleting the record removes it from the map.
+Nobody keeps a list of contributors and this site stores nothing. Both records name
+the atlas's DID (`did:plc:zz4wcje4a2nbbtc7pdoth3f2`, jason-edelman.org) in their
+`atlas` field. [Constellation](https://constellation.microcosm.blue/) answers "which
+records point at this DID?", and each one it reports is read from its author's own PDS.
 
-An entry is placed in an administrative unit (the country, county, district or region
-that was selected when it was written), never at an address. Its coordinates are that
-unit's centre, rounded to two decimal places. atproto records hold no floats, so the
-coordinates are strings.
+**A link** holds `url`, `scope`, `unit`, `lat`, `lon` and `createdAt`. The unit is the
+country, county, district or region that was selected when it was added; the
+coordinates are that unit's centre, rounded to two decimal places, as strings (atproto
+records hold no floats). A link is never placed at an address. Its place name is looked
+up from the unit id, so a record cannot supply one; a link whose unit this atlas does
+not have is not shown. The heading on its card is the address's host name.
 
-Nothing in an entry is trusted. `parseEntry` drops records with the wrong type, a
-different atlas, unknown kinds, or out-of-range coordinates; it caps every text field
-and keeps a link only if it is http(s). The page escapes all of it.
+**A takedown request** takes effect at once: the link stops being shown. Any signed-in
+account can make one. If a request has been looked at and turned down, list the link's
+URI under `keep` in `hidden.json` and it is shown again.
 
-### Hiding an entry
+Nothing in a record is trusted. `parseLink` keeps only its own six fields, whatever
+else the record holds. `cleanUrl` accepts an address only if it is http(s), has a real
+host name (no IP addresses, no localhost), carries no credentials, contains no
+whitespace or direction-changing characters, and is at most 400 characters; it drops
+the fragment. A unit id is letters, digits, dot, underscore and hyphen, at most 64.
 
-Add its author's DID or its record URI (`at://did/org.jason-edelman.atlas.entry/rkey`)
-to `hidden.json` and deploy. That hides it here. It does not delete it: the record
-stays in its author's account.
+`loadCommunity` fails closed: if the index cannot be asked about links, or about
+takedown requests, no links are shown, because one that someone asked to have removed
+might otherwise come back.
+
+### Hiding a link, or keeping one
+
+`hidden.json`:
+
+- `dids`: nothing added by these accounts is shown.
+- `uris`: these links (`at://did/org.jason-edelman.atlas.link/rkey`) are not shown.
+- `keep`: these links are shown even though someone has asked for a takedown.
+
+Hiding does not delete: the record stays in its author's account. Its author can
+delete it with the Remove button.
 
 ## Known limits
 
-- **Everything is public.** An entry sits in its author's public repo under their
-  handle, readable by anyone whether or not this page shows it. The form says so. For
-  work that depends on not being found, that is a reason not to add it.
-- **Open writing.** Anyone can add anything, including about work that is not theirs.
-  The only controls are `hidden.json` and the author's own delete. There is no review
-  queue.
-- **Constellation is a dependency.** If it is down, added entries go missing from the
-  page and the page says so. The sourced entries and the layers still work.
+- **Links are public.** A link sits in the public repo of whoever added it, under their
+  handle, readable by anyone whether or not this page shows it. The form says so.
+- **Nobody checks where a link leads.** The page shows the host name and the address
+  and says it is unchecked.
+- **A web address can still carry words** in its path or query. That is the only text a
+  person can put on the page.
+- **Anyone signed in can take a link down, and can do it to every link.** That is the
+  chosen trade: a wrongly hidden link costs little, a wrongly shown one can cost a
+  great deal. `keep` is the way back.
+- **A takedown request needs an atproto account.** Someone without one cannot make one
+  here. The sourced entries have no takedown button at all.
+- **Constellation is a dependency.** If it does not answer, no links are shown and the
+  page says so. The sourced entries and the layers still work.
 - **No village or city level, and no street map.** The finest units are US counties,
   Indian districts and European regions. The map is drawn from boundary files with
   d3; there are no tiles.
 - **Local layers differ by country.** Each country's layers come from its own surveys.
 - **Sign-in and writing were not tested end to end** when this was first committed:
-  the logic is unit-tested and the page was tested with a simulated index, but no real
-  account signed in and wrote a record.
+  the rules are unit-tested and the page was tested against a simulated index and
+  simulated accounts, but no real account signed in and wrote a record.
 
 ## Running it locally
 
