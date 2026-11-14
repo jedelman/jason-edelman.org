@@ -4,17 +4,13 @@
   "defs": {
     "main": {
       "type": "record",
-      "description": "A vouch on the Atlas of Care: this organisation or person holds my world together in this place. It lives in the voucher's repo, carries no text of their own, and is placed in an administrative unit, not at an address.",
+      "description": "A vouch on the Atlas of Care: this account holds my world together. It lives in the voucher's repo and holds nothing but the account vouched for. The atlas shows it only while that account has a link of its own on the map.",
       "key": "tid",
       "record": {
         "type": "object",
         "required": [
           "atlas",
           "subject",
-          "scope",
-          "unit",
-          "lat",
-          "lon",
           "createdAt"
         ],
         "properties": {
@@ -25,33 +21,8 @@
           },
           "subject": {
             "type": "string",
-            "maxLength": 400,
-            "description": "Who is vouched for: an atproto account (a DID) or an http(s) address."
-          },
-          "scope": {
-            "type": "string",
-            "knownValues": [
-              "world",
-              "us",
-              "in",
-              "eu"
-            ],
-            "description": "Which of the atlas's maps the unit belongs to."
-          },
-          "unit": {
-            "type": "string",
-            "maxLength": 64,
-            "description": "The unit's id on that map."
-          },
-          "lat": {
-            "type": "string",
-            "maxLength": 12,
-            "description": "Latitude of the unit's centre, as a decimal string with two places."
-          },
-          "lon": {
-            "type": "string",
-            "maxLength": 12,
-            "description": "Longitude of the unit's centre, as a decimal string with two places."
+            "format": "did",
+            "description": "The account vouched for."
           },
           "createdAt": {
             "type": "string",

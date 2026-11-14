@@ -1,7 +1,7 @@
 // node --test atlas-of-care/atlas.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildLink, parseLink, buildTakedown, parseTakedown, loadCommunity, cleanUrl, linkUri, subjectUri, buildVouch, parseVouch, groupVouches, vouchSubject, COL, ATLAS_DID, SCOPE, MAX_URL } from './atlas.js'
+import { buildLink, parseLink, buildTakedown, parseTakedown, loadCommunity, cleanUrl, linkUri, subjectUri, buildVouch, parseVouch, cleanVouches, standingVouches, loadFollowing, vouchSubject, COL, ATLAS_DID, SCOPE, MAX_URL } from './atlas.js'
 
 const good = { url: 'https://example.org/acequia', scope: 'us', unit: '35039', lat: 36.5123, lon: -106.6987 }
 const uriOf = (did, rkey) => `at://${did}/${COL.link}/${rkey}`
@@ -158,51 +158,73 @@ test('loadCommunity counts authors it could not reach', async () => {
 // ── Vouches ──────────────────────────────────────────────────────────────────
 
 const V = (did, rkey) => `${did}/${COL.vouch}/${rkey}`
-const vouch = { subject: 'did:plc:tender', scope: 'us', unit: '51710', lat: 36.92, lon: -76.24 }
+const vouch = { subject: 'did:plc:tender' }
 
-test('a vouch points at an account or a web address in a place, and holds nothing else', () => {
+test('a vouch points at an account and holds nothing else', () => {
   const r = buildVouch(vouch, new Date('2026-11-14T15:00:00Z'))
-  assert.deepEqual(r.record, { $type: COL.vouch, atlas: ATLAS_DID, subject: 'did:plc:tender', scope: 'us', unit: '51710', lat: '36.92', lon: '-76.24', createdAt: '2026-11-14T15:00:00.000Z' })
-  assert.equal(buildVouch({ ...vouch, subject: 'https://foodbank.example/#top' }).record.subject, 'https://foodbank.example/')
-  assert.equal('name' in buildVouch({ ...vouch, name: 'free text', note: 'x' }).record, false)
+  assert.deepEqual(r.record, { $type: COL.vouch, atlas: ATLAS_DID, subject: 'did:plc:tender', createdAt: '2026-11-14T15:00:00.000Z' })
+  assert.deepEqual(Object.keys(buildVouch({ ...vouch, name: 'free text', note: 'x', unit: '51710', lat: 1, lon: 2 }).record).sort(), ['$type', 'atlas', 'createdAt', 'subject'])
 })
 
-test('a vouch cannot be for a name, a bare handle or a bad address', () => {
-  for (const subject of ['Maria down the street', 'tender.bsky.social', 'javascript:alert(1)', 'did:', '', null]) assert.equal(buildVouch({ ...vouch, subject }).ok, false, String(subject))
+test('a vouch cannot be for a web address, a name or a bare handle', () => {
+  for (const subject of ['https://foodbank.example/', 'Maria down the street', 'tender.bsky.social', 'javascript:alert(1)', 'did:', '', null]) assert.equal(buildVouch({ subject }).ok, false, String(subject))
   assert.equal(vouchSubject('did:web:example.org'), 'did:web:example.org')
-  assert.equal(buildVouch({ ...vouch, unit: 'two words' }).ok, false)
 })
 
-test('parseVouch round-trips and rejects what is not a vouch for this atlas', () => {
+test('parseVouch round-trips, ignores an old record\'s place, and rejects what is not a vouch for this atlas', () => {
   const { record } = buildVouch(vouch, new Date('2026-11-14T15:00:00Z'))
-  assert.deepEqual(parseVouch(record), { subject: 'did:plc:tender', isAccount: true, scope: 'us', unit: '51710', lat: 36.92, lon: -76.24, createdAt: '2026-11-14T15:00:00.000Z' })
+  assert.deepEqual(parseVouch(record), { subject: 'did:plc:tender', createdAt: '2026-11-14T15:00:00.000Z' })
+  assert.deepEqual(Object.keys(parseVouch({ ...record, scope: 'us', unit: '51710', lat: '36.92', lon: '-76.24', note: 'free text' })).sort(), ['createdAt', 'subject'])
+  assert.equal(parseVouch({ ...record, subject: 'https://foodbank.example/' }), null)
   assert.equal(parseVouch({ ...record, subject: 'Maria' }), null)
   assert.equal(parseVouch({ ...record, atlas: 'did:plc:other' }), null)
-  assert.deepEqual(Object.keys(parseVouch({ ...record, note: 'free text' })).sort(), ['createdAt', 'isAccount', 'lat', 'lon', 'scope', 'subject', 'unit'])
 })
 
-test('vouches for the same one in the same place are counted once per voucher', () => {
+test('a voucher counts once per account, never for themselves, and only for someone who is on the map', () => {
   const base = { ...parseVouch(buildVouch(vouch).record) }
   const list = [
     { ...base, did: 'did:plc:aaa', handle: 'a.example', uri: 'u1', rkey: '1' },
     { ...base, did: 'did:plc:bbb', handle: 'b.example', uri: 'u2', rkey: '2' },
     { ...base, did: 'did:plc:aaa', handle: 'a.example', uri: 'u3', rkey: '3' },      // the same person again
     { ...base, did: 'did:plc:tender', handle: 't.example', uri: 'u4', rkey: '4' },   // vouching for oneself
-    { ...base, unit: '51810', did: 'did:plc:ccc', handle: 'c.example', uri: 'u5', rkey: '5' },   // another place
+    { ...base, subject: 'did:plc:absent', did: 'did:plc:ccc', handle: 'c.example', uri: 'u5', rkey: '5' },   // someone who never entered
   ]
-  const groups = groupVouches(list)
-  assert.equal(groups.length, 2)
-  assert.deepEqual(groups[0].vouchers.map((v) => v.did), ['did:plc:aaa', 'did:plc:bbb'])
-  assert.equal(groups[0].key, 'vouch:did:plc:tender|us|51710')
-  assert.equal(groups[1].unit, '51810')
+  const clean = cleanVouches(list)
+  assert.deepEqual(clean.map((v) => v.did + '>' + v.subject), ['did:plc:aaa>did:plc:tender', 'did:plc:bbb>did:plc:tender', 'did:plc:ccc>did:plc:absent'])
+  assert.deepEqual(clean[0].records, [{ uri: 'u1', rkey: '1' }, { uri: 'u3', rkey: '3' }])
+  assert.deepEqual(standingVouches(clean, new Set(['did:plc:tender'])).map((v) => v.did), ['did:plc:aaa', 'did:plc:bbb'])
+  assert.deepEqual(standingVouches(clean, new Set()), [])
 })
 
 test('vouches load with the rest; a takedown withholds one, and so does the hidden list for whoever is vouched for', async () => {
   const rec = buildVouch(vouch).record
-  const other = buildVouch({ ...vouch, subject: 'https://hidden.example/' }).record
+  const other = buildVouch({ subject: 'did:plc:hidden' }).record
   const recs = { [V('did:plc:aaa', '1')]: rec, [V('did:plc:bbb', '2')]: rec, [V('did:plc:ccc', '3')]: other, [T('did:plc:tender', '9')]: buildTakedown(`at://did:plc:aaa/${COL.vouch}/1`).record }
-  const out = await loadCommunity(fakeIo(recs), { uris: ['https://hidden.example/'] })
+  const out = await loadCommunity(fakeIo(recs), { dids: ['did:plc:hidden'] })
   assert.deepEqual(out.vouches.map((v) => v.did), ['did:plc:bbb'])
   assert.equal(out.withheld, 1)
   assert.equal(subjectUri(`at://did:plc:aaa/${COL.vouch}/1`), `at://did:plc:aaa/${COL.vouch}/1`)
+})
+
+// ── Who you follow ───────────────────────────────────────────────────────────
+
+test('loadFollowing asks about 30 accounts a call, never about yourself, and keeps only those you follow', async () => {
+  const me = 'did:plc:me'
+  const dids = Array.from({ length: 65 }, (_, i) => `did:plc:x${i}`)
+  const calls = []
+  const getJson = async (url) => {
+    const q = new URL(url).searchParams
+    calls.push(q.getAll('others'))
+    assert.equal(q.get('actor'), me)
+    return { relationships: q.getAll('others').map((did) => (did.endsWith('3') ? { did, following: `at://${me}/app.bsky.graph.follow/k` } : did.endsWith('4') ? { did, followedBy: 'at://x/app.bsky.graph.follow/k' } : { did })) }
+  }
+  const out = await loadFollowing(getJson, me, [me, ...dids, dids[0], 'not a did'])
+  assert.deepEqual(calls.map((c) => c.length), [30, 30, 5])
+  assert.equal(calls.flat().includes(me), false)
+  assert.deepEqual([...out].sort(), dids.filter((d) => d.endsWith('3')).sort())
+})
+
+test('loadFollowing throws when a call fails, so half an answer is never shown', async () => {
+  await assert.rejects(loadFollowing(async () => { throw new Error('HTTP 502') }, 'did:plc:me', ['did:plc:a']))
+  assert.deepEqual([...(await loadFollowing(async () => { throw new Error('unused') }, 'did:plc:me', []))], [])
 })

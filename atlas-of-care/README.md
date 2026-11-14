@@ -4,15 +4,18 @@ A map for finding each other, served at `jason-edelman.org/atlas-of-care/`. Plai
 browser JavaScript, no build step. Subtitle: "find each other."
 
 The page opens on two questions. "What do you do to hold your world together?" takes a
-link to it, in a place. "Who holds your world together?" takes a vouch for an
-organisation or a person, in a place. Those answers are the only things on the map:
+link to it, in a place. "Who holds your world together?" takes a vouch for another
+account that has answered the first. Those answers are the only things on the map, so
+nobody is on it who did not put themselves there:
 
 - a place is tinted when someone is there, brighter the more there are;
-- a round amber mark is what someone does, a square one is someone vouched for;
-- a line joins what a person does to whoever they vouch for, when both are on the map;
+- an amber mark is what someone does; it carries a ring when someone vouches for them;
+- a line joins what a person does to what each person they vouch for does;
 - picking a place, on the map or by name in the search box, lists who is there;
 - "Who vouches for whom" lists each person with everyone they vouch for, and a link's
-  card names whoever vouches for the person behind it.
+  card names whoever vouches for the person behind it;
+- someone signed in is shown which of the people they follow are on the map, each with
+  a Vouch button, and can filter the map to them.
 
 The world map is by country. Three parts of it open to smaller places: US counties,
 Indian districts and European NUTS-2 regions. Each entry carries the handle of whoever
@@ -46,16 +49,17 @@ Sign-in and the backlink index reuse the Library's code: `app.js` imports
 `../library/lib.js` and the SDK under `../library/vendor/`. If the Library moves, this
 breaks.
 
-The services it calls: Google Fonts; then, for links people add, Constellation
-(backlinks), plc.directory (DID documents), each author's PDS (their records), and
-bsky.social (handle resolution at sign-in). No code loads from a CDN at runtime.
+The services it calls: Google Fonts; then, for what people add, Constellation
+(backlinks), plc.directory (DID documents), each author's PDS (their records),
+bsky.social (handle resolution), and, for someone signed in, public.api.bsky.app
+(which accounts on the map they follow). No code loads from a CDN at runtime.
 
 ## What people can add
 
 | Record | Repo | Meaning |
 |---|---|---|
 | `org.jason-edelman.atlas.link` | whoever added it | A web address and a place. No text of the person's own. |
-| `org.jason-edelman.atlas.vouch` | whoever vouched | "This one holds my world together, here": an atproto account or a web address, and a place. No text of the voucher's own. |
+| `org.jason-edelman.atlas.vouch` | whoever vouched | "This account holds my world together": the account's DID and nothing else. |
 | `org.jason-edelman.atlas.takedown` | whoever asked | A request that one link or vouch come off the page. It points at the record and gives no reason. |
 
 Nobody keeps a list of contributors and this site stores nothing. Both records name
@@ -72,22 +76,38 @@ not have is not shown. The heading on its card is the address's host name.
 
 ### Vouches
 
-A vouch names who it is for in one of two ways: an atproto account, stored as its DID
-(the form takes a handle and looks the DID up), or an http(s) address. It cannot hold a
-name typed as text, so nobody is put on the map who has neither an account nor a web
-page. It is placed in the selected unit, like a link.
+Jason, 2026-11-14: "Let's only allow people to vouch for other accounts (answers to
+'how do you hold your world together?')". A vouch holds one thing, the DID of the
+account vouched for. It has no place: the place is wherever that account put itself.
 
-Vouches for the same one in the same unit show as one entry with everyone who vouched;
-a voucher counts once, and a vouch for oneself is not counted (`groupVouches`). The
-entry's heading is the account's handle, or the address's host name. "I vouch too" adds
-the signed-in person's own record. "Withdraw my vouch" deletes it.
+A vouch counts only while the account it names has a link of its own on the map
+(`standingVouches`). If that person removes their links, or they are taken down, the
+vouches for them stop showing. A vouch for someone who never entered is never shown.
+The form takes a handle, looks up its DID, and refuses one that is not on the map.
 
-Whoever is vouched for has the same remedy as anyone: a takedown request, which takes
-the entry off at once. Because an entry stands for one record per voucher, the button
-writes one takedown record for each. Listing a DID or an address under `dids` or `uris`
-in `hidden.json` also stops anyone showing as vouched for under it.
+A voucher counts once per account, however many records they wrote, and a vouch for
+oneself is not counted (`cleanVouches`). "Withdraw my vouch" deletes the voucher's
+records. Whoever is vouched for sees "decline" beside each voucher on their own card:
+it writes a takedown request against each record behind that vouch, and the vouch
+comes off this page at once. The record itself stays in the voucher's account, where
+this site cannot reach it. Listing a DID under `dids` in `hidden.json` also stops that
+account showing as vouched for.
 
-**A takedown request** takes effect at once: the link or vouch stops being shown. Any signed-in account can make one. If a request has been looked at and
+Vouch records written before this rule also held a place, which is now ignored, or
+pointed at a web address, which is no longer a vouch. As far as is known none were
+ever written outside tests.
+
+### People you follow
+
+Once someone signs in, the page asks Bluesky's public AppView
+(`public.api.bsky.app`, `app.bsky.graph.getRelationships`) which of the accounts on
+the map they follow: 30 accounts a call, at most 900 accounts (`loadFollowing`). It
+sends the signed-in account's DID and the DIDs on the map, all of them public. It does
+not read the person's whole follow list. If any call fails the panel says so and shows
+nobody, so a partial answer is never shown as the whole. Follows kept outside Bluesky
+are not seen.
+
+**A takedown request** takes effect at once: the link or vouch stops being shown. Any signed-in account can make one against a link; the page offers one against a vouch only to whoever is vouched for. If a request has been looked at and
 turned down, list the record's URI under `keep` in `hidden.json` and it is shown again.
 
 Nothing in a record is trusted. `parseLink` keeps only its own six fields, whatever
@@ -123,10 +143,10 @@ delete it with the Remove button.
 - **Anyone signed in can take a link down, and can do it to every link.** That is the
   chosen trade: a wrongly hidden link costs little, a wrongly shown one can cost a
   great deal. `keep` is the way back.
-- **A vouch places someone on a map who did not ask to be there.** It is limited to
-  public accounts and web addresses, sits at the level of a county or district and not
-  an address, and comes off at once on request. It is still a claim about a named
-  organisation or person made by someone else.
+- **A declined vouch is hidden here, not deleted.** It stays in the voucher's own
+  account, where anyone else can still read it.
+- **The first person in a circle cannot be vouched for by name.** A vouch needs its
+  subject to be on the map already, so finding each other starts with adding yourself.
 - **A takedown request needs an atproto account.** Someone without one cannot make one
   here.
 - **Constellation is a dependency.** If it does not answer, nothing is shown but the
@@ -137,6 +157,7 @@ delete it with the Remove button.
 - **Lines need both ends.** A line is drawn only from someone who has added what they
   do. A person who only vouches appears in "Who vouches for whom" and has no place of
   their own on the map.
+- **Bluesky's AppView is a dependency for the follows panel** and for nothing else.
 - **Small island states are missing** from the world map (Natural Earth at 1:110m).
 - **Sign-in and writing were not tested end to end** when this was first committed:
   the rules are unit-tested and the page was tested against a simulated index and
