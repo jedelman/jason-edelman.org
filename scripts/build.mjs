@@ -32,6 +32,7 @@ const STATIC = [
   'liquid.js',
   'workshop',
   'library',
+  'atlas-of-care',
   'broadsheet',
   'trailer.js',
   'video',

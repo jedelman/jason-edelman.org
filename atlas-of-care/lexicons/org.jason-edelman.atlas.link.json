@@ -1,0 +1,65 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.atlas.link",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A web address placed on the Atlas of Care. It lives in the repo of whoever added it, carries no text of their own, and is placed in an administrative unit, not at an address.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "atlas",
+          "url",
+          "scope",
+          "unit",
+          "lat",
+          "lon",
+          "createdAt"
+        ],
+        "properties": {
+          "atlas": {
+            "type": "string",
+            "format": "did",
+            "description": "The atlas this link is for. The backlink index finds links by this field."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 400,
+            "description": "An http(s) address."
+          },
+          "scope": {
+            "type": "string",
+            "knownValues": [
+              "world",
+              "us",
+              "in",
+              "eu"
+            ],
+            "description": "Which of the atlas's maps the unit belongs to."
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "The unit's id on that map: ISO alpha-3 country, US county FIPS, geoBoundaries shape id, or NUTS-2 code."
+          },
+          "lat": {
+            "type": "string",
+            "maxLength": 12,
+            "description": "Latitude of the unit's centre, as a decimal string with two places."
+          },
+          "lon": {
+            "type": "string",
+            "maxLength": 12,
+            "description": "Longitude of the unit's centre, as a decimal string with two places."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}
