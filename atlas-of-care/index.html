@@ -93,6 +93,8 @@
     .account input { width: 15em; max-width: 100%; }
     .account b { color: var(--text); }
     .notice { flex-basis: 100%; padding: 6px 10px; border: 1px solid var(--warn); color: var(--text); }
+    .ask { font-family: var(--font-display); font-weight: 700; font-size: clamp(1.2rem, 2.6vw, 1.6rem); line-height: 1.15; letter-spacing: -0.015em; color: var(--bright); margin-bottom: 0.9rem; }
+    section > p.ask { color: var(--bright); }
     .scopes { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 0.75rem; }
     .layersel { display: none; margin-bottom: 0.75rem; }
     .scopes .caps { margin-right: 6px; }
@@ -101,9 +103,12 @@
     /* ── Atlas: layers at the side, map in the middle ──────────────── */
     .atlas { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 1.75rem; align-items: start; }
     .stage { min-width: 0; }
-    .layers { display: grid; gap: 14px; }
+    .layers { display: grid; gap: 12px; }
     .layers > .caps { line-height: 1.5; color: var(--muted); }
     .lgroup { display: grid; gap: 1px; }
+    .lgroup button.lg { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; align-items: baseline; width: 100%; border: 0; border-bottom: 1px solid var(--border); padding: 0 0 4px; margin-bottom: 3px; }
+    .lgroup button.lg:hover b { color: var(--link-hover); }
+    .lgroup button.lg[aria-expanded="false"] b { color: var(--soft); }
     .lg { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: 3px; margin-bottom: 3px; }
     .lg b { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; color: var(--bright); }
     .lg span { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); letter-spacing: 0.02em; }
@@ -255,6 +260,7 @@
       <p class="tagline">find each other.</p>
       <nav class="sections" aria-label="Atlas of Care">
         <a href="/">&larr; Jason Edelman</a>
+        <a href="#add">Add a link</a>
         <a href="#entries">Stories and interventions</a>
         <a href="#limits-section">What it cannot see</a>
         <a href="#about">About</a>
@@ -298,6 +304,7 @@
 
   <section id="add">
     <h2>Add a link</h2>
+    <p class="ask">What do you do to hold your world together?</p>
     <div class="account" id="account" aria-live="polite"></div>
   </section>
 

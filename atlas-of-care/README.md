@@ -6,7 +6,8 @@ Plain browser JavaScript, no build step for the page. Subtitle: "find each other
 It has three parts:
 
 1. **Layers**: statistics tinted onto a map, in six groups ordered by how soon it is
-   felt when the work behind them stops. Four maps: the world by country, the United
+   felt when the work behind them stops. The world map has 29, most of them covering
+   150 to 215 countries. Four maps: the world by country, the United
    States by county, India by district, Europe by NUTS-2 region. Clicking a unit opens
    a profile of every layer for that place.
 2. **Sourced entries** (`data/entries.json`): stories and interventions, each resting
@@ -133,6 +134,16 @@ g carer.csv "https://rplumber.ilo.org/data/indicator/?id=EIP_RCAR_SEX_RT_A&forma
 for p in life-expectancy:life share-of-children-immunized-dtp3:dtp3 births-attended-by-health-staff-sdgs:births \
          share-of-women-using-modern-contraceptive-methods:contra children-sleeping-under-treated-bednet:nets \
          terrestrial-protected-areas:protected; do g "owid_${p##*:}.csv" "$O/${p%%:*}.csv?$Q"; done
+for p in healthy-life-expectancy-at-birth:hale child-mortality:u5 maternal-mortality:mmr \
+         share-of-children-vaccinated-against-measles:measles prevalence-of-undernourishment:hunger \
+         share-of-children-younger-than-5-who-suffer-from-stunting:stunting \
+         proportion-using-safely-managed-drinking-water:water share-using-safely-managed-sanitation:sanitation \
+         access-to-clean-fuels-and-technologies-for-cooking:cleanfuel share-of-the-labor-force-employed-in-agriculture:agri \
+         universal-health-coverage-index:uhc share-of-out-of-pocket-expenditure-on-healthcare:oop \
+         forest-area-as-share-of-land-area:forest marine-protected-areas:marine; do g "owid_${p##*:}.csv" "$O/${p%%:*}.csv?$Q"; done
+# WHO Global Health Observatory (OData). The filter is SpatialDimType eq 'COUNTRY'.
+for c in HWF_0006 HWF_0001 WHS4_154 NUT_BF_EBF FAMILYPLANNINGUNPDUHC WSH_HYGIENE_BASIC; do
+  g "gho_$c.json" "https://ghoapi.azureedge.net/api/$c?\$filter=SpatialDimType%20eq%20'COUNTRY'"; done
 python3 -I build/build_data.py "$D" data/world.values.json
 curl -sSL -o data/world.topo.json https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json
 
@@ -165,9 +176,18 @@ without fetching its source.
 
 ## Data sources
 
-- Our World in Data: life expectancy; UN SDG 5.4.1 (unpaid care and domestic work);
-  WHO and UNICEF DTP3 coverage; births attended by skilled staff; modern contraceptive
-  use; children under treated nets; protected land.
+- Our World in Data: life expectancy and healthy life expectancy; child and maternal
+  mortality; UN SDG 5.4.1 (unpaid care and domestic work); WHO and UNICEF DTP3 and
+  measles coverage; births attended by skilled staff; undernourishment (FAO); stunting;
+  drinking water and sanitation (WHO/UNICEF JMP); clean cooking fuel; employment in
+  agriculture; universal health coverage index; out-of-pocket health spending; children
+  under treated nets; protected land and sea; forest area.
+- World Health Organization, Global Health Observatory: nursing and midwifery personnel
+  (`HWF_0006`); medical doctors (`HWF_0001`); antenatal care, four visits (`WHS4_154`);
+  exclusive breastfeeding (`NUT_BF_EBF`); family planning need met with modern methods
+  (`FAMILYPLANNINGUNPDUHC`, the 2024 estimate for all women); basic handwashing
+  facilities at home (`WSH_HYGIENE_BASIC`). The WHO's community health worker and
+  traditional birth attendant indicators returned no country rows on 2026-11-14.
 - International Labour Organization: status in employment (modelled estimates);
   persons outside the labour force due to care responsibilities; subsistence foodstuff
   production (from the DBnomics copy of February 2024; the ILO's current catalogue no

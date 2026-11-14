@@ -95,6 +95,82 @@ const WORLD_LAYERS = [
     src: `Protected Planet (UNEP-WCMC and IUCN), via the World Bank, as processed by Our World in Data. ${wyears("protected")[1]}.` },
 ];
 
+// More of the world: single figures from Our World in Data and the WHO Global Health Observatory,
+// for nearly every country. Each finding is counted from the data, not quoted.
+const OWID = "as processed by Our World in Data", GHO = "World Health Organization, Global Health Observatory";
+const span = k => { const [a, b] = wyears(k); return a === b ? `${a}` : `${a} to ${b}`; };
+const more = (id, group, name, o) => ({ id, group, name, order: o.order, cuts: o.cuts,
+  labels: o.pct ? pc(o.cuts, o.cuts[3]) : [`under ${o.cuts[0]}`, ...[1, 2, 3].map(i => `${o.cuts[i - 1]} to ${o.cuts[i]}`), `${o.cuts[3]} and over`],
+  val: d => fmt(d.v, o.dec ?? 0) + o.unit, num: d => fmt(d.v, o.dec ?? 0) + (o.pct ? "%" : ""), scaleMax: o.max ?? 100, read: d => `${o.of} ${o.survey ? "Survey year" : "Figure for"} ${d.y}.`,
+  rank: o.rank, measure: o.measure, finding: o.finding, src: `${o.src}. ${span(id)}.` });
+const lt = (k, x) => wcount(k, d => d.v < x), ge = (k, x) => wcount(k, d => d.v >= x);
+WORLD_LAYERS.splice(WORLD_LAYERS.findIndex(L => L.id === "contra"), 1);   // replaced by the WHO's estimate for all women, below
+WORLD_LAYERS.push(
+  more("hale", "life", "Years lived in good health", { unit: " years", dec: 1, cuts: [55, 60, 64, 68], max: 75, order: "low", of: "Years in good health.",
+    rank: "Where healthy years are fewest", measure: "Healthy life expectancy at birth: the years a newborn could expect to live in good health.",
+    finding: `In ${lt("hale", 60)} of ${wsize("hale")} countries, a newborn can expect fewer than 60 years in good health.`, src: `${GHO}, ${OWID}` }),
+  more("u5", "life", "Children who die before five", { unit: " per 1,000 births", dec: 1, cuts: [5, 10, 25, 50], max: 120, order: "high", of: "Deaths before age five for every 1,000 live births.",
+    rank: "Where the most children die before five", measure: "Deaths before the age of five for every 1,000 live births.",
+    finding: `In ${ge("u5", 50)} of ${wsize("u5")} countries, at least one child in twenty dies before the age of five.`, src: `UN Inter-agency Group for Child Mortality Estimation and Gapminder, ${OWID}` }),
+  more("mmr", "life", "Mothers who die giving birth", { unit: " per 100,000 births", cuts: [10, 50, 150, 400], max: 1250, order: "high", of: "Maternal deaths for every 100,000 live births.",
+    rank: "Where the most mothers die", measure: "Maternal deaths for every 100,000 live births.",
+    finding: `In ${ge("mmr", 150)} of ${wsize("mmr")} countries, at least 150 mothers die for every 100,000 live births. In ${lt("mmr", 10)}, fewer than 10.`, src: `UN Maternal Mortality Estimation Inter-agency Group and other sources, ${OWID}` }),
+  more("anc4", "birth", "Four check-ups in pregnancy", { pct: true, unit: "%", cuts: [50, 70, 85, 95], order: "low", survey: true, of: "Of pregnant women.",
+    rank: "Where the fewest women get four check-ups", measure: "Share of women who had at least four antenatal care visits, from the latest survey since 2010.",
+    finding: `In ${lt("anc4", 70)} of ${wsize("anc4")} countries, fewer than 70 of every 100 pregnant women get four check-ups.`, src: GHO }),
+  more("measles", "birth", "Vaccinated against measles", { pct: true, unit: "%", cuts: [60, 80, 90, 95], order: "low", of: "Of one-year-olds.",
+    rank: "Where the fewest children are reached", measure: "Share of one-year-olds with a first dose of measles vaccine. Every new child needs it, so this figure has to be earned again each year.",
+    finding: `In ${lt("measles", 90)} of ${wsize("measles")} countries, fewer than 90 of every 100 one-year-olds have had a measles vaccine.`, src: `WHO and UNICEF estimates of national immunisation coverage, ${OWID}` }),
+  more("ebf", "birth", "Babies fed only breast milk", { pct: true, unit: "%", cuts: [20, 35, 50, 65], order: "high", survey: true, of: "Of infants under six months.",
+    rank: "Where the most infants are fed only breast milk", measure: "Share of infants under six months who are exclusively breastfed, from the latest survey since 2010.",
+    finding: `In ${ge("ebf", 50)} of ${wsize("ebf")} countries with a survey, at least half of infants under six months are fed only breast milk.`, src: GHO }),
+  more("nurses", "care", "Nurses and midwives", { unit: " per 10,000 people", dec: 1, cuts: [10, 25, 50, 90], max: 200, order: "low", of: "Nursing and midwifery personnel for every 10,000 people.",
+    rank: "Where nurses and midwives are fewest", measure: "Nursing and midwifery personnel for every 10,000 people.",
+    finding: `In ${lt("nurses", 10)} of ${wsize("nurses")} countries there is fewer than one nurse or midwife for every 1,000 people.`, src: GHO }),
+  more("agri", "food", "People who work the land", { pct: true, unit: "%", dec: 1, cuts: [3, 10, 25, 45], order: "high", of: "Of employed people.",
+    rank: "Where the most people work in agriculture", measure: "Share of employed people who work in agriculture. A model's estimate.",
+    finding: `In ${ge("agri", 45)} of ${wsize("agri")} countries, at least 45 of every 100 workers work in agriculture. In ${lt("agri", 3)}, fewer than 3.`, src: `International Labour Organization modelled estimates, via the World Bank, ${OWID}` }),
+  more("hunger", "food", "Not enough to eat", { pct: true, unit: "%", dec: 1, cuts: [5, 10, 20, 35], order: "high", of: "Of people.",
+    rank: "Where the most people go hungry", measure: "Share of people whose food intake is too low to meet their energy needs. Figures under 2.5% are reported as 2.5.",
+    finding: `In ${ge("hunger", 20)} of ${wsize("hunger")} countries, at least one person in five is undernourished.`, src: `Food and Agriculture Organization of the United Nations, ${OWID}` }),
+  more("stunting", "food", "Children too short for their age", { pct: true, unit: "%", dec: 1, cuts: [5, 10, 20, 30], order: "high", of: "Of children under five.",
+    rank: "Where the most children are stunted", measure: "Share of children under five who are stunted, a sign of long-term undernourishment. Latest figure since 2010.",
+    finding: `In ${ge("stunting", 30)} of ${wsize("stunting")} countries, at least 30 of every 100 children under five are stunted.`, src: `${GHO}, ${OWID}` }),
+  more("water", "food", "Safe water at home", { pct: true, unit: "%", cuts: [40, 70, 90, 99], order: "low", of: "Of people.",
+    rank: "Where the fewest people have safe water", measure: "Share of people using a safely managed drinking water service.",
+    finding: `In ${lt("water", 50)} of ${wsize("water")} countries, fewer than half the people have safely managed drinking water.`, src: `WHO/UNICEF Joint Monitoring Programme, ${OWID}` }),
+  more("sanitation", "food", "A safe toilet", { pct: true, unit: "%", cuts: [25, 50, 75, 90], order: "low", of: "Of people.",
+    rank: "Where the fewest people have a safe toilet", measure: "Share of people using a safely managed sanitation service.",
+    finding: `In ${lt("sanitation", 50)} of ${wsize("sanitation")} countries, fewer than half the people have safely managed sanitation.`, src: `WHO/UNICEF Joint Monitoring Programme, ${OWID}` }),
+  more("handwash", "food", "A place to wash hands at home", { pct: true, unit: "%", cuts: [25, 50, 75, 90], order: "low", of: "Of people.",
+    rank: "Where the fewest people can wash their hands at home", measure: "Share of people with basic handwashing facilities at home.",
+    finding: `In ${lt("handwash", 50)} of ${wsize("handwash")} countries with a figure, fewer than half the people have a place to wash their hands at home.`, src: GHO }),
+  more("cleanfuel", "food", "Clean cooking fuel", { pct: true, unit: "%", cuts: [25, 50, 90, 99], order: "low", of: "Of people.",
+    rank: "Where the fewest people cook with clean fuel", measure: "Share of people who cook mainly with clean fuels and technologies.",
+    finding: `In ${lt("cleanfuel", 50)} of ${wsize("cleanfuel")} countries, fewer than half the people cook mainly with clean fuel.`, src: `${GHO}, ${OWID}` }),
+  more("uhc", "disease", "Essential health services covered", { unit: " of 100", cuts: [50, 65, 75, 82], order: "low", of: "On the WHO's index of essential health services.",
+    rank: "Where the fewest services reach people", measure: "The WHO's universal health coverage service index, from 0 to 100.",
+    finding: `In ${lt("uhc", 50)} of ${wsize("uhc")} countries, the WHO's index of essential health services is under 50 of 100.`, src: `${GHO}, ${OWID}` }),
+  more("doctors", "disease", "Doctors", { unit: " per 10,000 people", dec: 1, cuts: [3, 10, 20, 35], max: 90, order: "low", of: "Medical doctors for every 10,000 people.",
+    rank: "Where doctors are fewest", measure: "Medical doctors for every 10,000 people.",
+    finding: `In ${lt("doctors", 3)} of ${wsize("doctors")} countries there are fewer than 3 doctors for every 10,000 people.`, src: GHO }),
+  more("oop", "disease", "Paid out of pocket", { pct: true, unit: "%", cuts: [12, 25, 35, 50], order: "high", of: "Of all health spending.",
+    rank: "Where people pay the most themselves", measure: "Share of all health spending that people pay out of their own pockets.",
+    finding: `In ${ge("oop", 50)} of ${wsize("oop")} countries, people pay at least half of all health spending out of their own pockets.`, src: `WHO Global Health Expenditure Database, via the World Bank, ${OWID}` }),
+  more("fp", "disease", "Family planning need met", { pct: true, unit: "%", cuts: [40, 60, 75, 85], order: "low", of: "Of women aged 15 to 49 with a need for family planning.",
+    rank: "Where the least need is met", measure: "Share of women aged 15 to 49 whose need for family planning is met with a modern method. A model's estimate.",
+    finding: `In ${lt("fp", 50)} of ${wsize("fp")} countries, less than half of women's need for family planning is met with a modern method.`, src: `${GHO} (UN Population Division estimates)` }),
+  more("marine", "land", "Sea under protection", { pct: true, unit: "%", dec: 1, cuts: [1, 5, 10, 30], order: "high", of: "Of territorial waters.",
+    rank: "Where the most sea is designated", measure: "Share of territorial waters inside a marine protected area. Countries without a coast have no figure.",
+    finding: `${ge("marine", 30)} of ${wsize("marine")} countries with a figure have protected at least 30% of their waters. ${lt("marine", 1)} have protected less than 1%.`, src: `Protected Planet (UNEP-WCMC and IUCN), via the World Bank, ${OWID}` }),
+  more("forest", "land", "Land under forest", { pct: true, unit: "%", dec: 1, cuts: [10, 25, 40, 55], order: "high", of: "Of land area.",
+    rank: "Where the most land is forest", measure: "Share of land area covered by forest.",
+    finding: `Forest covers at least half the land in ${ge("forest", 50)} of ${wsize("forest")} countries and territories, and less than a tenth in ${lt("forest", 10)}.`, src: "Our World in Data, from several sources" }),
+);
+const LAYER_ORDER = ["life", "hale", "u5", "mmr", "births", "anc4", "dtp3", "measles", "ebf", "hours", "carers", "family", "nurses",
+  "subsistence", "agri", "hunger", "stunting", "water", "sanitation", "handwash", "cleanfuel", "uhc", "doctors", "oop", "fp", "nets", "protected", "marine", "forest"];
+WORLD_LAYERS.sort((a, b) => LAYER_ORDER.indexOf(a.id) - LAYER_ORDER.indexOf(b.id));
+
 const W = 980, H = 520;
 const byNum = {}; for (const [a3, m] of Object.entries(C)) byNum[m.id] = a3;
 const EUROPE = new Set("AUT BEL BGR HRV CYP CZE DNK EST FIN FRA DEU GRC HUN IRL ITA LVA LTU LUX MLT NLD POL PRT ROU SVK SVN ESP SWE NOR CHE ISL".split(" "));
@@ -125,7 +201,7 @@ function adoptPack(S, built) {
     idx[L.id] = i;
     const f = v => fmt(v, L.dec) + L.unit, bare = v => fmt(v, L.dec);
     const ids = Object.keys(P.values).filter(id => P.values[id][i] != null);
-    return { ...L, i, ids, val: d => f(d.v), scaleMax: L.max, order: "high",
+    return { ...L, i, ids, val: d => f(d.v), num: d => bare(d.v) + (L.unit === "%" ? "%" : ""), scaleMax: L.max, order: "high",
       labels: [`under ${bare(L.cuts[0])}`, ...[1, 2, 3].map(j => `${bare(L.cuts[j - 1])} to ${bare(L.cuts[j])}`), `${bare(L.cuts[3])} and over`],
       finding: `${L.name}: from ${f(L.min)} to ${f(L.max)} across ${L.n.toLocaleString("en")} ${S.units}.`,
       read: () => L.measure, rank: `${L.name}: the highest`, src: L.src + "." };
@@ -138,6 +214,7 @@ function adoptPack(S, built) {
 
 const svg = d3.select("#map");
 const g = svg.append("g"), gUnits = g.append("g"), gMesh = g.append("path").attr("fill", "none").attr("class", "mesh"), gPins = g.append("g");
+let openGroup = null;   // the one group whose layers are listed; null follows the selected layer
 let scopeKey = "world", S = SCOPES.world, layer = S.layers[0], picked = null, proj, pathGen, shapes, pins, pinInner, k = 1;
 let fg = "all", fm = "all";
 const zoom = d3.zoom().scaleExtent([1, 14]).translateExtent([[0, 0], [W, H]])
@@ -273,7 +350,10 @@ function draw() {
     `<span><i class="none"></i>no figure</span><span><i class="pinkey"></i>maintenance</span><span><i class="pinkey t"></i>leverage</span><span><i class="pinkey p"></i>a link someone added</span>`;
   el("layers").innerHTML = `<p class="caps">Layers, by how soon it is felt when the work stops</p>` + GROUPS.map(([gk, gl, gw]) => {
     const ls = S.layers.filter(L => L.group === gk);
-    return ls.length ? `<div class="lgroup"><div class="lg"><b>${gl}</b><span>${gw}</span></div>` + ls.map(L => `<button type="button" data-id="${L.id}" aria-pressed="${L.id === layer.id}">${esc(L.name)}</button>`).join("") + `</div>` : "";
+    if (!ls.length) return "";
+    const open = gk === (openGroup ?? layer.group);
+    return `<div class="lgroup"><button type="button" class="lg" data-g="${gk}" aria-expanded="${open}"><b>${gl}</b><span>${open ? gw : ls.length + (ls.length === 1 ? " layer" : " layers")}</span></button>` +
+      (open ? ls.map(L => `<button type="button" data-id="${L.id}" aria-pressed="${L.id === layer.id}">${esc(L.name)}</button>`).join("") : "") + `</div>`;
   }).join("");
   el("layersel").innerHTML = GROUPS.map(([gk, gl]) => {
     const ls = S.layers.filter(L => L.group === gk);
@@ -281,14 +361,14 @@ function draw() {
   }).join("");
   el("scopes").innerHTML = `<span class="caps">Map</span>` + Object.entries(SCOPES).map(([key, s]) => `<button type="button" data-s="${key}" aria-pressed="${key === scopeKey}">${key === "world" ? "World" : s.label}<span class="by">, by ${s.unit}</span></button>`).join("");
   // rank
-  el("rankhead").textContent = layer.rank; el("ranknote").textContent = S.units[0].toUpperCase() + S.units.slice(1) + " with a figure: " + S.ids(layer).length.toLocaleString("en") + ".";
+  el("rankhead").textContent = layer.rank; el("ranknote").textContent = layer.measure + " " + S.units[0].toUpperCase() + S.units.slice(1) + " with a figure: " + S.ids(layer).length.toLocaleString("en") + ".";
   el("rankkey").hidden = !layer.gendered;
   const dir = layer.order === "low" ? 1 : -1, w = x => Math.max(.5, Math.min(100, 100 * x / (layer.id === "hours" ? 6 : layer.scaleMax))) + "%";
   const sorted = S.ids(layer).map(id => [id, S.get(layer, id)]).sort((a, b) => dir * (a[1].v - b[1].v));
   const nm = id => (scopeKey === "world" ? C[id].n : S.pack.names[id] || id);
   el("rank").innerHTML = sorted.slice(0, 10).map(([id, d]) => `<div class="row"><div class="nm">${esc(nm(id))}</div><div class="bars">` + (layer.gendered
     ? `<div class="b"><div style="width:${w(d.f)};background:var(--women)"></div><span>${layer.f(d)}</span></div><div class="b"><div style="width:${w(d.m)};background:var(--men)"></div><span>${layer.m(d)}</span></div>`
-    : `<div class="b"><div style="width:${w(d.v)};background:var(--s4)"></div><span>${layer.val(d)}</span></div>`) + `</div></div>`).join("");
+    : `<div class="b"><div style="width:${w(d.v)};background:var(--s4)"></div><span>${(layer.num || layer.val)(d)}</span></div>`) + `</div></div>`).join("");
   el("tabledetails").open = false; el("table").innerHTML = "";
   el("tabledetails").ontoggle = () => { if (!el("tabledetails").open || el("table").innerHTML) return;
     el("table").innerHTML = `<thead><tr><th>${S.unit[0].toUpperCase() + S.unit.slice(1)}</th><th>Figure</th>${layer.gendered ? "<th>Women</th><th>Men</th>" : ""}</tr></thead><tbody>` +
@@ -326,11 +406,16 @@ function profile() {
 el("profile").addEventListener("click", e => {
   if (e.target.closest("#addbox")) return;
   const o = e.target.closest("button.open"); if (o) return setScope(o.dataset.s);
-  const r = e.target.closest("button.prow"); if (r) { layer = S.layers.find(L => L.id === r.dataset.id); draw(); document.querySelector(".mapbox").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+  const r = e.target.closest("button.prow"); if (r) { layer = S.layers.find(L => L.id === r.dataset.id); openGroup = null; draw(); document.querySelector(".mapbox").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
   const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); }
 });
-el("layers").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; layer = S.layers.find(L => L.id === b.dataset.id); draw(); });
-el("layersel").addEventListener("change", e => { layer = S.layers.find(L => L.id === e.target.value); draw(); });
+el("layers").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.g) openGroup = b.dataset.g;   // open a group without changing the map
+  else { layer = S.layers.find(L => L.id === b.dataset.id); openGroup = null; }
+  draw();
+});
+el("layersel").addEventListener("change", e => { layer = S.layers.find(L => L.id === e.target.value); openGroup = null; draw(); });
 el("scopes").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setScope(b.dataset.s); });
 
 async function setScope(key) {
@@ -341,7 +426,7 @@ async function setScope(key) {
     catch (err) { el("loading").textContent = "The local map could not be loaded."; return; }
     el("loading").hidden = true;
   }
-  scopeKey = key; S = T; picked = null;
+  scopeKey = key; S = T; picked = null; openGroup = null;
   layer = S.layers.find(L => L.group === layer.group) || S.layers[0];
   buildMap(); draw();
 }
@@ -389,9 +474,9 @@ async function setSession(session) {
 function renderAccount() {
   const note = state.notice ? `<p class="notice">${esc(state.notice)}</p>` : "";
   el("account").innerHTML = note + (state.me
-    ? `<span>Signed in as <b>@${esc(state.handle || state.me)}</b>. Pick a place on the map, then add what you do there.</span> <button type="button" class="link" id="signout">Sign out</button>`
+    ? `<span>Signed in as <b>@${esc(state.handle || state.me)}</b>. Pick a place on the map, then add a link there.</span> <button type="button" class="link" id="signout">Sign out</button>`
     : state.authError ? `<span>Sign-in is unavailable right now. The map still works.</span>`
-    : `<form id="signin"><label for="handle">To add to the map, sign in with your atproto handle</label> <input id="handle" name="handle" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="you.bsky.social"> <button type="submit">Sign in</button></form>`);
+    : `<form id="signin"><label for="handle">Sign in with your atproto handle to add a link to it</label> <input id="handle" name="handle" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="you.bsky.social"> <button type="submit">Sign in</button></form>`);
 }
 el("account").addEventListener("submit", async e => {
   e.preventDefault();
@@ -412,8 +497,8 @@ function renderAdd() {
   const box = el("addbox"); if (!box) return;
   const f = picked && featureOf(picked); if (!f) { box.innerHTML = ""; return; }
   const name = S.nameOf(f);
-  if (!state.me) { box.innerHTML = `<h3>Know of something that keeps ${esc(name)} going?</h3><p><a href="#add">Sign in</a> with an atproto handle, such as a Bluesky one, to add a link to it here.</p>`; return; }
-  box.innerHTML = `<h3>Add a link to ${esc(name)}</h3>
+  if (!state.me) { box.innerHTML = `<h3>What do you do to hold your world together?</h3><p><a href="#add">Sign in</a> with an atproto handle, such as a Bluesky one, to add a link to it in ${esc(name)}.</p>`; return; }
+  box.innerHTML = `<h3>What do you do to hold your world together?</h3><p>Add a link to it in ${esc(name)}.</p>
   <form class="addform" id="addform" novalidate>
     <p class="warn">A link is a web address and this place, nothing else. It is public, saved in your own account under your handle. Add pages that are already public. Do not add one that locates a person who could be harmed by being found. Anyone signed in can ask for it to be taken down.</p>
     ${state.errors.length ? `<p class="errors" role="alert">${state.errors.map(esc).join(" ")}</p>` : ""}
@@ -491,7 +576,8 @@ const LIMITS = [
   "A takedown request needs an atproto account. Someone without one cannot make one here.",
 ];
 const SOURCES = [
-  ["Our World in Data: life expectancy; unpaid care and domestic work (UN SDG 5.4.1); DTP3 coverage (WHO and UNICEF); births attended by skilled staff; modern contraceptive use; children under treated nets; protected land", "https://ourworldindata.org/"],
+  ["Our World in Data: life expectancy and healthy life expectancy; child and maternal mortality; unpaid care and domestic work (UN SDG 5.4.1); DTP3 and measles coverage (WHO and UNICEF); births attended by skilled staff; undernourishment (FAO); stunting; drinking water and sanitation (WHO/UNICEF JMP); clean cooking fuel; employment in agriculture; universal health coverage index; out-of-pocket health spending; children under treated nets; protected land and sea; forest area", "https://ourworldindata.org/"],
+  ["World Health Organization, Global Health Observatory: nursing and midwifery personnel; medical doctors; antenatal care (four visits); exclusive breastfeeding; family planning need met with modern methods; basic handwashing facilities at home", "https://www.who.int/data/gho"],
   ["International Labour Organization, ILOSTAT: status in employment (modelled estimates); persons outside the labour force due to care responsibilities", "https://ilostat.ilo.org/data/"],
   ["International Labour Organization, subsistence foodstuff production rate by sex, via DBnomics", "https://db.nomics.world/ILO/FOW_5SFP_SEX_RT"],
   ["United States counties: County Health Rankings & Roadmaps, 2025 analytic data (University of Wisconsin Population Health Institute)", "https://www.countyhealthrankings.org/"],
