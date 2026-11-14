@@ -10,12 +10,15 @@ It has three parts:
    150 to 215 countries. Four maps: the world by country, the United
    States by county, India by district, Europe by NUTS-2 region. Clicking a unit opens
    a profile of every layer for that place.
-2. **Sourced entries** (`data/entries.json`): stories and interventions, each resting
-   on a page that was fetched and quoted. A ring marks maintenance (it has to be done
-   again); a diamond marks leverage (a bounded act that changes what follows).
-3. **Links people add**: anyone with an atproto account can add a link to a place: a
-   web address and a location, nothing else. Those are the amber dots, and each carries
-   the handle of whoever added it. Anyone signed in can ask for a link to be taken down.
+2. **Case studies**: stories and interventions, each resting on a page that was
+   fetched and quoted. A ring marks maintenance (it has to be done again); a diamond
+   marks leverage (a bounded act that changes what follows). They are atproto records
+   (`org.jason-edelman.atlas.case`) in the atlas owner's repo. Until the owner has
+   published them there, the page shows the copies in `data/entries.json`.
+3. **What people add**: anyone with an atproto account can add a link to a place, or a
+   case study of their own in the same form, with its source. Those are drawn in amber
+   and carry the handle of whoever added them. Anyone signed in can ask for one to be
+   taken down.
 
 It is styled to the rest of the site: the field-notes palette, Epilogue and Charis SIL,
 no rounded corners, shadows or gradients (`.impeccable.md`). One colour comes from
@@ -30,8 +33,8 @@ be told apart with red-green colour blindness.
 | `app.js` | The map, layers, place profile, sign-in, adding a link and asking for a takedown. |
 | `atlas.js` | The rules for links and takedown requests: building, checking and loading them. No DOM, so it runs in Node tests. |
 | `atlas.test.mjs` | `node --test atlas-of-care/atlas.test.mjs` |
-| `client-metadata.json` | The atproto OAuth client. Its scope is the two collections below. |
-| `lexicons/` | The schemas of a link and of a takedown request. |
+| `client-metadata.json` | The atproto OAuth client. Its scope is the three collections below. |
+| `lexicons/` | The schemas of a link, a case study and a takedown request. |
 | `hidden.json` | What this page declines to show (`dids`, `uris`), and links it shows despite a takedown request (`keep`). |
 | `data/` | Map shapes, layer values and the sourced entries. |
 | `vendor/` | d3 7.9.0 and topojson-client 3.1.0, checked in; `vendor/LICENSES.txt` has the notices. |
@@ -47,12 +50,31 @@ bsky.social (handle resolution at sign-in). No code loads from a CDN at runtime.
 
 ## What people can add
 
-Two things, and neither carries any text of the person's own.
-
 | Record | Repo | Meaning |
 |---|---|---|
-| `org.jason-edelman.atlas.link` | whoever added it | A web address and a place. |
-| `org.jason-edelman.atlas.takedown` | whoever asked | A request that one link come off the page. It points at the link and gives no reason. |
+| `org.jason-edelman.atlas.link` | whoever added it | A web address and a place. No text of the person's own. |
+| `org.jason-edelman.atlas.case` | the atlas owner, or whoever wrote it | A case study: who does what, who pays, what came of it, and its source. |
+| `org.jason-edelman.atlas.takedown` | whoever asked | A request that one link or contributed case study come off the page. It points at the record and gives no reason. |
+
+### The atlas's own case studies
+
+They live in the owner's repo (`did:plc:zz4wcje4a2nbbtc7pdoth3f2`) and are read from it
+directly with `listRecords`, with no index in between. To put them there, the owner
+signs in on the page and presses "Publish the N from the site's file" in the Add a
+link section. That writes each entry of `data/entries.json` with `putRecord` under a
+key made from its title, so pressing it again updates the records and does not double
+them. After that the repo is the source of truth: edit a record there and the page
+follows; `data/entries.json` is only what the page shows when the repo cannot be read
+or has none. Takedown requests do not apply to the owner's own case studies.
+
+### Case studies people contribute
+
+Written in the form in a place's profile and saved to the writer's own repo. A
+contributed case study must name a source with an http(s) address, and it is placed in
+the unit that was selected, under the atlas's own name for that unit (a typed place
+name is ignored). Its text is the writer's: capped in length, stripped of control
+characters, and escaped by the page. It shows beside the atlas's own with "Contributed
+by @handle. Not checked by the atlas." and a takedown button.
 
 Nobody keeps a list of contributors and this site stores nothing. Both records name
 the atlas's DID (`did:plc:zz4wcje4a2nbbtc7pdoth3f2`, jason-edelman.org) in their
@@ -66,9 +88,9 @@ records hold no floats). A link is never placed at an address. Its place name is
 up from the unit id, so a record cannot supply one; a link whose unit this atlas does
 not have is not shown. The heading on its card is the address's host name.
 
-**A takedown request** takes effect at once: the link stops being shown. Any signed-in
-account can make one. If a request has been looked at and turned down, list the link's
-URI under `keep` in `hidden.json` and it is shown again.
+**A takedown request** takes effect at once: the link or contributed case study stops
+being shown. Any signed-in account can make one. If a request has been looked at and
+turned down, list the record's URI under `keep` in `hidden.json` and it is shown again.
 
 Nothing in a record is trusted. `parseLink` keeps only its own six fields, whatever
 else the record holds. `cleanUrl` accepts an address only if it is http(s), has a real
@@ -76,9 +98,9 @@ host name (no IP addresses, no localhost), carries no credentials, contains no
 whitespace or direction-changing characters, and is at most 400 characters; it drops
 the fragment. A unit id is letters, digits, dot, underscore and hyphen, at most 64.
 
-`loadCommunity` fails closed: if the index cannot be asked about links, or about
-takedown requests, no links are shown, because one that someone asked to have removed
-might otherwise come back.
+`loadCommunity` fails closed: if the index cannot be asked about links, contributed
+case studies or takedown requests, nothing people have added is shown, because
+something that someone asked to have removed might otherwise come back.
 
 ### Hiding a link, or keeping one
 
@@ -97,8 +119,9 @@ delete it with the Remove button.
   handle, readable by anyone whether or not this page shows it. The form says so.
 - **Nobody checks where a link leads.** The page shows the host name and the address
   and says it is unchecked.
-- **A web address can still carry words** in its path or query. That is the only text a
-  person can put on the page.
+- **Contributed case studies are free text.** Anyone signed in can put their own words
+  on the page under their handle. The checks are a required source, length caps,
+  escaping, the takedown button and `hidden.json`. Nobody reviews them first.
 - **Anyone signed in can take a link down, and can do it to every link.** That is the
   chosen trade: a wrongly hidden link costs little, a wrongly shown one can cost a
   great deal. `keep` is the way back.

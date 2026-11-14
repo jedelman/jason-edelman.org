@@ -127,6 +127,7 @@
     .mark { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--bright); vertical-align: -1px; margin-right: 6px; }
     .mark.r { border-radius: 50%; } .mark.t { transform: rotate(45deg) scale(.86); }
     .mark.p { border-radius: 50%; border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
+    .mark.pc { border-color: var(--warn); }
 
     .mapbox { position: relative; background: var(--sea); border: 1px solid var(--border); }
     .mapbox svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
@@ -142,6 +143,9 @@
     .pin.sel .halo { fill: var(--bright); } .pin.sel .core { fill: var(--bg); }
     .pin.people .halo { fill: var(--warn); stroke: var(--bg); }
     .pin.people.sel .halo { stroke: var(--bright); }
+    .pin.people.case .halo { fill: var(--bg); stroke: var(--warn); }
+    .pin.people.case .core { fill: var(--warn); }
+    .pin.people.case.sel .halo { fill: var(--warn); } .pin.people.case.sel .core { fill: var(--bg); }
     .pin.off { display: none; }
     .zoom { position: absolute; top: 8px; right: 8px; display: grid; gap: 4px; }
     .zoom button { width: 34px; min-height: 34px; padding: 0; background: var(--surface); font-size: 1rem; }
@@ -214,6 +218,17 @@
     .addform { display: grid; gap: 10px; }
     .addform .row { display: flex; gap: 8px; align-items: stretch; }
     .addform .row input { flex: 1 1 auto; }
+    .addform label { display: grid; gap: 2px; font-size: .82rem; color: var(--soft); }
+    .addform label.radio { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem; color: var(--text); }
+    .addform label input, .addform label select, .addform textarea { width: 100%; }
+    .addform textarea { font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border); padding: 8px 12px; min-height: 4.5em; resize: vertical; }
+    .addform .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; }
+    .addform fieldset { border: 0; display: flex; flex-wrap: wrap; gap: 4px 16px; align-content: start; }
+    .addform legend { font-size: .82rem; color: var(--soft); padding: 0; margin-bottom: 2px; }
+    .addform label.radio input { width: auto; min-height: 0; }
+    .casebox { margin-top: 1.1rem; }
+    .casebox form { margin-top: .75rem; }
+    .account .owner { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
     .addform .warn { border-left: 1px solid var(--warn); padding-left: 10px; color: var(--text); }
     .addform .errors { color: var(--text); border: 1px solid var(--warn); padding: 6px 10px; }
 
@@ -239,6 +254,12 @@
     .story button:hover { color: var(--accent); }
     .story button.takedown:hover, .story button.remove:hover { color: var(--warn); border-color: var(--warn); }
 
+    .prior h3 { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--bright); margin: 1.4rem 0 .5rem; }
+    .prior ul { list-style: none; max-width: 80ch; display: grid; gap: 12px; }
+    .prior li { color: var(--soft); font-size: .95rem; }
+    .prior .cite { color: var(--text); }
+    .prior .meta { font-family: var(--font-mono); font-size: .68rem; color: var(--muted); }
+    .prior q { font-style: italic; quotes: "\201C" "\201D"; }
     .limits ul { max-width: 72ch; padding-left: 1.1em; display: grid; gap: 8px; color: var(--soft); }
     .sources ol { max-width: 80ch; padding-left: 1.4em; display: grid; gap: 6px; color: var(--soft); font-size: .9rem; overflow-wrap: anywhere; }
 
@@ -264,6 +285,7 @@
         <a href="#entries">Stories and interventions</a>
         <a href="#limits-section">What it cannot see</a>
         <a href="#about">About</a>
+        <a href="#prior" id="priornav" hidden>Prior work</a>
         <a href="#sources-section">Sources</a>
       </nav>
     </div>
@@ -310,7 +332,7 @@
 
   <section id="entries">
     <h2>Stories and interventions</h2>
-    <p>Each sourced entry names a place, the people doing the work, what they do, who pays, and what happened when it stopped, as far as the source says. The quotes are copied from the linked pages. Links added by people come first and say who added them. The filters above the map apply here too.</p>
+    <p>Each sourced entry names a place, the people doing the work, what they do, who pays, and what happened when it stopped, as far as the source says. The quotes are copied from the linked pages. What people have added comes first and says who added it. The filters above the map apply here too.</p>
     <p class="count" id="count"></p>
     <p class="count" id="communitynote"></p>
     <div class="stories" id="stories"></div>
@@ -324,12 +346,18 @@
     </blockquote>
     <p class="how">Pick a layer, then pick a place. The layers are in order of how soon it is felt when the work behind them stops: a birth with nobody trained in the room is felt within hours, an untended forest over years. Three parts of the map open to local units: the counties of the United States, the districts of India and the regions of Europe.</p>
     <p class="how">The marks on top are particular: a place, the people doing the work, who pays, and a source. A ring is maintenance, which has to be done again or the loss comes back. A diamond is leverage, a bounded act that changes what follows. Where a famous result is disputed, the entry says so.</p>
-    <p class="how">Anyone with an atproto account, such as a Bluesky handle, can add a link to a place: a web address and a location, nothing else. Links are the amber dots. Each carries the handle of whoever added it, and nobody has checked where it leads. Anyone signed in can ask for a link to be taken down, and it comes off this page at once.</p>
+    <p class="how">The case studies are records in an atproto account, the kind of account a Bluesky handle is. Anyone with one can add to the map from their own: a link to a place, or a case study of their own with its source. What people add is marked in amber and carries their handle, and nobody has checked it. Anyone signed in can ask for one to be taken down, and it comes off this page at once.</p>
   </section>
 
   <section class="limits" id="limits-section">
     <h2 id="limits-h">What this atlas cannot see</h2>
     <ul id="limits"></ul>
+  </section>
+
+  <section class="prior" id="prior" hidden>
+    <h2>Prior work</h2>
+    <p>This atlas comes after a great deal of work by other people. Each entry below was checked against the page it links to.</p>
+    <div id="priorlist"></div>
   </section>
 
   <section class="sources" id="sources-section">
