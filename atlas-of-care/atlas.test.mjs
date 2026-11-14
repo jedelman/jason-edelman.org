@@ -2,13 +2,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { buildLink, parseLink, buildTakedown, parseTakedown, loadCommunity, loadOwnCases, buildCase, parseCase, caseRkey, cleanUrl, linkUri, subjectUri, COL, ATLAS_DID, SCOPE, MAX_URL } from './atlas.js'
+import { buildLink, parseLink, buildTakedown, parseTakedown, loadCommunity, loadOwnCases, buildCase, parseCase, caseRkey, cleanUrl, linkUri, subjectUri, buildVouch, parseVouch, groupVouches, vouchSubject, COL, ATLAS_DID, SCOPE, MAX_URL } from './atlas.js'
 
 const good = { url: 'https://example.org/acequia', scope: 'us', unit: '35039', lat: 36.5123, lon: -106.6987 }
 const uriOf = (did, rkey) => `at://${did}/${COL.link}/${rkey}`
 
-test('scope covers the three collections and nothing else', () => {
-  assert.equal(SCOPE, 'atproto repo:org.jason-edelman.atlas.link repo:org.jason-edelman.atlas.case repo:org.jason-edelman.atlas.takedown')
+test('scope covers the four collections and nothing else', () => {
+  assert.equal(SCOPE, 'atproto repo:org.jason-edelman.atlas.link repo:org.jason-edelman.atlas.case repo:org.jason-edelman.atlas.vouch repo:org.jason-edelman.atlas.takedown')
 })
 
 test('a link record holds an address and a place, and no other fields', () => {
@@ -142,7 +142,7 @@ test('keep overrides a takedown request; hidden dids and uris are never shown', 
 
 test('loadCommunity fails closed when either index query fails', async () => {
   const a = buildLink(good).record
-  for (const failIndex of [COL.link, COL.case, COL.takedown]) {
+  for (const failIndex of [COL.link, COL.case, COL.vouch, COL.takedown]) {
     const out = await loadCommunity(fakeIo({ [L('did:plc:aaa', '1')]: a }, { failIndex }))
     assert.equal(out.links.length, 0)
     assert.equal(out.error.message, 'index down')
@@ -237,4 +237,56 @@ test('a takedown request withholds a contributed case study', async () => {
   const out = await loadCommunity(fakeIo({ [C('did:plc:aaa', '1')]: mine, [T('did:plc:zzz', '9')]: down }))
   assert.equal(out.cases.length, 0)
   assert.equal(out.withheld, 1)
+})
+
+// ── Vouches ──────────────────────────────────────────────────────────────────
+
+const V = (did, rkey) => `${did}/${COL.vouch}/${rkey}`
+const vouch = { subject: 'did:plc:tender', scope: 'us', unit: '51710', lat: 36.92, lon: -76.24 }
+
+test('a vouch points at an account or a web address in a place, and holds nothing else', () => {
+  const r = buildVouch(vouch, new Date('2026-11-14T15:00:00Z'))
+  assert.deepEqual(r.record, { $type: COL.vouch, atlas: ATLAS_DID, subject: 'did:plc:tender', scope: 'us', unit: '51710', lat: '36.92', lon: '-76.24', createdAt: '2026-11-14T15:00:00.000Z' })
+  assert.equal(buildVouch({ ...vouch, subject: 'https://foodbank.example/#top' }).record.subject, 'https://foodbank.example/')
+  assert.equal('name' in buildVouch({ ...vouch, name: 'free text', note: 'x' }).record, false)
+})
+
+test('a vouch cannot be for a name, a bare handle or a bad address', () => {
+  for (const subject of ['Maria down the street', 'tender.bsky.social', 'javascript:alert(1)', 'did:', '', null]) assert.equal(buildVouch({ ...vouch, subject }).ok, false, String(subject))
+  assert.equal(vouchSubject('did:web:example.org'), 'did:web:example.org')
+  assert.equal(buildVouch({ ...vouch, unit: 'two words' }).ok, false)
+})
+
+test('parseVouch round-trips and rejects what is not a vouch for this atlas', () => {
+  const { record } = buildVouch(vouch, new Date('2026-11-14T15:00:00Z'))
+  assert.deepEqual(parseVouch(record), { subject: 'did:plc:tender', isAccount: true, scope: 'us', unit: '51710', lat: 36.92, lon: -76.24, createdAt: '2026-11-14T15:00:00.000Z' })
+  assert.equal(parseVouch({ ...record, subject: 'Maria' }), null)
+  assert.equal(parseVouch({ ...record, atlas: 'did:plc:other' }), null)
+  assert.deepEqual(Object.keys(parseVouch({ ...record, note: 'free text' })).sort(), ['createdAt', 'isAccount', 'lat', 'lon', 'scope', 'subject', 'unit'])
+})
+
+test('vouches for the same one in the same place are counted once per voucher', () => {
+  const base = { ...parseVouch(buildVouch(vouch).record) }
+  const list = [
+    { ...base, did: 'did:plc:aaa', handle: 'a.example', uri: 'u1', rkey: '1' },
+    { ...base, did: 'did:plc:bbb', handle: 'b.example', uri: 'u2', rkey: '2' },
+    { ...base, did: 'did:plc:aaa', handle: 'a.example', uri: 'u3', rkey: '3' },      // the same person again
+    { ...base, did: 'did:plc:tender', handle: 't.example', uri: 'u4', rkey: '4' },   // vouching for oneself
+    { ...base, unit: '51810', did: 'did:plc:ccc', handle: 'c.example', uri: 'u5', rkey: '5' },   // another place
+  ]
+  const groups = groupVouches(list)
+  assert.equal(groups.length, 2)
+  assert.deepEqual(groups[0].vouchers.map((v) => v.did), ['did:plc:aaa', 'did:plc:bbb'])
+  assert.equal(groups[0].key, 'vouch:did:plc:tender|us|51710')
+  assert.equal(groups[1].unit, '51810')
+})
+
+test('vouches load with the rest; a takedown withholds one, and so does the hidden list for whoever is vouched for', async () => {
+  const rec = buildVouch(vouch).record
+  const other = buildVouch({ ...vouch, subject: 'https://hidden.example/' }).record
+  const recs = { [V('did:plc:aaa', '1')]: rec, [V('did:plc:bbb', '2')]: rec, [V('did:plc:ccc', '3')]: other, [T('did:plc:tender', '9')]: buildTakedown(`at://did:plc:aaa/${COL.vouch}/1`).record }
+  const out = await loadCommunity(fakeIo(recs), { uris: ['https://hidden.example/'] })
+  assert.deepEqual(out.vouches.map((v) => v.did), ['did:plc:bbb'])
+  assert.equal(out.withheld, 1)
+  assert.equal(subjectUri(`at://did:plc:aaa/${COL.vouch}/1`), `at://did:plc:aaa/${COL.vouch}/1`)
 })

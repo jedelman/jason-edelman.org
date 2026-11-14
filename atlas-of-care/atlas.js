@@ -1,15 +1,20 @@
 // Atlas of Care: what people add to the map. No DOM and no SDK import, so it
 // runs in the browser and in Node tests alike.
 //
-// People can add three things:
+// People can add four things:
 //
 //   link      a web address and a place, with no text of their own.
 //   case      a case study: who does what to keep a place going, who pays, what
 //             came of it, and the source it rests on. The atlas's own case
 //             studies are records of this kind in the atlas owner's repo; anyone
 //             else's sit in their own repo and show beside them, marked as theirs.
-//   takedown  a request that one link or one contributed case study come off the
-//             page. It points at the record and carries no text.
+//   vouch     "who holds your world together": a pointer at an organisation or a
+//             person, by their atproto account or their web address, and a
+//             place. No text of the voucher's own. Several people can vouch for
+//             the same one in the same place; the page counts them.
+//   takedown  a request that one link, contributed case study or vouch come off
+//             the page. It points at the record and carries no text. Whoever is
+//             vouched for can use it like anyone else.
 //
 // Nobody keeps a list of contributors and this site stores nothing. Both
 // records name the atlas's DID in their `atlas` field, and Constellation, a
@@ -27,8 +32,8 @@
 // read straight from the owner's repo and are not subject to takedown requests.
 
 export const NS = 'org.jason-edelman.atlas'
-export const COL = { link: `${NS}.link`, case: `${NS}.case`, takedown: `${NS}.takedown` }
-// Granular OAuth scope: this app can touch its own three collections, nothing else.
+export const COL = { link: `${NS}.link`, case: `${NS}.case`, vouch: `${NS}.vouch`, takedown: `${NS}.takedown` }
+// Granular OAuth scope: this app can touch its own four collections, nothing else.
 export const SCOPE = ['atproto', ...Object.values(COL).map((c) => `repo:${c}`)].join(' ')
 // jason-edelman.org. Records point here so the index can find them.
 export const ATLAS_DID = 'did:plc:zz4wcje4a2nbbtc7pdoth3f2'
@@ -182,11 +187,61 @@ export function caseRkey(title) {
   return slug.slice(0, 80) || 'case'
 }
 
-// at://did/<a link or case collection>/rkey, and nothing else.
+// Who a vouch is for: an atproto account (a DID) or a web address. Returns the
+// normalised form, or null. A handle is turned into a DID before it gets here.
+export function vouchSubject(s) {
+  if (typeof s !== 'string') return null
+  const t = s.trim()
+  return DID.test(t) ? t : cleanUrl(t)
+}
+
+// What the form collects -> a vouch record to write, or the reasons it can't be.
+export function buildVouch(input, now = new Date()) {
+  const errors = []
+  const subject = vouchSubject(String(input.subject ?? ''))
+  if (!subject) errors.push('Give their atproto handle, or a full web address that starts with https:// or http://.')
+  const lat = coord(input.lat, 90)
+  const lon = coord(input.lon, 180)
+  if (!SCOPES.includes(input.scope) || !UNIT.test(String(input.unit ?? '')) || lat == null || lon == null) errors.push('Pick a place on the map first.')
+  if (errors.length) return { ok: false, errors }
+  return {
+    ok: true,
+    record: { $type: COL.vouch, atlas: ATLAS_DID, subject, scope: input.scope, unit: String(input.unit), lat: lat.toFixed(2), lon: lon.toFixed(2), createdAt: now.toISOString() },
+  }
+}
+
+// A vouch record read from someone's repo -> a checked vouch, or null.
+export function parseVouch(value) {
+  if (!value || typeof value !== 'object' || value.$type !== COL.vouch || value.atlas !== ATLAS_DID) return null
+  const subject = vouchSubject(value.subject)
+  const lat = coord(value.lat, 90)
+  const lon = coord(value.lon, 180)
+  if (!subject || lat == null || lon == null) return null
+  if (!SCOPES.includes(value.scope) || typeof value.unit !== 'string' || !UNIT.test(value.unit)) return null
+  const created = new Date(typeof value.createdAt === 'string' ? value.createdAt : NaN)
+  return { subject, isAccount: subject.startsWith('did:'), scope: value.scope, unit: value.unit, lat, lon, createdAt: Number.isNaN(created.getTime()) ? null : created.toISOString() }
+}
+
+// Vouches for the same one in the same place become one entry, with everyone
+// who vouched. A voucher counts once, and nobody's vouch for themselves counts.
+export function groupVouches(vouches) {
+  const groups = new Map()
+  for (const v of vouches) {
+    if (v.subject === v.did) continue
+    const key = `${v.subject}|${v.scope}|${v.unit}`
+    let g = groups.get(key)
+    if (!g) groups.set(key, (g = { key: 'vouch:' + key, subject: v.subject, isAccount: v.isAccount, scope: v.scope, unit: v.unit, lat: v.lat, lon: v.lon, createdAt: v.createdAt, vouchers: [] }))
+    if (!g.vouchers.some((x) => x.did === v.did)) g.vouchers.push({ did: v.did, handle: v.handle || null, uri: v.uri, rkey: v.rkey })
+    if (v.createdAt && (!g.createdAt || v.createdAt > g.createdAt)) g.createdAt = v.createdAt
+  }
+  return [...groups.values()].sort((a, b) => b.vouchers.length - a.vouchers.length || String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+}
+
+// at://did/<a link, case or vouch collection>/rkey, and nothing else.
 export function subjectUri(s) {
   if (typeof s !== 'string') return null
   const m = /^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(s)
-  return m && DID.test(m[1]) && (m[2] === COL.link || m[2] === COL.case) && RKEY.test(m[3]) ? s : null
+  return m && DID.test(m[1]) && (m[2] === COL.link || m[2] === COL.case || m[2] === COL.vouch) && RKEY.test(m[3]) ? s : null
 }
 export const linkUri = (s) => (subjectUri(s) && s.split('/')[3] === COL.link ? s : null)
 
@@ -238,22 +293,23 @@ export async function loadOwnCases(io) {
 // io: { backlinks, resolveDid, getRecord } from ../library/lib.js (or fakes in tests).
 // hidden: { dids: [], uris: [], keep: [] } from hidden.json.
 //
-// It fails closed. If the index can't be asked about any of the three kinds of
+// It fails closed. If the index can't be asked about any of the four kinds of
 // record, nothing is shown, because something that someone asked to have removed
 // might otherwise come back.
 export async function loadCommunity(io, hidden = {}) {
   const hideDid = new Set(hidden.dids || [])
   const hideUri = new Set(hidden.uris || [])
   const keep = new Set(hidden.keep || [])
-  let linkRefs, caseRefs, downRefs
+  let linkRefs, caseRefs, vouchRefs, downRefs
   try {
-    ;[linkRefs, caseRefs, downRefs] = await Promise.all([
+    ;[linkRefs, caseRefs, vouchRefs, downRefs] = await Promise.all([
       io.backlinks(ATLAS_DID, COL.link, '.atlas', MAX_RECORDS),
       io.backlinks(ATLAS_DID, COL.case, '.atlas', MAX_RECORDS),
+      io.backlinks(ATLAS_DID, COL.vouch, '.atlas', MAX_RECORDS),
       io.backlinks(ATLAS_DID, COL.takedown, '.atlas', MAX_RECORDS),
     ])
   } catch (error) {
-    return { links: [], cases: [], withheld: 0, unreachable: 0, error }
+    return { links: [], cases: [], vouches: [], withheld: 0, unreachable: 0, error }
   }
   const read = (collection, parse) => async (r) => {
     const id = await io.resolveDid(r.did)
@@ -262,10 +318,12 @@ export async function loadCommunity(io, hidden = {}) {
   }
   const wantLinks = unique(linkRefs).filter((r) => !hideDid.has(r.did))
   const wantCases = unique(caseRefs).filter((r) => !hideDid.has(r.did) && r.did !== ATLAS_DID)
+  const wantVouches = unique(vouchRefs).filter((r) => !hideDid.has(r.did))
   const downs = unique(downRefs)
-  const [gotLinks, gotCases, gotDowns] = await Promise.all([
+  const [gotLinks, gotCases, gotVouches, gotDowns] = await Promise.all([
     pool(wantLinks, 8, read(COL.link, parseLink)),
     pool(wantCases, 8, read(COL.case, parseCase)),
+    pool(wantVouches, 8, read(COL.vouch, parseVouch)),
     pool(downs, 8, read(COL.takedown, parseTakedown)),
   ])
   const asked = new Set()
@@ -291,5 +349,7 @@ export async function loadCommunity(io, hidden = {}) {
   const links = collect(gotLinks, wantLinks, COL.link)
   // A contributed case study must sit in a unit of the map, as a link does.
   const cases = collect(gotCases, wantCases, COL.case).filter((c) => c.scope && c.unit)
-  return { links, cases, withheld, unreachable, error: null }
+  // Nobody shows as vouched for if they, or their address, are on the hidden list.
+  const vouches = collect(gotVouches, wantVouches, COL.vouch).filter((v) => !hideDid.has(v.subject) && !hideUri.has(v.subject))
+  return { links, cases, vouches, withheld, unreachable, error: null }
 }
