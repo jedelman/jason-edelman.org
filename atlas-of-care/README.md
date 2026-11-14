@@ -15,10 +15,11 @@ It has three parts:
    marks leverage (a bounded act that changes what follows). They are atproto records
    (`org.jason-edelman.atlas.case`) in the atlas owner's repo. Until the owner has
    published them there, the page shows the copies in `data/entries.json`.
-3. **What people add**: anyone with an atproto account can add a link to a place, or a
-   case study of their own in the same form, with its source. Those are drawn in amber
-   and carry the handle of whoever added them. Anyone signed in can ask for one to be
-   taken down.
+3. **What people add**: the page opens on two questions. "What do you do to hold your
+   world together?" takes a link to a place, or a case study of one's own in the
+   atlas's form, with its source. "Who holds your world together?" takes a vouch for an
+   organisation or a person. Those are drawn in amber and carry the handle of whoever
+   added them. Anyone signed in can ask for one to be taken down.
 
 It is styled to the rest of the site: the field-notes palette, Epilogue and Charis SIL,
 no rounded corners, shadows or gradients (`.impeccable.md`). One colour comes from
@@ -33,8 +34,8 @@ be told apart with red-green colour blindness.
 | `app.js` | The map, layers, place profile, sign-in, adding a link and asking for a takedown. |
 | `atlas.js` | The rules for links and takedown requests: building, checking and loading them. No DOM, so it runs in Node tests. |
 | `atlas.test.mjs` | `node --test atlas-of-care/atlas.test.mjs` |
-| `client-metadata.json` | The atproto OAuth client. Its scope is the three collections below. |
-| `lexicons/` | The schemas of a link, a case study and a takedown request. |
+| `client-metadata.json` | The atproto OAuth client. Its scope is the four collections below. |
+| `lexicons/` | The schemas of a link, a case study, a vouch and a takedown request. |
 | `hidden.json` | What this page declines to show (`dids`, `uris`), and links it shows despite a takedown request (`keep`). |
 | `data/` | Map shapes, layer values, the case studies' seed file (`entries.json`) and the prior-work list (`prior.json`). |
 | `vendor/` | d3 7.9.0 and topojson-client 3.1.0, checked in; `vendor/LICENSES.txt` has the notices. |
@@ -54,7 +55,8 @@ bsky.social (handle resolution at sign-in). No code loads from a CDN at runtime.
 |---|---|---|
 | `org.jason-edelman.atlas.link` | whoever added it | A web address and a place. No text of the person's own. |
 | `org.jason-edelman.atlas.case` | the atlas owner, or whoever wrote it | A case study: who does what, who pays, what came of it, and its source. |
-| `org.jason-edelman.atlas.takedown` | whoever asked | A request that one link or contributed case study come off the page. It points at the record and gives no reason. |
+| `org.jason-edelman.atlas.vouch` | whoever vouched | "This one holds my world together, here": an atproto account or a web address, and a place. No text of the voucher's own. |
+| `org.jason-edelman.atlas.takedown` | whoever asked | A request that one link, contributed case study or vouch come off the page. It points at the record and gives no reason. |
 
 ### The atlas's own case studies
 
@@ -88,8 +90,25 @@ records hold no floats). A link is never placed at an address. Its place name is
 up from the unit id, so a record cannot supply one; a link whose unit this atlas does
 not have is not shown. The heading on its card is the address's host name.
 
-**A takedown request** takes effect at once: the link or contributed case study stops
-being shown. Any signed-in account can make one. If a request has been looked at and
+### Vouches
+
+A vouch names who it is for in one of two ways: an atproto account, stored as its DID
+(the form takes a handle and looks the DID up), or an http(s) address. It cannot hold a
+name typed as text, so nobody is put on the map who has neither an account nor a web
+page. It is placed in the selected unit, like a link.
+
+Vouches for the same one in the same unit show as one entry with everyone who vouched;
+a voucher counts once, and a vouch for oneself is not counted (`groupVouches`). The
+entry's heading is the account's handle, or the address's host name. "I vouch too" adds
+the signed-in person's own record. "Withdraw my vouch" deletes it.
+
+Whoever is vouched for has the same remedy as anyone: a takedown request, which takes
+the entry off at once. Because an entry stands for one record per voucher, the button
+writes one takedown record for each. Listing a DID or an address under `dids` or `uris`
+in `hidden.json` also stops anyone showing as vouched for under it.
+
+**A takedown request** takes effect at once: the link, contributed case study or vouch
+stops being shown. Any signed-in account can make one. If a request has been looked at and
 turned down, list the record's URI under `keep` in `hidden.json` and it is shown again.
 
 Nothing in a record is trusted. `parseLink` keeps only its own six fields, whatever
@@ -125,6 +144,10 @@ delete it with the Remove button.
 - **Anyone signed in can take a link down, and can do it to every link.** That is the
   chosen trade: a wrongly hidden link costs little, a wrongly shown one can cost a
   great deal. `keep` is the way back.
+- **A vouch places someone on a map who did not ask to be there.** It is limited to
+  public accounts and web addresses, sits at the level of a county or district and not
+  an address, and comes off at once on request. It is still a claim about a named
+  organisation or person made by someone else.
 - **A takedown request needs an atproto account.** Someone without one cannot make one
   here. The sourced entries have no takedown button at all.
 - **Constellation is a dependency.** If it does not answer, no links are shown and the

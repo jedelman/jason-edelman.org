@@ -4,7 +4,7 @@
   "defs": {
     "main": {
       "type": "record",
-      "description": "A request that one link or one contributed case study come off the Atlas of Care. It lives in the requester's repo and carries no reason or other text.",
+      "description": "A request that one link, contributed case study or vouch come off the Atlas of Care. It lives in the requester's repo and carries no reason or other text.",
       "key": "tid",
       "record": {
         "type": "object",
@@ -22,7 +22,7 @@
           "subject": {
             "type": "string",
             "format": "at-uri",
-            "description": "The org.jason-edelman.atlas.link or org.jason-edelman.atlas.case record to take down."
+            "description": "The org.jason-edelman.atlas.link, .case or .vouch record to take down."
           },
           "createdAt": {
             "type": "string",
