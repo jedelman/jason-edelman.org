@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atlas of Care</title>
-  <meta name="description" content="A map of the work that keeps life going, by country, county, district and region, with sourced stories and links added by people.">
+  <meta name="description" content="What do you do to hold your world together, and who holds it together for you? A map of the answers people give, over what life is like in each country, county, district and region.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap">
@@ -141,7 +141,7 @@
     .mark.r { border-radius: 50%; } .mark.t { transform: rotate(45deg) scale(.86); }
     .mark.p { border-radius: 50%; border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
     .mark.pc { border-color: var(--warn); }
-    .mark.pv { border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
+    .mark.pv { border-radius: 0; border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
 
     .mapbox { position: relative; background: var(--sea); border: 1px solid var(--border); }
     .mapbox svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
@@ -176,6 +176,7 @@
     .swatches i.pinkey { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--bright); background: var(--bg); }
     .swatches i.pinkey.t { border-radius: 0; transform: rotate(45deg) scale(.86); }
     .swatches i.pinkey.p { border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
+    .swatches i.pinkey.pv { border-radius: 0; border-color: var(--bg); background: var(--warn); outline: 1px solid var(--warn); }
     .srcline { font-family: var(--font-mono); font-size: .68rem; line-height: 1.5; color: var(--muted); }
     .readout { background: var(--surface); border: 1px solid var(--border); padding: 12px 14px; min-height: 104px; }
     .readout h3 { font-family: var(--font-display); font-weight: 700; font-size: 1rem; color: var(--bright); margin-bottom: 4px; }
@@ -300,7 +301,7 @@
       <p class="tagline">find each other.</p>
       <nav class="sections" aria-label="Atlas of Care">
         <a href="/">&larr; Jason Edelman</a>
-        <a href="#entries">Stories and interventions</a>
+        <a href="#entries">Who is here</a>
         <a href="#limits-section" class="more">What it cannot see</a>
         <a href="#about">About</a>
         <a href="#prior" id="priornav" class="more" hidden>Prior work</a>
@@ -311,7 +312,7 @@
 
   <section class="asks" id="add" aria-label="Add to the map">
     <div class="askrow">
-      <button type="button" class="askbtn" data-ask="do" aria-pressed="false"><span class="q">What do you do to hold your world together?</span><span class="a">Add a link or a case study</span></button>
+      <button type="button" class="askbtn" data-ask="do" aria-pressed="false"><span class="q">What do you do to hold your world together?</span><span class="a">Add a link to it</span></button>
       <button type="button" class="askbtn" data-ask="who" aria-pressed="false"><span class="q">Who holds your world together?</span><span class="a">Vouch for an organisation or a person</span></button>
     </div>
     <div id="notice" aria-live="polite"></div>
@@ -355,9 +356,8 @@
   </section>
 
   <section id="entries">
-    <h2>Stories and interventions</h2>
-    <p>Each sourced entry names a place, the people doing the work, what they do, who pays, and what happened when it stopped, as far as the source says. The quotes are copied from the linked pages. What people have added comes first and says who added it. The filters above the map apply here too.</p>
-    <p class="count" id="count"></p>
+    <h2>Who is here</h2>
+    <p>What people have added: a link to what they do in a place, or a vouch for an organisation or a person who holds their world together there. Each carries the handle of whoever added it. Nobody has checked them. Anyone signed in can ask for one to be taken down.</p>
     <p class="count" id="communitynote"></p>
     <div class="stories" id="stories"></div>
   </section>
@@ -369,8 +369,7 @@
       <footer>Jason Edelman, <a href="https://bsky.app/profile/jason-edelman.org/post/3n2blk3l4gc2i">on Bluesky</a>, 14 November 2026</footer>
     </blockquote>
     <p class="how">Pick a layer, then pick a place. The layers are in order of how soon it is felt when the work behind them stops: a birth with nobody trained in the room is felt within hours, an untended forest over years. Three parts of the map open to local units: the counties of the United States, the districts of India and the regions of Europe.</p>
-    <p class="how">The marks on top are particular: a place, the people doing the work, who pays, and a source. A ring is maintenance, which has to be done again or the loss comes back. A diamond is leverage, a bounded act that changes what follows. Where a famous result is disputed, the entry says so.</p>
-    <p class="how">The case studies are records in an atproto account, the kind of account a Bluesky handle is. Anyone with one can add to the map from their own: a link to a place, a case study of their own with its source, or a vouch for an organisation or a person who holds their world together. What people add is marked in amber and carries their handle, and nobody has checked it. Anyone signed in, including whoever is vouched for, can ask for one to be taken down, and it comes off this page at once.</p>
+    <p class="how">The marks on the map are what people have added, and nothing else. Anyone with an atproto account, such as a Bluesky handle, can add a link to what they do in a place, or vouch for an organisation or a person who holds their world together there. Each mark carries the handle of whoever added it, and nobody has checked it. Anyone signed in, including whoever is vouched for, can ask for one to be taken down, and it comes off this page at once.</p>
   </section>
 
   <section class="limits" id="limits-section">

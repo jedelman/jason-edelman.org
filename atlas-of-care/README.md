@@ -3,23 +3,22 @@
 A map of the work that keeps life going, served at `jason-edelman.org/atlas-of-care/`.
 Plain browser JavaScript, no build step for the page. Subtitle: "find each other."
 
-It has three parts:
+It has two parts:
 
 1. **Layers**: statistics tinted onto a map, in six groups ordered by how soon it is
    felt when the work behind them stops. The world map has 29, most of them covering
-   150 to 215 countries. Four maps: the world by country, the United
-   States by county, India by district, Europe by NUTS-2 region. Clicking a unit opens
-   a profile of every layer for that place.
-2. **Case studies**: stories and interventions, each resting on a page that was
-   fetched and quoted. A ring marks maintenance (it has to be done again); a diamond
-   marks leverage (a bounded act that changes what follows). They are atproto records
-   (`org.jason-edelman.atlas.case`) in the atlas owner's repo. Until the owner has
-   published them there, the page shows the copies in `data/entries.json`.
-3. **What people add**: the page opens on two questions. "What do you do to hold your
-   world together?" takes a link to a place, or a case study of one's own in the
-   atlas's form, with its source. "Who holds your world together?" takes a vouch for an
-   organisation or a person. Those are drawn in amber and carry the handle of whoever
-   added them. Anyone signed in can ask for one to be taken down.
+   150 to 215 countries. Three parts of it open to local units: US counties, Indian
+   districts and European NUTS-2 regions. Clicking a unit opens a profile of every
+   layer for that place, and of who is there.
+2. **What people add**: the page opens on two questions. "What do you do to hold your
+   world together?" takes a link to it, in a place. "Who holds your world together?"
+   takes a vouch for an organisation or a person. Those are the only marks on the map.
+   Each carries the handle of whoever added it, and anyone signed in can ask for one to
+   be taken down.
+
+The atlas began the day with 56 researched case studies on the map. Jason dropped them
+on 2026-11-14 to put all of it on people finding each other. They are in this folder's
+git history (`data/entries.json` before that date).
 
 It is styled to the rest of the site: the field-notes palette, Epilogue and Charis SIL,
 no rounded corners, shadows or gradients (`.impeccable.md`). One colour comes from
@@ -31,13 +30,13 @@ be told apart with red-green colour blindness.
 | File | What it is |
 |---|---|
 | `index.html` | Markup and styles. |
-| `app.js` | The map, layers, place profile, sign-in, adding a link and asking for a takedown. |
-| `atlas.js` | The rules for links and takedown requests: building, checking and loading them. No DOM, so it runs in Node tests. |
+| `app.js` | The map, layers, place profile, sign-in, adding a link, vouching and asking for a takedown. |
+| `atlas.js` | The rules for links, vouches and takedown requests: building, checking and loading them. No DOM, so it runs in Node tests. |
 | `atlas.test.mjs` | `node --test atlas-of-care/atlas.test.mjs` |
-| `client-metadata.json` | The atproto OAuth client. Its scope is the four collections below. |
-| `lexicons/` | The schemas of a link, a case study, a vouch and a takedown request. |
+| `client-metadata.json` | The atproto OAuth client. Its scope is the three collections below. |
+| `lexicons/` | The schemas of a link, a vouch and a takedown request. |
 | `hidden.json` | What this page declines to show (`dids`, `uris`), and links it shows despite a takedown request (`keep`). |
-| `data/` | Map shapes, layer values, the case studies' seed file (`entries.json`) and the prior-work list (`prior.json`). |
+| `data/` | Map shapes, layer values and the prior-work list (`prior.json`). |
 | `vendor/` | d3 7.9.0 and topojson-client 3.1.0, checked in; `vendor/LICENSES.txt` has the notices. |
 | `build/` | The Python scripts that made `data/`. See "Rebuilding the data". |
 
@@ -54,29 +53,8 @@ bsky.social (handle resolution at sign-in). No code loads from a CDN at runtime.
 | Record | Repo | Meaning |
 |---|---|---|
 | `org.jason-edelman.atlas.link` | whoever added it | A web address and a place. No text of the person's own. |
-| `org.jason-edelman.atlas.case` | the atlas owner, or whoever wrote it | A case study: who does what, who pays, what came of it, and its source. |
 | `org.jason-edelman.atlas.vouch` | whoever vouched | "This one holds my world together, here": an atproto account or a web address, and a place. No text of the voucher's own. |
-| `org.jason-edelman.atlas.takedown` | whoever asked | A request that one link, contributed case study or vouch come off the page. It points at the record and gives no reason. |
-
-### The atlas's own case studies
-
-They live in the owner's repo (`did:plc:zz4wcje4a2nbbtc7pdoth3f2`) and are read from it
-directly with `listRecords`, with no index in between. To put them there, the owner
-signs in on the page and presses "Publish the N from the site's file" in the Add a
-link section. That writes each entry of `data/entries.json` with `putRecord` under a
-key made from its title, so pressing it again updates the records and does not double
-them. After that the repo is the source of truth: edit a record there and the page
-follows; `data/entries.json` is only what the page shows when the repo cannot be read
-or has none. Takedown requests do not apply to the owner's own case studies.
-
-### Case studies people contribute
-
-Written in the form in a place's profile and saved to the writer's own repo. A
-contributed case study must name a source with an http(s) address, and it is placed in
-the unit that was selected, under the atlas's own name for that unit (a typed place
-name is ignored). Its text is the writer's: capped in length, stripped of control
-characters, and escaped by the page. It shows beside the atlas's own with "Contributed
-by @handle. Not checked by the atlas." and a takedown button.
+| `org.jason-edelman.atlas.takedown` | whoever asked | A request that one link or vouch come off the page. It points at the record and gives no reason. |
 
 Nobody keeps a list of contributors and this site stores nothing. Both records name
 the atlas's DID (`did:plc:zz4wcje4a2nbbtc7pdoth3f2`, jason-edelman.org) in their
@@ -107,8 +85,7 @@ the entry off at once. Because an entry stands for one record per voucher, the b
 writes one takedown record for each. Listing a DID or an address under `dids` or `uris`
 in `hidden.json` also stops anyone showing as vouched for under it.
 
-**A takedown request** takes effect at once: the link, contributed case study or vouch
-stops being shown. Any signed-in account can make one. If a request has been looked at and
+**A takedown request** takes effect at once: the link or vouch stops being shown. Any signed-in account can make one. If a request has been looked at and
 turned down, list the record's URI under `keep` in `hidden.json` and it is shown again.
 
 Nothing in a record is trusted. `parseLink` keeps only its own six fields, whatever
@@ -117,8 +94,8 @@ host name (no IP addresses, no localhost), carries no credentials, contains no
 whitespace or direction-changing characters, and is at most 400 characters; it drops
 the fragment. A unit id is letters, digits, dot, underscore and hyphen, at most 64.
 
-`loadCommunity` fails closed: if the index cannot be asked about links, contributed
-case studies or takedown requests, nothing people have added is shown, because
+`loadCommunity` fails closed: if the index cannot be asked about links, vouches or
+takedown requests, nothing people have added is shown, because
 something that someone asked to have removed might otherwise come back.
 
 ### Hiding a link, or keeping one
@@ -138,9 +115,9 @@ delete it with the Remove button.
   handle, readable by anyone whether or not this page shows it. The form says so.
 - **Nobody checks where a link leads.** The page shows the host name and the address
   and says it is unchecked.
-- **Contributed case studies are free text.** Anyone signed in can put their own words
-  on the page under their handle. The checks are a required source, length caps,
-  escaping, the takedown button and `hidden.json`. Nobody reviews them first.
+- **A web address can still carry words** in its path or query. That is the only text a
+  person can put on the page.
+- **The map is empty until people use it.** There are no marks of the atlas's own.
 - **Anyone signed in can take a link down, and can do it to every link.** That is the
   chosen trade: a wrongly hidden link costs little, a wrongly shown one can cost a
   great deal. `keep` is the way back.
@@ -149,9 +126,9 @@ delete it with the Remove button.
   an address, and comes off at once on request. It is still a claim about a named
   organisation or person made by someone else.
 - **A takedown request needs an atproto account.** Someone without one cannot make one
-  here. The sourced entries have no takedown button at all.
+  here.
 - **Constellation is a dependency.** If it does not answer, no links are shown and the
-  page says so. The sourced entries and the layers still work.
+  page says so. The layers still work.
 - **No village or city level, and no street map.** The finest units are US counties,
   Indian districts and European regions. The map is drawn from boundary files with
   d3; there are no tiles.
@@ -215,10 +192,6 @@ cp $G/us.json data/us.topo.json; cp $G/nuts2.json data/eu.topo.json
 `pack/in.units.geojson` (7 MB) was then simplified to `data/in.geo.json` with shapely:
 `buffer(0)`, `simplify(0.012, preserve_topology=True)`, exterior rings turned
 clockwise (d3-geo needs that), coordinates rounded to three places.
-
-`build/merge_entries.py` adds researched entries to `data/entries.json` only when
-their quote is found in a saved copy of the source page. Do not add a sourced entry
-without fetching its source.
 
 ## Prior work
 
