@@ -198,6 +198,28 @@ export async function rosterConvo(env, fetchImpl, convoId) {
 
 // ---- Routes ------------------------------------------------------------------------------------------------------
 
+/** What a message carries besides its text (2026-11-14, Scout's report: "post facets arrive, DM facets don't"): the
+ *  links its facets hold that the text doesn't spell out, and an embedded post (address, author, text). A client can turn
+ *  a link into an embed and drop it from the text: Jason's "We need these capabilities" arrived as the words alone. */
+function extras(m) {
+  const text = typeof m.text === "string" ? m.text : "";
+  const links = [];
+  for (const f of Array.isArray(m.facets) ? m.facets : []) {
+    for (const x of Array.isArray(f?.features) ? f.features : []) {
+      if (x?.$type === "app.bsky.richtext.facet#link" && typeof x.uri === "string" && x.uri && !text.includes(x.uri) && !links.includes(x.uri)) links.push(x.uri);
+    }
+  }
+  const out = links.length ? { links: links.slice(0, 10) } : {};
+  const e = m.embed && typeof m.embed === "object" ? m.embed : null;
+  if (e) {
+    const isRecord = (r) => r && typeof r === "object" && String(r.$type || "").endsWith("#viewRecord");
+    const rec = isRecord(e.record) ? e.record : isRecord(e.record?.record) ? e.record.record : null; // a record embed, or recordWithMedia's
+    if (rec) out.quote = { uri: typeof rec.uri === "string" ? rec.uri : null, author: rec.author?.handle ?? null, text: typeof rec.value?.text === "string" ? rec.value.text.slice(0, 500) : null };
+    else out.embed = String(e.$type || "unknown");
+  }
+  return out;
+}
+
 /** `allowed` is the roster (a Set); every caller passes it, so a missing one fails loudly rather than showing text. */
 function messageView(m, allowed) {
   if (!m || typeof m !== "object") return null;
@@ -207,7 +229,8 @@ function messageView(m, allowed) {
   // drift-test's add and removal came back marked offRoster).
   if (!m.sender?.did) return { id: m.id, rev: m.rev, sender: null, sentAt: m.sentAt, text: null, deleted, system: String(m.$type || "").split("#")[1] || "unknown" };
   const offRoster = !allowed.has(m.sender.did);
-  return { id: m.id, rev: m.rev, sender: m.sender.did, sentAt: m.sentAt, text: deleted || offRoster ? null : (m.text ?? null), deleted, ...(offRoster ? { offRoster: true } : {}) };
+  if (deleted || offRoster) return { id: m.id, rev: m.rev, sender: m.sender.did, sentAt: m.sentAt, text: null, deleted, ...(offRoster ? { offRoster: true } : {}) };
+  return { id: m.id, rev: m.rev, sender: m.sender.did, sentAt: m.sentAt, text: m.text ?? null, deleted, ...extras(m) };
 }
 
 export async function handleGroup(request, env, url, fetchImpl = fetch) {

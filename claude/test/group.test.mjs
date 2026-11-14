@@ -59,7 +59,12 @@ function fakeBluesky({ expireOnce = false, memberPages = null } = {}) {
         messages: [
           { $type: "chat.bsky.convo.defs#messageView", id: "m2", rev: "2", text: "hello from Jason", sender: { did: JASON }, sentAt: "2026-11-13T04:00:00Z" },
           { $type: "chat.bsky.convo.defs#deletedMessageView", id: "m1", rev: "1", sender: { did: SCOUT }, sentAt: "2026-11-13T03:59:00Z" },
-          { $type: "chat.bsky.convo.defs#messageView", id: "m0", rev: "0", text: "an outsider, since removed", sender: { did: OUTSIDER }, sentAt: "2026-11-13T03:58:00Z" },
+          { $type: "chat.bsky.convo.defs#messageView", id: "m0", rev: "0", text: "an outsider, since removed", sender: { did: OUTSIDER }, sentAt: "2026-11-13T03:58:00Z", embed: { $type: "app.bsky.embed.record#view", record: { $type: "app.bsky.embed.record#viewRecord", uri: "at://x/app.bsky.feed.post/secret", author: { handle: "x" }, value: { text: "outsider's quote" } } } },
+          {
+            $type: "chat.bsky.convo.defs#messageView", id: "mq", rev: "q", text: "We need these capabilities", sender: { did: JASON }, sentAt: "2026-11-14T03:09:11Z",
+            facets: [{ index: { byteStart: 0, byteEnd: 2 }, features: [{ $type: "app.bsky.richtext.facet#link", uri: "https://bsky.app/profile/kira.ws/post/3n27psyeacs2b" }] }],
+            embed: { $type: "app.bsky.embed.record#view", record: { $type: "app.bsky.embed.record#viewRecord", uri: "at://did:plc:kira/app.bsky.feed.post/3n27psyeacs2b", author: { handle: "kira.ws" }, value: { text: "bánh mì" } } },
+          },
           { $type: "chat.bsky.convo.defs#systemMessageView", id: "s1", rev: "00", text: "a member was removed", sentAt: "2026-11-13T03:57:00Z" },
         ],
         cursor: "c1",
@@ -281,4 +286,16 @@ test("a malformed stored session is ignored: the bridge logs in", async () => {
   const bsky = fakeBluesky();
   assert.equal((await call("/group/convos", {}, { ...ENV, INBOX }, bsky)).status, 200);
   assert.equal(bsky.calls.filter((c) => c.method === "com.atproto.server.createSession").length, 1);
+});
+
+test("a roster member's links and embedded post come back beside the text; an off-roster sender's never do (Scout, 2026-11-14)", async () => {
+  const r = await call("/group/messages?convoId=room");
+  const mq = r.data.messages.find((m) => m.id === "mq");
+  assert.equal(mq.text, "We need these capabilities");
+  assert.deepEqual(mq.links, ["https://bsky.app/profile/kira.ws/post/3n27psyeacs2b"]);
+  assert.deepEqual(mq.quote, { uri: "at://did:plc:kira/app.bsky.feed.post/3n27psyeacs2b", author: "kira.ws", text: "bánh mì" });
+  const m0 = r.data.messages.find((m) => m.id === "m0");
+  assert.equal(m0.quote, undefined);
+  assert.ok(!r.text.includes("outsider's quote") && !r.text.includes("secret"));
+  assert.equal(r.data.messages.find((m) => m.id === "m2").links, undefined);
 });
