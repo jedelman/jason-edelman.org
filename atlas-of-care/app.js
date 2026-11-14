@@ -126,7 +126,17 @@ el("stories").addEventListener("click", e => {
   const t = e.target.closest("button.takedown"); if (t) requestTakedown(+t.dataset.i);
 });
 // Everything on the page that depends on what people have added, redrawn together.
-function refresh() { reindex(); renderFilters(); renderAccount(); renderCards(); renderConnections(); drawGraph(); applyFilters(); renderPerson(); renderFollows(); notePeople(); }
+function refresh() { reindex(); renderFilters(); renderAccount(); renderCards(); renderConnections(); drawGraph(); applyFilters(); renderPerson(); renderFollows(); renderSteps(); notePeople(); }
+// The numbered instructions under the two questions tick off as the signed-in person does each.
+function renderSteps() {
+  const me = state.me, done = { in: !!me, say: !!me && isHere(me), like: !!me && LIKES.some(v => v.did === me), vouch: !!me && VOUCHES.some(v => v.did === me) };
+  document.querySelectorAll("#steps li").forEach(li => { const d = done[li.dataset.step]; li.classList.toggle("done", d); });
+}
+el("steps").addEventListener("click", e => {
+  const b = e.target.closest("button[data-go]"); if (!b) return;
+  if (b.dataset.go === "do") return openAsk("do");
+  el("entries").scrollIntoView({ behavior: "smooth", block: "start" });
+});
 
 // ---- the graph: one mark for each person who has said what they do, joined to the people
 // whose statements they vouch for (amber) or like (green). It settles by itself: marks

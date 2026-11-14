@@ -20,6 +20,11 @@ There is no map. The page draws a force-directed graph:
 - picking a mark lists what that person says they do and what they vouch for;
 - filters: everyone, vouched for, people you follow, and one place.
 
+Directly under the two questions are four numbered steps (sign in, say what you do,
+like, vouch), at Jason's ask for "clear instructions". Each is filled in once the
+signed-in person has done it, and the first two open the form. A line under the graph
+says how to pick, drag and zoom.
+
 Under the graph, "Who vouches for whom" and "Everyone here" list the same things as
 text. Someone signed in is shown what the people they follow have said, each with Like
 and Vouch buttons.
