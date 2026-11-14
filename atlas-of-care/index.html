@@ -103,9 +103,12 @@
     /* ── Atlas: layers at the side, map in the middle ──────────────── */
     .atlas { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 1.75rem; align-items: start; }
     .stage { min-width: 0; }
-    .layers { display: grid; gap: 14px; }
+    .layers { display: grid; gap: 12px; }
     .layers > .caps { line-height: 1.5; color: var(--muted); }
     .lgroup { display: grid; gap: 1px; }
+    .lgroup button.lg { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; align-items: baseline; width: 100%; border: 0; border-bottom: 1px solid var(--border); padding: 0 0 4px; margin-bottom: 3px; }
+    .lgroup button.lg:hover b { color: var(--link-hover); }
+    .lgroup button.lg[aria-expanded="false"] b { color: var(--soft); }
     .lg { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 8px; align-items: baseline; border-bottom: 1px solid var(--border); padding-bottom: 3px; margin-bottom: 3px; }
     .lg b { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; color: var(--bright); }
     .lg span { font-family: var(--font-mono); font-size: 0.66rem; color: var(--muted); letter-spacing: 0.02em; }

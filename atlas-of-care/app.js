@@ -101,7 +101,7 @@ const OWID = "as processed by Our World in Data", GHO = "World Health Organizati
 const span = k => { const [a, b] = wyears(k); return a === b ? `${a}` : `${a} to ${b}`; };
 const more = (id, group, name, o) => ({ id, group, name, order: o.order, cuts: o.cuts,
   labels: o.pct ? pc(o.cuts, o.cuts[3]) : [`under ${o.cuts[0]}`, ...[1, 2, 3].map(i => `${o.cuts[i - 1]} to ${o.cuts[i]}`), `${o.cuts[3]} and over`],
-  val: d => fmt(d.v, o.dec ?? 0) + o.unit, scaleMax: o.max ?? 100, read: d => `${o.of} ${o.survey ? "Survey year" : "Figure for"} ${d.y}.`,
+  val: d => fmt(d.v, o.dec ?? 0) + o.unit, num: d => fmt(d.v, o.dec ?? 0) + (o.pct ? "%" : ""), scaleMax: o.max ?? 100, read: d => `${o.of} ${o.survey ? "Survey year" : "Figure for"} ${d.y}.`,
   rank: o.rank, measure: o.measure, finding: o.finding, src: `${o.src}. ${span(id)}.` });
 const lt = (k, x) => wcount(k, d => d.v < x), ge = (k, x) => wcount(k, d => d.v >= x);
 WORLD_LAYERS.splice(WORLD_LAYERS.findIndex(L => L.id === "contra"), 1);   // replaced by the WHO's estimate for all women, below
@@ -201,7 +201,7 @@ function adoptPack(S, built) {
     idx[L.id] = i;
     const f = v => fmt(v, L.dec) + L.unit, bare = v => fmt(v, L.dec);
     const ids = Object.keys(P.values).filter(id => P.values[id][i] != null);
-    return { ...L, i, ids, val: d => f(d.v), scaleMax: L.max, order: "high",
+    return { ...L, i, ids, val: d => f(d.v), num: d => bare(d.v) + (L.unit === "%" ? "%" : ""), scaleMax: L.max, order: "high",
       labels: [`under ${bare(L.cuts[0])}`, ...[1, 2, 3].map(j => `${bare(L.cuts[j - 1])} to ${bare(L.cuts[j])}`), `${bare(L.cuts[3])} and over`],
       finding: `${L.name}: from ${f(L.min)} to ${f(L.max)} across ${L.n.toLocaleString("en")} ${S.units}.`,
       read: () => L.measure, rank: `${L.name}: the highest`, src: L.src + "." };
@@ -214,6 +214,7 @@ function adoptPack(S, built) {
 
 const svg = d3.select("#map");
 const g = svg.append("g"), gUnits = g.append("g"), gMesh = g.append("path").attr("fill", "none").attr("class", "mesh"), gPins = g.append("g");
+let openGroup = null;   // the one group whose layers are listed; null follows the selected layer
 let scopeKey = "world", S = SCOPES.world, layer = S.layers[0], picked = null, proj, pathGen, shapes, pins, pinInner, k = 1;
 let fg = "all", fm = "all";
 const zoom = d3.zoom().scaleExtent([1, 14]).translateExtent([[0, 0], [W, H]])
@@ -349,7 +350,10 @@ function draw() {
     `<span><i class="none"></i>no figure</span><span><i class="pinkey"></i>maintenance</span><span><i class="pinkey t"></i>leverage</span><span><i class="pinkey p"></i>a link someone added</span>`;
   el("layers").innerHTML = `<p class="caps">Layers, by how soon it is felt when the work stops</p>` + GROUPS.map(([gk, gl, gw]) => {
     const ls = S.layers.filter(L => L.group === gk);
-    return ls.length ? `<div class="lgroup"><div class="lg"><b>${gl}</b><span>${gw}</span></div>` + ls.map(L => `<button type="button" data-id="${L.id}" aria-pressed="${L.id === layer.id}">${esc(L.name)}</button>`).join("") + `</div>` : "";
+    if (!ls.length) return "";
+    const open = gk === (openGroup ?? layer.group);
+    return `<div class="lgroup"><button type="button" class="lg" data-g="${gk}" aria-expanded="${open}"><b>${gl}</b><span>${open ? gw : ls.length + (ls.length === 1 ? " layer" : " layers")}</span></button>` +
+      (open ? ls.map(L => `<button type="button" data-id="${L.id}" aria-pressed="${L.id === layer.id}">${esc(L.name)}</button>`).join("") : "") + `</div>`;
   }).join("");
   el("layersel").innerHTML = GROUPS.map(([gk, gl]) => {
     const ls = S.layers.filter(L => L.group === gk);
@@ -357,14 +361,14 @@ function draw() {
   }).join("");
   el("scopes").innerHTML = `<span class="caps">Map</span>` + Object.entries(SCOPES).map(([key, s]) => `<button type="button" data-s="${key}" aria-pressed="${key === scopeKey}">${key === "world" ? "World" : s.label}<span class="by">, by ${s.unit}</span></button>`).join("");
   // rank
-  el("rankhead").textContent = layer.rank; el("ranknote").textContent = S.units[0].toUpperCase() + S.units.slice(1) + " with a figure: " + S.ids(layer).length.toLocaleString("en") + ".";
+  el("rankhead").textContent = layer.rank; el("ranknote").textContent = layer.measure + " " + S.units[0].toUpperCase() + S.units.slice(1) + " with a figure: " + S.ids(layer).length.toLocaleString("en") + ".";
   el("rankkey").hidden = !layer.gendered;
   const dir = layer.order === "low" ? 1 : -1, w = x => Math.max(.5, Math.min(100, 100 * x / (layer.id === "hours" ? 6 : layer.scaleMax))) + "%";
   const sorted = S.ids(layer).map(id => [id, S.get(layer, id)]).sort((a, b) => dir * (a[1].v - b[1].v));
   const nm = id => (scopeKey === "world" ? C[id].n : S.pack.names[id] || id);
   el("rank").innerHTML = sorted.slice(0, 10).map(([id, d]) => `<div class="row"><div class="nm">${esc(nm(id))}</div><div class="bars">` + (layer.gendered
     ? `<div class="b"><div style="width:${w(d.f)};background:var(--women)"></div><span>${layer.f(d)}</span></div><div class="b"><div style="width:${w(d.m)};background:var(--men)"></div><span>${layer.m(d)}</span></div>`
-    : `<div class="b"><div style="width:${w(d.v)};background:var(--s4)"></div><span>${layer.val(d)}</span></div>`) + `</div></div>`).join("");
+    : `<div class="b"><div style="width:${w(d.v)};background:var(--s4)"></div><span>${(layer.num || layer.val)(d)}</span></div>`) + `</div></div>`).join("");
   el("tabledetails").open = false; el("table").innerHTML = "";
   el("tabledetails").ontoggle = () => { if (!el("tabledetails").open || el("table").innerHTML) return;
     el("table").innerHTML = `<thead><tr><th>${S.unit[0].toUpperCase() + S.unit.slice(1)}</th><th>Figure</th>${layer.gendered ? "<th>Women</th><th>Men</th>" : ""}</tr></thead><tbody>` +
@@ -402,11 +406,16 @@ function profile() {
 el("profile").addEventListener("click", e => {
   if (e.target.closest("#addbox")) return;
   const o = e.target.closest("button.open"); if (o) return setScope(o.dataset.s);
-  const r = e.target.closest("button.prow"); if (r) { layer = S.layers.find(L => L.id === r.dataset.id); draw(); document.querySelector(".mapbox").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
+  const r = e.target.closest("button.prow"); if (r) { layer = S.layers.find(L => L.id === r.dataset.id); openGroup = null; draw(); document.querySelector(".mapbox").scrollIntoView({ behavior: "smooth", block: "center" }); return; }
   const a = e.target.closest("a[data-i]"); if (a) { e.preventDefault(); selectStory(+a.dataset.i, "story"); }
 });
-el("layers").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; layer = S.layers.find(L => L.id === b.dataset.id); draw(); });
-el("layersel").addEventListener("change", e => { layer = S.layers.find(L => L.id === e.target.value); draw(); });
+el("layers").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.g) openGroup = b.dataset.g;   // open a group without changing the map
+  else { layer = S.layers.find(L => L.id === b.dataset.id); openGroup = null; }
+  draw();
+});
+el("layersel").addEventListener("change", e => { layer = S.layers.find(L => L.id === e.target.value); openGroup = null; draw(); });
 el("scopes").addEventListener("click", e => { const b = e.target.closest("button"); if (b) setScope(b.dataset.s); });
 
 async function setScope(key) {
@@ -417,7 +426,7 @@ async function setScope(key) {
     catch (err) { el("loading").textContent = "The local map could not be loaded."; return; }
     el("loading").hidden = true;
   }
-  scopeKey = key; S = T; picked = null;
+  scopeKey = key; S = T; picked = null; openGroup = null;
   layer = S.layers.find(L => L.group === layer.group) || S.layers[0];
   buildMap(); draw();
 }
