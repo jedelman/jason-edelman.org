@@ -1,14 +1,13 @@
 // node --test atlas-of-care/atlas.test.mjs
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { buildLink, parseLink, buildTakedown, parseTakedown, loadCommunity, loadOwnCases, buildCase, parseCase, caseRkey, cleanUrl, linkUri, subjectUri, buildVouch, parseVouch, groupVouches, vouchSubject, COL, ATLAS_DID, SCOPE, MAX_URL } from './atlas.js'
+import { buildLink, parseLink, buildTakedown, parseTakedown, loadCommunity, cleanUrl, linkUri, subjectUri, buildVouch, parseVouch, groupVouches, vouchSubject, COL, ATLAS_DID, SCOPE, MAX_URL } from './atlas.js'
 
 const good = { url: 'https://example.org/acequia', scope: 'us', unit: '35039', lat: 36.5123, lon: -106.6987 }
 const uriOf = (did, rkey) => `at://${did}/${COL.link}/${rkey}`
 
-test('scope covers the four collections and nothing else', () => {
-  assert.equal(SCOPE, 'atproto repo:org.jason-edelman.atlas.link repo:org.jason-edelman.atlas.case repo:org.jason-edelman.atlas.vouch repo:org.jason-edelman.atlas.takedown')
+test('scope covers the three collections and nothing else', () => {
+  assert.equal(SCOPE, 'atproto repo:org.jason-edelman.atlas.link repo:org.jason-edelman.atlas.vouch repo:org.jason-edelman.atlas.takedown')
 })
 
 test('a link record holds an address and a place, and no other fields', () => {
@@ -83,14 +82,14 @@ test('a takedown points at one link on this map and carries nothing else', () =>
   assert.equal(parseTakedown({ ...r.record, reason: 'ignored' }), subject)
 })
 
-test('a takedown can point at a contributed case study too', () => {
-  const subject = `at://did:plc:aaa/${COL.case}/3abc`
+test('a takedown can point at a vouch too', () => {
+  const subject = `at://did:plc:aaa/${COL.vouch}/3abc`
   assert.equal(subjectUri(subject), subject)
   assert.equal(linkUri(subject), null)
   assert.equal(parseTakedown(buildTakedown(subject).record), subject)
 })
 
-test('a takedown cannot point at anything but a link or case record', () => {
+test('a takedown cannot point at anything but a link or vouch record', () => {
   for (const s of ['at://did:plc:aaa/app.bsky.feed.post/3abc', 'https://example.org', 'at://not-a-did/' + COL.link + '/1', uriOf('did:plc:aaa', 'a/b'), '', null]) {
     assert.equal(subjectUri(s), null, String(s))
     assert.equal(buildTakedown(s).ok, false)
@@ -142,7 +141,7 @@ test('keep overrides a takedown request; hidden dids and uris are never shown', 
 
 test('loadCommunity fails closed when either index query fails', async () => {
   const a = buildLink(good).record
-  for (const failIndex of [COL.link, COL.case, COL.vouch, COL.takedown]) {
+  for (const failIndex of [COL.link, COL.vouch, COL.takedown]) {
     const out = await loadCommunity(fakeIo({ [L('did:plc:aaa', '1')]: a }, { failIndex }))
     assert.equal(out.links.length, 0)
     assert.equal(out.error.message, 'index down')
@@ -154,89 +153,6 @@ test('loadCommunity counts authors it could not reach', async () => {
   const out = await loadCommunity(fakeIo({ [L('did:plc:aaa', '1')]: a, [L('did:plc:eee', '5')]: a }, { failDid: 'did:plc:eee' }))
   assert.deepEqual(out.links.map((e) => e.did), ['did:plc:aaa'])
   assert.equal(out.unreachable, 1)
-})
-
-// ── Case studies ─────────────────────────────────────────────────────────────
-
-const seeds = JSON.parse(readFileSync(new URL('./data/entries.json', import.meta.url), 'utf8'))
-const C = (did, rkey) => `${did}/${COL.case}/${rkey}`
-const study = { title: 'Ditch day', place: 'Rio Arriba County, NM', does: 'Neighbours clear the shared ditch each April.', who: 'Water-right holders', pays: 'not stated',
-  domain: 'commons', mode: 'repeats', lat: 36.51, lon: -106.7, scope: 'us', unit: '35039', source_title: 'Ditch notes', source_url: 'https://example.org/ditch' }
-
-test("every one of the atlas's own case studies becomes a record and comes back the same", () => {
-  assert.ok(seeds.length >= 56)
-  for (const e of seeds) {
-    const built = buildCase(e, new Date('2026-11-14T00:00:00Z'))
-    assert.equal(built.ok, true, `${e.title}: ${built.errors}`)
-    for (const v of Object.values(built.record)) assert.equal(typeof v, 'string') // no floats in atproto records
-    const back = parseCase(built.record)
-    for (const k of ['title', 'place', 'does', 'who', 'mode', 'domain', 'quote', 'source_title', 'source_url']) assert.equal(back[k], e[k], `${e.title}: ${k}`)
-    assert.ok(Math.abs(back.lat - e.lat) < 0.001 && Math.abs(back.lon - e.lon) < 0.001)
-  }
-})
-
-test('the record keys of the seed case studies are distinct and valid', () => {
-  const keys = seeds.map((e) => caseRkey(e.title))
-  assert.equal(new Set(keys).size, keys.length)
-  for (const k of keys) assert.match(k, /^[a-z0-9-]{1,80}$/)
-  assert.equal(caseRkey('Kerala’s ASHA health workers'), 'kerala-s-asha-health-workers')
-  assert.equal(caseRkey('Bello Horizonte olla común'), 'bello-horizonte-olla-comun')
-})
-
-test('"not stated" and "none found" are left out of the record', () => {
-  const { record } = buildCase({ ...study, cost: 'not stated', contested: 'none found' })
-  for (const k of ['pays', 'cost', 'contested']) assert.equal(k in record, false)
-})
-
-test('a case study needs a name, a place, what is done, a kind, a mode and a real source', () => {
-  assert.equal(buildCase(study).ok, true)
-  for (const k of ['title', 'place', 'does', 'source_title']) assert.equal(buildCase({ ...study, [k]: ' ' }).ok, false, k)
-  assert.equal(buildCase({ ...study, source_url: 'javascript:alert(1)' }).ok, false)
-  assert.equal(buildCase({ ...study, source_url: '' }).ok, false)
-  assert.equal(buildCase({ ...study, mode: 'x' }).ok, false)
-  assert.equal(buildCase({ ...study, domain: 'x' }).ok, false)
-  assert.equal(buildCase({ ...study, unit: 'two words' }).ok, false)
-  assert.equal(buildCase({ ...study, lat: 'north' }).ok, false)
-})
-
-test('parseCase caps long text, strips control characters and drops a bad source', () => {
-  const { record } = buildCase(study)
-  const e = parseCase({ ...record, result: 'x'.repeat(5000), who: 'a\u0000b\u202ec' })
-  assert.equal(e.result.length, 900)
-  assert.equal(e.who, 'a b c')
-  assert.equal(parseCase({ ...record, sourceUrl: 'javascript:alert(1)' }), null)
-  assert.equal(parseCase({ ...record, atlas: 'did:plc:other' }), null)
-  assert.equal(parseCase({ ...record, title: 7 }), null)
-})
-
-test("loadOwnCases reads the owner's repo directly and skips records that are not case studies", async () => {
-  const a = buildCase(seeds[0]).record
-  const io = { resolveDid: async () => ({ pds: 'https://pds.example' }), listRecords: async (_pds, repo, col) => {
-    assert.equal(repo, ATLAS_DID); assert.equal(col, COL.case)
-    return [{ uri: `at://${ATLAS_DID}/${COL.case}/k1`, rkey: 'k1', value: a }, { uri: 'x', rkey: 'k2', value: { $type: COL.case } }]
-  } }
-  const out = await loadOwnCases(io)
-  assert.equal(out.length, 1)
-  assert.equal(out[0].title, seeds[0].title)
-  assert.equal(out[0].uri, `at://${ATLAS_DID}/${COL.case}/k1`)
-})
-
-test('contributed case studies load beside links; the owner\'s own and unplaced ones are left out', async () => {
-  const mine = buildCase(study).record
-  const unplaced = buildCase({ ...study, scope: undefined, unit: undefined }).record
-  const out = await loadCommunity(fakeIo({ [C('did:plc:aaa', '1')]: mine, [C(ATLAS_DID, 'own')]: mine, [C('did:plc:bbb', '2')]: unplaced, [L('did:plc:ccc', '3')]: buildLink(good).record }))
-  assert.deepEqual(out.cases.map((c) => c.did), ['did:plc:aaa'])
-  assert.equal(out.cases[0].title, 'Ditch day')
-  assert.equal(out.cases[0].handle, 'aaa.example')
-  assert.equal(out.links.length, 1)
-})
-
-test('a takedown request withholds a contributed case study', async () => {
-  const mine = buildCase(study).record
-  const down = buildTakedown(`at://did:plc:aaa/${COL.case}/1`).record
-  const out = await loadCommunity(fakeIo({ [C('did:plc:aaa', '1')]: mine, [T('did:plc:zzz', '9')]: down }))
-  assert.equal(out.cases.length, 0)
-  assert.equal(out.withheld, 1)
 })
 
 // ── Vouches ──────────────────────────────────────────────────────────────────
