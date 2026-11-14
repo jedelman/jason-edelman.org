@@ -3,43 +3,46 @@
 //
 // The marks on the map are only what people add, and there are three kinds of record:
 //
-//   link      "what do you do to hold your world together": a web address and a
-//             place. No text of the person's own.
-//   vouch     "who holds your world together": a pointer at another account,
-//             and nothing else. It counts only while that account has a link
-//             of its own on the map, so nobody is named here who has not put
-//             themselves here. No place: the place is where they put themselves.
-//   takedown  a request that one link or vouch come off the page. It points at
-//             the record and carries no text. Whoever is vouched for can use it
-//             like anyone else.
+//   statement  "what do you do to hold your world together": one sentence in
+//              the person's own words that begins with "I", and a place. It
+//              may carry a web address. Nobody can write one about someone else:
+//              it sits in the repo of whoever says it, and it has to say "I".
+//   vouch      "who holds your world together": a pointer at one statement, by
+//              its address and its content hash, and nothing else. It affirms
+//              that sentence as it stood. If the sentence is changed or
+//              removed, the vouch no longer counts.
+//   takedown   a request that one statement or vouch come off the page. It
+//              points at the record and carries no text.
 //
-// Nobody keeps a list of contributors and this site stores nothing. Both
-// records name the atlas's DID in their `atlas` field, and Constellation, a
+// Nobody keeps a list of contributors and this site stores nothing. Each
+// record names the atlas's DID in its `atlas` field, and Constellation, a
 // network-wide index of links between records, answers "which records point at
 // this DID?" The index only says where to look. Each record it reports is read
 // from its author's own PDS, so a deleted one 404s and drops out.
 //
-// A link is placed in an administrative unit (a country, a
-// county, a district, a region), never at an address. Its coordinates are the
-// centre of that unit, rounded.
+// A statement is placed in an administrative unit (a country, a county, a
+// district, a region), never at an address. Its coordinates are the centre of
+// that unit, rounded.
 //
 // A takedown request is honoured at once: the record stops being shown here.
 // The site's own hidden.json can list it under `keep` to show it again after a
 // request has been looked at and turned down.
 
 export const NS = 'org.jason-edelman.atlas'
-export const COL = { link: `${NS}.link`, vouch: `${NS}.vouch`, takedown: `${NS}.takedown` }
+export const COL = { statement: `${NS}.statement`, vouch: `${NS}.vouch`, takedown: `${NS}.takedown` }
 // Granular OAuth scope: this app can touch its own three collections, nothing else.
 export const SCOPE = ['atproto', ...Object.values(COL).map((c) => `repo:${c}`)].join(' ')
 // jason-edelman.org. Records point here so the index can find them.
 export const ATLAS_DID = 'did:plc:zz4wcje4a2nbbtc7pdoth3f2'
 export const MAX_RECORDS = 2000
 export const MAX_URL = 400
+export const MAX_TEXT = 140
 
 export const SCOPES = ['world', 'us', 'in', 'eu']
 const UNIT = /^[A-Za-z0-9._-]{1,64}$/
 const DID = /^did:[a-z]+:[A-Za-z0-9._:%-]{1,200}$/
 const RKEY = /^[A-Za-z0-9._~:-]{1,512}$/
+const CID = /^[a-z0-9]{20,200}$/i
 
 // A web address we are willing to show: http(s), a real host name, no
 // credentials, no fragment. Returns the normalised address, or null.
@@ -70,78 +73,109 @@ const coord = (s, lim) => {
   return Number.isFinite(n) && Math.abs(n) <= lim ? n : null
 }
 
-// What the form collects -> a link record to write, or the reasons it can't be.
+// One sentence that begins with "I". Returns it tidied, or null.
+//
+// "I" is the whole rule about whose work a statement can describe. Beyond it,
+// a statement is one line of at most MAX_TEXT characters, with no web address
+// and no @-mention in it: the address has its own field, and a mention is a
+// way of talking about someone else.
+const UNSAFE = /[\u0000-\u001f\u007f\u200b-\u200f\u202a-\u202e\u2066-\u2069]/
+export function cleanStatement(s) {
+  if (typeof s !== 'string') return null
+  if (UNSAFE.test(s.replace(/[\t\n\r]/g, ' '))) return null
+  const text = s.normalize('NFC').replace(/\s+/g, ' ').trim()
+  if (!/^I(?: |['’](?:m|ve|ll|d) )\S/.test(text) || [...text].length < 4 || [...text].length > MAX_TEXT) return null
+  if (/@|:\/\/|\bwww\.|\bhttps?\b/i.test(text)) return null
+  return text
+}
+// What someone typed after the "I" the form already shows -> the full sentence.
+// A leading "I" they typed anyway ("I cook", "I'm the one who") is not doubled.
+export const withI = (rest) => {
+  const r = String(rest ?? '').trim()
+  return /^I(?:\s|['’])/.test(r) ? r : 'I ' + r
+}
+
+// What the form collects -> a statement record to write, or the reasons it can't be.
 // atproto records hold no floats, so coordinates are strings.
-export function buildLink(input, now = new Date()) {
+export function buildStatement(input, now = new Date()) {
   const errors = []
-  const url = cleanUrl(String(input.url ?? '').trim())
-  if (!url) errors.push('Enter a full web address that starts with https:// or http://.')
+  const text = cleanStatement(withI(input.text))
+  if (!text) errors.push(`Say what you do in one line, up to ${MAX_TEXT} characters, with no web address or @ in it.`)
+  const rawUrl = String(input.url ?? '').trim()
+  const url = rawUrl ? cleanUrl(rawUrl) : null
+  if (rawUrl && !url) errors.push('The web address has to be a full one that starts with https:// or http://. It can be left out.')
   const lat = coord(input.lat, 90)
   const lon = coord(input.lon, 180)
   if (!SCOPES.includes(input.scope) || !UNIT.test(String(input.unit ?? '')) || lat == null || lon == null) errors.push('Pick a place on the map first.')
   if (errors.length) return { ok: false, errors }
-  return {
-    ok: true,
-    record: { $type: COL.link, atlas: ATLAS_DID, url, scope: input.scope, unit: String(input.unit), lat: lat.toFixed(2), lon: lon.toFixed(2), createdAt: now.toISOString() },
-  }
+  const record = { $type: COL.statement, atlas: ATLAS_DID, text, scope: input.scope, unit: String(input.unit), lat: lat.toFixed(2), lon: lon.toFixed(2), createdAt: now.toISOString() }
+  if (url) record.url = url
+  return { ok: true, record }
 }
 
-// A record read from someone's repo -> a checked link, or null if it isn't one.
-// Anyone can write anything into their own repo, so nothing is trusted here.
-export function parseLink(value) {
-  if (!value || typeof value !== 'object' || value.$type !== COL.link || value.atlas !== ATLAS_DID) return null
-  const url = cleanUrl(value.url)
+// A record read from someone's repo -> a checked statement, or null if it isn't one.
+// Anyone can write anything into their own repo, so nothing is trusted here. A web
+// address that does not pass is dropped; the statement still stands.
+export function parseStatement(value) {
+  if (!value || typeof value !== 'object' || value.$type !== COL.statement || value.atlas !== ATLAS_DID) return null
+  const text = cleanStatement(value.text)
   const lat = coord(value.lat, 90)
   const lon = coord(value.lon, 180)
-  if (!url || lat == null || lon == null) return null
+  if (!text || lat == null || lon == null) return null
   if (!SCOPES.includes(value.scope) || typeof value.unit !== 'string' || !UNIT.test(value.unit)) return null
+  const url = value.url == null ? null : cleanUrl(value.url)
   const created = new Date(typeof value.createdAt === 'string' ? value.createdAt : NaN)
-  return { url, host: hostOf(url), scope: value.scope, unit: value.unit, lat, lon, createdAt: Number.isNaN(created.getTime()) ? null : created.toISOString() }
+  return { text, url, host: url ? hostOf(url) : null, scope: value.scope, unit: value.unit, lat, lon, createdAt: Number.isNaN(created.getTime()) ? null : created.toISOString() }
 }
 
-// Who a vouch is for: an atproto account, by its DID, and nothing else. A handle
-// is turned into a DID before it gets here.
-export function vouchSubject(s) {
+// at://did/<the statement collection>/rkey, and nothing else.
+export function statementUri(s) {
   if (typeof s !== 'string') return null
-  const t = s.trim()
-  return DID.test(t) ? t : null
+  const m = /^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(s)
+  return m && DID.test(m[1]) && m[2] === COL.statement && RKEY.test(m[3]) ? s : null
 }
 
-// A vouch record to write, or the reason it can't be.
+// A vouch record to write, or the reason it can't be. It points at one
+// statement by address and content hash, the way atproto pins a record.
 export function buildVouch(input, now = new Date()) {
-  const subject = vouchSubject(String(input.subject ?? ''))
-  if (!subject) return { ok: false, errors: ['Give the handle of someone who has added what they do.'] }
-  return { ok: true, record: { $type: COL.vouch, atlas: ATLAS_DID, subject, createdAt: now.toISOString() } }
+  const uri = statementUri(input.uri)
+  const cid = typeof input.cid === 'string' && CID.test(input.cid) ? input.cid : null
+  if (!uri || !cid) return { ok: false, errors: ['A vouch is for something someone has said they do here.'] }
+  return { ok: true, record: { $type: COL.vouch, atlas: ATLAS_DID, subject: { uri, cid }, createdAt: now.toISOString() } }
 }
 
 // A vouch record read from someone's repo -> a checked vouch, or null. Vouches
-// written before 2026-11-14 also held a place; it is ignored. Ones that pointed
-// at a web address are no longer vouches.
+// written before 2026-11-14 pointed at an account or a web address; they are
+// no longer vouches.
 export function parseVouch(value) {
   if (!value || typeof value !== 'object' || value.$type !== COL.vouch || value.atlas !== ATLAS_DID) return null
-  const subject = vouchSubject(value.subject)
-  if (!subject) return null
+  const s = value.subject
+  if (!s || typeof s !== 'object') return null
+  const subject = statementUri(s.uri)
+  if (!subject || typeof s.cid !== 'string' || !CID.test(s.cid)) return null
   const created = new Date(typeof value.createdAt === 'string' ? value.createdAt : NaN)
-  return { subject, createdAt: Number.isNaN(created.getTime()) ? null : created.toISOString() }
+  return { subject, cid: s.cid, createdAt: Number.isNaN(created.getTime()) ? null : created.toISOString() }
 }
 
-// One vouch per voucher per account, however many records they wrote, and
-// nobody's vouch for themselves. `records` keeps every record behind it, so
-// withdrawing or declining reaches all of them.
+// One vouch per voucher per statement, however many records they wrote, and
+// nobody's vouch for their own statement. `records` keeps every record behind
+// it, so withdrawing or declining reaches all of them.
 export function cleanVouches(vouches) {
   const seen = new Map()
   for (const v of vouches) {
-    if (v.subject === v.did) continue
-    const key = v.did + '|' + v.subject
+    if (v.subject.split('/')[2] === v.did) continue
+    const key = v.did + '|' + v.subject + '|' + v.cid
     const have = seen.get(key)
     if (have) have.records.push({ uri: v.uri, rkey: v.rkey })
-    else seen.set(key, { did: v.did, handle: v.handle || null, subject: v.subject, createdAt: v.createdAt, records: [{ uri: v.uri, rkey: v.rkey }] })
+    else seen.set(key, { did: v.did, handle: v.handle || null, subject: v.subject, cid: v.cid, createdAt: v.createdAt, records: [{ uri: v.uri, rkey: v.rkey }] })
   }
   return [...seen.values()]
 }
 
-// The vouches that count: those for an account with a link of its own in `linkDids`.
-export const standingVouches = (vouches, linkDids) => vouches.filter((v) => linkDids.has(v.subject))
+// The vouches that count: those for a statement that is on the map and still
+// reads as it did when it was vouched for. `current` maps a statement's address
+// to its content hash.
+export const standingVouches = (vouches, current) => vouches.filter((v) => current.get(v.subject) === v.cid)
 
 // Which of `dids` the account `me` follows on Bluesky. getJson fetches a URL
 // and returns its JSON; the AppView takes at most 30 accounts a call. Returns
@@ -159,13 +193,12 @@ export async function loadFollowing(getJson, me, dids) {
   return out
 }
 
-// at://did/<a link or vouch collection>/rkey, and nothing else.
+// at://did/<the statement or vouch collection>/rkey, and nothing else.
 export function subjectUri(s) {
   if (typeof s !== 'string') return null
   const m = /^at:\/\/([^/]+)\/([^/]+)\/([^/]+)$/.exec(s)
-  return m && DID.test(m[1]) && (m[2] === COL.link || m[2] === COL.vouch) && RKEY.test(m[3]) ? s : null
+  return m && DID.test(m[1]) && (m[2] === COL.statement || m[2] === COL.vouch) && RKEY.test(m[3]) ? s : null
 }
-export const linkUri = (s) => (subjectUri(s) && s.split('/')[3] === COL.link ? s : null)
 
 export function buildTakedown(subject, now = new Date()) {
   const uri = subjectUri(subject)
@@ -202,7 +235,7 @@ const unique = (refs) => {
   return refs.filter((r) => r && typeof r.did === 'string' && typeof r.rkey === 'string' && !seen.has(r.did + '/' + r.rkey) && seen.add(r.did + '/' + r.rkey))
 }
 
-// What people have added that this page will show, newest first: links and vouches.
+// What people have added that this page will show, newest first: statements and vouches.
 // io: { backlinks, resolveDid, getRecord } from ../library/lib.js (or fakes in tests).
 // hidden: { dids: [], uris: [], keep: [] } from hidden.json.
 //
@@ -216,23 +249,23 @@ export async function loadCommunity(io, hidden = {}) {
   let linkRefs, vouchRefs, downRefs
   try {
     ;[linkRefs, vouchRefs, downRefs] = await Promise.all([
-      io.backlinks(ATLAS_DID, COL.link, '.atlas', MAX_RECORDS),
+      io.backlinks(ATLAS_DID, COL.statement, '.atlas', MAX_RECORDS),
       io.backlinks(ATLAS_DID, COL.vouch, '.atlas', MAX_RECORDS),
       io.backlinks(ATLAS_DID, COL.takedown, '.atlas', MAX_RECORDS),
     ])
   } catch (error) {
-    return { links: [], vouches: [], withheld: 0, unreachable: 0, error }
+    return { statements: [], vouches: [], withheld: 0, unreachable: 0, error }
   }
   const read = (collection, parse) => async (r) => {
     const id = await io.resolveDid(r.did)
     const rec = await io.getRecord(id.pds, r.did, collection, r.rkey)
-    return { parsed: rec ? parse(rec.value) : null, handle: id.handle || null }
+    return { parsed: rec ? parse(rec.value) : null, cid: rec && typeof rec.cid === 'string' ? rec.cid : null, handle: id.handle || null }
   }
   const wantLinks = unique(linkRefs).filter((r) => !hideDid.has(r.did))
   const wantVouches = unique(vouchRefs).filter((r) => !hideDid.has(r.did))
   const downs = unique(downRefs)
   const [gotLinks, gotVouches, gotDowns] = await Promise.all([
-    pool(wantLinks, 8, read(COL.link, parseLink)),
+    pool(wantLinks, 8, read(COL.statement, parseStatement)),
     pool(wantVouches, 8, read(COL.vouch, parseVouch)),
     pool(downs, 8, read(COL.takedown, parseTakedown)),
   ])
@@ -252,12 +285,12 @@ export async function loadCommunity(io, hidden = {}) {
       const uri = `at://${r.did}/${collection}/${r.rkey}`
       if (hideUri.has(uri)) return
       if (asked.has(uri) && !keep.has(uri)) return void withheld++
-      out.push({ ...g.value.parsed, uri, rkey: r.rkey, did: r.did, handle: g.value.handle })
+      out.push({ ...g.value.parsed, uri, rkey: r.rkey, did: r.did, handle: g.value.handle, ...(collection === COL.statement ? { recordCid: g.value.cid } : {}) })
     })
     return out.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
   }
-  const links = collect(gotLinks, wantLinks, COL.link)
+  const statements = collect(gotLinks, wantLinks, COL.statement)
   // Nobody shows as vouched for if they are on the hidden list.
-  const vouches = collect(gotVouches, wantVouches, COL.vouch).filter((v) => !hideDid.has(v.subject))
-  return { links, vouches, withheld, unreachable, error: null }
+  const vouches = collect(gotVouches, wantVouches, COL.vouch).filter((v) => !hideDid.has(v.subject.split('/')[2]))
+  return { statements, vouches, withheld, unreachable, error: null }
 }
