@@ -29,6 +29,9 @@
   // Without both, every /group/ route answers 404.
   // Claude's inbox (src/inbox.js). INBOX_TOKEN is a secret, set with
   // `npx wrangler secret put INBOX_TOKEN`, never a var here.
+  // Logs on (2026-11-14): the group bridge logs each Bluesky login and refresh, so they can be counted against
+  // Bluesky's 300-a-day limit.
+  "observability": { "enabled": true },
   "kv_namespaces": [
     { "binding": "INBOX", "id": "df04496da9ca4598adbbaba27e97002a" }
   ]
