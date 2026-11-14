@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atlas of Care</title>
-  <meta name="description" content="What do you do to hold your world together, and who holds it together for you? A map for finding each other: links to what people do and vouches for who they rely on, by country, county, district and region.">
+  <meta name="description" content="What do you do to hold your world together, and who holds it together for you? A map for finding each other: what people say they do, in their own words, and who vouches for it, by country, county, district and region.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap">
@@ -110,6 +110,8 @@
     .flist li { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid var(--rule); overflow-wrap: anywhere; }
     .flist li > div { flex: 1 1 16em; min-width: 0; }
     .flist li span { color: var(--soft); font-size: .9rem; }
+    .flist .said { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; line-height: 1.25; color: var(--bright); text-decoration: none; }
+    .flist .said:hover { color: var(--link-hover); }
     .flist .done { color: var(--muted); }
     .flist button.vouch { min-height: 32px; border-color: var(--accent); color: var(--accent); }
     .askhere { margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -183,6 +185,11 @@
     .addform { display: grid; gap: 10px; }
     .addform .row { display: flex; gap: 8px; align-items: stretch; }
     .addform .row input { flex: 1 1 auto; }
+    /* "I" is set by the form; the person writes the rest. */
+    .addform .say { align-items: center; gap: 10px; }
+    .addform .say .i { display: block; font-family: var(--font-display); font-weight: 900; font-size: 1.6rem; line-height: 1; color: var(--bright); }
+    .addform .say input { font-size: 1.1rem; min-height: 46px; }
+    .addform .eg { font-style: italic; color: var(--muted); margin: -4px 0 0; }
     .addform label { display: grid; gap: 2px; font-size: .82rem; color: var(--soft); }
     .addform label.radio { display: inline-flex; gap: 6px; align-items: center; font-size: .9rem; color: var(--text); }
     .addform label input, .addform label select, .addform textarea { width: 100%; }
@@ -203,7 +210,7 @@
     .story.sel { border-color: var(--accent); }
     .story.people { border-color: color-mix(in oklch, var(--warn) 45%, var(--border)); }
     .story.people .caps { color: var(--warn); }
-    .story h3 { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; line-height: 1.2; color: var(--bright); }
+    .story h3 { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; line-height: 1.2; letter-spacing: -0.01em; color: var(--bright); text-wrap: balance; }
     .story .where { font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
     .story .mode { font-size: .85rem; color: var(--soft); }
     .story q { font-style: italic; font-size: 1.02rem; line-height: 1.45; quotes: "\201C" "\201D"; }
@@ -262,8 +269,8 @@
 
   <section class="asks" id="add" aria-label="Add to the map">
     <div class="askrow">
-      <button type="button" class="askbtn" data-ask="do" aria-pressed="false"><span class="q">What do you do to hold your world together?</span><span class="a">Add a link to it</span></button>
-      <button type="button" class="askbtn" data-ask="who" aria-pressed="false"><span class="q">Who holds your world together?</span><span class="a">Vouch for someone who is here</span></button>
+      <button type="button" class="askbtn" data-ask="do" aria-pressed="false"><span class="q">What do you do to hold your world together?</span><span class="a">Say it, starting with I</span></button>
+      <button type="button" class="askbtn" data-ask="who" aria-pressed="false"><span class="q">Who holds your world together?</span><span class="a">Vouch for what they say they do</span></button>
     </div>
     <div id="notice" aria-live="polite"></div>
     <div class="contribute" id="contribute" hidden>
@@ -302,7 +309,7 @@
 
   <section id="entries">
     <h2>Everyone here</h2>
-    <p>What people have added: a link to what they do, in a place. Under each, whoever says that person holds their world together. Each carries the handle of whoever added it. Nobody has checked them. Anyone signed in can ask for a link to be taken down, and whoever is vouched for can decline a vouch.</p>
+    <p>What people say they do, each in their own words and each beginning with I. Under each, whoever vouches for it. Nobody has checked them, and nobody can say what someone else does. Anyone signed in can ask for one to be taken down, and whoever wrote it can decline a vouch.</p>
     <p class="count" id="communitynote"></p>
     <div class="stories" id="stories"></div>
   </section>
@@ -313,9 +320,9 @@
       There&rsquo;s a whole geography of tending, an atlas of people quietly holding the world together, that I think is more visible to the people that want to profit from the chaos of losing than it is to the vaster population who is protected by it. What if it was made visible?
       <footer>Jason Edelman, <a href="https://bsky.app/profile/jason-edelman.org/post/3n2blk3l4gc2i">on Bluesky</a>, 14 November 2026</footer>
     </blockquote>
-    <p class="how">This is a map for finding each other. It asks two things. What do you do to hold your world together? Who holds it together for you? An answer to the first is a link to the thing you do, set down in a place: a country, or a county of the United States, a district of India, a region of Europe. An answer to the second is a vouch for someone else who has answered the first.</p>
-    <p class="how">So nobody is on this map who did not put themselves on it. There is nothing here but those answers. Pick a place to see who is there. Follow a link to find them. Where someone vouches for someone else, a line joins the two.</p>
-    <p class="how">Anyone with an atproto account, such as a Bluesky handle, can add. Sign in and the page shows which of the people you follow are already here, and asks whether they hold your world together. Each mark carries the handle of whoever added it, and nobody has checked it. Anyone signed in can ask for a link to be taken down, and it comes off this page at once.</p>
+    <p class="how">This is a map for finding each other. It asks two things. What do you do to hold your world together? Who holds it together for you? An answer to the first is one sentence in your own words that begins with I: I feed the birds, I cook for my kids, I clean toilets. It is set down in a place: a country, or a county of the United States, a district of India, a region of Europe. An answer to the second is a vouch for a sentence someone else has written.</p>
+    <p class="how">So nobody here says what another person does. You say your own work, and you can affirm someone else's and be affirmed for yours. There is nothing on the map but that. Pick a place to see who is there. Where someone vouches for what someone else does, a line joins the two.</p>
+    <p class="how">Anyone with an atproto account, such as a Bluesky handle, can add. Sign in and the page shows what the people you follow have said, and asks whether you vouch for it. Each sentence carries the handle of whoever wrote it, and nobody has checked it. Anyone signed in can ask for one to be taken down, and it comes off this page at once.</p>
   </section>
 
   <section class="limits" id="limits-section">

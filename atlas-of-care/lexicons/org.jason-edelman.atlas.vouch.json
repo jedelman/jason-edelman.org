@@ -4,7 +4,7 @@
   "defs": {
     "main": {
       "type": "record",
-      "description": "A vouch on the Atlas of Care: this account holds my world together. It lives in the voucher's repo and holds nothing but the account vouched for. The atlas shows it only while that account has a link of its own on the map.",
+      "description": "A vouch on the Atlas of Care: an affirmation of one thing someone else has said they do. It lives in the voucher's repo and holds nothing but a pointer to that statement as it stood. The atlas shows it only while the statement is on the map and unchanged.",
       "key": "tid",
       "record": {
         "type": "object",
@@ -20,9 +20,9 @@
             "description": "The atlas this vouch is for. The backlink index finds vouches by this field."
           },
           "subject": {
-            "type": "string",
-            "format": "did",
-            "description": "The account vouched for."
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "The statement vouched for: its at-uri and content hash."
           },
           "createdAt": {
             "type": "string",

@@ -1,16 +1,16 @@
 {
   "lexicon": 1,
-  "id": "org.jason-edelman.atlas.link",
+  "id": "org.jason-edelman.atlas.statement",
   "defs": {
     "main": {
       "type": "record",
-      "description": "A web address placed on the Atlas of Care. It lives in the repo of whoever added it, carries no text of their own, and is placed in an administrative unit, not at an address.",
+      "description": "What someone does to hold their world together, on the Atlas of Care: one sentence in their own words that begins with \"I\", and a place. It lives in the repo of whoever says it, so nobody writes one about someone else. It is placed in an administrative unit, not at an address.",
       "key": "tid",
       "record": {
         "type": "object",
         "required": [
           "atlas",
-          "url",
+          "text",
           "scope",
           "unit",
           "lat",
@@ -21,13 +21,19 @@
           "atlas": {
             "type": "string",
             "format": "did",
-            "description": "The atlas this link is for. The backlink index finds links by this field."
+            "description": "The atlas this statement is for. The backlink index finds statements by this field."
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 600,
+            "maxGraphemes": 140,
+            "description": "One line that begins with \"I\". No web address and no @-mention in it."
           },
           "url": {
             "type": "string",
             "format": "uri",
             "maxLength": 400,
-            "description": "An http(s) address."
+            "description": "Optional. A web address for the thing they do."
           },
           "scope": {
             "type": "string",
