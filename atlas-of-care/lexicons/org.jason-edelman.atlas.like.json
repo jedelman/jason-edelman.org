@@ -1,0 +1,35 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.atlas.like",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "A like on the Atlas of Care: someone is glad of one thing another person has said they do. It lives in the liker's repo and holds nothing but a pointer to that statement as it stood.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "atlas",
+          "subject",
+          "createdAt"
+        ],
+        "properties": {
+          "atlas": {
+            "type": "string",
+            "format": "did",
+            "description": "The atlas this like is for. The backlink index finds likes by this field."
+          },
+          "subject": {
+            "type": "ref",
+            "ref": "com.atproto.repo.strongRef",
+            "description": "The statement liked: its at-uri and content hash."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}

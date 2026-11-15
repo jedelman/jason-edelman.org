@@ -1,0 +1,57 @@
+{
+  "lexicon": 1,
+  "id": "org.jason-edelman.atlas.statement",
+  "defs": {
+    "main": {
+      "type": "record",
+      "description": "What someone does to hold their world together, on the Atlas of Care: one sentence in their own words that begins with \"I\". It lives in the repo of whoever says it, so nobody writes one about someone else. It may name a place, as an administrative unit picked from a list, never an address.",
+      "key": "tid",
+      "record": {
+        "type": "object",
+        "required": [
+          "atlas",
+          "text",
+          "createdAt"
+        ],
+        "properties": {
+          "atlas": {
+            "type": "string",
+            "format": "did",
+            "description": "The atlas this statement is for. The backlink index finds statements by this field."
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 600,
+            "maxGraphemes": 140,
+            "description": "One line that begins with \"I\". No web address and no @-mention in it."
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 400,
+            "description": "Optional. A web address for the thing they do."
+          },
+          "scope": {
+            "type": "string",
+            "knownValues": [
+              "world",
+              "us",
+              "in",
+              "eu"
+            ],
+            "description": "Optional, with unit. Which of the atlas's lists of places the unit is on."
+          },
+          "unit": {
+            "type": "string",
+            "maxLength": 64,
+            "description": "Optional, with scope. The unit's id on that list."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "datetime"
+          }
+        }
+      }
+    }
+  }
+}
