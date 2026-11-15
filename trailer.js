@@ -15,6 +15,7 @@
     e.preventDefault();
     title.textContent = `${a.dataset.title} · trailer`;
     play.href = a.dataset.play;
+    play.textContent = a.dataset.playLabel || 'Play it in your browser'; // a game plays; Ghent Streets explores
     video.poster = a.dataset.poster || '';
     video.src = a.dataset.trailer;
     dlg.showModal();
