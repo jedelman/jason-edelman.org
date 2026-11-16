@@ -36,6 +36,7 @@ const STATIC = [
   'broadsheet',
   'trailer.js',
   'video',
+  'cv',
 ];
 
 // Subprojects: { name, dir, buildCmd, outDir, required }
