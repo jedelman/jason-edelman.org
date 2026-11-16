@@ -44,6 +44,8 @@ PHOTOS = "https://gisshare.norfolk.gov/provalimages/001"
 FT = 0.3048                      # US survey foot ≈ international foot at this precision
 UA = {"User-Agent": "ghent-streets-explorer/1.0 (+https://github.com/jedelman/ghent-zoning-reform)"}
 OUT = os.path.join(os.path.dirname(__file__), "../../explorer/data/ghent.json")
+# Lots the explorer builds by hand and the site writes up as case studies; they get a photo like the corners.
+CASE_STUDIES = {"1428706223", "1428629200"}   # 715 Colonial Avenue, 740 W Princess Anne Road
 
 
 def head(url, tries=3):
@@ -311,12 +313,12 @@ def main():
                      "land_square_footage,commercial_building_area"):
         assess.setdefault(r["gpin"], r)
 
-    # 6. The assessor's street photo, for corner lots (the explorer's featured parcels).
+    # 6. The assessor's street photo, for corner lots (the explorer's featured parcels) and the case studies.
     for p in parcels:
         a = assess.get(p["gpin"], {})
         p["pid"] = a.get("parcel_id")
         p["photo"] = None
-        if p["corner"] and p["pid"] and len(p["pid"]) == 8 and p["pid"].isdigit():
+        if (p["corner"] or p["gpin"] in CASE_STUDIES) and p["pid"] and len(p["pid"]) == 8 and p["pid"].isdigit():
             p["photo"] = assessor_photo(p["pid"])
 
     # 7. Trees: the city's inventory, mostly street and public trees. Diameter is the trunk at breast

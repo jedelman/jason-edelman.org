@@ -10,6 +10,8 @@
   <meta property="og:title" content="Ghent Streets — Bring Norfolk's Historic District Back to Life" />
   <meta property="og:description" content="A campaign to permit street-facing retail uses by right in Norfolk's HC-G2 Historic and Cultural Conservation district." />
   <meta property="og:url" content="https://jason-edelman.org/ghent-streets/" />
+  <meta property="og:image" content="https://jason-edelman.org/ghent-streets/assets/media/hero-801-share.jpg" />
+  <meta property="og:image:alt" content="801 Stockley Gardens in Ghent Streets' parcel explorer, its porch set as a bistro under string lights." />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
   <link rel="canonical" href="https://jason-edelman.org/ghent-streets/" />
@@ -45,6 +47,33 @@
     <a href="policy/brief-01.html" style="font-family:var(--mono);font-size:0.7rem;letter-spacing:0.10em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold);padding-bottom:2px;">Read the Policy Brief →</a>
     <a href="explorer/" style="font-family:var(--mono);font-size:0.7rem;letter-spacing:0.10em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold);padding-bottom:2px;margin-left:1.5rem;">Explore the corners in 3D →</a>
   </div>
+  <figure class="container--wide hero-film">
+    <div class="hero-film-frame">
+      <video id="hero-video" muted loop playsinline preload="none" width="1280" height="720"
+             poster="assets/media/hero-801-after.webp"
+             aria-label="801 Stockley Gardens in 3D. Its windows light, a sign is hung at the door, string lights come on along the porch, and people take the tables.">
+        <source src="assets/media/hero-801.mp4" type="video/mp4">
+      </video>
+      <button type="button" class="hero-film-toggle" id="hero-toggle" aria-pressed="false" hidden>Pause</button>
+    </div>
+    <figcaption>801 Stockley Gardens, modeled from the city's maps and the assessor's photo, with its ground floor as a bistro. HC-G2's zoning prohibits restaurants. <a href="explorer/#p=1428701712&amp;t=bistro">Try it in the parcel explorer →</a></figcaption>
+  </figure>
+  <script>
+    // The loop plays unless the reader has asked for less motion; then the still shows the porch lit.
+    (() => {
+      const v = document.getElementById('hero-video'), b = document.getElementById('hero-toggle');
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      v.poster = 'assets/media/hero-801-before.webp';
+      v.preload = 'auto';
+      v.play().then(() => { b.hidden = false; }).catch(() => { v.poster = 'assets/media/hero-801-after.webp'; });
+      b.addEventListener('click', () => {
+        const stop = !v.paused;
+        if (stop) v.pause(); else v.play();
+        b.textContent = stop ? 'Play' : 'Pause';
+        b.setAttribute('aria-pressed', String(stop));
+      });
+    })();
+  </script>
 </section>
 
 <section style="padding: 3rem 0 2rem;">
@@ -132,6 +161,25 @@
   </div>
 </section>
 
+<section style="padding: 2rem 0 3rem; border-top: 1px solid var(--rule-strong);">
+  <div class="container">
+    <p class="section-label">Case Studies</p>
+    <div class="card-grid">
+      <a class="card" href="case-studies/715-colonial.html">
+        <img class="card-img" src="case-studies/img/715-colonial-bistro.webp" width="960" height="720" loading="lazy" alt="The explorer's model of 715 Colonial Avenue with its porch set as a bistro under string lights.">
+        <p class="card-tag">Case Study · Colonial Avenue</p>
+        <h3>715 Colonial Avenue</h3>
+        <p>An 1888 brick house whose porch could seat a café, on a street the city's plan points shops toward.</p>
+      </a>
+      <a class="card" href="case-studies/740-w-princess-anne.html">
+        <img class="card-img" src="case-studies/img/740-w-princess-anne-coffee.webp" width="1280" height="720" loading="lazy" alt="The explorer's model of 740 W Princess Anne Road with a coffee shop on its first floor under striped awnings.">
+        <p class="card-tag">Case Study · W Princess Anne Road</p>
+        <h3>740 W Princess Anne Road</h3>
+        <p>A 1919 apartment building with porches stacked four high, and a shop on its first floor under the apartments.</p>
+      </a>
+    </div>
+  </div>
+</section>
 <section style="padding: 2rem 0 3rem; border-top: 1px solid var(--rule-strong);">
   <div class="container">
     <p class="section-label">From the Blog</p>

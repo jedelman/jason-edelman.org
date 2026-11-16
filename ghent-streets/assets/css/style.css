@@ -167,6 +167,54 @@ nav a:hover, nav a.active {
   margin-bottom: 2rem;
 }
 
+/* The hero film: 801 Stockley's porch coming alive, from the parcel explorer. */
+.hero-film {
+  margin: clamp(2rem, 5vw, 3rem) auto 0;
+}
+
+.hero-film-frame {
+  position: relative;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-mid);
+}
+
+.hero-film video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.hero-film-toggle {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f3ede0;
+  background: rgba(26,23,20,0.62);
+  border: 1px solid rgba(243,237,224,0.35);
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+
+.hero-film-toggle:hover { background: rgba(26,23,20,0.8); }
+.hero-film-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.hero-film figcaption {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: rgba(var(--ink-rgb),0.7);
+  margin-top: 0.75rem;
+  max-width: 62ch;
+}
+
+.hero-film figcaption a { color: var(--gold); }
+
 /* ── Typography ── */
 h1, h2, h3, h4 {
   font-family: var(--display);
@@ -273,6 +321,89 @@ blockquote cite {
   color: rgba(var(--ink-rgb),0.7);
   margin: 0;
   line-height: 1.55;
+}
+
+/* A card with a picture across its top. */
+.card-img {
+  display: block;
+  width: calc(100% + 3rem);
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  margin: -1.5rem -1.5rem 1.2rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ── Case studies ── */
+.cs-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1.2rem;
+  margin: 0 0 1.8rem;
+  font-size: 0.95rem;
+}
+
+.cs-facts dt {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb),0.55);
+  padding-top: 0.25rem;
+}
+
+.cs-facts dd { margin: 0; }
+
+.cs-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin: 1.6rem 0 0.4rem;
+}
+
+.cs-photos figure, .cs-render { margin: 0; }
+
+.cs-photos img, .cs-render img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-mid);
+}
+
+.cs-photos figcaption, .cs-render figcaption, .cs-credit {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  line-height: 1.55;
+  letter-spacing: 0.03em;
+  color: rgba(var(--ink-rgb),0.65);
+  margin-top: 0.4rem;
+}
+
+.cs-credit { margin: 0 0 2rem; }
+.cs-credit a, .cs-render figcaption a { color: var(--gold); }
+
+.cs-renders {
+  display: grid;
+  gap: 1.2rem;
+  margin: 1.6rem 0 2rem;
+}
+
+.cs-renders .pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.cs-cta {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold);
+  padding-bottom: 2px;
 }
 
 /* ── Article body ── */

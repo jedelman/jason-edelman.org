@@ -140,6 +140,13 @@ function buildPanel() {
     o.textContent = titleCase(p.address);
     pick.append(o);
   }
+  const cases = Object.keys(HEROES).filter((g) => HEROES[g].page && parcels.has(g));
+  if (cases.length) {
+    const group = document.createElement('optgroup');
+    group.label = 'Case studies';
+    for (const g of cases) { const o = document.createElement('option'); o.value = g; o.textContent = titleCase(parcels.get(g).address); group.append(o); }
+    pick.append(group);
+  }
   pick.addEventListener('change', () => { if (pick.value) select(pick.value); });
   $('back').addEventListener('click', () => deselect());
 
@@ -196,7 +203,10 @@ function fillLot(p) {
   card.textContent = p.photo ? 'property card ↗' : 'see the property card ↗';
   const sv = $('lot-sv');
   if (p.sv) { sv.href = streetViewUrl(p.sv); sv.parentElement.hidden = false; } else sv.parentElement.hidden = true;
-  const hasBuilding = p.buildings.length > 0 || p.gpin === HERO_801;
+  const page = HEROES[p.gpin] && HEROES[p.gpin].page;
+  $('lot-case').hidden = !page;
+  if (page) $('lot-case-link').href = page;
+  const hasBuilding = p.buildings.length > 0 || !!HEROES[p.gpin];
   $('no-building').hidden = hasBuilding;
   $('kits').hidden = !hasBuilding;
   $('rule').hidden = true;
@@ -226,12 +236,12 @@ function select(gpin, kitId = null, { fly = true } = {}) {
   if (picked && picked !== p) unhighlight(picked);
   applyKit(null, { silent: true });
   picked = p;
-  $('corner-pick').value = p.corner ? gpin : '';
+  $('corner-pick').value = p.corner || (HEROES[gpin] && HEROES[gpin].page) ? gpin : '';
   fillLot(p);
   if (three) {
     highlight(p);
     p.front = p.hero ? null : frontage(p);
-    if (fly) { if (p.hero) glide(heroView('picked')); else flyTo(p); }
+    if (fly) { if (p.hero) glide(p.hero.def.view('picked')); else flyTo(p); }
   }
   if (kitId) applyKit(kitId);
   else writeHash();
@@ -392,10 +402,13 @@ function buildBuildings() {
     const g = new THREE.ExtrudeGeometry(shapeOf(b.poly), { depth: b.h, bevelEnabled: false });
     g.rotateX(-Math.PI / 2);
     const p = b.parcel && parcels.get(b.parcel);
-    if (p && p.gpin === HERO_801 && !p.hero) {
-      p.hero = buildHero801(p);
-      three.scene.add(p.hero.group);
-      three.pickables.push(...p.hero.pick);
+    if (p && HEROES[p.gpin]) {   // drawn by hand: every footprint on the lot gives way to the model
+      if (!p.hero) {
+        p.hero = HEROES[p.gpin].build(p);
+        p.hero.def = HEROES[p.gpin];
+        three.scene.add(p.hero.group);
+        three.pickables.push(...p.hero.pick);
+      }
       continue;
     }
     if (p) {
@@ -1967,11 +1980,11 @@ function applyKit(id, { silent = false } = {}) {
   if (!silent) { setPressed(kit ? kit.id : null); fillRule(kit); }
   if (!kit || !picked) { if (!silent) writeHash(); return; }
   if (three && picked.hero) {
-    const built = heroTransform801(kit, picked);
+    const built = picked.hero.def.transform(kit, picked);
     three.scene.add(built.root);
     activeKit = { id: kit.id, root: built.root, tweens: built.tweens, hidden: null, cleanup: built.cleanup, variant: 'hero', start: performance.now(), dur: 4200 };
     if (REDUCE) for (const t of built.tweens) t.fn(1);
-    fly(heroView('street'));
+    fly(picked.hero.def.view('street'));
   } else if (three && picked.front) {
     const built = buildStorefront(kit, picked);
     const hidden = picked.front.b.mesh || null;
@@ -1999,7 +2012,6 @@ function applyKit(id, { silent = false } = {}) {
 //                Raleigh side v −10.3…−6.95 (u −8.8…6.9); floor 0.95 m up, roof at 3.95 m
 // Bays with crenellated parapets on the front and the Raleigh side, a hipped dormer facing
 // Stockley, four tall chimneys, the hedge along both walks.
-const HERO_801 = '1428701712';
 const H801 = {
   c: [26.57, -104.45], U: [0.879, -0.477], V: [0.477, 0.879],
   main: [-9.0, 6.9, -6.95, 13.2], wing: [-15.8, -9.0, -5.4, 3.6],
@@ -2086,6 +2098,7 @@ function hipRoof(parent, u0, u1, v0, v1, e, o, slope, mat) {
   const m = new THREE.Mesh(geo, mat);
   m.castShadow = m.receiveShadow = true;
   parent.add(m);
+  if (parent.userData.brackets === false) return m;
   // Brackets under the eaves, the style's tell.
   const step = 1.1;
   for (const [x0, z0, x1, z1] of [[u0, v0, u1, v0], [u1, v0, u1, v1], [u1, v1, u0, v1], [u0, v1, u0, v0]]) {
@@ -2135,18 +2148,18 @@ function hwin(parent, face, at, along, y0, y1, w, mats, list) {
   return win;
 }
 
-function hedgeRun(parent, u0, v0, u1, v1, mats, rng) {
+function hedgeRun(parent, u0, v0, u1, v1, mats, rng, hgt = 1.7, dep = 1.3) {
   const x0 = u0, z0 = -v0, x1 = u1, z1 = -v1;
   const L = Math.hypot(x1 - x0, z1 - z0);
-  const geo = new THREE.BoxGeometry(L, 1.7, 1.3, Math.max(2, Math.round(L / 0.8)), 3, 2);
+  const geo = new THREE.BoxGeometry(L, hgt, dep, Math.max(2, Math.round(L / 0.8)), 3, 2);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const y = pos.getY(i);
-    pos.setXYZ(i, pos.getX(i), y + (y > 0.5 ? (rng() - 0.3) * 0.28 : 0), pos.getZ(i) + (rng() - 0.5) * 0.18);
+    pos.setXYZ(i, pos.getX(i), y + (y > hgt * 0.3 ? (rng() - 0.3) * 0.28 * hgt / 1.7 : 0), pos.getZ(i) + (rng() - 0.5) * 0.18);
   }
   geo.computeVertexNormals();
   const m = new THREE.Mesh(geo, mats.hedge);
-  m.position.set((x0 + x1) / 2, 0.85, (z0 + z1) / 2);
+  m.position.set((x0 + x1) / 2, hgt / 2, (z0 + z1) / 2);
   m.rotation.y = Math.atan2(-(z1 - z0), x1 - x0);
   m.castShadow = m.receiveShadow = true;
   parent.add(m);
@@ -2401,6 +2414,415 @@ function heroView(mode) {
   const [px, py] = huv(h, 36, -22), [tx, ty] = huv(h, 2, 0.5);
   return { pos: to3(px, py, 17), target: to3(tx, ty, 3.5) };
 }
+
+// ── Case studies: built by hand like 801, from the city's footprint, the assessor's photos and the FY2026 record ──
+
+const dk = (hex) => DARK ? '#' + new THREE.Color(hex).multiplyScalar(0.62).getHexString() : hex;
+
+// 801's materials, with this building's brick, roof and trim.
+function heroMatsFor({ brick, mortar, roof, trim, base }) {
+  const M = heroMats();
+  const tex = canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = dk(mortar); g.fillRect(0, 0, w, h);
+    g.fillStyle = dk(brick);
+    for (let y = 0; y < h; y += 8) for (let x = (y / 8) % 2 ? 0 : 12; x < w; x += 24) g.fillRect(x, y, 22, 6);
+  });
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  M.wall = new THREE.MeshLambertMaterial({ color: 0xffffff, map: tex });
+  M.chimney = M.wall;
+  M.roof = new THREE.MeshLambertMaterial({ color: dk(roof), side: THREE.DoubleSide, flatShading: true });
+  M.trim = M.white = new THREE.MeshLambertMaterial({ color: dk(trim) });
+  M.base = new THREE.MeshLambertMaterial({ color: dk(base) });
+  return M;
+}
+
+// A box from a to b (local points) with a square section t: rake boards.
+function beam(parent, a, b, t, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(t, t, a.distanceTo(b)), mat);
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), b.clone().sub(a).normalize());
+  m.castShadow = true;
+  parent.add(m);
+  return m;
+}
+
+// A front-facing gable: the ridge runs back along u over [u0,u1]; the gable ends face ±u.
+function gableRoof(parent, u0, u1, v0, v1, e, rise, o, M) {
+  const vm = (v0 + v1) / 2, s = rise / ((v1 - v0) / 2);
+  const P = (u, v, y) => new THREE.Vector3(u, y, -v);
+  const ue0 = u0 - 0.35, ue1 = u1 + 0.35, ye = e - o * s, yk = e + rise;
+  const L0 = P(ue0, v0 - o, ye), L1 = P(ue1, v0 - o, ye), R0 = P(ue0, v1 + o, ye), R1 = P(ue1, v1 + o, ye);
+  const K0 = P(ue0, vm, yk), K1 = P(ue1, vm, yk);
+  const pos = [], uv = [];
+  for (const t of [[L0, L1, K1], [L0, K1, K0], [R1, R0, K0], [R1, K0, K1]]) for (const q of t) { pos.push(q.x, q.y, q.z); uv.push(q.x / 1.6, (q.y - q.z) / 1.6); }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.computeVertexNormals();
+  const roof = new THREE.Mesh(geo, M.roof);
+  roof.castShadow = roof.receiveShadow = true;
+  parent.add(roof);
+  // The gable walls in brick, and white rake boards on the front one.
+  const gableMat = new THREE.MeshLambertMaterial({ map: M.wall.map, color: 0xffffff, side: THREE.DoubleSide });
+  for (const u of [u0, u1]) {
+    const tri = [P(u, v0, e), P(u, v1, e), P(u, vm, yk)];
+    const g2 = new THREE.BufferGeometry();
+    g2.setAttribute('position', new THREE.Float32BufferAttribute(tri.flatMap((q) => [q.x, q.y, q.z]), 3));
+    g2.setAttribute('uv', new THREE.Float32BufferAttribute(tri.flatMap((q) => [-q.z / 2.4, q.y / 2.4]), 2));
+    g2.computeVertexNormals();
+    const w = new THREE.Mesh(g2, gableMat);
+    w.castShadow = w.receiveShadow = true;
+    parent.add(w);
+  }
+  beam(parent, P(ue1, v0 - o, ye), P(ue1, vm, yk), 0.18, M.trim);
+  beam(parent, P(ue1, v1 + o, ye), P(ue1, vm, yk), 0.18, M.trim);
+  return roof;
+}
+
+// A round-headed window on a +u face: hwin's sash under a half-round light and a white arch.
+function archWin(parent, at, along, y0, y1, w, M) {
+  hwin(parent, 'u+', at, along, y0, y1, w, M, null);
+  const r = w / 2;
+  const top = new THREE.Mesh(new THREE.CircleGeometry(r, 20, 0, Math.PI), M.glass);
+  top.rotation.y = Math.PI / 2;
+  top.position.set(at + 0.205, y1, -along);
+  parent.add(top);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(r, r + 0.16, 20, 1, 0, Math.PI), M.trim);
+  ring.rotation.y = Math.PI / 2;
+  ring.position.set(at + 0.21, y1, -along);
+  parent.add(ring);
+}
+
+// A balustrade from (a0,b0) to (a1,b1), along u or along v, standing on height y.
+function railRun(parent, a0, b0, a1, b1, y, M, h = 0.88) {
+  const L = Math.hypot(a1 - a0, b1 - b0);
+  if (Math.abs(a1 - a0) < 0.01) {
+    hbox(parent, a0 - 0.06, a0 + 0.06, Math.min(b0, b1), Math.max(b0, b1), y + h - 0.08, y + h, M.white);
+    hbox(parent, a0 - 0.05, a0 + 0.05, Math.min(b0, b1), Math.max(b0, b1), y + 0.08, y + 0.13, M.white);
+  } else {
+    hbox(parent, Math.min(a0, a1), Math.max(a0, a1), b0 - 0.06, b0 + 0.06, y + h - 0.08, y + h, M.white);
+    hbox(parent, Math.min(a0, a1), Math.max(a0, a1), b0 - 0.05, b0 + 0.05, y + 0.08, y + 0.13, M.white);
+  }
+  const n = Math.max(1, Math.floor(L / 0.15));
+  const bal = new THREE.InstancedMesh(new THREE.BoxGeometry(0.05, h - 0.26, 0.05), M.white, n);
+  const m4 = new THREE.Matrix4();
+  for (let i = 0; i < n; i++) { const t = (i + 0.5) / n; bal.setMatrixAt(i, m4.makeTranslation(a0 + (a1 - a0) * t, y + h / 2, -(b0 + (b1 - b0) * t))); }
+  bal.castShadow = true;
+  parent.add(bal);
+}
+
+// The black lamp post with a lantern head that stands in front of both buildings in the photos.
+function postLamp(parent, u, v) {
+  const iron = std(0x1d1b19);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 3.3, 10), iron);
+  post.position.set(u, 1.65, -v);
+  post.castShadow = true;
+  parent.add(post);
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.13, 0.5, 4), new THREE.MeshStandardMaterial({ color: 0xf6f0e2, emissive: 0xfff1c9, emissiveIntensity: 0.12, roughness: 0.4 }));
+  glass.rotation.y = Math.PI / 4;
+  glass.position.set(u, 3.55, -v);
+  parent.add(glass);
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.24, 4), iron);
+  cap.rotation.y = Math.PI / 4;
+  cap.position.set(u, 3.92, -v);
+  parent.add(cap);
+}
+
+function columnAt(parent, u, v, y0, y1, M) {
+  const c = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, y1 - y0 - 0.3, 12), M.white);
+  c.position.set(u, y0 + 0.15 + (y1 - y0 - 0.3) / 2, -v);
+  c.castShadow = true;
+  parent.add(c);
+  hbox(parent, u - 0.24, u + 0.24, v - 0.24, v + 0.24, y0, y0 + 0.15, M.white);
+  hbox(parent, u - 0.24, u + 0.24, v - 0.24, v + 0.24, y1 - 0.15, y1, M.white);
+}
+
+// The shop arrives, the same way at each case study: the shop windows light and show the kit's interior,
+// gold lettering, a sign hung from the porch beam where there is one, canvas awnings where the
+// building takes them, lanterns, tables, people. cfg places each piece in the building's frame.
+function caseTransform(kit, p, cfg) {
+  const h = cfg.h, hero = p.hero, M = hero.mats;
+  const g = heroGroup(h);
+  const tweens = [];
+  const at = (t0, t1, fn) => tweens.push({ t0, t1, fn });
+  const paint = PAINTS[kit.id][0], trim = '#efe6d2';
+  const rng = rngFor(`${p.gpin}:${kit.id}`);
+  M.shopGlass.emissiveMap = windowTexture(kit.window);
+  M.shopGlass.needsUpdate = true;
+  at(0.08, 0.4, (k) => { M.shopGlass.emissiveIntensity = 0.85 * ease(k); hero.door.material.emissive = new THREE.Color(0x6b3a10); hero.door.material.emissiveIntensity = 0.6 * ease(k); });
+  const lettering = letteringTex(kit.sign, kit.signFont);
+  for (const [u, v, y, w] of cfg.letters) {
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, w / 2), new THREE.MeshBasicMaterial({ map: lettering, transparent: true, depthWrite: false, opacity: 0 }));
+    plane.rotation.y = Math.PI / 2;
+    plane.position.set(u, y, -v);
+    g.add(plane);
+    at(0.3, 0.5, (k) => { plane.material.opacity = ease(k); });
+  }
+  // A sign hung from the porch beam, facing the street.
+  if (cfg.sign) {
+    const icon = new THREE.MeshStandardMaterial({ map: iconTex(ICONS[kit.id], paint, trim) });
+    const signG = new THREE.Group();
+    const board = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.52, 0.72), [icon, icon, std(paint), std(paint), std(paint), std(paint)]);
+    board.position.y = -0.62;
+    board.castShadow = true;
+    signG.add(board);
+    for (const z of [-0.26, 0.26]) box(signG, 0.012, 0.36, 0.012, 0, -0.18, z, std(0x1d1b19), false);
+    signG.position.set(cfg.sign.u, cfg.sign.y, -cfg.sign.v);
+    signG.scale.y = 0.001;
+    g.add(signG);
+    at(0.32, 0.5, (k) => { signG.scale.y = Math.max(0.001, ease(k)); });
+  }
+  // Canvas awnings over first-floor windows, in the kit's stripes.
+  for (const [u, v, y, w] of cfg.awnings || []) {
+    const mat = new THREE.MeshLambertMaterial({ map: stripesTexture(kit.stripes || [paint, trim]), side: THREE.DoubleSide });
+    const aw = new THREE.Group();
+    const tilt = new THREE.Group();
+    const slope = new THREE.Mesh(new THREE.PlaneGeometry(0.95, w), mat);
+    slope.rotation.x = -Math.PI / 2;
+    slope.position.x = 0.4;
+    tilt.add(slope);
+    tilt.rotation.z = -0.55;
+    aw.add(tilt);
+    const valance = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.26, w), mat);
+    valance.position.set(0.78, -0.58, 0);
+    aw.add(valance);
+    aw.position.set(u, y, -v);
+    aw.scale.set(0.001, 1, 1);
+    g.add(aw);
+    at(0.25, 0.45, (k) => { aw.scale.x = Math.max(0.001, ease(k)); });
+  }
+  // Lanterns and a warm light, from outside.
+  const lanternMat = new THREE.MeshStandardMaterial({ color: 0xfff1c9, emissive: kit.glow, emissiveIntensity: 0 });
+  for (const [u, v, y] of cfg.lanterns) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.26, 0.16), lanternMat); l.position.set(u, y, -v); g.add(l); }
+  const lamp = new THREE.PointLight(kit.glow, 0, 16, 1.6);
+  lamp.position.set(cfg.light[0], cfg.light[2], -cfg.light[1]);
+  g.add(lamp);
+  at(0.35, 0.6, (k) => { lanternMat.emissiveIntensity = 2.2 * ease(k); lamp.intensity = (DARK ? 44 : 22) * ease(k); });
+  // Tables, a book cart or benches, the board out front.
+  const n = kit.id === 'bistro' ? cfg.tables.length : kit.id === 'coffee' ? Math.min(cfg.tables.length, 3) : kit.id === 'books' ? 1 : 0;
+  const props = [];
+  cfg.tables.slice(0, n).forEach(([u, v, y]) => {
+    const t = table(kit.id === 'bistro' ? 0xf4ead6 : 0xf2ece0);
+    t.position.set(u, y, -v); t.scale.setScalar(0.001); g.add(t); props.push(t);
+  });
+  if (kit.id === 'books') { const c = bookCart(); c.position.set(cfg.cart[0], cfg.cart[2], -cfg.cart[1]); c.rotation.y = Math.PI / 2; c.scale.setScalar(0.001); g.add(c); props.push(c); }
+  if (kit.id === 'studio') for (const [u, v, y] of cfg.benches) { const b = bench(); b.position.set(u, y, -v); b.rotation.y = -Math.PI / 2; b.scale.setScalar(0.001); g.add(b); props.push(b); }
+  const af = aFrame(kit.id === 'bistro' ? 'tonight' : kit.id === 'books' ? 'used & new' : kit.id === 'studio' ? 'open studio' : 'espresso');
+  af.position.set(cfg.board[0], 0, -cfg.board[1]); af.rotation.y = Math.PI / 2 - 0.4; af.scale.setScalar(0.001); g.add(af); props.push(af);
+  props.forEach((o, i) => at(0.45 + i * 0.03, 0.62 + i * 0.03, (k) => o.scale.setScalar(Math.max(0.001, ease(k)))));
+  if (kit.id === 'bistro' && cfg.bulbs) {
+    const bulbMat = new THREE.MeshStandardMaterial({ color: 0xfff1c9, emissive: kit.glow, emissiveIntensity: 0 });
+    const bulb = new THREE.SphereGeometry(0.06, 8, 6);
+    for (const [u0, v0, u1, v1, y] of cfg.bulbs) {
+      const L = Math.hypot(u1 - u0, v1 - v0), nB = Math.round(L / 0.45);
+      for (let i = 0; i <= nB; i++) { const t = i / nB, m = new THREE.Mesh(bulb, bulbMat); m.position.set(u0 + (u1 - u0) * t, y - Math.sin((t * L / 3.6) % 1 * Math.PI) * 0.22, -(v0 + (v1 - v0) * t)); g.add(m); }
+    }
+    at(0.55, 0.75, (k) => { bulbMat.emissiveIntensity = 2.4 * ease(k); });
+  }
+  // People: one at each table (facing it), one at the door, two arriving along the sidewalk.
+  cfg.tables.slice(0, n).forEach(([u, v, y], i) => {
+    if (i >= kit.people) return;
+    const who = person(rng); who.sit();
+    const side = i % 2 ? 1 : -1;
+    who.group.position.set(u, y, -(v + side * 0.62));
+    who.group.rotation.y = side < 0 ? Math.PI : 0;
+    who.group.visible = false; g.add(who.group);
+    at(0.5 + i * 0.04, 0.52 + i * 0.04, (k) => { who.group.visible = k > 0; });
+  });
+  const greeter = person(rng); greeter.stand();
+  greeter.group.position.set(cfg.greeter[0], cfg.greeter[2], -cfg.greeter[1]); greeter.group.rotation.y = Math.PI / 2; greeter.group.visible = false; g.add(greeter.group);
+  at(0.55, 0.57, (k) => { greeter.group.visible = k > 0; });
+  cfg.walkers.forEach(([fu, fv, tu, tv], i) => {
+    const who = person(rng);
+    const from = new THREE.Vector3(fu, 0, -fv), to = new THREE.Vector3(tu, 0, -tv);
+    who.group.position.copy(from); who.group.visible = false; g.add(who.group);
+    at(0.55 + i * 0.08, 0.95, (k) => {
+      who.group.visible = k > 0;
+      who.group.position.lerpVectors(from, to, ease(k));
+      who.group.rotation.y = Math.atan2(to.x - from.x, to.z - from.z);
+      if (k < 1) who.walk(k * 26); else who.stand();
+    });
+  });
+  const cleanup = () => { M.shopGlass.emissiveIntensity = 0; hero.door.material.emissiveIntensity = 0; };
+  return { root: g, tweens, variant: 'hero', cleanup, view: { hero: true } };
+}
+
+// ── 715 Colonial Avenue (case study): an 1888 brick house with a front porch ──
+// The city's footprint is the roof outline, porch included: 7.7 m on Colonial, 25 m deep, with a narrower
+// rear ell. The assessor's photos (2007, 2023, 2026) show red brick and a steep front gable over two
+// round-headed windows, a round-headed attic window between two small ones, a porch across the front on
+// white columns, a balcony on the porch roof at the right, a tall chimney on the left, boxwood at the walk,
+// a lamp post at the curb. The FY2026 record: built 1888, 3,759 sq ft, on a 3,063 sq ft lot.
+const H715 = {
+  c: [188.64, -257.91], U: [0.892, -0.452], V: [0.452, 0.892],
+  wallU: 9.4, porchU: 11.8, v0: -4.3, v1: 3.7, gv1: 1.3, rearU: -5.1,
+  baseY: 0.9, porchTop: 3.9, eave: 8.2,
+};
+function buildHero715(p) {
+  const h = H715;
+  const M = heroMatsFor({ brick: '#8e3b2a', mortar: '#b8836c', roof: '#5d6166', trim: '#f2ece0', base: '#7a4a38' });
+  const g = heroGroup(h); g.userData.trim = M.trim; g.userData.brackets = false;
+  const pick = [];
+  const wall = (...a) => { const m = hbox(g, ...a, M.wall, 2.4); m.userData.gpin = p.gpin; pick.push(m); return m; };
+  const { wallU: uw, porchU: up, v0, v1, gv1, rearU, baseY: y0, porchTop: pT, eave: e } = h;
+  // The house, the rear ell, a stone band at the second floor.
+  hbox(g, rearU, uw, v0, v1, 0, y0, M.base);
+  wall(rearU, uw, v0, v1, y0, e);
+  wall(-13.1, rearU, -2.1, 3.8, 0, 7.4);
+  hbox(g, rearU, uw + 0.05, v0 - 0.05, v1 + 0.05, 4.5, 4.62, M.trim);
+  // Roofs: the front gable over the left two-thirds, a lower hip over the right third and over the ell.
+  gableRoof(g, rearU, uw, v0, gv1, e, 5.0, 0.45, M);
+  hipRoof(g, rearU, uw, gv1, v1, e, 0.35, 0.6, M.roof);
+  hipRoof(g, -13.1, rearU, -2.1, 3.8, 7.4, 0.4, 0.55, M.roof);
+  hbox(g, 6.4, 7.3, v0 - 0.45, v0 + 0.25, 1.0, 14.0, M.chimney);
+  hbox(g, 6.3, 7.4, v0 - 0.55, v0 + 0.35, 14.0, 14.2, M.cap);
+  // Windows: round-headed on the second floor and in the attic, tall sash on the first floor.
+  const winList = [];
+  archWin(g, uw, -2.6, 5.0, 6.7, 1.0, M);
+  archWin(g, uw, -0.5, 5.0, 6.7, 1.0, M);
+  archWin(g, uw, -1.55, 9.4, 10.6, 0.8, M);
+  hwin(g, 'u+', uw, -2.75, 9.1, 9.75, 0.5, M, null);
+  hwin(g, 'u+', uw, -0.35, 9.1, 9.75, 0.5, M, null);
+  hwin(g, 'u+', uw, 2.5, 4.75, 7.0, 0.9, M, null);            // the door onto the balcony
+  hwin(g, 'u+', uw, -2.8, y0 + 0.6, y0 + 2.8, 1.0, M, winList);
+  hwin(g, 'u+', uw, -1.0, y0 + 0.6, y0 + 2.8, 1.0, M, winList);
+  for (const u of [-3.5, 0.5, 4.5]) { hwin(g, 'v-', v0, u, 5.0, 6.8, 0.9, M, null); hwin(g, 'v-', v0, u, y0 + 0.6, y0 + 2.7, 0.9, M, null); }
+  hbox(g, uw, uw + 0.12, 1.25, 2.55, y0, y0 + 2.75, M.trim);  // the door's surround and transom
+  const door = hbox(g, uw + 0.1, uw + 0.16, 1.45, 2.35, y0, y0 + 2.25, new THREE.MeshLambertMaterial({ color: 0x3a2418 }));
+  // The porch: deck, white columns, a flat roof with a balustrade over the balcony end, steps, railings.
+  hbox(g, uw, up, v0, v1, 0, y0 - 0.08, M.base); hbox(g, uw, up, v0, v1, y0 - 0.08, y0, M.deck);
+  for (const v of [-4.05, -1.5, 1.05, 3.45]) columnAt(g, up - 0.25, v, y0, pT, M);
+  hbox(g, uw, up + 0.05, v0 - 0.08, v1 + 0.08, pT, pT + 0.34, M.trim);
+  hbox(g, uw, up + 0.1, v0 - 0.12, v1 + 0.12, pT + 0.34, pT + 0.44, M.roof);
+  railRun(g, up - 0.15, gv1, up - 0.15, v1 - 0.05, pT + 0.44, M);
+  railRun(g, uw + 0.05, gv1, up - 0.15, gv1, pT + 0.44, M);
+  for (const [b0, b1] of [[-3.85, -1.7], [-1.3, 0.85], [2.75, 3.25]]) railRun(g, up - 0.25, b0, up - 0.25, b1, y0, M, 0.8);
+  for (const b of [v0 + 0.12, v1 - 0.12]) railRun(g, uw + 0.1, b, up - 0.45, b, y0, M, 0.8);
+  const nSteps = 4, rise = y0 / nSteps;
+  for (let i = 1; i <= nSteps; i++) hbox(g, up, up + (nSteps - i + 1) * 0.3, 1.25, 2.6, 0, i * rise, M.deck);
+  // Boxwood either side of the walk, and the lamp post.
+  const rng = rngFor('715-hero');
+  hedgeRun(g, up + 0.9, v0 + 0.1, up + 0.9, 0.9, M, rng, 0.9, 0.8);
+  hedgeRun(g, up + 0.9, 2.95, up + 0.9, v1 + 0.6, M, rng, 0.9, 0.8);
+  hbox(g, up, up + 2.6, 1.3, 2.55, 0, 0.03, M.path);
+  postLamp(g, up + 2.2, -0.6);
+  return { group: g, pick, winList, door, mats: M };
+}
+function heroTransform715(kit, p) {
+  const h = H715, uw = h.wallU, up = h.porchU, y0 = h.baseY, pT = h.porchTop;
+  return caseTransform(kit, p, {
+    h,
+    letters: [[uw + 0.3, -2.8, y0 + 1.4, 0.95], [uw + 0.3, -1.0, y0 + 1.4, 0.95]],
+    sign: { u: up - 0.25, v: -0.2, y: pT },
+    lanterns: [[uw + 0.25, 1.0, y0 + 2.05], [uw + 0.25, 2.8, y0 + 2.05]],
+    light: [uw + 1.0, 0, y0 + 2.2],
+    tables: [[uw + 1.25, -3.0, y0], [uw + 1.25, -0.3, y0], [uw + 1.25, 3.1, y0]],
+    cart: [uw + 1.2, -2.0, y0],
+    benches: [[uw + 1.4, -2.2, y0]],
+    board: [up + 2.0, -1.8],
+    bulbs: [[up - 0.15, h.v0 + 0.1, up - 0.15, h.v1 - 0.1, pT - 0.15]],
+    greeter: [uw + 0.9, 1.9, y0],
+    walkers: [[up + 3.6, -9, up + 2.6, 1.9], [up + 3.9, 11, up + 2.9, 2.2]],
+  });
+}
+function heroView715(mode) {
+  const h = H715;
+  if (mode === 'street') { const [px, py] = huv(h, 27.5, 8.5), [tx, ty] = huv(h, 9.6, -0.6); return { pos: to3(px, py, 2.4), target: to3(tx, ty, 5.2) }; }
+  const [px, py] = huv(h, 31, 13), [tx, ty] = huv(h, 3, -0.4);
+  return { pos: to3(px, py, 15), target: to3(tx, ty, 5) };
+}
+
+// ── 740 W Princess Anne Road (case study): a 1919 apartment building ──
+// The city's footprint: 20.8 m on Princess Anne, 20.6 m deep, the end bays standing 0.4 m proud; 15.7 m
+// high. The assessor's photo (April 2025) shows dark red brick, four floors over a raised basement, porches
+// stacked in the outer half of both end bays (white balustrades on all four floors), paired sash windows,
+// a stone surround at the centre entrance up a short flight of steps, a white cornice, a lamp post by the
+// steps. The FY2026 record: built 1919, an apartment building on a 7,049 sq ft lot.
+const H740 = {
+  c: [-41.59, 345.37], U: [-0.48, -0.878], V: [0.878, -0.48],
+  front: 10.0, bay: 10.4, back: 8.4, rear: -10.4, v0: -10.4, v1: 10.2, bayIn: 4.9, porchDepth: 2.0,
+  floors: [0.9, 4.2, 7.5, 10.8, 14.1], cornice: 14.7, top: 15.7,
+};
+const porches740 = (h) => [[h.v0 + 0.4, h.v0 + 3.4], [h.v1 - 3.4, h.v1 - 0.4]];
+function buildHero740(p) {
+  const h = H740;
+  const M = heroMatsFor({ brick: '#6e2f22', mortar: '#8f5a48', roof: '#3d3a36', trim: '#f2ece0', base: '#5a3428' });
+  const g = heroGroup(h); g.userData.trim = M.trim; g.userData.brackets = false;
+  const pick = [];
+  const wall = (...a) => { const m = hbox(g, ...a, M.wall, 2.4); m.userData.gpin = p.gpin; pick.push(m); return m; };
+  const { front: uf, bay: ub, back: uk, rear: ur, v0, v1, bayIn: bi, floors: F, cornice: cy, top } = h;
+  const ud = ub - h.porchDepth;   // the porches' back wall
+  const solid = (u0, u1, a, b) => { hbox(g, u0, u1, a, b, 0, F[0], M.base); wall(u0, u1, a, b, F[0], cy); };
+  // The body behind the porches, the centre between the bays, then each bay around its stack of porches.
+  solid(ur, uk, v0, v1);
+  solid(uk, uf, -bi, bi);
+  const P = porches740(h);
+  const bays = [[v0, -bi, P[0]], [bi, v1, P[1]]];
+  const winList = [];
+  for (const [a, b, [p0, p1]] of bays) {
+    for (const [x, y] of [[a, p0], [p1, b]]) solid(uk, ub, x, y);
+    solid(uk, ud, p0, p1);
+    hbox(g, ud, ub, p0, p1, 0, F[0], M.base);
+    for (let f = 1; f <= 4; f++) wall(ud, ub, p0, p1, F[f] - 0.55, f === 4 ? cy : F[f]);   // each porch's floor, the one below's ceiling
+    const inner = a < 0 ? (p1 + b) / 2 : (a + p0) / 2;
+    for (let f = 0; f < 4; f++) {
+      railRun(g, ub - 0.08, p0 + 0.05, ub - 0.08, p1 - 0.05, F[f], M);
+      hwin(g, 'u+', ud, (p0 + p1) / 2, F[f] + 0.05, F[f] + 2.4, 1.2, M, f === 0 ? winList : null);   // the porch's French door
+      hwin(g, 'u+', ub, inner, F[f] + 0.75, F[f] + 2.55, 1.4, M, f === 0 ? winList : null);
+    }
+  }
+  // Cornice, parapet and its cap; a band over the first floor.
+  hbox(g, ur - 0.25, ub + 0.25, v0 - 0.25, v1 + 0.25, cy, cy + 0.3, M.trim);
+  wall(ur, ub, v0, v1, cy + 0.3, top);
+  hbox(g, ur - 0.05, ub + 0.05, v0 - 0.05, v1 + 0.05, top, top + 0.12, M.trim);
+  hbox(g, ur - 0.03, ub + 0.03, v0 - 0.03, v1 + 0.03, F[1] - 0.14, F[1] - 0.02, M.trim);
+  // The centre: three windows a floor above, two either side of the entrance on the first floor.
+  for (let f = 1; f < 4; f++) for (const v of [-2.9, 0, 2.9]) hwin(g, 'u+', uf, v, F[f] + 0.75, F[f] + 2.55, 1.3, M, null);
+  for (const v of [-2.9, 2.9]) hwin(g, 'u+', uf, v, F[0] + 0.7, F[0] + 2.6, 1.4, M, winList);
+  hbox(g, uf, uf + 0.18, -1.05, 1.05, F[0], F[0] + 3.0, M.trim);       // the stone surround
+  hbox(g, uf, uf + 0.32, -1.25, 1.25, F[0] + 3.0, F[0] + 3.3, M.trim);
+  const door = hbox(g, uf + 0.18, uf + 0.22, -0.55, 0.55, F[0], F[0] + 2.5, new THREE.MeshLambertMaterial({ color: 0x3a2418 }));
+  for (let i = 1; i <= 4; i++) hbox(g, uf, uf + (5 - i) * 0.3, -1.1, 1.1, 0, i * F[0] / 4, M.deck);
+  // Windows down both sides.
+  for (const [face, at] of [['v-', v0], ['v+', v1]]) for (let f = 0; f < 4; f++) for (const u of [-7.5, -3.5, 0.5, 4.5]) hwin(g, face, at, u, F[f] + 0.75, F[f] + 2.5, 1.0, M, null);
+  // Low shrubs along the front, the lamp post by the steps.
+  const rng = rngFor('740-hero');
+  for (const [b0, b1] of [[-10.0, -8.6], [-7.4, -5.6], [-4.4, -1.6], [1.6, 4.4], [5.6, 7.4], [8.6, 10.0]]) hedgeRun(g, ub + 0.55, b0, ub + 0.55, b1, M, rng, 0.75, 0.6);
+  postLamp(g, ub + 1.3, -2.4);
+  return { group: g, pick, winList, door, mats: M };
+}
+function heroTransform740(kit, p) {
+  const h = H740, uf = h.front, ub = h.bay, ud = ub - h.porchDepth, y = h.floors[0];
+  const [[a0, a1], [b0, b1]] = porches740(h);
+  const innerL = (a1 - h.bayIn) / 2, innerR = (h.bayIn + b0) / 2;
+  return caseTransform(kit, p, {
+    h,
+    letters: [[uf + 0.3, -2.9, y + 1.5, 1.1], [uf + 0.3, 2.9, y + 1.5, 1.1]],
+    awnings: [[uf + 0.05, -2.9, y + 3.0, 1.7], [uf + 0.05, 2.9, y + 3.0, 1.7], [ub + 0.05, innerL, y + 3.0, 1.6], [ub + 0.05, innerR, y + 3.0, 1.6]],
+    lanterns: [[uf + 0.25, -1.4, y + 2.2], [uf + 0.25, 1.4, y + 2.2]],
+    light: [uf + 1.2, 0, y + 2.4],
+    tables: [[ud + 1.0, (a0 + a1) / 2, y], [ud + 1.0, (b0 + b1) / 2, y]],
+    cart: [ud + 1.0, (a0 + a1) / 2, y],
+    benches: [[ud + 1.0, (a0 + a1) / 2, y], [ud + 1.0, (b0 + b1) / 2, y]],
+    board: [ub + 2.0, 2.0],
+    bulbs: [[ub - 0.2, a0 + 0.1, ub - 0.2, a1 - 0.1, y + 2.6], [ub - 0.2, b0 + 0.1, ub - 0.2, b1 - 0.1, y + 2.6]],
+    greeter: [uf + 0.45, 0.6, y * 0.75],
+    walkers: [[ub + 3.2, -18, uf + 1.9, -0.6], [ub + 3.6, 18, uf + 2.1, 0.7]],
+  });
+}
+function heroView740(mode) {
+  const h = H740;
+  if (mode === 'street') { const [px, py] = huv(h, 31, -13), [tx, ty] = huv(h, 10.4, -1.0); return { pos: to3(px, py, 2.2), target: to3(tx, ty, 5.2) }; }
+  const [px, py] = huv(h, 40, -20), [tx, ty] = huv(h, 3, 0);
+  return { pos: to3(px, py, 21), target: to3(tx, ty, 7) };
+}
+
+// The buildings drawn by hand, by GPIN: 801 Stockley Gardens and the case studies, which also get a page.
+const HEROES = {
+  '1428701712': { build: buildHero801, transform: heroTransform801, view: heroView },
+  '1428706223': { build: buildHero715, transform: heroTransform715, view: heroView715, page: '../case-studies/715-colonial.html' },
+  '1428629200': { build: buildHero740, transform: heroTransform740, view: heroView740, page: '../case-studies/740-w-princess-anne.html' },
+};
 
 // ── Frame ──
 function tick(now) {
