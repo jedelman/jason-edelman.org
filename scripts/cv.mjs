@@ -95,7 +95,7 @@ ${body.map((s) => `          <a href="#${s.id}">${esc(s.title)}</a>`).join('\n')
         </nav>
       </div>
       <div class="header-side">
-        <a class="book-call" href="https://calendly.com/edelmanja/30min">Book a 30-minute call</a>
+        <a class="book-call" href="https://calendly.com/edelmanja/30min">Book a Call</a>
       </div>
     </header>
 
