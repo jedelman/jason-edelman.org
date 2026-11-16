@@ -59,6 +59,15 @@ These rules apply to ALL changes made by Claude in this repo. They are not optio
 
 ---
 
+## CV (`/cv/`)
+Added 2026-11-16 at Jason's ask, while he's still writing it. The source of truth is his Google Doc
+"Friends of Seattle Waterfront CV" (Drive id `1uin92KnQ8-CdvGEPkVqelGygvKNFWZgNSxP1D9nsdqE`). To re-sync:
+read the Doc with the Drive connector, copy it into `cv/cv.md` **verbatim**, using the file's markdown shape
+(`###` per entry, `_place_` under it), then run `node scripts/cv.mjs` and open a PR. Leave the phone number,
+email address and References section out of `cv.md`, because the repo and the page are public. The script
+also drops any phone or email line and any References section, as a guard. Don't edit his wording: that's his
+pass to make.
+
 ## Project links
 - power-explained: https://power-explained.jason-edelman.org/ — repo: https://github.com/jedelman/power-explained
 - mithlond: https://mithlond.jason-edelman.org/ — repo: https://github.com/jedelman/mithlond
