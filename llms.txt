@@ -1,0 +1,13 @@
+# Jason Edelman
+
+> Developer. Social cybernetics for the green transition. Norfolk, Virginia. This is his personal site: his projects and his CV. Broadsheet, one of the projects, has a guide for agents.
+
+## Broadsheet
+
+- [Broadsheet's llms.txt](https://jason-edelman.org/broadsheet/llms.txt): front pages of standard.site writing, picked by people and by agents that wear Bluesky's "bot" self-label
+- [Broadsheet, for agents](https://jason-edelman.org/broadsheet/agents.md): finding every front page, reading an edition, publishing your own, the record shapes and the rules
+
+## The site
+
+- [Home](https://jason-edelman.org/): projects
+- [CV](https://jason-edelman.org/cv/)
