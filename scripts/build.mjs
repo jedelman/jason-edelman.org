@@ -244,26 +244,47 @@ function collectHtml(dir, files = []) {
   return files;
 }
 
-/** Last commit date per path, from one `git log` pass (newest first). */
+/**
+ * Last commit date per path, from one `git log` pass (newest first).
+ *
+ * CI (Workers Builds) clones shallow, so `git log` ends at a boundary commit that seems
+ * to add every file it holds. A path whose newest commit is a boundary commit has an
+ * unknown date: it's left out of the map, and its sitemap entry gets no <lastmod>
+ * (optional in the protocol, and better absent than wrong). `newest` is the date of the
+ * newest commit, which a shallow clone still has right.
+ */
 function gitDates(cwd) {
   const map = new Map();
+  let newest = null;
   try {
-    const out = execSync('git log --format=%x00%cI --name-only', { cwd, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
-    let date = null;
-    for (const line of out.split('\n')) {
-      if (line.startsWith('\0')) date = line.slice(1, 11);
-      else if (line && date && !map.has(line)) map.set(line, date);
+    const run = (cmd) => execSync(cmd, { cwd, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
+    let boundary = new Set();
+    if (run('git rev-parse --is-shallow-repository').trim() === 'true') {
+      try { boundary = new Set(readFileSync(resolve(cwd, run('git rev-parse --git-path shallow').trim()), 'utf8').split('\n').filter(Boolean)); } catch {}
+    }
+    const seen = new Set();
+    let date = null, cut = false;
+    for (const line of run('git log "--format=%x00%H %cI" --name-only').split('\n')) {
+      if (line.startsWith('\0')) {
+        const [sha, iso] = line.slice(1).split(' ');
+        date = iso.slice(0, 10);
+        cut = boundary.has(sha);
+        newest = newest || date;
+      } else if (line && date && !seen.has(line)) {
+        seen.add(line);
+        if (!cut) map.set(line, date);
+      }
     }
   } catch { /* not a git checkout */ }
-  return map;
+  return { map, newest };
 }
 const repoDates = gitDates(ROOT);
 const subDates = Object.fromEntries(PROJECTS.filter(p => existsSync(resolve(ROOT, p.dir, '.git'))).map(p => [p.name, gitDates(resolve(ROOT, p.dir))]));
 
 /**
  * The last-modified date of a public file: the last commit that touched its source.
- * Pages a build step generates (no source file of the same path) get the newest commit
- * in their project; anything else falls back to the file's mtime.
+ * Pages a build step generates in a submodule (no source file of the same path) get
+ * their submodule's newest commit. Anything else is unknown (null: no <lastmod>).
  */
 function lastmod(absPath) {
   const rel = relative(PUBLIC, absPath).replace(/\\/g, '/');
@@ -273,16 +294,13 @@ function lastmod(absPath) {
     const inner = join(project.outDir, rest.join('/')).replace(/\\/g, '/');
     const sub = subDates[project.name];
     if (sub) {
-      if (sub.has(inner)) return sub.get(inner);
-      const newest = [...sub.values()].sort().pop();
-      if (newest) return newest;
-    } else if (repoDates.has(`${project.dir}/${inner}`)) {
-      return repoDates.get(`${project.dir}/${inner}`);
+      if (sub.map.has(inner)) return sub.map.get(inner);
+      const tracked = execSync(`git ls-files -- "${inner}"`, { cwd: resolve(ROOT, project.dir), encoding: 'utf8' }).trim();
+      return tracked ? null : sub.newest;   // a tracked file of unknown date stays unknown
     }
-  } else if (repoDates.has(rel)) {
-    return repoDates.get(rel);
+    return repoDates.map.get(`${project.dir}/${inner}`) || null;
   }
-  return new Date(statSync(absPath).mtime).toISOString().slice(0, 10);
+  return repoDates.map.get(rel) || null;
 }
 
 /**
@@ -356,11 +374,11 @@ const xml = [
   ...entries.map(e => [
     '  <url>',
     `    <loc>${e.loc}</loc>`,
-    `    <lastmod>${e.lastmod}</lastmod>`,
+    e.lastmod && `    <lastmod>${e.lastmod}</lastmod>`,
     `    <changefreq>${e.changefreq}</changefreq>`,
     `    <priority>${e.priority}</priority>`,
     '  </url>',
-  ].join('\n')),
+  ].filter(Boolean).join('\n')),
   '</urlset>',
 ].join('\n');
 
