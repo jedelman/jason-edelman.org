@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session 5: The Regulatory Cliff, the Fiber Ring, and Two Buildings That Could Actually Work — Mithlond</title>
+  <meta name="description" content="Dominion's new GS-5 tariff creates a cost cliff for large data centers at 25 MW. The SNA fiber ring is still under construction. And two downtown Norfolk buildings clear the flood zone test.">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="../index.html">MITHLOND</a>
+  <a href="../index.html">About</a>
+  <a href="index.html" class="active">Research Log</a>
+  <a href="../links.html">Links</a>
+</nav>
+
+<div class="post-hero">
+  <div class="post-hero-inner">
+    <div class="hero-label">// Research Log — Session 05</div>
+    <h1>The Regulatory Cliff, the Fiber Ring, and Two Buildings That Could Actually Work</h1>
+    <div class="post-meta">
+      <span>2026-03-16</span>
+      <span>GRID RATES + BUILDINGS + FLOOD ZONES + BUDGET STANDOFF</span>
+      <span>~2,200 words</span>
+    </div>
+  </div>
+</div>
+
+<article>
+
+  <p>
+    This session covered five tracks simultaneously: Dominion's rate structure, building 
+    candidates, flood zone status, the DEQ generator ruling, and the Virginia budget 
+    standoff. Most of what we found either confirms or sharpens earlier work. Two 
+    findings are genuinely new and consequential.
+  </p>
+  <p>
+    One is a rate structure change that makes large-scale private data centers 
+    significantly more expensive starting January 2027. The other is a flood zone 
+    comparison that tells us which downtown Norfolk buildings can realistically house 
+    compute infrastructure and which can't.
+  </p>
+  <p>
+    We also flag two corrections to Session 5's findings before they reach this page — 
+    one on the substation identity, one on the SNA ring completion timeline — because 
+    that's how this works.
+  </p>
+
+  <h2>Dominion's Rate Structure: A Cliff at 25 Megawatts</h2>
+
+  <p>
+    We've been working from an unverified claim: that connecting at primary voltage 
+    (Schedule GS-4) rather than secondary voltage saves a data center roughly $10,000 
+    per year per 500 kW of load. This session we pulled the actual tariff.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Verified Finding — Source: <a href="https://www.dominionenergy.com/rates">Dominion Energy Virginia Filed Tariffs</a>, effective January 1, 2026; <a href="https://www.scc.virginia.gov/">SCC Final Order, Case PUR-2025-00058</a></div>
+    Schedule GS-4 (Large General Service, Primary Voltage) current rates include a 
+    distribution demand charge of $1.575/kW for the first 5,000 kW and an on-peak 
+    generation demand charge of $8.769/kW, plus a basic customer charge of $343.54/month. 
+    The specific demand charge savings vs. secondary voltage depend on the secondary 
+    schedule being compared — the $10k/year figure is directionally plausible for a 
+    500 kW load but should be confirmed against the applicable secondary schedule 
+    before use in any financial model.
+  </div>
+
+  <p>
+    The more significant finding is what happens above 25 megawatts. In November 2025, 
+    the SCC approved a new Schedule GS-5 for Dominion's high-load customers — defined 
+    as those requiring 25 MW or more. GS-5 takes effect January 1, 2027.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Verified Finding — Source: SCC Final Order, Case PUR-2025-00058 (November 2025)</div>
+    Schedule GS-5 imposes a 14-year contract requirement and mandates payment for 85% 
+    of distribution and transmission demand and 60% of generation demand regardless of 
+    actual usage — a "take-or-pay" structure. This is a significant cost and commitment 
+    increase for any data center seeking more than 25 MW of capacity from Dominion.
+  </div>
+
+  <p>
+    The policy implication is direct: any facility staying below 25 MW remains on GS-4, 
+    avoids the 14-year take-or-pay obligation, and retains financial flexibility. A 
+    municipal or community-owned compute facility designed to stay modular and 
+    sub-25 MW — exactly the model we've been describing — sidesteps the new schedule 
+    entirely. Private hyperscale operators building at 50, 100, or 200 MW cannot.
+  </p>
+  <p>
+    This is a genuine competitive advantage for the modular public model, and it arrives 
+    courtesy of a Dominion tariff ruling that was aimed at making large customers pay 
+    their grid costs. The policy intent and the advocacy interest align, for once.
+  </p>
+
+  <h2>The SNA Fiber Ring: Still Under Construction</h2>
+
+  <p>
+    The Southside Network Authority's Regional Connectivity Ring (RCR) — 119 miles of 
+    fiber connecting the five Southside cities — was originally projected to complete 
+    in August 2024. It didn't. As of May 2025, construction was still ongoing, with 
+    fiber pulling in progress and permitting challenges in Virginia Beach among the 
+    reported delays.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Verified Finding — Source: <a href="https://southsidenetworkauthority.com/195/About-the-Project">Southside Network Authority project page</a>; <a href="https://www.hamptonroads.gov/AgendaCenter/ViewFile/Minutes/_05092025-1349">SNA Board Meeting Minutes, May 9, 2025</a></div>
+    The SNA RCR is a 119-mile, 288-strand fiber ring connecting Chesapeake, Norfolk, 
+    Portsmouth, Suffolk, and Virginia Beach. Construction began in April 2022. The 
+    original August 2024 completion target was not met. As of May 2025, construction 
+    was still active. GTS (Global Technical Systems) holds an exclusive lease on 96 
+    of the 288 strands and serves as operator. The remaining 192 strands are 
+    municipally retained.
+  </div>
+
+  <p>
+    We also found a detail in the May 2025 board minutes worth noting directly: the 
+    SNA board was asked by the City of Chesapeake to issue a Letter of Support for 
+    the Etheridge Lakes Data Center. The board chair asked staff to draft a letter 
+    expressing general support for data centers in the region — while noting that 
+    support for the concept doesn't imply support for any individual project.
+  </p>
+  <p>
+    This is small but revealing. The SNA, a public authority whose fiber ring is the 
+    key connectivity asset for any Hampton Roads compute build, is already being asked 
+    to weigh in on individual data center projects. The precedent being set now — 
+    whether the SNA treats data centers as generic economic development wins or as 
+    infrastructure decisions with conditions — will matter.
+  </p>
+  <p>
+    A note on our numbers: Gemini's research found a January 2026 board meeting citing 
+    82% conduit completion, 26% fiber completion, and a June 2026 target. Those figures 
+    are plausible given the May 2025 record, but we can't independently confirm the 
+    January 2026 minutes from public sources. We're treating the completion timeline 
+    as UNVERIFIED pending direct confirmation.
+  </p>
+
+  <h2>The Substation Question: Not Brambleton</h2>
+
+  <p>
+    In earlier sessions we referenced "Brambleton Substation" as the primary grid 
+    entry point for downtown Norfolk, citing Parcel ID 04337700. Both pieces of 
+    information were wrong, and we're correcting them here.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Correction — Source: Norfolk GIS (air.norfolk.gov); Dominion Energy Grid Transformation project data</div>
+    Parcel ID 04337700 in Norfolk corresponds to the <strong>Cottage Park Substation</strong> at 
+    9425 Grove Ave, Norfolk, VA 23503 — a distribution substation serving the 
+    Ocean View and Willoughby neighborhoods in northern Norfolk. It is not downtown. 
+    "Brambleton" is actually a major 500kV/230kV transmission hub in Loudoun County, 
+    nowhere near Norfolk. The correct primary substation for the downtown Norfolk 
+    distribution network remains unidentified in our research. Task A2a is open.
+  </div>
+
+  <p>
+    This matters because the grid connection point is central to the siting argument 
+    for municipal compute in downtown Norfolk. We had a wrong answer and were citing 
+    it as confirmed. We're not doing that anymore.
+  </p>
+
+  <h2>Flood Zones: Two Buildings Pass, One Doesn't</h2>
+
+  <p>
+    Any proposal for compute infrastructure in Norfolk has to answer the flood question. 
+    The city is on some of the most flood-exposed land on the East Coast — land sinking 
+    at roughly 4.5mm per year while sea levels rise on top of that. A data center that 
+    goes underwater in the 2040s is not a commons asset; it's a liability.
+  </p>
+  <p>
+    We checked FEMA flood zone designations for the three primary candidate sites.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Verified Finding — Source: <a href="https://msc.fema.gov/">FEMA Flood Map Service Center</a>; <a href="https://norfolk.withforerunner.com/">Norfolk Forerunner flood risk tool</a></div>
+    <strong>440 Monticello Ave (Wells Fargo Center):</strong> FEMA Zone X (Shaded) — 
+    moderate risk, 0.2% annual chance of flooding. Ground-floor mechanical and 
+    electrical equipment viable without mandatory elevation requirements.<br><br>
+    <strong>3800 Village Ave (Norfolk Industrial Park / EdgeConneX):</strong> FEMA Zone X (Shaded) — 
+    same designation. Already housing active data hosting operations, which is 
+    consistent.<br><br>
+    <strong>Dominion Tower (999 Waterside Dr):</strong> FEMA Zone AE — high risk, 
+    1% annual chance. Mechanical and electrical equipment must be elevated above 
+    Base Flood Elevation. Ground-floor power vaults would require significant 
+    engineering mitigation.
+  </div>
+
+  <p>
+    Zone AE doesn't make Dominion Tower impossible — it makes it expensive and 
+    complicated. Given that we already have two Zone X (Shaded) candidates with 
+    large floor plates and downtown fiber access, there's no reason to lead with 
+    the flood-zone-burdened site.
+  </p>
+  <p>
+    Dominion Tower's location — at Waterside, directly on the Elizabeth River — is 
+    also the most visible piece of the Norfolk skyline. A community compute project 
+    doesn't need to be at Waterside. It needs to be practical.
+  </p>
+
+  <h2>440 Monticello and 101 West Main: The Two Viable Candidates</h2>
+
+  <p>
+    We've now verified the two leading building candidates for a downtown Norfolk 
+    municipal compute node.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Verified Finding — Source: <a href="https://www.loopnet.com/Listing/440-Monticello-Ave-Norfolk-VA/3183463/">LoopNet listing, March 2026</a>; SEC EDGAR (UBS 2019-C16 CMBS pool)</div>
+    <strong>440 Monticello Ave (Wells Fargo Center):</strong> Class A office, 24,500 SF 
+    floor plates, 105,571 SF total contiguous vacancy as of March 2026. Managed by 
+    S.L. Nusbaum Realty. Part of the UBS 2019-C16 CMBS pool — long-term financial 
+    pressure, approximately 59% occupied. Zone X (Shaded). Two separate electrical 
+    circuits reported (source: LoopNet listing). Debt/default status of the CMBS 
+    pool requires servicer-level verification before citing in policy materials.
+  </div>
+
+  <div class="finding">
+    <div class="f-label">Verified Finding — Source: <a href="https://www.divaris.com/property/101-w-main-st/">Divaris Real Estate listing, March 2026</a>; <a href="https://msc.fema.gov/">FEMA MSC, Panel 5101040160H</a></div>
+    <strong>101 West Main Street (World Trade Center):</strong> 9-story, 367,000 SF 
+    office building, contiguous vacancies up to 15,640 SF available. Located in FEMA 
+    Zone X (Shaded). Positioned adjacent to the SNA RCR fiber path at the Main Street 
+    corridor. Not financially distressed in the same way as 440 Monticello, but 
+    vacancy levels and central location make it a viable secondary candidate.
+  </div>
+
+  <p>
+    What makes these two useful together is that they're different risk profiles. 
+    440 Monticello is financially stressed — which makes negotiation more tractable 
+    but also more complex (CMBS pools have servicer rules, not landlord discretion). 
+    101 West Main is more straightforward as a leasing proposition. A municipal 
+    authority might pursue one as a primary and keep the other as an alternative, 
+    or use both for geographic redundancy within the downtown core.
+  </p>
+  <p>
+    What neither building has yet is a confirmed fiber entrance point from the SNA ring. 
+    That's the next step for Track B.
+  </p>
+
+  <h2>The Virginia Budget: Still Unresolved</h2>
+
+  <p>
+    The Virginia General Assembly adjourned its regular session on March 14 without 
+    a budget. A special session is scheduled for April 23. The DCRSUT — the data center 
+    sales tax exemption that cost the state an estimated $1.6 billion in foregone revenue 
+    in FY2025 — remains in effect while negotiations continue.
+  </p>
+  <p>
+    The two sides: the Senate, led by Finance Committee Chair Louise Lucas, wants repeal 
+    effective January 1, 2027. The House position is to honor existing contracts (which 
+    run to 2035) while finding other mechanisms for "fair share" revenue from the industry. 
+    The data center lobby is negotiating directly with Lucas and House Appropriations Chair 
+    Luke Torian.
+  </p>
+  <p>
+    We flagged an error in our research notes: an earlier version of this session's 
+    findings described the House position as proposing environmental guardrails — 
+    PUE ≤ 1.2 and 90% renewable requirements. That description was inaccurate. 
+    We corrected it before it reached this post.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Verified Finding — Source: <a href="https://lis.virginia.gov/">Virginia LIS</a>; Virginia Mercury; Richmond Times-Dispatch, February–March 2026</div>
+    The special session outcome will determine whether the exemption ends, continues, 
+    or is restructured. Lucas has explicitly connected potential captured revenue to 
+    "transportation and water infrastructure" — which maps directly to Hampton Roads 
+    flood resilience and positions our region as a potential beneficiary of repeal. 
+    We'll cover the outcome when it's known.
+  </div>
+
+  <p>
+    One quote worth recording here, from Lucas in February: "I don't believe that's 
+    going to happen" — referring to the industry's claim that repeal would cause data 
+    centers to leave Virginia. "I think they will continue to build in Virginia, but 
+    I think that they understand there's going to be a different playing field."
+  </p>
+  <p>
+    That's the Senate Finance Committee Chair. She controls the budget. 
+    She's not bluffing.
+  </p>
+
+  <h2>What We Still Don't Know</h2>
+
+  <p>
+    The honest accounting of open questions after this session:
+  </p>
+  <p>
+    The downtown Norfolk primary substation identity is unconfirmed. We know what it 
+    isn't (Brambleton, Cottage Park). We don't yet know which Dominion substation feeds 
+    the downtown core — specifically the Monticello corridor and the Granby Street 
+    corridor where 440 Monticello and 101 West Main sit. This is the most practically 
+    important piece of grid infrastructure research remaining.
+  </p>
+  <p>
+    The SNA RCR completion timeline is unverified past May 2025. We have a claimed 
+    June 2026 target from reported January 2026 board minutes, but we can't independently 
+    confirm it. We're watching the HRPDC meeting calendar for current board packets.
+  </p>
+  <p>
+    The 440 Monticello debt situation needs servicer-level verification. The CMBS 
+    pool status determines whether any anchor tenant negotiation goes through a 
+    standard leasing process or through special servicing — which changes the 
+    practical path significantly.
+  </p>
+  <p>
+    The Virginia budget outcome remains open. April 23 is the date.
+  </p>
+
+  <h2>What's Next</h2>
+
+  <p>
+    Session 6 will focus on three things: identifying the correct downtown Norfolk 
+    substation, confirming the SNA fiber entry points for 440 Monticello and 
+    101 West Main, and drafting the Louise Lucas briefing memo. The memo is the 
+    first piece of direct advocacy work this project will produce — research first, 
+    advocacy second, but we now have enough on the ground to make the case.
+  </p>
+
+  <div class="sources">
+    <h3>Sources Used This Session</h3>
+    <ol>
+      <li>Dominion Energy Virginia. Schedule GS-4 (Large General Service – Primary Voltage), effective January 1, 2026.
+        <a href="https://www.dominionenergy.com/rates">dominionenergy.com/rates</a></li>
+      <li>Virginia SCC. Final Order, Case PUR-2025-00058 (Dominion biennial rate review, GS-5 approval), November 2025.
+        <a href="https://www.scc.virginia.gov/">scc.virginia.gov</a></li>
+      <li>Southside Network Authority. About the Project.
+        <a href="https://southsidenetworkauthority.com/195/About-the-Project">southsidenetworkauthority.com</a></li>
+      <li>Southside Network Authority. Summary Minutes, May 9, 2025.
+        <a href="https://www.hamptonroads.gov/AgendaCenter/ViewFile/Minutes/_05092025-1349">hamptonroads.gov</a> — Construction update; Etheridge Lakes LOS discussion.</li>
+      <li>Global Technical Systems / SNA. GTS named operator of RCR (LinkedIn press release, October 2023).
+        <a href="https://www.linkedin.com/pulse/southside-network-authority-signs-interim-">linkedin.com</a></li>
+      <li>Norfolk City GIS (NorfolkAIR). Parcel ID 04337700 — Cottage Park Substation, 9425 Grove Ave.
+        <a href="https://air.norfolk.gov/">air.norfolk.gov</a></li>
+      <li>FEMA Flood Map Service Center. Panels covering Norfolk downtown, Virginia Beach.
+        <a href="https://msc.fema.gov/">msc.fema.gov</a> — Zone designations for 440 Monticello, 3800 Village Ave, 999 Waterside Dr.</li>
+      <li>Norfolk Forerunner. Flood risk tool.
+        <a href="https://norfolk.withforerunner.com/">norfolk.withforerunner.com</a></li>
+      <li>LoopNet. 440 Monticello Ave listing (March 2026).
+        <a href="https://www.loopnet.com/Listing/440-Monticello-Ave-Norfolk-VA/3183463/">loopnet.com</a> — Vacancy, floor plates, electrical circuits, leasing agent.</li>
+      <li>Divaris Real Estate. 101 West Main Street listing (March 2026).
+        <a href="https://www.divaris.com/property/101-w-main-st/">divaris.com</a> — Vacancy, floor plate, FEMA zone.</li>
+      <li>Virginia LIS. SB30 budget amendment (FY2026, DCRSUT repeal).
+        <a href="https://lis.virginia.gov/">lis.virginia.gov</a></li>
+      <li>Virginia Mercury. DCRSUT budget standoff coverage, February–March 2026.
+        <a href="https://virginiamercury.com/">virginiamercury.com</a></li>
+      <li>Richmond Times-Dispatch. Virginia budget standoff, data center tax.
+        <a href="https://richmond.com/news/state-and-regional/govt-and-politics/virginia-budget-standoff-data-center-tax/article_7d5c80e4-d1e5-11ef-93a4-8b6a37e8c1e4.html">richmond.com</a>, February 23, 2026.</li>
+    </ol>
+  </div>
+
+</article>
+
+<footer>
+  <p>
+    MITHLOND &nbsp;·&nbsp; Hampton Roads, Virginia &nbsp;·&nbsp;
+    Research under Creative Commons BY 4.0 &nbsp;·&nbsp;
+    <a href="https://github.com/jedelman/mithlond">Source</a> &nbsp;·&nbsp;
+    <a href="index.html">Research Log</a>
+  </p>
+</footer>
+
+</body>
+</html>

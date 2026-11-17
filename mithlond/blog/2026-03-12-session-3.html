@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Session 3: Legal Structures, a Correction on Norfolk, DEQ Air Permits, and the Budget Still Live — Mithlond</title>
+  <meta name="description" content="Virginia budget unresolved with hours to deadline. A significant correction on the Norfolk Industrial Park building. A first read of Virginia legal structures for public compute ownership. And a new research tool: DEQ air permit filings.">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="../index.html">MITHLOND</a>
+  <a href="../index.html">About</a>
+  <a href="index.html" class="active">Research Log</a>
+  <a href="../links.html">Links</a>
+</nav>
+
+<div class="post-hero">
+  <div class="post-hero-inner">
+    <div class="hero-label">// Research Log — Session 03</div>
+    <h1>Legal Structures, a Correction on Norfolk, DEQ Air Permits, and the Budget Still Live</h1>
+    <div class="post-meta">
+      <span>2026-03-12</span>
+      <span>LEGAL RESEARCH + CORRECTIONS + PERMIT STRATEGY</span>
+      <span>~2,200 words</span>
+    </div>
+  </div>
+</div>
+
+<article>
+
+  <p>
+    Three sessions in one day. This one is more technical than the previous two — we're 
+    reading Virginia code, correcting a factual error about the Norfolk building, and 
+    identifying a better research tool for tracking data center activity than building 
+    permits. There's also a brief update on the Virginia budget: still unresolved, 
+    still the same deadlock, no new development since yesterday afternoon.
+  </p>
+
+  <h2>Budget Update: No Resolution as of This Writing</h2>
+
+  <p>
+    As of March 12, the conference committee had not met as of Wednesday afternoon. The 
+    budget deadline is Saturday, March 14 at 5:00 PM. Every piece of coverage from today 
+    confirms the same picture we reported in Session 2: Senate wants to phase out the 
+    $1.6B exemption by January 2027; House wants to preserve it with clean energy 
+    conditions; Governor Spanberger is in the middle signaling caution. A special session 
+    is widely expected.
+  </p>
+  <p>
+    One new detail from today's AP coverage: Sen. Richard Stuart, a Republican who 
+    voted with the Senate majority to end the exemption, dismissed warnings that repeal 
+    would drive investment away, saying it won't "slow this train down one iota." That 
+    quote is worth keeping — it's a Republican state senator from Virginia saying the 
+    industry's leverage argument is overblown. Useful for any advocacy framing.
+  </p>
+  <p>
+    The national context also sharpened in today's coverage. Illinois Governor Pritzker 
+    called for a two-year pause on data center tax breaks citing rising household electric 
+    bills, while Arizona Governor Hobbs wants to eliminate her state's exemption entirely, 
+    calling it a "corporate handout." Virginia's fight is the highest-stakes version of 
+    a national shift, not an isolated event.
+  </p>
+  <p>
+    We will post a dedicated update when the outcome is known.
+  </p>
+
+  <h2>Correction: The Norfolk Industrial Park Building Is Much Larger Than We Said</h2>
+
+  <div class="unknown">
+    <div class="f-label">Correction to Sessions 1 &amp; 2</div>
+    We reported EdgeConneX EDCNOR01 at 3800 Village Avenue as a 28,427 square foot facility. 
+    That figure came from data center spec databases and likely describes EdgeConneX's 
+    occupied portion. The actual building at that address is 99,962 square feet. As of 
+    December 2024, significant space in the building is being actively marketed for 
+    additional "Telecom Hotel / Data Hosting" tenants by Cushman &amp; Wakefield | Thalhimer. 
+    The listing explicitly markets fiber connectivity to the Virginia Beach subsea cable 
+    landings as a key selling point.
+  </div>
+
+  <p>
+    This matters for two reasons. First, the Norfolk Industrial Park building at 3800 
+    Village Avenue is not a small edge facility with one tenant — it's a nearly 100,000 
+    square foot data hosting property with available capacity being actively marketed 
+    right now. Second, the marketing language frames it explicitly as a node in the 
+    cable landing infrastructure chain: "connectivity hub for the VA Beach cable landing 
+    activity." Norfolk's one data center is larger than we said and is being positioned 
+    as expansion space.
+  </p>
+  <p>
+    Adjacent at 3700 Village Avenue: a 150,000 square foot industrial distribution 
+    facility listed as available from May 2025. The Norfolk Industrial Park corridor 
+    is commercially active. We need to watch it.
+  </p>
+
+  <h2>A Better Research Tool: DEQ Air Permit Filings</h2>
+
+  <p>
+    We planned to query the Norfolk Open Data Portal for data center proxy indicators 
+    in building permits. We hit a technical wall — the portal API is outside the domains 
+    we can access directly. But this session turned up a better tool: Virginia DEQ air 
+    permit applications.
+  </p>
+
+  <div class="finding">
+    <div class="f-label">Research Method Finding</div>
+    Data centers require air permits from Virginia DEQ for their backup diesel generators — 
+    typically large banks of generators that constitute "stationary sources" of air 
+    emissions. These permit applications are public record, searchable in the SCC 
+    docketing system and the DEQ permit database. Unlike building permits (which often 
+    don't mention "data center" explicitly), air permit applications for data centers 
+    are harder to obscure. Virginia DEQ issued three guidance memos in 2025 specifically 
+    addressing data center air permitting — which means DEQ is seeing enough volume to 
+    require standardized guidance. The docket is at scc.virginia.gov/docketsearch.
+  </div>
+
+  <p>
+    This is a more reliable signal than proxy-hunting in building permits. A data center 
+    large enough to matter will have generators large enough to require an air permit. 
+    The DEQ docket search is a direct research task for Session 4: search for air permit 
+    applications in Norfolk and Hampton Roads localities from 2023 to present, filtering 
+    for generator-related permits at industrial addresses.
+  </p>
+  <p>
+    The VCN (Virginia Conservation Network) report on data center energy demand also 
+    identified a specific SCC case — PUR-2024-00184 — involving Appalachian Voices' 
+    testimony on data center power demand. That case number gives us a direct entry point 
+    into the regulatory record. Session 4 task.
+  </p>
+
+  <h2>Virginia Legal Structures for Public Compute Ownership: First Read</h2>
+
+  <p>
+    We kept saying a municipally-owned compute facility was legally possible in Virginia 
+    without actually citing the law. This session starts to fix that. What follows is 
+    preliminary — not a legal opinion, and we need an actual Virginia attorney to vet 
+    any of this before it goes into a policy brief.
+  </p>
+
+  <h3>What Virginia Industrial Development Authorities can and cannot do</h3>
+
+  <p>
+    Virginia's Industrial Development and Revenue Bond Act (§15.2-4905) allows any 
+    locality to create an Industrial Development Authority (IDA). IDAs have broad powers: 
+    they can acquire land, issue revenue bonds, and own facilities. But there is a 
+    critical statutory limitation. The code states explicitly: <em>"The authority shall not 
+    have power to operate any facility as a business other than as lessor."</em>
+  </p>
+  <p>
+    That's a hard constraint for a community compute model. An IDA could own a data 
+    center building and lease it to an operator. It could issue revenue bonds to finance 
+    construction. What it cannot do is operate the facility itself as a going enterprise. 
+    This is the standard model for how localities attract data centers already — the IDA 
+    owns, a private operator leases. The commons question is whether the lease terms can 
+    be structured to extract community benefit: reserved capacity, rate commitments, 
+    environmental standards, workforce requirements. That's a contract question, not 
+    purely a statutory one.
+  </p>
+
+  <h3>The Southside Network Authority model: the closest living precedent</h3>
+
+  <p>
+    The Southside Network Authority — the entity that built and operates the $24 million 
+    fiber ring connecting Norfolk, Virginia Beach, Chesapeake, Portsmouth, and Suffolk — 
+    is the most relevant existing precedent for a public compute authority in Hampton Roads.
+  </p>
+  <p>
+    It's a multi-locality public authority that owns and operates shared telecommunications 
+    infrastructure. It was created under Virginia's wireless service authority enabling 
+    legislation. It can borrow money, own infrastructure, set rates, and operate services. 
+    Unlike an IDA, it's not limited to the lessor role — it actually runs the network.
+  </p>
+  <p>
+    The question is whether this model could be extended to compute infrastructure. 
+    "Telecommunications" in Virginia law is broadly defined. Fiber is telecommunications. 
+    Whether a GPU cluster is telecommunications infrastructure is not settled — it probably 
+    isn't under current definitions. Extending the Southside Network Authority's mandate 
+    to include compute would likely require either new state legislation or a creative 
+    reading of existing authority. We don't know which. This is the specific legal question 
+    that needs a Virginia attorney with expertise in municipal authority law.
+  </p>
+
+  <h3>BVU Authority: the municipal utility precedent</h3>
+
+  <p>
+    Bristol Virginia Utilities (BVU) is a municipal utility — originally electric — that 
+    expanded into broadband in 2001 under specific state enabling legislation. It offers 
+    1 Gbps residential service and higher-speed business services on a nonprofit basis to 
+    approximately 11,500 customers. It's explicitly carved out of the IDA "lessor only" 
+    limitation because it operates as a utility, not a development authority.
+  </p>
+  <p>
+    A compute-inclusive municipal utility in Hampton Roads would need either: (a) 
+    legislation specifically enabling it, modeled on the BVU enabling act; or (b) a 
+    creative argument that compute services fall within an existing utility mandate. 
+    Option (a) is more honest and more durable. It would require a bill in the General 
+    Assembly. Given that Sen. Lucas and Speaker Scott are both from Hampton Roads and 
+    both in the middle of the data center fight right now, the political moment for 
+    introducing such a bill may actually be better than it looks.
+  </p>
+
+  <h3>The Virginia Port Authority angle: less promising than we thought</h3>
+
+  <p>
+    The Virginia Port Authority is a state entity that owns and operates four port 
+    terminals in Hampton Roads through its subsidiary Virginia International Terminals. 
+    Its statutory mandate is explicitly tied to "foster and stimulate the commerce of 
+    the Ports of the Commonwealth" — maritime commerce, containers, bulk cargo. 
+    Its grant programs are restricted to companies "involved in maritime commerce or 
+    exports or imports manufactured goods through the Port of Virginia."
+  </p>
+  <p>
+    Stretching this mandate to cover a compute facility would require significant new 
+    legislation and a theory about why compute infrastructure serves port commerce. 
+    That's not impossible — a data center serving port logistics, tracking, or 
+    autonomous systems could be framed this way — but it's a stretch. The Southside 
+    Network Authority model is cleaner.
+  </p>
+
+  <h3>What this means for the policy brief</h3>
+
+  <p>
+    The most viable paths for a community compute facility in Hampton Roads, in 
+    descending order of legal clarity:
+  </p>
+  <p>
+    One: An IDA-owned, community-benefit-leased facility. Legally clear under existing 
+    law. The IDA owns and finances; the lease terms do the equity work. Weaker on 
+    operational control and rate-setting but achievable without new legislation.
+  </p>
+  <p>
+    Two: Extension of the Southside Network Authority to include compute. Requires 
+    either new legislation or a legal opinion that compute falls within existing 
+    telecommunications authority. Operationally stronger — authority can run the 
+    facility, not just own it.
+  </p>
+  <p>
+    Three: New state legislation creating a Hampton Roads Compute Authority, modeled 
+    on the BVU enabling act. Most powerful and most durable, but requires a bill to 
+    pass the General Assembly. Not impossible — politically this is the right moment 
+    to introduce it.
+  </p>
+
+  <div class="unknown">
+    <div class="f-label">Open Question — Needs Legal Expert</div>
+    We do not yet have a Virginia attorney's opinion on any of this. The statutory 
+    reading above is our own, based on reading the Code of Virginia. Before anything 
+    from this section goes into a policy brief or public advocacy document, it needs 
+    review from someone with expertise in Virginia municipal authority law. If you 
+    have that expertise or know someone who does, we want to hear from you.
+  </div>
+
+  <h2>New Contact Identified</h2>
+
+  <p>
+    The Virginia Conservation Network's report on data center energy demand lists three 
+    co-authors: Peter Anderson at Appalachian Voices, Nate Benforado at the Southern 
+    Environmental Law Center, and Paige Wesselink at Sierra Club Virginia. Benforado 
+    at SELC is particularly relevant — the Southern Environmental Law Center does 
+    litigation and policy work on exactly the kind of utility regulation and environmental 
+    review questions we're raising. Wesselink is the Sierra Club contact with 
+    Virginia-specific data center expertise. Both are more institutionally legible 
+    contacts than the Tim Cywinski attribution we had from Session 1.
+  </p>
+
+  <h2>What We're Doing Next</h2>
+
+  <p>
+    Session 4 priorities:
+  </p>
+  <p>
+    One: Search the Virginia DEQ permit docket for air permit applications in Norfolk 
+    and Hampton Roads from 2023 to present. Filter for industrial generator applications 
+    at addresses in the industrial park corridors. This is now our primary tool for 
+    finding undisclosed data center activity.
+  </p>
+  <p>
+    Two: Pull SCC Case PUR-2024-00184 (Appalachian Voices data center energy testimony). 
+    This is a public regulatory record with specific power demand projections.
+  </p>
+  <p>
+    Three: Update when the Virginia budget resolves — special session expected.
+  </p>
+  <p>
+    Four: Draft the first section of the legal structures memo based on this session's 
+    research, with appropriate uncertainty flagged throughout.
+  </p>
+
+  <div class="sources">
+    <h3>Sources Used This Session</h3>
+    <ol>
+      <li>AP / WTVR. "Virginia has a data center boon. Officials debate whether it's time to scrap its tax breaks." March 11, 2026.
+        <a href="https://www.wtvr.com/news/local-news/virginia-data-center-boon-tax-breaks-march-11-2026">wtvr.com</a></li>
+      <li>Cardinal News. "Special session looks likely as budget battle over data center tax exemptions continues." March 12, 2026.
+        <a href="https://cardinalnews.org/2026/03/12/special-session-looks-likely-as-the-budget-battle-over-data-center-tax-exemptions-continues/">cardinalnews.org</a></li>
+      <li>CityFeet / LoopNet. 3800 Village Ave, Norfolk — Telecom Hotel Data Hosting listing. December 2024.
+        <a href="https://www.cityfeet.com/cont/listing/3800-village-ave-norfolk-va-23502/cs34394642">cityfeet.com</a></li>
+      <li>LoopNet (archived). 3800 Village Ave — original EdgeConneX listing with cable landing language.
+        <a href="https://www.loopnet.com/Listing/3800-Village-Ave-Norfolk-VA/9068108/">loopnet.com</a></li>
+      <li>LoopNet. 3700 Village Ave — adjacent 150,000 sqft industrial facility. December 2024.
+        <a href="https://www.loopnet.com/Listing/3700-Village-Ave-Norfolk-VA/32014362/">loopnet.com</a></li>
+      <li>Shovels AI. "Virginia's Data Center Dominance: A Deep Dive into Permit Trends." August 2025.
+        <a href="https://www.shovels.ai/blog/virginia-data-center-permit-trends/">shovels.ai</a></li>
+      <li>National Law Review / Hunton Andrews Kurth. "What Data Center Developers Need to Know About Virginia DEQ's Recent Air Permitting Guidance." 2025.
+        <a href="https://www.hunton.com/the-nickel-report/what-data-center-developers-need-to-know-about-virginia-deqs-recent-air-permitting-guidance">hunton.com</a></li>
+      <li>Virginia Conservation Network. "Addressing Data Center Energy Demand." August 2025.
+        <a href="https://vcnva.org/agenda-item/addressing-data-center-energy-demand/">vcnva.org</a></li>
+      <li>Code of Virginia §15.2-4905. Powers of Industrial Development Authority.
+        <a href="https://law.lis.virginia.gov/vacode/title15.2/chapter49/section15.2-4905/">law.lis.virginia.gov</a></li>
+      <li>Virginia Places. Virginia Port Authority history and statutory structure.
+        <a href="http://www.virginiaplaces.org/transportation/vpa.html">virginiaplaces.org</a></li>
+      <li>NARUC. "Municipal Broadband: A Review of Rules, Requirements, and Options." (BVU Authority / Bristol Virginia Utilities precedent.)
+        <a href="https://pubs.naruc.org/pub/FA86C96C-ECA3-B0C1-D5DC-B92FE52541C0">pubs.naruc.org</a></li>
+      <li>Code of Virginia §62.1-132. Virginia Port Authority statutory mandate.
+        <a href="https://law.lis.virginia.gov/authorities/virginia-port-authority/">law.lis.virginia.gov</a></li>
+    </ol>
+  </div>
+
+</article>
+
+<footer>
+  <p>
+    MITHLOND &nbsp;·&nbsp; Hampton Roads, Virginia &nbsp;·&nbsp;
+    Research under Creative Commons BY 4.0 &nbsp;·&nbsp;
+    <a href="https://github.com/jedelman/mithlond">Source</a> &nbsp;·&nbsp;
+    <a href="index.html">Research Log</a>
+  </p>
+</footer>
+
+</body>
+</html>

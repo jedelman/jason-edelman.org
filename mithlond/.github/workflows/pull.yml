@@ -1,0 +1,42 @@
+name: Pull Bluesky Interactions
+
+on:
+  schedule:
+    - cron: '0 9,21 * * *'   # twice daily: 9am and 9pm UTC
+  workflow_dispatch:
+
+jobs:
+  pull:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Pull interactions
+        env:
+          ATPROTO_IDENTIFIER: ${{ vars.ATPROTO_IDENTIFIER }}
+          ATPROTO_APP_PASSWORD: ${{ secrets.ATPROTO_APP_PASSWORD }}
+        run: npm run pull
+
+      - name: Commit interaction data
+        run: |
+          git config user.name "mithlond-bot"
+          git config user.email "bot@mithlond.research"
+          git add interactions/
+          git diff --staged --quiet || git commit -m "data: sync Bluesky interactions [$(date -u +%Y-%m-%dT%H:%M:%SZ)]"
+          git push
