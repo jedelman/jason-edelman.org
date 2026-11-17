@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parcel Explorer — Ghent Streets</title>
+  <meta name="description" content="Pick a lot in Norfolk's HC-G2 district, see the building as the city photographed it, and see what a ground-floor coffee shop, bookshop, bistro or design studio could look like. All four are prohibited there today." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Ghent Streets" />
+  <meta property="og:title" content="Parcel Explorer — Ghent Streets" />
+  <meta property="og:url" content="https://jason-edelman.org/ghent-streets/explorer/" />
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+  <link rel="canonical" href="https://jason-edelman.org/ghent-streets/explorer/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <link rel="stylesheet" href="explorer.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body class="explorer">
+
+<header class="bar">
+  <a class="site-name" href="/ghent-streets/">Ghent <span>Streets</span></a>
+  <span class="bar-title">Parcel explorer · HC-G2</span>
+  <nav>
+    <a href="../policy/">Policy</a>
+    <a href="../case-studies/">Case Studies</a>
+    <a href="../blog/">Blog</a>
+    <a href="../get-involved.html">Get Involved</a>
+  </nav>
+</header>
+
+<main class="stage">
+  <div class="scene" id="scene" aria-label="3D model of the HC-G2 district. Drag to turn, scroll or pinch to zoom, click a lot to pick it."></div>
+  <p class="scene-note" id="scene-note" hidden></p>
+
+  <aside class="panel" id="panel" aria-live="polite">
+
+    <section id="intro">
+      <p class="label">Ghent · Norfolk, Virginia</p>
+      <h1>Pick a corner.</h1>
+      <p>This is HC-G2, Ghent's historic district, built from the city's own maps. The gold lots are its corners.</p>
+      <p>Choose one to see the building as the city's assessor photographed it, then try four things a ground floor could hold. Norfolk's zoning ordinance prohibits all four here today.</p>
+      <div class="case-links" id="case-links" hidden>
+        <p class="label">Case studies, built by hand</p>
+        <ul id="case-list"></ul>
+      </div>
+      <label class="label" for="corner-pick">Jump to a corner lot</label>
+      <select id="corner-pick"><option value="">Choose an address…</option></select>
+      <ul class="legend">
+        <li><span class="swatch corner"></span>Corner lot</li>
+        <li><span class="swatch lot"></span>Other HC-G2 lot</li>
+        <li><span class="swatch line"></span>HC-G2 boundary</li>
+        <li><span class="swatch g3"></span>HC-G3, where the same uses are allowed</li>
+      </ul>
+    </section>
+
+    <section id="lot" hidden>
+      <button type="button" class="back" id="back">&larr; All corners</button>
+      <p class="label" id="lot-corner"></p>
+      <h1 id="lot-address"></h1>
+      <dl class="facts" id="lot-facts"></dl>
+      <figure class="photo" id="lot-photo">
+        <img id="lot-photo-img" alt="" loading="lazy" referrerpolicy="no-referrer" />
+        <figcaption>Photo: City of Norfolk Real Estate Assessor · <a id="lot-card" target="_blank" rel="noopener">property card &nearr;</a></figcaption>
+      </figure>
+      <p class="links"><a id="lot-sv" target="_blank" rel="noopener">See it on Street View &nearr;</a></p>
+      <p class="links lot-case" id="lot-case" hidden><a id="lot-case-link" href="">Read the case study &rarr;</a></p>
+
+      <p class="label">Transform the ground floor into</p>
+      <div class="kits" id="kits" role="group" aria-label="Transform the ground floor"></div>
+      <p class="no-building" id="no-building" hidden>There's no building on this lot to transform.</p>
+
+      <div class="rule" id="rule" hidden>
+        <p class="label">The rule today</p>
+        <p class="rule-use" id="rule-use"></p>
+        <blockquote id="rule-def"></blockquote>
+        <table class="rule-table">
+          <tr><th>HC-G2 <span>(this lot)</span></th><td id="rule-g2"></td></tr>
+          <tr><th>HC-G3 <span>(across the line)</span></th><td id="rule-g3"></td></tr>
+        </table>
+        <p class="fine">From Table 3.6.11 of the <a href="https://www.norfolkva.gov/NorfolkZoningOrdinance/#Norfolk-ZO/3_6_Historic_and_Cultural_Conservation.htm" target="_blank" rel="noopener">Norfolk Zoning Ordinance</a>: P = permitted by right · C = allowed only with a conditional use permit · blank = prohibited. Definitions from <a href="https://www.norfolkva.gov/NorfolkZoningOrdinance/#Norfolk-ZO/4_2_Performance_Standards_for_Principal.htm" target="_blank" rel="noopener">§4.2</a>. Checked November 14, 2026.</p>
+      </div>
+      <p class="fine">Illustrative. The storefront and everything on the sidewalk are drawn by this page, not a design for this building. Each one follows Norfolk's <a href="https://www.norfolk.gov/6540/Historic-District-Design-Guidelines-Upda" target="_blank" rel="noopener">Historic District Design Guidelines</a> (adopted by the Architectural Review Board, May 26, 2026): houses keep their open porches and their doors and windows where they are; storefronts go on commercial buildings; canvas awnings shade the first floor; signs sit on sign bands, windows and awnings, lit from outside. Building heights are approximate. Nothing here removes a tree: tables and signs make room for the city's trees.</p>
+    </section>
+
+    <footer class="credits">
+      <p>Built from the City of Norfolk's <a href="https://gisshare.norfolk.gov/pubserver/rest/services/OpenData" target="_blank" rel="noopener">open GIS</a> (zoning, parcels, buildings, streets) and <a href="https://data.norfolk.gov/" target="_blank" rel="noopener">open data</a> (addresses, FY26 assessments, the <a href="https://data.norfolk.gov/d/cmvv-agyb" target="_blank" rel="noopener">tree inventory</a>). Each tree stands where the city mapped it, with the city's species and trunk diameter; its height and crown are drawn from the diameter, so they're approximate, and the inventory counts street and park trees, not most of the trees in back yards. Photos stay on the city's servers; <a href="../blog/open-letter-assessor-photos.html">our open letter</a> asks the City to publish them as open data. <a href="https://github.com/jedelman/ghent-zoning-reform/blob/main/data/scripts/build_explorer.py" target="_blank" rel="noopener">How the data is built</a>.</p>
+    </footer>
+  </aside>
+</main>
+
+<script type="module" src="explorer.js"></script>
+</body>
+</html>

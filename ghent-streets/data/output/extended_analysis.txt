@@ -1,0 +1,95 @@
+
+============================================================
+1. COLLEY AVENUE VALUE TREND (FY21-FY26)
+============================================================
+
+  Commercial parcels by fiscal year:
+  Year      Count      Median AV        Mean AV
+  ----------------------------------------------
+  2021        106 $      415,100 $      590,472
+  2023        105 $      425,500 $      651,486
+  2024        106 $      477,900 $    2,553,087
+  2025        106 $      478,200 $    2,631,160
+  2026        106 $      491,700 $    2,787,206
+
+  Residential parcels by fiscal year:
+  Year      Count      Median AV        Mean AV
+  ----------------------------------------------
+  2021         82 $      141,350 $      151,020
+  2022         60 $      147,300 $      162,662
+  2023         64 $      156,600 $      183,286
+  2024         64 $      161,200 $      191,581
+  2025         64 $      170,500 $      203,681
+  2026         64 $      180,300 $      218,633
+
+  Colley commercial median AV change FY21→FY26: +18.5%
+  Colley residential median AV change FY21→FY26: +27.6%
+
+============================================================
+2. ZONING PERMITS IN GHENT (CUP BARRIER EVIDENCE)
+============================================================
+  Total zoning permits found: 151
+
+  By status:
+    Expired                               62
+    Issued                                29
+    Finaled                               29
+    Cancelled                             16
+    Pending                               11
+    Abandoned                              2
+    Authorized                             1
+    Reviews in progress                    1
+
+  By use type (top 15):
+    Commercial                                      78
+    One/Two Family Dwelling                         59
+    Multi Family Dwelling                            8
+
+  By work type:
+    New                                            145
+
+  Use class values:
+    Commercial                                      86
+    Residential                                     59
+
+============================================================
+3. VIOLATIONS IN GHENT CIVIC LEAGUE AREAS
+============================================================
+  Total violations: 592
+
+  By ordinance type (top 10):
+    103.2.3 Responsibility.                              56
+    Trash And Debris                                     53
+    Tall Weeds and Grass                                 47
+    Zoning Violation - General                           43
+    304.2 General Requirements-Exterior Structure        34
+    304.10 General Requirements-Exterior Structure       28
+    305.3 General Requirements- Interior surfaces        26
+    Zoning Violation - Short-Term Rental                 22
+    106.1 General.                                       16
+    304.7 General Requirements-Exterior Structure        16
+
+  By civic league:
+    Ghent Neighborhood League                      483
+    West Ghent                                     109
+
+============================================================
+4. COLONIAL AVENUE: COMMERCIAL VS RESIDENTIAL AV
+============================================================
+  Total Colonial Ave parcels (zip 23507): 113
+  Commercial parcels: 5
+  Residential parcels: 92
+
+  Commercial AV (mean):    $     424,060
+  Commercial AV (median):  $     494,600
+  Residential AV (mean):   $     506,296
+  Residential AV (median): $     487,050
+
+  Commercial parcels on Colonial Ave:
+    Addr Class                                  Owner                                         AV
+  -------------------------------------------------------------------------------------------------
+     701 447 Com 1 & 2 Sty Office Bldg          Smith, Randall W                    $    526,500
+     608 423 General Commercial                 Talmudical Academy Of Norfolk, Inc  $    516,000
+    1115 428 Com Convenience Mkt                Niki Investments, Lp                $    494,600
+    1101 429 Com Other Retail Bldg              Nero, James Jr & Carol T, Trustees  $    376,200
+     617 447 Com 1 & 2 Sty Office Bldg          Karakla, Danette                    $    207,000

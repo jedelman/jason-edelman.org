@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Policy Brief No. 2: HC-G2 Retail and City Revenue: A Model and Its Limits — Ghent Streets</title>
+  <meta name="description" content="A scenario model of what 15 to 40 new ground-floor businesses in HC-G2 could bring the city in taxes. The meals tax carries most of the result; the evidence on property values is mixed." />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="Ghent Streets" />
+  <meta property="og:title" content="Policy Brief No. 2: HC-G2 Retail and City Revenue: A Model and Its Limits — Ghent Streets" />
+  <meta property="og:description" content="A scenario model of what 15 to 40 new ground-floor businesses in HC-G2 could bring the city in taxes. The meals tax carries most of the result; the evidence on property values is mixed." />
+  <meta property="og:url" content="https://jason-edelman.org/ghent-streets/policy/brief-02.html" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="../assets/favicon.svg" />
+  <link rel="canonical" href="https://jason-edelman.org/ghent-streets/policy/brief-02.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/css/style.css" />
+  <style>
+    .model-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.5rem 0;
+      font-size: 0.88rem;
+    }
+    .model-table th {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border-bottom: 2px solid var(--ink);
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+    }
+    .model-table td {
+      padding: 0.6rem 0.75rem;
+      border-bottom: 1px solid var(--rule);
+      vertical-align: top;
+    }
+    .model-table tr:last-child td {
+      border-bottom: none;
+    }
+    .model-table .total-row td {
+      border-top: 2px solid var(--ink);
+      border-bottom: none;
+      font-weight: 700;
+      background: var(--paper-mid);
+    }
+    .model-table .scenario-header td {
+      background: var(--ink);
+      color: var(--paper);
+      font-family: var(--mono);
+      font-size: 0.62rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.4rem 0.75rem;
+    }
+    .num { text-align: right; font-family: var(--mono); font-size: 0.82rem; }
+    .caveat-box {
+      background: var(--paper-mid);
+      border: 1px solid var(--rule-strong);
+      border-left: 4px solid var(--gold);
+      padding: 1.25rem 1.5rem;
+      font-size: 0.88rem;
+      margin: 1.5rem 0;
+    }
+    .caveat-box p { margin: 0; }
+    .caveat-box p + p { margin-top: 0.75rem; }
+    .caveat-box strong { color: var(--gold-dim); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a class="site-name" href="/ghent-streets/">Ghent <span>Streets</span></a>
+    <span class="issue-line">Norfolk, Virginia · HC-G2 Campaign</span>
+  </div>
+  <div class="container">
+    <nav>
+      <a href="/ghent-streets/">Home</a>
+      <a href="../blog/">Blog</a>
+      <a href="../policy/" class="active">Policy</a>
+      <a href="../case-studies/">Case Studies</a>
+      <a href="../zines/">Zines</a>
+      <a href="../about.html">About</a>
+      <a href="../get-involved.html">Get Involved</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero" style="padding-bottom: 1.5rem;">
+  <div class="container">
+    <p class="hero-label">Policy Brief · No. 2</p>
+    <h1>HC-G2 Retail and City Revenue: A Model and Its Limits</h1>
+    <p class="hero-deck">A scenario model of what 15 to 40 new ground-floor businesses in HC-G2 could bring the city in taxes. The meals tax carries most of the result; the evidence on property values is mixed.</p>
+  </div>
+</div>
+
+<div class="container">
+  <div class="policy-meta">
+    <span>Norfolk, Virginia</span>
+    <span>HC-G2 District</span>
+    <span>Revenue Projection Model</span>
+    <span>FY2026 Baseline</span>
+    <span>Version 2.1 · November 2026 · Real Parcel Data</span>
+  </div>
+</div>
+
+<article class="article-body">
+  <div class="container">
+
+    <div class="caveat-box">
+      <p><strong>Data source:</strong> Parcel counts, assessed values, and property use data in this brief are drawn directly from Norfolk's open data portal (<a href="https://data.norfolk.gov">data.norfolk.gov</a>) — specifically the FY2026 Property Assessment dataset (updated March 2026) and the Address Information dataset, queried via the Socrata API. Revenue projections apply Norfolk's published FY2025 tax rates to activation scenarios grounded in real parcel counts.</p>
+      <p>The remaining gap: HC-G2 is a <em>zoning</em> designation; the open data portal uses <em>planning districts</em> (PD 61–64 cover the Ghent area). The headline parcel counts are Planning District 64 (core Ghent), used as a proxy for HC-G2; the $3.36 billion figure covers all four Ghent planning districts. A parcel-level zoning filter would give exact HC-G2 counts. The revenue model doesn't depend on this distinction: it counts businesses, not parcels.</p>
+    </div>
+
+    <h4>Executive Summary</h4>
+    <p>Under the assumptions set out below, 15 new ground-floor businesses in HC-G2 would bring the city about <strong>$227,000 a year</strong> in taxes, and 40 about <strong>$602,000</strong>. These are gross figures: spending that moves here from Colley, Granby or 21st Street is already taxed there, so net new revenue is lower, by an amount not estimated here. Most of the total is the 6.5% meals tax: in the conservative scenario, eight cafés and restaurants with $350,000 in annual sales each produce $182,000 of it. The result moves with how many open and what they sell. With food and beverage at a tenth of the mix, as on Colley Avenue, the conservative total falls to about $83,000.</p>
+    <p>The property-value effects are the least certain part. Research on how nearby shops affect home values is mixed, and some of it finds losses right next to retail. Norfolk's own data doesn't settle it: Colley Avenue's median residential assessment, mostly condominiums, rose 27.6% from FY2021 to FY2026, against 47.7% citywide, which says little about retail either way. The model's two property-value lines come to $33,012 of the conservative total and could be zero or negative; without them, the result is about $194,000 a year.</p>
+    <p>For context, 13 of the 945 parcels in Planning District 64, a proxy for HC-G2, are commercial (1.4%); along all of Colley Avenue, only part of it under the overlay, 106 of 229 are. Adopting the amendment costs staff time, legal review and printing.</p>
+
+    <hr class="rule" />
+
+    <h4>I. Parcel Inventory</h4>
+    <p>HC-G2 covers the core of Ghent: roughly the blocks between Colley Avenue and Colonial Avenue, from West Princess Anne Road south to West Olney Road, though its boundary is irregular. The district is almost entirely residential, with dense urban blocks typical of late-nineteenth-century planned neighborhoods.</p>
+    <p>For this analysis, a "street-facing activatable parcel" is defined as a parcel with at minimum one ground-floor structural unit with direct frontage on a designated street, which is the category that would be eligible for commercial use under the proposed amendment.</p>
+
+    <div class="stat-row">
+      <div class="stat">
+        <span class="stat-number">945</span>
+        <span class="stat-label">Parcels in PD 64<br>(core Ghent)</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">13</span>
+        <span class="stat-label">Currently commercial<br>parcels in PD 64</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">817</span>
+        <span class="stat-label">Small urban lots w/ structure<br>(activatable proxy)</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">1.4%</span>
+        <span class="stat-label">Current commercial share<br>of core Ghent parcels</span>
+      </div>
+    </div>
+
+    <p style="font-size:0.82rem;color:rgba(var(--ink-rgb),0.55);font-family:var(--mono);">Source: Norfolk FY2026 Property Assessment dataset (data.norfolk.gov, updated March 2026), filtered to Planning District 64. The activation range (15–40) is the steady state the model reaches; Section V lays out the pace.<br>
+    <em>817 "activatable proxy" definition:</em> Parcels within PD 64 not currently classified as commercial/office/retail/restaurant, with lot size under 0.25 acres and improvement value greater than $0 (i.e., a structure is present). This excludes vacant land, large multi-family complexes, and existing commercial parcels. It doesn't test for street frontage, so it overcounts. It bounds the physical stock; it doesn't predict how many will activate.</p>
+
+    <hr class="rule" />
+
+    <h4>II. Norfolk's Relevant Tax Rates</h4>
+    <p>Four revenue streams are modeled. All rates are from Norfolk's current published schedule:</p>
+
+    <table class="model-table">
+      <thead>
+        <tr>
+          <th>Revenue Stream</th>
+          <th>Rate / Basis</th>
+          <th>Applicability in HC-G2</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Real Property Tax</strong></td>
+          <td class="num">$1.25 / $100 assessed value</td>
+          <td>One rate for all property. Any gain comes from a higher assessed value on a parcel with an active ground floor (see Section III)</td>
+        </tr>
+        <tr>
+          <td><strong>Local Sales Tax</strong></td>
+          <td class="num">1.0% city share (of Virginia 6%)</td>
+          <td>Applied in the model to retail goods only, at 60% of retail gross receipts. Food and beverage sales are counted under the meals tax.</td>
+        </tr>
+        <tr>
+          <td><strong>BPOL (Business License)</strong></td>
+          <td class="num">$0.20 / $100 gross receipts</td>
+          <td>Norfolk Business, Professional & Occupational License tax. Applies to all businesses with gross receipts over $100,000. First $100K is flat-fee exempt for most categories.</td>
+        </tr>
+        <tr>
+          <td><strong>Meals Tax</strong></td>
+          <td class="num">6.5% of gross sales</td>
+          <td>Applies to food and beverage served for immediate consumption. The highest-yield stream for café/restaurant activations.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <hr class="rule" />
+
+    <h4>III. Revenue Model: Conservative (15) and Aggressive (40) Scenarios</h4>
+    <p>The conservative scenario's steady state is 15 activated ground-floor commercial spaces, a deliberately modest number that discounts operator hesitation, buildout time, and market absorption. Section V lays out the pace.</p>
+    <p><strong>Business mix assumption:</strong> 50% food/beverage (cafés and restaurants), 30% retail goods, 20% personal/professional services. This mix is an assumption, weighted toward food and beverage because that's what neighbors ask for most. It isn't drawn from Colley Avenue, whose commercial parcels are mostly retail buildings (44 of 106) and offices (14); 11 are classed as restaurants or bars.</p>
+    <p><strong>Revenue per unit assumption:</strong> Average gross receipts of $350,000/year per food/beverage location; $250,000/year for retail; $180,000/year for services. These are conservative estimates for neighborhood-scale operations (not destination restaurants).</p>
+
+    <table class="model-table">
+      <thead>
+        <tr>
+          <th>Stream</th>
+          <th>Basis</th>
+          <th class="num">Conservative (15)</th>
+          <th class="num">Aggressive (40)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Property Tax Uplift</strong></td>
+          <td>AV uplift per activated parcel × $1.25/$100. Calibrated to Colley Ave "418 Retail/Apartment Over" class (mean AV $347K on small lots) vs. Ghent single-family mean AV $604K. Conservative: $100K uplift; aggressive: $200K. Applied to activated parcel count.</td>
+          <td class="num">$18,750</td>
+          <td class="num">$100,000</td>
+        </tr>
+        <tr>
+          <td><strong>Meals Tax</strong></td>
+          <td>8 (conservative) / 20 (aggressive) food/bev locations × avg $350K gross × 6.5%</td>
+          <td class="num">$182,000</td>
+          <td class="num">$455,000</td>
+        </tr>
+        <tr>
+          <td><strong>Sales Tax (city share)</strong></td>
+          <td>4 / 12 retail locations × $250K gross × 60% taxable goods × 1.0%</td>
+          <td class="num">$6,000</td>
+          <td class="num">$18,000</td>
+        </tr>
+        <tr>
+          <td><strong>BPOL</strong></td>
+          <td>Blended gross receipts less $100K exempt threshold per business × $0.20/$100</td>
+          <td class="num">$5,680</td>
+          <td class="num">$14,880</td>
+        </tr>
+        <tr>
+          <td><strong>Adjacent Residential Uplift</strong></td>
+          <td>50 proximate residential parcels × Ghent residential mean AV $456K × 5% uplift × $1.25/$100 (same in both scenarios; may be zero or negative, see Section IV-A)</td>
+          <td class="num">$14,262</td>
+          <td class="num">$14,262</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="2"><strong>Total Annual New Revenue (steady-state)</strong></td>
+          <td class="num"><strong>$226,692</strong></td>
+          <td class="num"><strong>$602,142</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="caveat-box">
+      <p><strong>How sensitive the total is:</strong> Each café or restaurant that opens adds about $22,750 a year in meals tax (6.5% of $350,000), so the scenario totals move mainly with that count. If food and beverage were a tenth of the mix, as Colley's parcel classes are, the conservative meals tax would be about $34,000 rather than $182,000, and the conservative total about $83,000 (keeping the other businesses in the model's 3:2 retail-to-services ratio). The two property-value lines are the least certain (see Section IV-A); without them the conservative total is $193,680. <strong>Gross, not net:</strong> the model counts every dollar of sales as new, though some of this spending would move from businesses elsewhere in Norfolk that already pay these taxes; that lowers the net figure by an amount not estimated here. <strong>What the model leaves out:</strong> It does not include state sales tax passthrough effects (which increase Norfolk's formula-allocated revenue slightly), the indirect economic multiplier from local wages paid by activated businesses, or the reduction in vacancy-related code enforcement and maintenance costs. Each of those would add to the city's net position, and none is estimated here.</p>
+    </div>
+
+    <hr class="rule" />
+
+    <h4>IV. The Comparable: Colley Avenue</h4>
+    <!-- Section IV-A and IV-B are subsections of IV -->
+    <p>Colley Avenue runs from the edge of HC-G2 north through several neighborhoods, and a Pedestrian Commercial Overlay covers part of its length. All 229 parcels on the avenue are counted here; <strong>106 are classified as commercial</strong> (46%, vs. 1.4% in core Ghent). Its commercial parcels by class:</p>
+
+    <table class="model-table">
+      <thead><tr><th>Property Class</th><th class="num">Count</th><th class="num">Mean AV</th></tr></thead>
+      <tbody>
+        <tr><td>429 Com Other Retail Bldg</td><td class="num">44</td><td class="num">$574,700</td></tr>
+        <tr><td>447 Com 1 &amp; 2 Sty Office Bldg</td><td class="num">14</td><td class="num">$634,100</td></tr>
+        <tr><td>430 Commercial Restaurant/Bar</td><td class="num">11</td><td class="num">$606,500</td></tr>
+        <tr><td>418 Retail/Apartment Over</td><td class="num">6</td><td class="num">$606,100</td></tr>
+        <tr><td>Other commercial classes</td><td class="num">31</td><td class="num">varies</td></tr>
+      </tbody>
+    </table>
+
+    <p>The <strong>418 Retail/Apartment Over</strong> class (buildings with residential units above ground-floor retail) is the most direct analog to what HC-G2 ground-floor activation would produce. The five assessed under $1M (lots of 0.06–0.22 acres) have a mean AV of $347K, below Ghent's single-family mean of $604K, so this class doesn't show how much an active ground floor would add to a Ghent house's assessed value. No Norfolk comparable does; the model's $100K and $200K uplift figures are assumptions.</p>
+    <p>Colley's residential parcels (64 total) have a mean AV of $219K, lower than Ghent's residential mean of $456K. Ghent's residential market is stronger.</p>
+
+    <h4>IV-A. Property Values: What the Evidence Shows</h4>
+    <p>The research on how nearby shops affect home values is mixed, and it depends on the setting. The closest match to Ghent is Matthews (2007), who studied single-family home sales in King County, Washington, from 1989 to 2003. In Seattle's older, grid-street neighborhoods, homes about 235 to 1,260 feet from retail sold for slightly more, with the net gain peaking near 560 feet at roughly $2,000, while homes immediately next to retail sold for less; in the car-oriented suburbs to the east, distance to retail had no significant effect. A Dutch study found buyers paying about 2.5% more for homes in mixed-use neighborhoods, nearly all of it apartment buyers (Koster and Rouwendal 2012). Walk Score studies associate walkability with higher home prices in most U.S. markets (Cortright 2009), but they measure walkability in general, not ground-floor retail. A King County study found few walkability measures significantly associated with single-family values, and proximity to retail associated with lower assessed values for rental housing (Sohn, Moudon and Lee 2012). None of these supports a premium as large as the 5% the model's adjacent-uplift line assumes, and some find losses right next to retail, so this line could be zero or negative.</p>
+    <p>Norfolk's assessment data shows how values moved on Colley Avenue from FY2021 to FY2026. The datasets begin after the overlay was in place, so there is no before:</p>
+
+    <table class="model-table">
+      <thead><tr><th>Fiscal Year</th><th class="num">Commercial Median AV</th><th class="num">Residential Median AV</th><th class="num">Com:Res Ratio</th></tr></thead>
+      <tbody>
+        <tr><td>FY2021</td><td class="num">$415,100</td><td class="num">$141,350</td><td class="num">2.9×</td></tr>
+        <tr><td>FY2023</td><td class="num">$425,500</td><td class="num">$156,600</td><td class="num">2.7×</td></tr>
+        <tr><td>FY2024</td><td class="num">$477,900</td><td class="num">$161,200</td><td class="num">3.0×</td></tr>
+        <tr><td>FY2025</td><td class="num">$478,200</td><td class="num">$170,500</td><td class="num">2.8×</td></tr>
+        <tr><td>FY2026</td><td class="num">$491,700</td><td class="num">$180,300</td><td class="num">2.7×</td></tr>
+        <tr class="total-row"><td><strong>FY21→FY26 change</strong></td><td class="num"><strong>+18.5%</strong></td><td class="num"><strong>+27.6%</strong></td><td class="num">—</td></tr>
+      </tbody>
+    </table>
+
+    <p>Commercial parcels on Colley stayed at 2.7–3.0× the residential median. Residential values on the avenue rose 27.6%, but the citywide residential median rose 47.7% over the same years ($191,200 to $282,400, same datasets and the same residential filter), so Colley's residential parcels gained less than the city's. The two groups differ in composition (58 of Colley's 64 residential parcels are condominiums; the citywide median is mostly houses), and the residential count on Colley drops from 82 to 64 in FY2022, likely a reclassification, so this doesn't show the overlay held values down. It does mean this data offers no support for a spillover premium.</p>
+
+    <h4>Colonial Ave Commercial Assessed Values</h4>
+    <p>Colonial Avenue (zip 23507) has only 5 commercial parcels alongside 92 residential parcels. Their assessed values show almost no commercial premium: the existing commercial parcels have a <strong>median AV of $494K</strong>, about 1.6% above the residential median of $487K. On Colley, commercial parcels are assessed at 2.7× residential.</p>
+    <p>The commercial parcels on Colonial are a convenience store, two offices, a retail building and a general commercial building. Under today's table none of those uses could open new in HC-G2, so the street has no way to grow the kind of commercial strip that produces Colley's premium. By-right permitting would let the market build one.</p>
+
+
+    <hr class="rule" />
+
+    <h4>IV-B. Ghent Zoning Permit Data</h4>
+    <p>Norfolk's open data portal includes a Permits dataset covering all zoning permits filed in the city. Querying for zoning permits on Ghent's primary streets (Colonial Ave, Mowbray Arch, Westover Ave, Pembroke Ave, and others) reveals <strong>151 zoning permits</strong> on record. Their status breaks down as follows:</p>
+
+    <table class="model-table">
+      <thead><tr><th>Permit Status</th><th class="num">Count</th><th class="num">Share</th></tr></thead>
+      <tbody>
+        <tr><td>Expired — issued but never completed</td><td class="num">62</td><td class="num">41%</td></tr>
+        <tr><td>Issued — active permit</td><td class="num">29</td><td class="num">19%</td></tr>
+        <tr><td>Finaled — completed</td><td class="num">29</td><td class="num">19%</td></tr>
+        <tr><td>Cancelled — withdrawn</td><td class="num">16</td><td class="num">11%</td></tr>
+        <tr><td>Pending / other</td><td class="num">15</td><td class="num">10%</td></tr>
+        <tr class="total-row"><td><strong>Never completed (Expired + Cancelled)</strong></td><td class="num"><strong>78</strong></td><td class="num"><strong>52%</strong></td></tr>
+      </tbody>
+    </table>
+
+    <p>More than half of all zoning permit applications on these Ghent streets expire or are cancelled before the underlying project reaches final completion. "Expired" means the permit was approved and issued, but the work was never finished and the permit lapsed. "Cancelled" means the application was withdrawn before approval.</p>
+    <p><strong>What this data can and cannot say:</strong> The query returns every permit of type 'Zoning' on these streets, whatever the project. It can't separate changes of use from other zoning permits, such as those for residential renovations. Of the 151 permits, 86 have a Commercial use class, but this field describes the intended use of the property, not the permit type. A further query isolating permit type to use permits or change-of-occupancy permits, cross-referenced with HC-G2 parcel addresses, would be needed to say anything specific about changes of use. That analysis is listed in Section VI.</p>
+    <p>The aggregate data does show that permit attrition in Ghent is high. This dataset alone cannot show whether that attrition comes from construction economics, financing difficulty, or other factors, and it says nothing specific about retail: because neighborhood retail is prohibited in HC-G2, there are no conditional use permit applications for it to count. The structural argument rests on the use table, not on this permit data.</p>
+
+    <hr class="rule" />
+
+    <h4>V. The 10-Year Picture</h4>
+    <p>Zoning text amendments don't produce commercial districts overnight, so the fiscal case rests on the 10-year trajectory. The model assumes 3–8 activations in years 1–2 (operators who have been waiting, spaces already suited to it), 10–25 by the end of year 5, and a steady state of 15–40 in years 6–10. Those paces are assumptions, not forecasts, and the table counts each period at its end-of-period business count, so its sums are a ceiling.</p>
+
+    <table class="model-table">
+      <thead>
+        <tr>
+          <th>Year Range</th>
+          <th>Activations (cumulative)</th>
+          <th class="num">Annual Revenue (est.)</th>
+          <th class="num">Cumulative 10-Year Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Year 1–2</td>
+          <td>3–8 spaces</td>
+          <td class="num">$45K–$120K</td>
+          <td class="num">$90K–$240K</td>
+        </tr>
+        <tr>
+          <td>Year 3–5</td>
+          <td>10–25 spaces</td>
+          <td class="num">$150K–$380K</td>
+          <td class="num">$450K–$1.14M</td>
+        </tr>
+        <tr>
+          <td>Year 6–10</td>
+          <td>15–40 spaces</td>
+          <td class="num">$227K–$602K</td>
+          <td class="num">$1.135M–$3.01M</td>
+        </tr>
+        <tr class="total-row">
+          <td colspan="3"><strong>10-Year Total, a ceiling (conservative → aggressive)</strong></td>
+          <td class="num"><strong>$1.675M–$4.39M</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The cost to the city of adopting the text amendment is staff time to process the application (typically 20–40 hours), legal review, and printing for the public hearing record. Against a city budget, that cost is small.</p>
+
+    <hr class="rule" />
+
+    <h4>VI. What Would Further Refine This Model</h4>
+    <p>The parcel data comes from Norfolk's open data portal, as do the multi-year assessments and permit history. Four items remain to be fully validated:</p>
+
+    <ul>
+      <li><strong>HC-G2 zoning boundary vs. planning district boundary</strong> — The parcel data uses Planning District 64 as a proxy for HC-G2. A parcel-level zoning filter (available through the city GIS viewer, not yet in the open data API) would give exact counts within the zoning district. The planning district boundary is closely aligned but not identical.</li>
+      <li><strong>Assessed values of the existing HC-G2 commercial parcels vs. adjacent lots</strong> — The 7-Eleven (1115 Colonial Ave, class 428 Commercial Convenience Market, AV: $494K) is in the FY2026 dataset. (The Harris Teeter at 1320 Colonial Ave is zoned C-C, outside HC-G2.) A lot-size-normalized comparison to immediately adjacent residential parcels would give a precise figure for the current commercial premium, which would be the most persuasive single number for a Planning Commission presentation.</li>
+      <li><strong>Colley Avenue assessed value trend, pre-PCO baseline (FY2018–FY2020)</strong> — This brief includes FY2021–FY2026 from the six available assessment datasets. The pre-PCO baseline years (FY2018–FY2020 datasets, if available on data.norfolk.gov) would allow a clean before/after appreciation comparison tied to the PCO adoption date, which would allow a real before/after comparison. Even then, a before/after comparison shows correlation, not cause.</li>
+      <li><strong>Change-of-use history within HC-G2</strong> — The permit data queried here covers all Ghent streets by address pattern (Colonial, Mowbray, Westover, Pembroke, Graydon, Boissevain, Spotswood). Isolating use and change-of-occupancy permits, and cross-referencing with parcel addresses within the HC-G2 boundary, would show what kinds of use changes owners pursue under the current table.</li>
+    </ul>
+
+    <hr class="rule" />
+
+    <h4>VII. The Fiscal Argument in One Paragraph</h4>
+    <p>Norfolk's FY2026 assessment data shows 945 parcels in core Ghent, of which 13 (1.4%) are commercial. Under the assumptions set out above, 15 ground-floor businesses would bring the city about <strong>$194,000 a year</strong> in gross tax revenue at steady state, and 40 about <strong>$488,000</strong>, most of it from the 6.5% meals tax. The model's property-value lines would add $33,000 and $114,000 if they hold; the research says they may not. Some of that spending would move from elsewhere in Norfolk, so net new revenue is lower. Summed over ten years, the totals reach at most <strong>$1.7M to $4.4M</strong>. Adopting the amendment costs staff time, legal review and printing.</p>
+
+    <div class="demand-box">
+      <h3>Fiscal Summary: Norfolk Parcel Data, March 2026</h3>
+      <ul>
+        <li>Core Ghent (PD 64, a proxy for HC-G2): <strong>945 parcels, 13 commercial (1.4%)</strong> — source: Norfolk FY2026 Assessment Dataset</li>
+        <li>Colley Avenue, all parcels: <strong>229, of which 106 commercial (46%)</strong>; 66 of the 106 are north of Ghent, in 23508, and the overlay covers part of the avenue</li>
+        <li>Ghent residential mean assessed value (PD 61–64): <strong>$456,372</strong></li>
+        <li>Conservative (15 businesses): <strong>$194,000/year</strong> gross; <strong>$227,000</strong> with the property-value lines</li>
+        <li>Aggressive (40 businesses): <strong>$488,000/year</strong> gross; <strong>$602,000</strong> with them</li>
+        <li>Gross, not net: spending that moves from elsewhere in Norfolk is already taxed there</li>
+        <li>10-year sum: <strong>at most $1.7M–$4.4M</strong></li>
+        <li>Largest stream: <strong>meals tax</strong>, $182,000 of the conservative total</li>
+        <li>Cost of amendment to the city: <strong>staff time, legal review, printing</strong></li>
+      </ul>
+    </div>
+
+    <hr class="rule" />
+
+    <h4>References and Methodology Notes</h4>
+    <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
+      PARCEL DATA: Norfolk Property Assessment FY2026 dataset (data.norfolk.gov, dataset ID m5ya-5grb, updated 2026-03-04); Norfolk Address Information dataset (ere7-kake). Queried via Socrata API, filtered to Planning Districts 61–64 (Ghent area). 945 parcels in PD 64; 3,138 across all Ghent planning districts. Colley Ave: 229 parcels on street name "Colley". Source code available in the campaign repository.
+    </p>
+    <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
+      NORFOLK TAX RATES: City of Norfolk FY2025 Real Estate Tax Rate ($1.25/$100 AV); Virginia Sales Tax Structure (6% total, 1% local share); Norfolk BPOL Schedule (Retail/Services, $0.20/$100 gross receipts); Norfolk Meals Tax (6.5%). All rates current as of publication.
+    </p>
+    <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
+      PROPERTY VALUES (Section IV-A): Matthews, J. W., "Retail Proximity and Residential Values or Do Nearby Stores Really Run Down Property Values?", Andrew Young School of Policy Studies Research Paper Series, Working Paper 07-21, Georgia State University, April 2007 (King County, WA single-family sales, 1989–2003). Koster, H. R. A. and Rouwendal, J., "The Impact of Mixed Land Use on Residential Property Values," <em>Journal of Regional Science</em> (2012). Cortright, J., "Walking the Walk," CEOs for Cities (2009). Sohn, D. W., Moudon, A. V. and Lee, J., "The Economic Value of Walkable Neighborhoods" (2012). The model's property-tax uplift ($100K / $200K per activated parcel) and adjacent uplift (5% on 50 parcels) are assumptions; the adjacent line may be zero or negative. Earlier versions of this brief cited a 3–7% premium to Matthews and to ULI's <em>Reshaping the City</em>; neither supports it. CITYWIDE COMPARISON: residential median assessed value, FY2021 (8bfx-a5g8) $191,200 and FY2026 (m5ya-5grb) $282,400, using the same residential filter as the Colley series.
+    </p>
+    <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
+      YEAR-OVER-YEAR: Median FY25→FY26 change in assessed value across the 23507 and 23517 zip codes, all property types: +6.4% (+$13,800 median dollar change). Source: cross-join of FY25 (g7sg-tivf) and FY26 (m5ya-5grb) assessment datasets by GPIN.
+    </p>
+    <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
+      $3.36 BILLION FIGURE (Section VII): Total assessed value of all parcels in Ghent planning districts PD 61–64 combined (3,138 parcels), as of the FY2026 assessment dataset (m5ya-5grb): $3,359,240,700. This is the aggregate taxable wealth of the neighborhood that the city's current zoning leaves in the lowest-yield land-use configuration. Source: data/output/hcg2_analysis.txt, Section 2.
+    </p>
+    <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
+      MULTI-YEAR COLLEY TREND (Section IV-A): Six Norfolk Property Assessment datasets, FY2021–FY2026 (dataset IDs: 8bfx-a5g8, 7tu9-2ytx, yvpm-8aid, 9gmp-9x4c, g7sg-tivf, m5ya-5grb), all filtered to street_name='Colley'. Commercial median AV: $415K (FY21) → $491K (FY26), +18.5%. Residential median AV: $141K (FY21) → $180K (FY26), +27.6%. Commercial parcel count: stable at ~106. Residential parcel count: 82 in FY2021, dropping to 64 from FY2022 onward (likely reflects a reclassification event in the assessment database; FY22–FY26 are consistent at 64). The body text uses the FY2026 figure of 64 residential parcels. PCO adopted pre-FY2021; trend data begins post-adoption.
+    </p>
+    <p style="font-family:var(--mono);font-size:0.65rem;letter-spacing:0.06em;color:rgba(var(--ink-rgb),0.45);">
+      PERMIT DATA (Section IV-B): Norfolk Permits dataset (data.norfolk.gov, dataset ID fahm-yuh4). Query: type='Zoning', address matching Ghent street patterns (Colonial, Mowbray, Westover, Pembroke, Graydon, Boissevain, Spotswood). Result: 151 permits. Status breakdown: 62 Expired (41%), 29 Issued (19%), 29 Finaled (19%), 16 Cancelled (11%), 15 Pending/other (10%). Never-completed (Expired + Cancelled): 78 (52%).
+    </p>
+
+  </div>
+</article>
+
+<section style="padding: 2rem 0 3rem; border-top: 1px solid var(--rule-strong);">
+  <div class="container">
+    <p class="section-label">Also in This Series</p>
+    <div class="card-grid">
+      <a class="card" href="brief-01.html">
+        <p class="card-tag">Policy Brief · No. 1</p>
+        <h3>The Case for By-Right Retail in HC-G2</h3>
+        <p>The legal and planning argument: what the zoning code says, what it should say, and exact proposed amendment language.</p>
+      </a>
+      <a class="card" href="../get-involved.html">
+        <p class="card-tag">Action</p>
+        <h3>Get Involved</h3>
+        <p>Show up at hearings, write letters, print zines. Here's how.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-note">
+      <p>Ghent Streets is a community advocacy campaign for zoning reform in Norfolk, Virginia.<br>
+      Not affiliated with the City of Norfolk or any official body.</p>
+    </div>
+    <div class="footer-note" style="text-align:right;">
+      <p>HC-G2 · Norfolk Zoning Ordinance § 3.6<br>
+      NFK2050 · Sustain – Traditional</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

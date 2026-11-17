@@ -1,0 +1,665 @@
+/* ── Ghent Streets Design System ── */
+/* Derived from power-explained. Accent: amber-gold instead of red. */
+
+:root {
+  --ink:        #1a1714;
+  --ink-rgb:    26,23,20;
+  --paper:      #f3ede0;
+  --paper-mid:  #ebe1c9;
+  --paper-dark: #ddd3b8;
+  --gold:       #b07c2a;
+  --gold-rgb:   176,124,42;
+  --gold-dim:   #8a5f1e;
+  --gold-warm:  #d4aa70;
+  --rule:       rgba(var(--ink-rgb),0.15);
+  --rule-strong:rgba(var(--ink-rgb),0.4);
+
+  --display: 'Cormorant Garamond', Georgia, serif;
+  --body:    'Lora', Georgia, serif;
+  --mono:    'DM Mono', monospace;
+
+  --max:    780px;
+  --wide:   1100px;
+  --gutter: clamp(1.5rem, 5vw, 4rem);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink:        #f0e8d8;
+    --ink-rgb:    240,232,216;
+    --paper:      #1e1b17;
+    --paper-mid:  #28231d;
+    --paper-dark: #242019;
+    --gold:       #d4a060;
+    --gold-rgb:   212,160,96;
+    --gold-dim:   #b88040;
+    --gold-warm:  #c49060;
+    --rule:       rgba(var(--ink-rgb),0.10);
+    --rule-strong:rgba(var(--ink-rgb),0.28);
+  }
+}
+
+/* ── Base ── */
+html { font-size: 18px; scroll-behavior: smooth; }
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  line-height: 1.72;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+}
+
+/* ── Layout ── */
+.container {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.container--wide {
+  max-width: var(--wide);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+/* ── Masthead ── */
+header {
+  border-bottom: 2px solid var(--ink);
+  padding: 1.25rem 0 1rem;
+}
+
+header .container {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.site-name {
+  font-family: var(--display);
+  font-size: clamp(1.1rem, 2.5vw, 1.3rem);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.site-name span { color: var(--gold); }
+
+.issue-line {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: rgba(var(--ink-rgb),0.48);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+nav {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+nav a {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb),0.6);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+nav a:hover, nav a.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+/* ── Hero ── */
+.hero {
+  padding: clamp(3rem, 8vw, 6rem) 0 clamp(2rem, 5vw, 4rem);
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.hero-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.hero-label::before {
+  content: '';
+  display: block;
+  width: 2rem;
+  height: 1px;
+  background: var(--gold);
+}
+
+.hero h1 {
+  font-family: var(--display);
+  font-size: clamp(2.4rem, 7vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  margin: 0 0 1.5rem;
+}
+
+.hero-deck {
+  font-size: clamp(1rem, 2vw, 1.15rem);
+  line-height: 1.6;
+  color: rgba(var(--ink-rgb),0.78);
+  max-width: 580px;
+  margin-bottom: 2rem;
+}
+
+/* The hero film: 801 Stockley's porch coming alive, from the parcel explorer. */
+.hero-film {
+  margin: clamp(2rem, 5vw, 3rem) auto 0;
+}
+
+.hero-film-frame {
+  position: relative;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-mid);
+}
+
+.hero-film video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.hero-film-toggle {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f3ede0;
+  background: rgba(26,23,20,0.62);
+  border: 1px solid rgba(243,237,224,0.35);
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+
+.hero-film-toggle:hover { background: rgba(26,23,20,0.8); }
+.hero-film-toggle:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.hero-film figcaption {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: rgba(var(--ink-rgb),0.7);
+  margin-top: 0.75rem;
+  max-width: 62ch;
+}
+
+.hero-film figcaption a { color: var(--gold); }
+
+/* ── Typography ── */
+h1, h2, h3, h4 {
+  font-family: var(--display);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+h2 { font-size: clamp(1.7rem, 4vw, 2.4rem); margin: 2.5rem 0 1rem; }
+h3 { font-size: clamp(1.2rem, 2.5vw, 1.55rem); margin: 2rem 0 0.75rem; }
+h4 { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); margin: 1.75rem 0 0.5rem; font-weight: 500; }
+
+p { margin: 0 0 1.2rem; }
+
+a { color: var(--gold-dim); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--gold); }
+
+strong { font-weight: 700; }
+
+blockquote {
+  margin: 2rem 0;
+  padding: 1.25rem 1.5rem;
+  border-left: 3px solid var(--gold);
+  background: var(--paper-mid);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+
+blockquote cite {
+  display: block;
+  margin-top: 0.75rem;
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb),0.5);
+}
+
+/* ── Rule/Label ── */
+.section-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule-strong);
+}
+
+/* ── Article/Card Grid ── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin: 2rem 0;
+}
+
+.card {
+  background: var(--paper-mid);
+  border: 1px solid var(--rule);
+  padding: 1.5rem;
+  text-decoration: none;
+  color: var(--ink);
+  display: block;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.card:hover {
+  border-color: var(--gold);
+  background: var(--paper-dark);
+  text-decoration: none;
+  color: var(--ink);
+}
+
+.card-tag {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.6rem;
+}
+
+.card h3 {
+  font-family: var(--display);
+  font-size: 1.2rem;
+  margin: 0 0 0.5rem;
+  line-height: 1.2;
+  font-weight: 600;
+}
+
+.card p {
+  font-size: 0.88rem;
+  color: rgba(var(--ink-rgb),0.7);
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* A card with a picture across its top. */
+.card-img {
+  display: block;
+  width: calc(100% + 3rem);
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  margin: -1.5rem -1.5rem 1.2rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ── Case studies ── */
+.cs-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1.2rem;
+  margin: 0 0 1.8rem;
+  font-size: 0.95rem;
+}
+
+.cs-facts dt {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb),0.55);
+  padding-top: 0.25rem;
+}
+
+.cs-facts dd { margin: 0; }
+
+.cs-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin: 1.6rem 0 0.4rem;
+}
+
+.cs-photos figure, .cs-render { margin: 0; }
+
+.cs-photos img, .cs-render img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--rule-strong);
+  background: var(--paper-mid);
+}
+
+.cs-photos figcaption, .cs-render figcaption, .cs-credit {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  line-height: 1.55;
+  letter-spacing: 0.03em;
+  color: rgba(var(--ink-rgb),0.65);
+  margin-top: 0.4rem;
+}
+
+.cs-credit { margin: 0 0 2rem; }
+.cs-credit a, .cs-render figcaption a { color: var(--gold); }
+
+.cs-renders {
+  display: grid;
+  gap: 1.2rem;
+  margin: 1.6rem 0 2rem;
+}
+
+.cs-renders .pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.cs-cta {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold);
+  padding-bottom: 2px;
+}
+
+/* ── Article body ── */
+.article-body {
+  padding: 2.5rem 0 4rem;
+}
+
+.article-body > * + * { margin-top: 0; }
+
+/* ── Pull quote ── */
+.pullquote {
+  font-family: var(--display);
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
+  line-height: 1.25;
+  font-style: italic;
+  color: var(--gold-dim);
+  border-top: 2px solid var(--gold);
+  border-bottom: 2px solid var(--gold);
+  padding: 1.5rem 0;
+  margin: 2.5rem 0;
+  text-align: center;
+}
+
+/* ── Demand box ── */
+.demand-box {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 2rem 2rem;
+  margin: 2.5rem 0;
+}
+
+.demand-box h3 {
+  font-family: var(--display);
+  color: var(--gold-warm);
+  margin-top: 0;
+}
+
+.demand-box ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.8;
+}
+
+/* ── Stat callout ── */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.stat {
+  border: 1px solid var(--rule-strong);
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.stat-number {
+  font-family: var(--display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1;
+  display: block;
+}
+
+.stat-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb),0.55);
+  margin-top: 0.4rem;
+  display: block;
+}
+
+/* ── Footer ── */
+footer {
+  border-top: 2px solid var(--ink);
+  padding: 2rem 0;
+  margin-top: 4rem;
+}
+
+footer .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.footer-note {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: rgba(var(--ink-rgb),0.45);
+  text-transform: uppercase;
+  line-height: 1.7;
+}
+
+/* ── Utility ── */
+.text-gold { color: var(--gold); }
+.mono { font-family: var(--mono); font-size: 0.75rem; letter-spacing: 0.06em; }
+hr.rule { border: none; border-top: 1px solid var(--rule-strong); margin: 2.5rem 0; }
+hr.rule-heavy { border: none; border-top: 2px solid var(--ink); margin: 3rem 0; }
+
+/* ── Zine-specific ── */
+.zine-cover {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 3rem var(--gutter);
+  margin-bottom: 0;
+}
+
+.zine-cover .zine-title {
+  font-family: var(--display);
+  font-size: clamp(3rem, 10vw, 6rem);
+  font-weight: 700;
+  line-height: 0.95;
+  color: var(--gold-warm);
+  margin: 1rem 0;
+}
+
+.zine-body {
+  font-size: 1.05rem;
+  line-height: 1.8;
+}
+
+/* ── Policy brief specific ── */
+.policy-meta {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(var(--ink-rgb),0.5);
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+  padding: 0.6rem 0;
+  margin: 1.5rem 0 2rem;
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.amendment-text {
+  background: var(--paper-mid);
+  border: 1px solid var(--rule-strong);
+  border-left: 4px solid var(--gold);
+  padding: 1.5rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  margin: 1.5rem 0;
+  overflow-x: auto;   /* the amendment's column layout scrolls inside its box on a phone */
+}
+
+/* Wide data tables scroll inside their own box on narrow screens instead of widening the page. */
+@media (max-width: 640px) {
+  .model-table { display: block; overflow-x: auto; }
+}
+
+ins { text-decoration: none; background: rgba(var(--gold-rgb),0.2); padding: 0 2px; }
+del { text-decoration: line-through; color: rgba(var(--ink-rgb),0.4); }
+
+/* ── Print ── */
+@media print {
+  :root {
+    --ink:        #000;
+    --ink-rgb:    0,0,0;
+    --paper:      #fff;
+    --paper-mid:  #f5f5f5;
+    --paper-dark: #ebebeb;
+    --gold:       #000;
+    --gold-dim:   #000;
+    --gold-warm:  #555;
+    --rule:       rgba(0,0,0,0.2);
+    --rule-strong:rgba(0,0,0,0.5);
+  }
+
+  header, nav, footer { display: none !important; }
+
+  body {
+    font-size: 11pt;
+    line-height: 1.6;
+    background: #fff;
+    color: #000;
+  }
+
+  .container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* Zine cover: keep black background, reduce padding */
+  .zine-cover {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    padding: 1.5rem;
+    page-break-after: always;
+  }
+
+  .zine-cover .zine-title {
+    color: #b07c2a !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .zine-section {
+    page-break-inside: avoid;
+  }
+
+  .zine-number {
+    font-size: 4rem;
+  }
+
+  /* Callout boxes: keep dark background for print emphasis */
+  .callout {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    page-break-inside: avoid;
+  }
+
+  .demand-box {
+    background: #000 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    page-break-inside: avoid;
+  }
+
+  /* Comparison grid: keep for print */
+  .compare {
+    page-break-inside: avoid;
+  }
+
+  h1, h2, h3 { page-break-after: avoid; }
+  p { orphans: 3; widows: 3; }
+
+  a { color: #000; text-decoration: none; }
+
+  /* Hide screen-only elements */
+  .hero-label::before { display: none; }
+  .section-label::after { display: none; }
+
+  /* Print attribution line */
+  .zine-body::after { display: none; }
+}
+
+/* Case studies: the homepage's "open in 3D" line and the switcher at the top of each case page. */
+.case-jump { margin-top: 1.25rem; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em; line-height: 2; color: rgba(var(--ink-rgb), 0.75); }
+.case-jump a, .cs-switch a { color: var(--gold); text-decoration: none; border-bottom: 1px solid currentColor; }
+.cs-switch { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin-top: 1.25rem; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(var(--ink-rgb), 0.7); }
+.cs-switch a[aria-current="page"] { color: var(--ink); border-bottom-color: transparent; pointer-events: none; }
