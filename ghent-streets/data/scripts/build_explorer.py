@@ -42,7 +42,7 @@ SOCRATA = "https://data.norfolk.gov/resource"
 PHOTOS = "https://gisshare.norfolk.gov/provalimages/001"
 
 FT = 0.3048                      # US survey foot ≈ international foot at this precision
-UA = {"User-Agent": "ghent-streets-explorer/1.0 (+https://github.com/jedelman/ghent-zoning-reform)"}
+UA = {"User-Agent": "ghent-streets-explorer/1.0 (+https://github.com/jedelman/jason-edelman.org)"}
 OUT = os.path.join(os.path.dirname(__file__), "../../explorer/data/ghent.json")
 # Lots the explorer builds by hand and the site writes up as case studies; they get a photo like the corners.
 CASE_STUDIES = {"1428706223", "1428629200", "1428615872"}   # 715 Colonial Ave, 740 W Princess Anne Rd, 1012 Colley Ave

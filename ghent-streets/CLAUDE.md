@@ -1,4 +1,8 @@
-# CLAUDE.md — ghent-zoning-reform
+# CLAUDE.md — ghent-streets
+
+Since 2026-11-17 this project lives in the jason-edelman.org monorepo at `ghent-streets/`, served at
+https://jason-edelman.org/ghent-streets/. The old repo (jedelman/ghent-zoning-reform) is retired; its history
+came along. The build and deploy rules are in the root `CLAUDE.md`.
 
 ## Purpose
 Ghent Streets is a community advocacy campaign for zoning reform in Norfolk,
@@ -32,7 +36,7 @@ by right and restore pedestrian vitality to the neighborhood.
 
 ## Project facts
 - Live site: https://ghent-zoning-reform.jason-edelman.org/
-- Repo: https://github.com/jedelman/ghent-zoning-reform
+- Source: `ghent-streets/` in https://github.com/jedelman/jason-edelman.org (was jedelman/ghent-zoning-reform)
 - Author: Jason Edelman
 - Location focus: Norfolk, Virginia — HC-G2 historic district
 
@@ -61,7 +65,7 @@ argument: returning shared neighborhood infrastructure to collective benefit.
 The source of the analytical framework. Link there when the argument needs
 theoretical grounding.
 
-**Mithlond** (`mithlond.jason-edelman.org` / `github.com/jedelman/mithlond`)
+**Mithlond** (`jason-edelman.org/mithlond/` / `mithlond/` in this monorepo)
 Applies the same commons lens to compute infrastructure in Hampton Roads.
 A parallel case study in a different domain.
 

@@ -70,8 +70,24 @@ pass to make.
 
 ## Project links
 - power-explained: https://power-explained.jason-edelman.org/ — repo: https://github.com/jedelman/power-explained
-- mithlond: https://mithlond.jason-edelman.org/ — repo: https://github.com/jedelman/mithlond
-- ghent-zoning-reform: https://ghent-zoning-reform.jason-edelman.org/ — repo: https://github.com/jedelman/ghent-zoning-reform
+- mithlond: https://jason-edelman.org/mithlond/ — source: `mithlond/` in this repo (was jedelman/mithlond)
+- ghent-streets: https://jason-edelman.org/ghent-streets/ — source: `ghent-streets/` in this repo (was jedelman/ghent-zoning-reform)
+
+## Monorepo and the incremental build
+Set 2026-11-17 (Jason: "Separate repos are now more of a liability since our context management is tight...
+let's move everything that doesn't have a special build step to a monorepo with incremental build").
+
+- **In this repo:** the root site, `ghent-streets/`, `mithlond/` and `eastside-commons/`: plain static HTML, no
+  build step. Ghent Streets and Mithlond came in with their full history (rewritten into their subdirectories and
+  merged), so `git log` and `git blame` on their files reach back to the original commits. Edit them here, never in
+  their old repos (retired). Their own `CLAUDE.md` files still hold their content rules.
+- **Still submodules:** `abolish-lawns` (SvelteKit) and `qri` (`scripts/build-qri.mjs`), because they have a build
+  step. Run `git submodule update --init` before building if they're empty; the build skips an empty one.
+- **The build is incremental.** `npm run build` fingerprints each unit (every root static item and every project)
+  by content and rebuilds only what changed; state is in `.build-cache/` (gitignored). `npm run build:clean`
+  rebuilds everything. CI clones fresh, so it always builds in full. A new root file or folder that should be
+  published goes in `STATIC` in `scripts/build.mjs`; a new project goes in `PROJECTS`.
+- **PRs that bring in history must be merged with a merge commit**, never squashed, or the history is lost.
 
 ## Socials
 - LinkedIn: https://www.linkedin.com/in/edelmanja (Jason's current profile; changed 2026-11-13 from the older jason-edelman-168b1370)

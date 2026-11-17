@@ -1,7 +1,7 @@
 # Ghent Zoning Reform — TASKS.md
 
 Campaign site for HC-G2 zoning text amendment in Norfolk, Virginia.
-Repo: https://github.com/jedelman/ghent-zoning-reform
+Repo: https://github.com/jedelman/jason-edelman.org (`ghent-streets/`; was jedelman/ghent-zoning-reform)
 Live at: jedelman.github.io/ghent-zoning-reform (enable GitHub Pages: Settings → Pages → Branch: main, root /)
 
 ---

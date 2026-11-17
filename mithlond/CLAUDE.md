@@ -1,5 +1,9 @@
 # CLAUDE.md — mithlond
 
+Since 2026-11-17 this project lives in the jason-edelman.org monorepo at `mithlond/`, served at
+https://jason-edelman.org/mithlond/. The old repo (jedelman/mithlond) is retired; its history came along. The
+build and deploy rules are in the root `CLAUDE.md`.
+
 ## Purpose
 Mithlond is a research and advocacy initiative examining AI-era data center
 infrastructure in Hampton Roads through a commons framework: who owns the compute,
@@ -34,7 +38,7 @@ economic benefit.
 
 ## Project facts
 - Live site: https://mithlond.jason-edelman.org/
-- Repo: https://github.com/jedelman/mithlond
+- Source: `mithlond/` in https://github.com/jedelman/jason-edelman.org (was jedelman/mithlond)
 - Author: Jason Edelman
 - Geographic focus: Hampton Roads, Virginia
 
@@ -64,7 +68,7 @@ is complete.
 The source of the analytical framework. Link there when the argument needs
 theoretical grounding.
 
-**Ghent Streets** (`ghent-zoning-reform.jason-edelman.org` / `github.com/jedelman/ghent-zoning-reform`)
+**Ghent Streets** (`jason-edelman.org/ghent-streets/` / `ghent-streets/` in this monorepo)
 Applies the same commons lens to urban space in Norfolk. A parallel case study
 in a different domain.
 

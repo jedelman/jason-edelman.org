@@ -14,7 +14,7 @@ Three working thesis pillars:
 3. **Social Equity for the AI Era** — Who owns the infrastructure, who captures the value, who bears the cost.
 
 Site: https://jedelman.github.io/mithlond  
-Repo: https://github.com/jedelman/mithlond  
+Repo: https://github.com/jedelman/jason-edelman.org (`mithlond/`; was jedelman/mithlond, retired 2026-11-17)  
 Research Logs (Google Doc): https://docs.google.com/document/d/1IlkgmarullMJWUDUJTr-sj3A2OOx5ON33_Fvia3ZO9Y/edit
 
 ---

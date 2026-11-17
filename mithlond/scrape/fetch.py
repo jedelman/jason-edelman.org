@@ -32,7 +32,7 @@ HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 "
-        "Mithlond-Research/1.0 (github.com/jedelman/mithlond)"
+        "Mithlond-Research/1.0 (github.com/jedelman/jason-edelman.org)"
     )
 }
 
