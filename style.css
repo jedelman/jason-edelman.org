@@ -975,14 +975,32 @@ dialog.trailer::backdrop { background: oklch(8% 0.005 145 / 0.88); }
   margin-top: var(--space-xl);
 }
 .civic .principles li {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-sm);
   padding-top: var(--space-md);
   border-top: 1px solid var(--border);
+}
+.civic .principles li p {
   font-family: var(--font-display);
   font-size: 1.2rem;
   line-height: 1.35;
   color: var(--heading);
   text-wrap: balance;
 }
+/* The project that practices the principle: a quiet label, not a button. */
+.civic .principle-link {
+  align-self: flex-start;
+  font-family: var(--font-label);
+  font-size: var(--text-label);
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  text-decoration: none;
+  padding-block: 0.35rem;   /* a taller target without moving the type */
+}
+.civic .principle-link:hover,
+.civic .principle-link:focus-visible { color: var(--link-hover); text-decoration: underline; text-underline-offset: 3px; }
 
 /* ── Record: what he has led, with place and years in the margin ───────────────────────── */
 .civic .entry {
