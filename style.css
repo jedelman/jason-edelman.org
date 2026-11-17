@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Epilogue:ital,wght@0,400;0,600;0,700;0,900;1,400&family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&family=Marcellus&family=Marcellus+SC&display=swap');
 
 /* ── Reset ─────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -774,4 +774,432 @@ dialog.trailer::backdrop { background: oklch(8% 0.005 145 / 0.88); }
   .readings-callout { padding: 1.25rem; }
   .contact-links { flex-direction: column; }
   .contact-link { width: 100%; text-align: center; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════════════════════════
+   Civic: the 2026-11 redesign, for Jason as a civic leader (pages whose <html> has class="civic":
+   the homepage, /cv/, /workshop/). Calm and visionary: few elements, each one weighty; light or dark
+   by the visitor's setting. Marcellus, lettering cut into a public building, for display; Marcellus SC
+   for labels; Charis SIL for reading. Pages without the class keep the rules above, untouched.
+   ══════════════════════════════════════════════════════════════════════════════════════════ */
+:root.civic {
+  color-scheme: dark;
+  --bg:          oklch(13% 0.008 150);
+  --surface:     oklch(16.5% 0.010 150);
+  --surface-hi:  oklch(20% 0.012 150);
+  --border:      oklch(28% 0.012 150);
+  --text:        oklch(88% 0.010 150);
+  --heading:     oklch(96% 0.010 150);
+  --muted:       oklch(68% 0.014 150);
+  --accent:      oklch(72% 0.11  152);
+  --accent-dim:  oklch(55% 0.08  152);
+  --link:        oklch(80% 0.09  152);
+  --link-hover:  oklch(91% 0.07  152);
+  --on-accent:   oklch(16% 0.02  152);
+  --scrim:       oklch(11% 0.008 150 / 0.86);
+  --on-scrim:    oklch(95% 0.010 150);
+  --mask-opacity: 0.10;
+  --leading:     1.75;
+
+  --font-display: 'Marcellus', Optima, Candara, 'Palatino Linotype', Georgia, serif;
+  --font-label:   'Marcellus SC', 'Marcellus', Optima, Candara, Georgia, serif;
+  --font-body:    'Charis SIL', Charter, 'Bitstream Charter', Georgia, serif;
+
+  /* A 4pt scale; at the 17px root, 1rem is 17px. */
+  --space-2xs: 0.25rem;
+  --space-xs:  0.5rem;
+  --space-sm:  0.75rem;
+  --space-md:  1rem;
+  --space-lg:  1.5rem;
+  --space-xl:  2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --space-4xl: clamp(4.5rem, 3rem + 6vw, 8rem);
+
+  /* Five sizes, a perfect fourth apart, and the vision statement above them. */
+  --text-label:  0.8rem;
+  --text-small:  0.9rem;
+  --text-lead:   1.333rem;
+  --text-title:  1.777rem;
+  --text-vision: clamp(2.6rem, 1.2rem + 4.6vw, 5.4rem);
+
+  font-synthesis: none;   /* Marcellus has one weight; never fake a bold */
+}
+
+@media (prefers-color-scheme: light) {
+  :root.civic {
+    color-scheme: light;
+    --bg:          oklch(96.8% 0.009 140);
+    --surface:     oklch(94.3% 0.012 140);
+    --surface-hi:  oklch(91.6% 0.015 140);
+    --border:      oklch(84% 0.016 145);
+    --text:        oklch(27% 0.022 155);
+    --heading:     oklch(19% 0.025 155);
+    --muted:       oklch(44% 0.020 155);
+    --accent:      oklch(45% 0.10  152);
+    --accent-dim:  oklch(60% 0.07  152);
+    --link:        oklch(39% 0.10  152);
+    --link-hover:  oklch(27% 0.09  152);
+    --on-accent:   oklch(98% 0.006 140);
+    --scrim:       oklch(22% 0.02  155 / 0.78);
+    --on-scrim:    oklch(97% 0.008 140);
+    --mask-opacity: 0.055;
+    --leading:     1.68;
+  }
+}
+
+.civic body {
+  line-height: var(--leading);
+  padding: clamp(1.5rem, 1rem + 2vw, 2.75rem) max(1.1rem, env(safe-area-inset-right, 0px)) var(--space-4xl) max(1.1rem, env(safe-area-inset-left, 0px));
+}
+.civic main { max-width: 1240px; gap: var(--space-4xl); }
+.civic a { color: var(--link); }
+.civic :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* The conifers, both ways round: in the dark the cloud glows a little behind the page; in the light the
+   same photograph's trees are drawn faintly in ink, by excluding the sky from a solid layer. */
+@media (prefers-color-scheme: light) {
+  :root.civic body::before {
+    background: var(--heading);
+    -webkit-mask: linear-gradient(#000 0 0), url("/img/forest-mask.webp") center 30% / cover no-repeat;
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#000 0 0), url("/img/forest-mask.webp") center 30% / cover no-repeat;
+            mask-composite: exclude;
+  }
+}
+.civic body::before { opacity: var(--mask-opacity); }
+
+/* ── Section labels: carved small capitals, not code ───────────────────────────────────── */
+.civic section > h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  font-family: var(--font-label);
+  font-size: var(--text-label);
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  margin-bottom: var(--space-2xl);
+}
+.civic section > h2::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+/* ── The bar: name, the page's sections, the call ─────────────────────────────────────── */
+.civic .bar {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md) var(--space-xl);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border);
+}
+.civic .bar h1 {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  line-height: 1.1;
+  color: var(--heading);
+  transform: none;
+  transition: none;
+  cursor: auto;
+}
+.civic .bar h1 a { color: inherit; text-decoration: none; }
+.civic .bar .tagline {
+  margin-top: var(--space-2xs);
+  font-family: var(--font-body);
+  font-style: italic;
+  font-size: var(--text-small);
+  letter-spacing: 0;
+  color: var(--muted);
+  max-width: 44ch;
+}
+.civic .bar-nav { display: flex; flex-wrap: wrap; gap: var(--space-xs) var(--space-lg); margin-left: auto; }
+.civic .bar-nav a,
+.civic .sections a {
+  font-family: var(--font-label);
+  font-size: var(--text-label);
+  letter-spacing: 0.16em;
+  text-transform: none;
+  color: var(--link);
+  text-decoration: none;
+  padding-block: var(--space-2xs);
+  border-bottom: 1px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.civic .bar-nav a:hover,
+.civic .sections a:hover { color: var(--link-hover); border-bottom-color: var(--accent-dim); }
+
+.civic .book-call {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: var(--link);
+  background: transparent;
+  border: 1px solid var(--accent-dim);
+  border-radius: 2px;
+  padding: var(--space-xs) var(--space-lg);
+}
+.civic .book-call:hover { color: var(--link-hover); border-color: var(--accent); background: var(--surface-hi); }
+
+/* ── Vision: the one thing a visitor should take away ──────────────────────────────────── */
+.civic .vision {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2xl);
+  padding-block: clamp(2.5rem, 1rem + 8vh, 7rem) 0;
+}
+.civic .vision-statement {
+  font-family: var(--font-display);
+  font-size: var(--text-vision);
+  line-height: 1.04;
+  letter-spacing: -0.008em;
+  color: var(--heading);
+  max-width: 15ch;
+  text-wrap: balance;
+  margin-left: -0.04em;   /* optical: the cap's side bearing */
+}
+.civic .vision-body { display: grid; gap: var(--space-sm); max-width: 38ch; }
+.civic .vision-body p { font-size: var(--text-lead); line-height: 1.5; color: var(--text); }
+.civic .vision-body .vision-sign { font-family: var(--font-display); color: var(--accent); }
+.civic .principles {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-lg) var(--space-xl);
+  max-width: 62rem;
+  margin-top: var(--space-xl);
+}
+.civic .principles li {
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border);
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  line-height: 1.35;
+  color: var(--heading);
+  text-wrap: balance;
+}
+
+/* ── Record: what he has led, with place and years in the margin ───────────────────────── */
+.civic .entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-xs);
+  padding-block: var(--space-xl);
+  border-top: 1px solid var(--border);
+}
+.civic .entry:first-of-type { border-top: 0; padding-top: 0; }
+.civic .entry-margin {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-md);
+  font-family: var(--font-label);
+  font-size: var(--text-label);
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  font-variant-numeric: lining-nums;
+}
+.civic .entry h3 {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  font-weight: 400;
+  line-height: 1.15;
+  color: var(--heading);
+  margin-bottom: var(--space-sm);
+}
+.civic .entry-text p { font-size: 1.06rem; color: var(--text); max-width: 64ch; }
+.civic .entry-text a { text-decoration-color: var(--accent-dim); text-underline-offset: 3px; }
+.civic .entry-text a:hover { color: var(--link-hover); }
+
+/* Places: a photograph beside an entry. */
+.civic .entry-photo { order: 3; max-width: 26rem; margin: var(--space-md) 0 0; display: grid; gap: var(--space-xs); }
+.civic .entry-photo img { display: block; width: 100%; height: auto; border-radius: 2px; background: var(--surface-hi); }
+.civic .entry-photo figcaption {
+  font-family: var(--font-label);
+  font-size: var(--text-label);
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+/* ── Work: the projects, as evidence ───────────────────────────────────────────────────── */
+.civic .group-title {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 400;
+  color: var(--heading);
+  margin-bottom: var(--space-lg);
+}
+.civic .project-group + .project-group { margin-top: var(--space-3xl); }
+.civic .projects-grid { gap: var(--space-lg); }
+.civic .project-card,
+.civic .project-card.in-progress {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+}
+.civic .project-card:hover { background: var(--surface-hi); border-color: var(--accent-dim); }
+.civic .project-shot-link { border-color: var(--border); }
+.civic .project-shot { background: var(--surface-hi); }
+.civic .project-tag,
+.civic .status-badge {
+  font-family: var(--font-label);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: none;
+}
+.civic .project-tag { color: var(--muted); }
+.civic .status-badge { color: var(--accent); border-color: var(--accent-dim); }
+.civic .project-card a { text-decoration: none; }
+.civic .project-card h4,
+.civic #projects h3 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.2;
+  color: var(--link);
+  margin-bottom: var(--space-xs);
+  transition: color 0.2s;
+}
+.civic .project-card a:hover h4,
+.civic #projects a:hover h3 { color: var(--link-hover); }
+.civic .project-card.headliner h4,
+.civic #projects .project-card.headliner h3 { font-size: var(--text-title); }
+.civic .project-card p { color: var(--text); }
+.civic .project-more { font-family: var(--font-label); font-size: var(--text-label); letter-spacing: 0.08em; }
+
+.civic .play-button {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  color: var(--on-accent);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.civic .play-button:hover,
+.civic .play-button:focus-visible { color: var(--on-accent); background: var(--link-hover); border-color: var(--link-hover); }
+.civic .trailer-cue {
+  font-family: var(--font-label);
+  letter-spacing: 0.1em;
+  text-transform: none;
+  color: var(--on-scrim);
+  background: var(--scrim);
+  border-color: transparent;
+}
+.civic .trailer-cue svg { fill: var(--on-scrim); }
+.civic .trailer-link:hover .trailer-cue,
+.civic .trailer-link:focus-visible .trailer-cue { color: var(--on-scrim); border-color: var(--on-scrim); }
+.civic dialog.trailer { background: var(--surface); color: var(--text); border-color: var(--border); }
+.civic dialog.trailer::backdrop { background: var(--scrim); }
+.civic .trailer-bar h2 { font-family: var(--font-label); letter-spacing: 0.16em; text-transform: none; color: var(--accent); }
+.civic .trailer-close { color: var(--muted); border-color: var(--border); }
+
+.civic .journal-callout { border-color: var(--border); border-radius: 2px; max-width: 46rem; text-decoration: none; }
+.civic .journal-callout:hover { border-color: var(--accent-dim); background: var(--surface); }
+.civic .journal-callout .journal-label { font-family: var(--font-label); letter-spacing: 0.16em; text-transform: none; color: var(--accent); }
+.civic .journal-callout .journal-title { font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; line-height: 1.3; color: var(--link); }
+.civic .journal-callout .journal-arrow { font-family: var(--font-body); color: var(--accent); }
+.civic .workshop-callout { margin-top: var(--space-3xl); }
+
+/* ── Writing ───────────────────────────────────────────────────────────────────────────── */
+.civic .writing-list { list-style: none; display: grid; max-width: 46rem; }
+.civic .writing-list li { padding-block: var(--space-lg); border-top: 1px solid var(--border); }
+.civic .writing-list li:first-child { border-top: 0; padding-top: 0; }
+.civic .writing-list a { display: grid; gap: var(--space-2xs); text-decoration: none; }
+.civic .writing-title { font-family: var(--font-display); font-size: var(--text-lead); line-height: 1.25; color: var(--link); transition: color 0.2s; }
+.civic .writing-list a:hover .writing-title { color: var(--link-hover); }
+.civic .writing-meta { font-family: var(--font-label); font-size: var(--text-label); letter-spacing: 0.12em; color: var(--muted); }
+.civic .writing-list p { margin-top: var(--space-xs); font-style: italic; color: var(--muted); max-width: 60ch; }
+
+/* ── Astrology, set as a quiet aside ───────────────────────────────────────────────────── */
+.civic .readings-callout { background: transparent; border: 0; padding: 0; gap: var(--space-lg); }
+.civic .readings-callout:hover { border: 0; }
+.civic .readings-intro { color: var(--text); max-width: 62ch; }
+.civic .readings-cta { font-family: var(--font-body); font-style: italic; letter-spacing: 0; color: var(--muted); font-size: 0.95rem; }
+.civic .contact-link {
+  font-family: var(--font-display);
+  font-weight: 400;
+  color: var(--link);
+  border: 1px solid var(--accent-dim);
+  border-radius: 2px;
+}
+.civic .contact-link:hover { color: var(--link-hover); border-color: var(--accent); background: var(--surface-hi); }
+
+/* ── Contact: the pond, the call, the CV, and the outbound links ───────────────────────── */
+.civic .reach { display: grid; gap: var(--space-lg); }
+.civic .reach-actions { display: grid; justify-items: start; }
+.civic .contact-open { font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; letter-spacing: 0.02em; margin-top: 0; border-radius: 2px; }
+.civic .reach .contact-nojs { color: var(--muted); }
+.civic .contact-form { color-scheme: inherit; }
+.civic .contact-form label { font-family: var(--font-label); font-size: var(--text-label); letter-spacing: 0.12em; text-transform: none; color: var(--muted); }
+.civic .contact-form input:not([type="checkbox"]),
+.civic .contact-form select,
+.civic .contact-form textarea { color: var(--text); background: var(--surface); border-color: var(--border); }
+.civic .contact-form .contact-check { font-family: var(--font-body); font-size: 0.9rem; color: var(--text); }
+.civic .contact-status { min-height: 1.2em; font-size: var(--text-small); font-style: italic; color: var(--muted); }
+.civic .contact-form button { font-family: var(--font-display); font-weight: 400; border-radius: 2px; }
+.civic .contact-form button:hover:not(:disabled) { background: var(--surface-hi); }
+.civic .reach-also { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-md) var(--space-xl); }
+.civic .reach-cv { font-family: var(--font-display); font-size: 1rem; text-decoration: none; }
+.civic .reach-cv:hover { color: var(--link-hover); }
+.civic .reach .links { justify-content: flex-start; column-gap: var(--space-lg); }
+.civic .links a { font-family: var(--font-label); font-size: var(--text-label); letter-spacing: 0.12em; color: var(--muted); }
+.civic .links a:hover { color: var(--link-hover); border-bottom-color: var(--accent-dim); }
+
+/* ── Subpages (CV, workshop): the same masthead, carved instead of bold ────────────────── */
+.civic .project-group > h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-lead);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--heading);
+  margin-bottom: var(--space-lg);
+}
+.civic .masthead h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 1.4rem + 3vw, 3.4rem);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.05;
+  color: var(--heading);
+  transform: none;
+  transition: none;
+  cursor: auto;
+}
+.civic .masthead .tagline { font-family: var(--font-body); font-style: italic; font-size: 1rem; letter-spacing: 0; color: var(--muted); }
+
+/* ── Arrival: one quiet entrance, nothing after ────────────────────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  .civic main > * { animation: civic-arrive 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; transform: none; }
+  .civic main > :nth-child(1) { animation-delay: 0s; }
+  .civic main > :nth-child(2) { animation-delay: 0.12s; }
+  .civic main > :nth-child(n+3) { animation-delay: 0.28s; }
+  @keyframes civic-arrive { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+}
+
+/* ── Wider screens ─────────────────────────────────────────────────────────────────────── */
+@media (min-width: 900px) {
+  .civic .entry { grid-template-columns: 13rem minmax(0, 1fr); column-gap: var(--space-2xl); }
+  .civic .entry-margin { flex-direction: column; gap: var(--space-2xs); padding-top: 0.55rem; }
+  .civic .entry-text { grid-column: 2; }
+  .civic .entry .entry-margin { grid-column: 1; grid-row: 1; }
+}
+@media (min-width: 900px) {
+  .civic .entry-photo { grid-column: 2; }
+}
+@media (min-width: 1150px) {
+  .civic .entry.has-photo { grid-template-columns: 13rem minmax(0, 1fr) minmax(15rem, 22rem); }
+  .civic .entry.has-photo .entry-photo { grid-column: 3; grid-row: 1 / span 2; max-width: none; margin-top: 0.45rem; }
+}
+@media (min-width: 1200px) {
+  .civic header.bar { flex-direction: row; align-items: baseline; }
+}
+@media (max-width: 480px) {
+  .civic .bar-nav { margin-left: 0; gap: var(--space-xs) var(--space-md); }
+  .civic .principles { margin-top: var(--space-md); }
 }

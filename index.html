@@ -1,47 +1,59 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="civic">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jason Edelman</title>
   <meta name="description" content="Leader, organizer, analyst, developer. Social cybernetics for the next economy.">
+  <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main>
 
-    <header>
-      <div class="masthead">
-        <h1>Jason Edelman</h1>
+    <header class="bar">
+      <div class="bar-name">
+        <h1><a href="/">Jason Edelman</a></h1>
         <p class="tagline">Leader, organizer, analyst, developer. Social cybernetics for the next economy.</p>
-        <nav class="sections" aria-label="On this site">
-          <a href="#civic">Civic &amp; commons</a>
-          <a href="#games">Interactive</a>
-          <a href="#agents">AI &amp; agents</a>
-          <a href="/workshop/">Under Development</a>
-          <a href="/cv/">CV</a>
-        </nav>
       </div>
-      <div class="header-side">
-        <a class="book-call" href="https://calendly.com/edelmanja/30min">Book a Call</a>
-        <nav class="elsewhere" aria-label="Contacts">
-          <ul class="links">
-            <li><a href="https://www.linkedin.com/in/edelmanja">LinkedIn</a></li>
-            <li><a href="https://github.com/jedelman">GitHub</a></li>
-            <li><a href="https://bsky.app/profile/jason-edelman.org">Bluesky</a></li>
-            <li><a href="https://edelmanja.substack.com/">Substack</a></li>
-            <li><a href="https://soundcloud.com/inruinsnfk">SoundCloud</a></li>
-            <li><a href="https://www.instagram.com/abolish.lawns">@abolish.lawns</a></li>
-          </ul>
-        </nav>
-      </div>
+      <nav class="bar-nav" aria-label="On this page">
+        <a href="#vision">Vision</a>
+        <a href="#record">Record</a>
+        <a href="#work">Work</a>
+        <a href="#writing">Writing</a>
+        <a href="/cv/">CV</a>
+      </nav>
+      <a class="book-call" href="https://calendly.com/edelmanja/30min">Book a Call</a>
     </header>
 
-    <section id="about">
-      <p class="lede">I show up, and I build.</p>
-      <div class="about-cols">
-        <div class="about-col">
-          <h2>Hospitality.</h2>
+    <!-- The vision and the principles are Jason's own words (prose pass, 2026-11-17). Change them there. -->
+    <section id="vision" class="vision" aria-labelledby="vision-statement">
+      <p class="vision-statement" id="vision-statement">Together, we can create new and better ways of being.</p>
+      <div class="vision-body">
+        <p>The way cities work is not working for most of us, and this is what I aim to change.</p>
+        <p class="vision-sign">I show up, and I build.</p>
+      </div>
+      <ul class="principles" aria-label="Principles">
+        <li>Our differences can make us wiser.</li>
+        <li>Belonging is a thing we do together, not something that can be given or taken away.</li>
+        <li>Our power comes from the choices we make.</li>
+      </ul>
+    </section>
+
+    <section id="record" class="record">
+      <h2>Record</h2>
+      <article class="entry has-photo">
+        <p class="entry-margin"><span>Norfolk, Virginia</span><span>2019&ndash;2026</span></p>
+        <figure class="entry-photo">
+          <img src="/img/places/grandiflora-garden-720.webp"
+               srcset="/img/places/grandiflora-garden-720.webp 720w, /img/places/grandiflora-garden-1200.webp 1200w"
+               sizes="(min-width: 1150px) 22rem, (min-width: 600px) 26rem, 100vw"
+               width="1200" height="1594" loading="lazy" decoding="async"
+               alt="Grandiflora’s garden at night under a full moon: string lights along a vine-covered pergola, a wooden fence lined with cushions, a blue table and a chair on the grass.">
+          <figcaption>Grandiflora &middot; May 2025</figcaption>
+        </figure>
+        <div class="entry-text">
+          <h3>Hospitality.</h3>
           <p>
             You may know me from
             <a href="https://www.instagram.com/grandiflora____">Grandiflora</a>, a wine
@@ -52,8 +64,11 @@
             team meditation. Never missed a payroll, even if we had to cut our own salary.
           </p>
         </div>
-        <div class="about-col">
-          <h2>Civic</h2>
+      </article>
+      <article class="entry">
+        <p class="entry-margin"><span>Norfolk, Virginia</span><span>2019&ndash;2026</span></p>
+        <div class="entry-text">
+          <h3>Civic</h3>
           <p>
             My neighbors call me the Tree Guy because I got my start in local politics by
             getting answers from the City on their tree policy. I ran communications for the
@@ -66,44 +81,35 @@
             by combining open data sources.
           </p>
         </div>
-        <div class="about-col">
-          <h2>Next</h2>
+      </article>
+      <article class="entry has-photo">
+        <p class="entry-margin"><span>Seattle, Washington</span></p>
+        <figure class="entry-photo">
+          <img src="/img/places/trail-720.webp"
+               srcset="/img/places/trail-720.webp 720w, /img/places/trail-1200.webp 1200w"
+               sizes="(min-width: 1150px) 22rem, (min-width: 600px) 26rem, 100vw"
+               width="1200" height="1600" loading="lazy" decoding="async"
+               alt="A rocky trail in the North Cascades leads between tall firs toward a mountain lake below a steep grey ridge half in cloud.">
+          <figcaption>North Cascades &middot; August 2019</figcaption>
+        </figure>
+        <div class="entry-text">
+          <h3>Next</h3>
           <p>
             I build systems that support, connect, and combine people's unique gifts and curiosities. I'm results- and relationship-driven, and I lead from the front, by example. I'm moving back to Seattle and looking for a role where I can contribute to civic engagement or environmental protection as a leader, builder, or analyst.
           </p>
-          <button type="button" class="contact-open" aria-expanded="false" aria-controls="contact" hidden><span>Write to me</span></button>
-          <p class="contact-nojs">
-            The form needs JavaScript. You can also reach me on
-            <a href="https://bsky.app/profile/jason-edelman.org">Bluesky</a>.
-          </p>
-          <form id="contact" class="contact-form" hidden>
-            <label for="contact-name">Your name</label>
-            <input id="contact-name" name="name" autocomplete="name" required>
-            <label for="contact-topic">About</label>
-            <select id="contact-topic" name="topic">
-              <option>A role in Seattle</option>
-              <option>A project</option>
-              <option>An astrology reading</option>
-              <option>Something else</option>
-            </select>
-            <label for="contact-message">Message</label>
-            <textarea id="contact-message" name="message" rows="4" required></textarea>
-            <label class="contact-check"><input type="checkbox" id="contact-human"> I'm not a robot</label>
-            <p class="contact-status" aria-live="polite">A quick calculation in your browser keeps my address away from scrapers.</p>
-            <button type="submit" disabled>Write the email</button>
-          </form>
         </div>
-      </div>
+      </article>
     </section>
 
-    <section id="projects">
+    <section id="work" class="work">
+      <h2>Work</h2>
       <div class="project-group" id="civic">
-        <h2>Civic &amp; commons</h2>
+        <h3 class="group-title">Civic &amp; commons</h3>
         <div class="projects-grid">
 
           <div class="project-card headliner in-progress">
             <a class="project-shot-link" href="https://ask-siren.jason-edelman.org/" tabindex="-1">
-              <img class="project-shot" src="/img/projects/siren.webp" alt="Siren's landing page: “What’s on my block, and who decided it?” above the pre-alpha sign-in."
+              <img class="project-shot" src="/img/projects/siren.webp" alt="Siren's start page: a dark green sidebar with New conversation and the city picker set to Norfolk, VA; “What would you like to know?” above three columns (One question, many sources; Shows its work; Learns what it can't answer) and the pre-alpha sign-in."
                    width="800" height="500" loading="lazy" decoding="async">
             </a>
             <div class="project-body">
@@ -112,7 +118,7 @@
                 <span class="status-badge">invite only</span>
               </div>
               <a href="https://ask-siren.jason-edelman.org/">
-                <h3>Siren</h3>
+                <h4>Siren</h4>
               </a>
               <p>Navigating city bureaucracy can be complicated. Siren brings together open data, the latest ordinances, zoning code, and public meeting minutes and attachments to give you the fullest possible picture of what's going on from official sources.  Siren is self-improving and open-source; if a question can't be answered with available data, escalation is automatic, best-effort, and always human-reviewed.</p>
             </div>
@@ -131,14 +137,9 @@
               <span class="project-tag">commons · civic · 3D</span>
             </div>
             <a href="/ghent-streets/">
-              <h3>Ghent Streets</h3>
+              <h4>Ghent Streets</h4>
             </a>
-            <p>A campaign for corner shops in Ghent, Norfolk's historic district, where the
-            zoning code prohibits cafés, shops and personal services outright. Its parcel
-            explorer rebuilds the district in 3D from the city's own maps, street trees
-            included: pick a corner, see the assessor's photo and the rule, and watch the
-            ground floor become a coffee shop, bookshop, bistro or studio, drawn to the
-            Architectural Review Board's design guidelines.</p>
+            <p>A visual and economic argument to legalize shops, cafes, and corner stores throughout Ghent, Norfolk. Watch the transformation in 3D and consider: historic restoration can be through what we do together, not just what we look at as we pass each other by.</p>
             <a class="play-button" href="/ghent-streets/explorer/">Explore the corners in 3D</a>
           </div>
 
@@ -152,16 +153,9 @@
               <span class="status-badge">new</span>
             </div>
             <a href="/atlas-of-care/">
-              <h3>Atlas of Care</h3>
+              <h4>Atlas of Care</h4>
             </a>
-            <p>Find each other. Say what you do to hold your world together, in one line
-            that begins with I: I feed the birds, I cook for my kids, I clean toilets. You
-            can only write about yourself. You can like what you're glad of and vouch for
-            what holds your world together, and the page draws everyone who has written a
-            line as a graph, joined by those vouches and likes. Sign in with a Bluesky
-            handle. Nothing is stored on this site: each sentence, like and vouch is a
-            record in its writer's own account, and the page finds them through a
-            network-wide index.</p>
+            <p>What do you do to hold the world together? Who does that for you? Find and celebrate each other here. Runs on atproto, the technology behind Bluesky.</p>
           </div>
 
           <div class="project-card in-progress">
@@ -174,15 +168,9 @@
               <span class="status-badge">new</span>
             </div>
             <a href="/broadsheet/">
-              <h3>Broadsheet</h3>
+              <h4>Broadsheet</h4>
             </a>
-            <p>Front pages of standard.site writing, picked by people. The editor fills a
-            broadsheet from the writers you follow and what they recommend, and publishes it
-            as a standard.site document in your own repo: the day's edition, or a morning
-            and an evening one. The newsstand lets anyone swipe through everyone's front
-            pages, tap a story to read it, go back through past editions, and reshare a page
-            to their own. There's no server: it finds every front page through a
-            network-wide index.</p>
+            <p>If you could publish a newspaper, what would be on the front page? Make your own here, automatically visible to your Bluesky followers. Then leaf through your own personalized newsstand to see what your follows think are today's top stories.</p>
           </div>
 
           <div class="project-card in-progress">
@@ -195,7 +183,7 @@
               <span class="status-badge">in progress</span>
             </div>
             <a href="/library/">
-              <h3>Library</h3>
+              <h4>Library</h4>
             </a>
             <p>A lending library with no server of its own. Scan an item's barcode with a
             phone camera or a handheld scanner to check it out, and scan it again to check
@@ -214,7 +202,7 @@
               <span class="project-tag">commons · education</span>
             </div>
             <a href="https://power-explained.jason-edelman.org/">
-              <h3>Power Explained</h3>
+              <h4>Power Explained</h4>
             </a>
             <p>An educational resource examining power structures, capitalism, and
             commons-based alternatives. The argument: systemic problems are design
@@ -224,8 +212,52 @@
         </div>
       </div>
 
+      <div class="project-group" id="agents">
+        <h3 class="group-title">AI &amp; agents</h3>
+        <div class="projects-grid">
+
+          <div class="project-card">
+            <a class="project-shot-link" href="https://bsky.app/profile/scout-two.bsky.social" tabindex="-1">
+              <img class="project-shot" src="/img/projects/scout-two.webp" alt="Scout Two’s Bluesky profile, “AI bot for cybernetic mutual aid,” above its latest post."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">atproto · agent</span>
+            </div>
+            <a href="https://bsky.app/profile/scout-two.bsky.social">
+              <h4>Scout Two</h4>
+            </a>
+            <p>Scout Two isn't deployed once and left running — it manages its own
+            existence. The harness watches its own GitHub repo, pulls in new code, and
+            restarts itself with no human touching the server, so the agent thinking,
+            posting, and responding on Bluesky is also the one keeping itself alive and
+            current. Open infrastructure for agents whose own deployment loop is part of
+            their behavior, not something outside it.</p>
+          </div>
+
+          <div class="project-card">
+            <a class="project-shot-link" href="https://github.com/jedelman/design-patterns-skill" tabindex="-1">
+              <img class="project-shot" src="/img/projects/design-patterns-skill.webp" alt="The opening of the skill’s SKILL.md: when to use it, and the questions that trigger it."
+                   width="800" height="500" loading="lazy" decoding="async">
+            </a>
+            <div class="project-header">
+              <span class="project-tag">ai · theory</span>
+            </div>
+            <a href="https://github.com/jedelman/design-patterns-skill">
+              <h4>Design Patterns Skill</h4>
+            </a>
+            <p>Thirteen software pattern languages from the Portland Pattern Repository at
+            C2, Ward Cunningham's c2.com, written by Cunningham, Kent Beck, Martin Fowler
+            and others, packaged as a Claude skill. Facing a design problem, an agent names
+            the forces driving it, picks the pattern language that answers them, and reads
+            the original text.</p>
+          </div>
+
+        </div>
+      </div>
+
       <div class="project-group" id="games">
-        <h2>Games &amp; toys</h2>
+        <h3 class="group-title">Interactive</h3>
         <div class="projects-grid">
 
           <div class="project-card headliner in-progress">
@@ -243,7 +275,7 @@
                 <span class="status-badge">playable</span>
               </div>
               <a href="https://dream-of-the-earth.jason-edelman.org/">
-                <h3>Dream of the Earth</h3>
+                <h4>Dream of the Earth</h4>
               </a>
               <p>An open world on the real Earth, in the browser. You wake as a small
               creature near one of the planet's ley nodes, on real terrain, in biomes drawn
@@ -270,7 +302,7 @@
               <span class="status-badge">playable</span>
             </div>
             <a href="https://shinjuku-megadungeon.jason-edelman.org/">
-              <h3>Shinjuku Megadungeon</h3>
+              <h4>Shinjuku Megadungeon</h4>
             </a>
             <p>Tokyo's stations, played as the dungeons people already call them. You're a
             kitten, 30 cm tall, with a backpack and a magic wand. It's cold outside, so get
@@ -291,7 +323,7 @@
               <span class="project-tag">sound · synthesis · toy</span>
             </div>
             <a href="/operator-field/">
-              <h3>Operator Field</h3>
+              <h4>Operator Field</h4>
             </a>
             <p>A touch instrument for designing FM synth patches. Place sine operators
             by frequency and amplitude, wire which one modulates which, draw each
@@ -303,57 +335,46 @@
         </div>
       </div>
 
-      <div class="project-group" id="agents">
-        <h2>AI &amp; agents</h2>
-        <div class="projects-grid">
-
-          <div class="project-card">
-            <a class="project-shot-link" href="https://bsky.app/profile/scout-two.bsky.social" tabindex="-1">
-              <img class="project-shot" src="/img/projects/scout-two.webp" alt="Scout Two’s Bluesky profile, “AI bot for cybernetic mutual aid,” above its latest post."
-                   width="800" height="500" loading="lazy" decoding="async">
-            </a>
-            <div class="project-header">
-              <span class="project-tag">atproto · agent</span>
-            </div>
-            <a href="https://bsky.app/profile/scout-two.bsky.social">
-              <h3>Scout Two</h3>
-            </a>
-            <p>Scout Two isn't deployed once and left running — it manages its own
-            existence. The harness watches its own GitHub repo, pulls in new code, and
-            restarts itself with no human touching the server, so the agent thinking,
-            posting, and responding on Bluesky is also the one keeping itself alive and
-            current. Open infrastructure for agents whose own deployment loop is part of
-            their behavior, not something outside it.</p>
-          </div>
-
-          <div class="project-card">
-            <a class="project-shot-link" href="https://github.com/jedelman/design-patterns-skill" tabindex="-1">
-              <img class="project-shot" src="/img/projects/design-patterns-skill.webp" alt="The opening of the skill’s SKILL.md: when to use it, and the questions that trigger it."
-                   width="800" height="500" loading="lazy" decoding="async">
-            </a>
-            <div class="project-header">
-              <span class="project-tag">ai · theory</span>
-            </div>
-            <a href="https://github.com/jedelman/design-patterns-skill">
-              <h3>Design Patterns Skill</h3>
-            </a>
-            <p>Thirteen software pattern languages from the Portland Pattern Repository at
-            C2, Ward Cunningham's c2.com, written by Cunningham, Kent Beck, Martin Fowler
-            and others, packaged as a Claude skill. Facing a design problem, an agent names
-            the forces driving it, picks the pattern language that answers them, and reads
-            the original text.</p>
-          </div>
-
-        </div>
-      </div>
-
       <a href="/workshop/" class="journal-callout workshop-callout">
         <div>
-          <p class="journal-label">Workshop</p>
+          <p class="journal-label">Under Development</p>
           <p class="journal-title">Prototypes, private builds,<br>and projects I've set aside.</p>
         </div>
         <span class="journal-arrow">&rarr;</span>
       </a>
+    </section>
+
+    <section id="writing" class="writing">
+      <h2>Writing</h2>
+      <ul class="writing-list">
+        <li>
+          <a href="https://edelmanja.substack.com/p/open-source-cities">
+            <span class="writing-title">Open Source Cities</span>
+            <span class="writing-meta">Substack &middot; November 2025</span>
+          </a>
+          <p>&ldquo;If you live in a city (and odds are you do), I&rsquo;m sure you&rsquo;re frustrated trying to understand what the city does and why.&rdquo;</p>
+        </li>
+        <li>
+          <a href="https://edelmanja.substack.com/p/you-need-source-control-even-if-you">
+            <span class="writing-title">You Need Source Control Even If You Don&rsquo;t Code</span>
+            <span class="writing-meta">Substack &middot; March 2026</span>
+          </a>
+          <p>&ldquo;It&rsquo;s the history of changes that help us understand and make better choices.&rdquo;</p>
+        </li>
+        <li>
+          <a href="https://power-explained.jason-edelman.org/">
+            <span class="writing-title">Build and Defend the Commons</span>
+            <span class="writing-meta">A book, with Claude &middot; Power Explained</span>
+          </a>
+        </li>
+        <li>
+          <a href="/dev-journal/">
+            <span class="writing-title">Dev Journal</span>
+            <span class="writing-meta">Notes from the work</span>
+          </a>
+          <p>What we built, what broke, what we learned.</p>
+        </li>
+      </ul>
     </section>
 
     <section id="astrology">
@@ -373,15 +394,42 @@
       </div>
     </section>
 
-    <section id="writing">
-      <h2>Writing</h2>
-      <a href="/dev-journal/" class="journal-callout">
-        <div>
-          <p class="journal-label">Dev Journal</p>
-          <p class="journal-title">Notes from the work: what we built,<br>what broke, what we learned.</p>
-        </div>
-        <span class="journal-arrow">→</span>
-      </a>
+    <section id="reach" class="reach">
+      <h2>Contact</h2>
+      <div class="reach-actions">
+        <button type="button" class="contact-open" aria-expanded="false" aria-controls="contact" hidden><span>Write to me</span></button>
+          <p class="contact-nojs">
+            The form needs JavaScript. You can also reach me on
+            <a href="https://bsky.app/profile/jason-edelman.org">Bluesky</a>.
+          </p>
+          <form id="contact" class="contact-form" hidden>
+            <label for="contact-name">Your name</label>
+            <input id="contact-name" name="name" autocomplete="name" required>
+            <label for="contact-topic">About</label>
+            <select id="contact-topic" name="topic">
+              <option>A role in Seattle</option>
+              <option>A project</option>
+              <option>An astrology reading</option>
+              <option>Something else</option>
+            </select>
+            <label for="contact-message">Message</label>
+            <textarea id="contact-message" name="message" rows="4" required></textarea>
+            <label class="contact-check"><input type="checkbox" id="contact-human"> I'm not a robot</label>
+            <p class="contact-status" aria-live="polite">A quick calculation in your browser keeps my address away from scrapers.</p>
+            <button type="submit" disabled>Write the email</button>
+          </form>
+      </div>
+      <p class="reach-also"><a class="book-call" href="https://calendly.com/edelmanja/30min">Book a Call</a> <a class="reach-cv" href="/cv/">Read the CV &rarr;</a></p>
+      <nav class="elsewhere" aria-label="Contacts">
+        <ul class="links">
+          <li><a href="https://www.linkedin.com/in/edelmanja">LinkedIn</a></li>
+          <li><a href="https://github.com/jedelman">GitHub</a></li>
+          <li><a href="https://bsky.app/profile/jason-edelman.org">Bluesky</a></li>
+          <li><a href="https://edelmanja.substack.com/">Substack</a></li>
+          <li><a href="https://soundcloud.com/inruinsnfk">SoundCloud</a></li>
+          <li><a href="https://www.instagram.com/abolish.lawns">@abolish.lawns</a></li>
+        </ul>
+      </nav>
     </section>
   </main>
   <!-- The trailer player: a card's picture opens it (trailer.js); without JavaScript the picture opens the video itself. -->

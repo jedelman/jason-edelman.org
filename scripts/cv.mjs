@@ -54,30 +54,31 @@ const body = sections.filter((s) => s !== summarySec);
 
 const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 const html = `<!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="civic">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CV — ${esc(name)}</title>
   <meta name="description" content="${esc(summary.split('. ')[0].replace(/\.$/, ''))}.">
+  <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="/style.css">
   <style>
     /* The CV: the site's masthead, then entries set like the rest of the site. */
-    .cv-where { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); margin-top: 0.4rem; }
+    .cv-where { font-family: var(--font-label, var(--font-mono)); letter-spacing: 0.08em; font-size: 0.8rem; color: var(--muted); margin-top: 0.4rem; }
     .cv-where a { color: var(--muted); }
     .cv-where a:hover { color: var(--link-hover); }
     .cv-summary { color: var(--text); max-width: 62ch; font-size: 1.08rem; }
     .cv-entry + .cv-entry { margin-top: 2rem; }
     .cv-entry.joined { margin-top: 0.6rem; }
-    .cv-entry h3 { font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; line-height: 1.35; color: var(--text); margin: 0; text-wrap: balance; }
-    .cv-place { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.02em; color: var(--muted); margin: 0.15rem 0 0; }
+    .cv-entry h3 { font-family: var(--font-display); font-size: 1.2rem; font-weight: 400; line-height: 1.35; color: var(--text); margin: 0; text-wrap: balance; }
+    .cv-place { font-family: var(--font-label, var(--font-mono)); font-size: 0.8rem; letter-spacing: 0.1em; color: var(--muted); margin: 0.15rem 0 0; }
     .cv-entry ul { margin: 0.7rem 0 0; padding-left: 1.1rem; color: var(--text); }
     .cv-entry li { max-width: 62ch; }
     .cv-entry li + li { margin-top: 0.45rem; }
     .cv-entry li::marker { color: var(--accent-dim); }
     .cv-entry p { margin: 0.6rem 0 0; max-width: 62ch; }
     .cv-entry a, .cv-summary a { color: var(--link); text-underline-offset: 3px; }
-    .cv-updated { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+    .cv-updated { font-family: var(--font-label, var(--font-mono)); letter-spacing: 0.08em; font-size: 0.76rem; color: var(--muted); }
   </style>
 </head>
 <body>
