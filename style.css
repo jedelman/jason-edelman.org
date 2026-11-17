@@ -1015,6 +1015,22 @@ dialog.trailer::backdrop { background: oklch(8% 0.005 145 / 0.88); }
 .civic .entry-text a { text-decoration-color: var(--accent-dim); text-underline-offset: 3px; }
 .civic .entry-text a:hover { color: var(--link-hover); }
 
+/* Places: a photograph beside an entry, and one wide plate between entries. */
+.civic .entry-photo,
+.civic .plate { margin: 0; display: grid; gap: var(--space-xs); }
+.civic .entry-photo img,
+.civic .plate img { display: block; width: 100%; height: auto; border-radius: 2px; background: var(--surface-hi); }
+.civic .entry-photo figcaption,
+.civic .plate figcaption {
+  font-family: var(--font-label);
+  font-size: var(--text-label);
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+.civic .entry-photo { order: 3; max-width: 26rem; margin-top: var(--space-md); }
+.civic .plate { padding-block: var(--space-xl); border-top: 1px solid var(--border); }
+.civic .plate img { aspect-ratio: 16 / 9; object-fit: cover; }
+
 /* ── Work: the projects, as evidence ───────────────────────────────────────────────────── */
 .civic .group-title {
   font-family: var(--font-display);
@@ -1178,6 +1194,14 @@ dialog.trailer::backdrop { background: oklch(8% 0.005 145 / 0.88); }
   .civic .entry-margin { flex-direction: column; gap: var(--space-2xs); padding-top: 0.55rem; }
   .civic .entry-text { grid-column: 2; }
   .civic .entry .entry-margin { grid-column: 1; grid-row: 1; }
+}
+@media (min-width: 900px) {
+  .civic .entry-photo { grid-column: 2; }
+  .civic .plate { padding-left: calc(13rem + var(--space-2xl)); }
+}
+@media (min-width: 1150px) {
+  .civic .entry.has-photo { grid-template-columns: 13rem minmax(0, 1fr) minmax(15rem, 22rem); }
+  .civic .entry.has-photo .entry-photo { grid-column: 3; grid-row: 1 / span 2; max-width: none; margin-top: 0.45rem; }
 }
 @media (min-width: 1200px) {
   .civic header.bar { flex-direction: row; align-items: baseline; }
