@@ -1,23 +1,37 @@
 #!/usr/bin/env node
 /**
- * Build script for jason-edelman.org
+ * Build script for jason-edelman.org, incremental.
  *
- * 1. Cleans and recreates public/
- * 2. Copies root static files into public/
- * 3. Builds each subproject (git submodules) into public/<name>/
- * 4. Generates sitemap.xml from all HTML files in public/
+ *   node scripts/build.mjs           build only what changed since the last build
+ *   node scripts/build.mjs --clean   wipe public/ and build everything
  *
- * Add future subprojects to the SUBPROJECTS array.
+ * The site is a set of units: the root's static files and folders, the in-repo projects
+ * (plain static HTML, copied whole: ghent-streets, mithlond, eastside-commons), and the
+ * two submodules that have a build step (abolish-lawns, qri). Each unit gets a content
+ * fingerprint. A unit whose fingerprint matches the last build's, and whose output is
+ * still in public/, is left alone; a changed unit is rebuilt from scratch, so files it no
+ * longer has disappear too. The state is kept in .build-cache/state.json (gitignored).
+ *
+ * A change to this script or to build-qri.mjs rebuilds everything. CI builds from a fresh
+ * clone, so it always does a full build; wrangler uploads only changed assets anyway.
+ * The sitemap, robots.txt, the deploy stamp and the manifest are rewritten every run.
+ *
+ * Monorepo since 2026-11-17: ghent-streets and mithlond were submodules; they now live
+ * here with their history. Only projects with a build step stay submodules.
  */
 
 import { execSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, relative, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT    = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PUBLIC  = resolve(ROOT, 'public');
+const CACHE   = resolve(ROOT, '.build-cache');
+const STATE   = resolve(CACHE, 'state.json');
 const DOMAIN  = 'https://jason-edelman.org';
+const CLEAN   = process.argv.includes('--clean');
 
 // Static files/dirs to copy from repo root into public/
 const STATIC = [
@@ -40,119 +54,175 @@ const STATIC = [
   'llms.txt',
 ];
 
-// Subprojects: { name, dir, buildCmd, outDir, required }
-// required: if true, build fails when directory is missing (not just a warning)
-// For plain static HTML projects, set buildCmd to null and outDir to '.'
-const SUBPROJECTS = [
+// Projects, each served at /<name>/: { name, dir, buildCmd, outDir, required, ignore }
+//   buildCmd null: plain static HTML, copied whole (outDir '.').
+//   required: the build fails if the directory is missing (in-repo projects).
+//   ignore: paths, relative to dir, left out of the fingerprint: build outputs and
+//           files a build step writes back into its own source folder.
+const PROJECTS = [
   {
-    name: 'abolish-lawns',
+    name: 'abolish-lawns',            // submodule, SvelteKit
     dir: 'abolish-lawns',
     buildCmd: 'npm install && npm run build',
     outDir: 'build',
+    ignore: ['build', '.svelte-kit'],
   },
   {
-    name: 'ghent-streets',
+    name: 'ghent-streets',            // in-repo since 2026-11-17 (was jedelman/ghent-zoning-reform)
     dir: 'ghent-streets',
-    buildCmd: null,   // plain static HTML — no build step needed
+    buildCmd: null,
     outDir: '.',
+    required: true,
   },
   {
-    name: 'mithlond',
+    name: 'mithlond',                 // in-repo since 2026-11-17 (was jedelman/mithlond)
     dir: 'mithlond',
-    buildCmd: null,   // plain static HTML — no build step needed
+    buildCmd: null,
     outDir: '.',
+    required: true,
   },
   {
-    name: 'eastside-commons',
+    name: 'eastside-commons',         // in-repo; the constraint solver runs in the browser
     dir: 'eastside-commons',
-    buildCmd: null,   // plain static HTML — constraint solver runs in browser
+    buildCmd: null,
     outDir: '.',
-    required: true,   // hard failure if missing
+    required: true,
   },
   {
-    name: 'qri',
+    name: 'qri',                      // submodule; build-qri.mjs picks the latest system doc render
     dir: 'qri',
     buildCmd: 'node ../scripts/build-qri.mjs',
     outDir: '.',
+    ignore: ['index.html', 'system-doc.html', 'system-doc.pdf'],
   },
 ];
 
-// ── Pre-flight: verify required sources exist before nuking public/ ─────────────
-const REQUIRED_SOURCES = [...STATIC, ...SUBPROJECTS.map(p => p.dir)];
-const missing = REQUIRED_SOURCES.filter(f => !existsSync(resolve(ROOT, f)));
-if (missing.length) {
-  // Warn about missing submodules but only hard-fail on non-optional sources
-  const OPTIONAL = new Set(SUBPROJECTS.filter(p => !p.required).map(p => p.dir));
-  const hardMissing = missing.filter(f => !OPTIONAL.has(f));
-  for (const f of missing) {
-    const tag = OPTIONAL.has(f) ? '⚠️  optional' : '❌ required';
-    console.warn(`  ${tag} source missing: ${f}`);
-  }
-  if (hardMissing.length) {
-    console.error('\nPre-flight failed — aborting before public/ is cleaned.');
-    process.exit(1);
-  }
+// ── Pre-flight: verify required sources exist before touching public/ ──────────
+const OPTIONAL = new Set(PROJECTS.filter(p => !p.required).map(p => p.dir));
+const missing = [...STATIC, ...PROJECTS.map(p => p.dir)].filter(f => !existsSync(resolve(ROOT, f)));
+for (const f of missing) console.warn(`  ${OPTIONAL.has(f) ? '⚠️  optional' : '❌ required'} source missing: ${f}`);
+if (missing.some(f => !OPTIONAL.has(f))) {
+  console.error('\nPre-flight failed — aborting before public/ is touched.');
+  process.exit(1);
 }
 console.log('✅ Pre-flight passed');
 
-// ── Clean ─────────────────────────────────────────────────────────────────────
-console.log('🧹 Cleaning public/');
-rmSync(PUBLIC, { recursive: true, force: true });
-mkdirSync(PUBLIC, { recursive: true });
+// ── Fingerprints ────────────────────────────────────────────────────────────────
+const SKIP_NAMES = new Set(['.git', 'node_modules', '.wrangler']);
 
-// ── Static files ──────────────────────────────────────────────────────────────
-console.log('📄 Copying static files');
-for (const item of STATIC) {
-  cpSync(resolve(ROOT, item), resolve(PUBLIC, item), { recursive: true, force: true });
+/** A content hash of a file or a folder (paths, sizes, bytes, link targets). */
+function fingerprint(absPath, ignore = []) {
+  const h = createHash('sha1');
+  const ig = new Set(ignore);
+  const walk = (p, rel) => {
+    const st = lstatSync(p);
+    if (st.isSymbolicLink()) { h.update(`L ${rel} ${readlinkSync(p)}\n`); return; }
+    if (st.isDirectory()) {
+      for (const name of readdirSync(p).sort()) {
+        const r = rel ? `${rel}/${name}` : name;
+        if (SKIP_NAMES.has(name) || ig.has(r)) continue;
+        walk(join(p, name), r);
+      }
+      return;
+    }
+    h.update(`F ${rel} ${st.size}\n`);
+    h.update(readFileSync(p));
+  };
+  walk(absPath, '');
+  return h.digest('hex');
 }
 
-// ── Subprojects ───────────────────────────────────────────────────────────────
-for (const project of SUBPROJECTS) {
+// A change to the build itself invalidates every unit.
+const BUILD_KEY = fingerprint(resolve(ROOT, 'scripts/build.mjs')) + fingerprint(resolve(ROOT, 'scripts/build-qri.mjs'));
+
+let state = { key: null, units: {} };
+try { state = JSON.parse(readFileSync(STATE, 'utf8')); } catch { /* first run, or no cache */ }
+
+const fresh = CLEAN || !existsSync(PUBLIC) || state.key !== BUILD_KEY;
+if (fresh) {
+  console.log(CLEAN ? '🧹 --clean: rebuilding everything' : '🧹 Full build (no usable previous build)');
+  rmSync(PUBLIC, { recursive: true, force: true });
+  mkdirSync(PUBLIC, { recursive: true });
+  state = { key: BUILD_KEY, units: {} };
+}
+
+const next = { key: BUILD_KEY, units: {} };
+const built = [], skipped = [];
+
+/** Rebuild a unit unless its fingerprint and output are unchanged. */
+function unit(id, fp, dest, make) {
+  const prev = state.units[id];
+  if (prev && prev.fp === fp && existsSync(dest)) {
+    skipped.push(id);
+  } else {
+    rmSync(dest, { recursive: true, force: true });
+    make();
+    built.push(id);
+  }
+  next.units[id] = { fp, dest: relative(ROOT, dest) };
+}
+
+// ── Static files ──────────────────────────────────────────────────────────────
+console.log('📄 Static files');
+for (const item of STATIC) {
+  const src = resolve(ROOT, item), dest = resolve(PUBLIC, item);
+  unit(`static:${item}`, fingerprint(src), dest, () => cpSync(src, dest, { recursive: true, force: true }));
+}
+
+// ── Projects ──────────────────────────────────────────────────────────────────
+for (const project of PROJECTS) {
   const projectDir = resolve(ROOT, project.dir);
   const outDir     = resolve(projectDir, project.outDir);
   const destDir    = resolve(PUBLIC, project.name);
 
-  // Guard: skip if submodule directory is missing or not checked out (empty)
-  try {
-    const entries = readdirSync(projectDir).filter(e => e !== '.git');
-    if (entries.length === 0) {
-      console.log(`\n⚠️  Skipping ${project.name} — directory empty (submodule not checked out)`);
-      continue;
-    }
-  } catch {
-    console.log(`\n⚠️  Skipping ${project.name} — directory not found`);
+  // Guard: skip if a submodule's directory is missing or not checked out (empty)
+  let entries = [];
+  try { entries = readdirSync(projectDir).filter(e => e !== '.git'); } catch { /* missing */ }
+  if (entries.length === 0) {
+    console.log(`\n⚠️  Skipping ${project.name} — directory empty or missing (submodule not checked out)`);
+    rmSync(destDir, { recursive: true, force: true });
     continue;
   }
 
-  if (project.buildCmd) {
-    console.log(`\n🔨 Building ${project.name}`);
-    execSync(project.buildCmd, { cwd: projectDir, stdio: 'inherit' });
-  } else {
-    console.log(`\n📋 ${project.name} (static — no build step)`);
-  }
-
-  console.log(`📦 Copying ${project.name} → public/${project.name}/`);
-  cpSync(outDir, destDir, { recursive: true,
-    filter: (src) => {
-      const rel = src.replace(projectDir, '');
-      return !rel.startsWith('/.git') &&
-             !rel.startsWith('/node_modules') &&
-             !rel.startsWith('/.wrangler');
+  unit(`project:${project.name}`, fingerprint(projectDir, project.ignore), destDir, () => {
+    if (project.buildCmd) {
+      console.log(`\n🔨 Building ${project.name}`);
+      execSync(project.buildCmd, { cwd: projectDir, stdio: 'inherit' });
+    } else {
+      console.log(`\n📋 ${project.name} (static — no build step)`);
     }
+    console.log(`📦 Copying ${project.name} → public/${project.name}/`);
+    cpSync(outDir, destDir, { recursive: true,
+      filter: (src) => {
+        const rel = src.replace(projectDir, '');
+        return !rel.startsWith('/.git') &&
+               !rel.startsWith('/node_modules') &&
+               !rel.startsWith('/.wrangler');
+      }
+    });
   });
 }
 
+// Units from an earlier build that no longer exist (a project removed from the list).
+for (const [id, u] of Object.entries(state.units)) {
+  if (!next.units[id] && u.dest) rmSync(resolve(ROOT, u.dest), { recursive: true, force: true });
+}
+
+console.log(`\n♻️  ${built.length} unit(s) built, ${skipped.length} unchanged`);
+if (built.length && built.length <= 12) console.log(`   built: ${built.join(', ')}`);
+
 // ── Build manifest ────────────────────────────────────────────────────────────
-const builtProjects = SUBPROJECTS.filter(p => existsSync(resolve(PUBLIC, p.name)));
+const builtProjects = PROJECTS.filter(p => existsSync(resolve(PUBLIC, p.name)));
 let gitSha = '';
-try { gitSha = execSync('git rev-parse --short HEAD', { encoding: 'utf8' }).trim(); } catch(_) {}
+try { gitSha = execSync('git rev-parse --short HEAD', { cwd: ROOT, encoding: 'utf8' }).trim(); } catch(_) {}
 const manifest = {
   built_at:    new Date().toISOString(),
   git_sha:     gitSha,
   total_files: 0,  // filled in after sitemap
+  incremental: { full: fresh, built: built.length, unchanged: skipped.length },
   sources: {
     static_files: STATIC.filter(f => existsSync(resolve(PUBLIC, f))).join(', '),
-    ...Object.fromEntries(builtProjects.map(p => [p.name, 'copied'])),
+    ...Object.fromEntries(builtProjects.map(p => [p.name, p.buildCmd ? 'built' : 'copied'])),
   },
 };
 
@@ -174,19 +244,44 @@ function collectHtml(dir, files = []) {
   return files;
 }
 
+/** Last commit date per path, from one `git log` pass (newest first). */
+function gitDates(cwd) {
+  const map = new Map();
+  try {
+    const out = execSync('git log --format=%x00%cI --name-only', { cwd, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
+    let date = null;
+    for (const line of out.split('\n')) {
+      if (line.startsWith('\0')) date = line.slice(1, 11);
+      else if (line && date && !map.has(line)) map.set(line, date);
+    }
+  } catch { /* not a git checkout */ }
+  return map;
+}
+const repoDates = gitDates(ROOT);
+const subDates = Object.fromEntries(PROJECTS.filter(p => existsSync(resolve(ROOT, p.dir, '.git'))).map(p => [p.name, gitDates(resolve(ROOT, p.dir))]));
+
 /**
- * Try to get the git last-modified date for a file.
- * Falls back to the file's mtime if git is unavailable or the file is untracked.
+ * The last-modified date of a public file: the last commit that touched its source.
+ * Pages a build step generates (no source file of the same path) get the newest commit
+ * in their project; anything else falls back to the file's mtime.
  */
 function lastmod(absPath) {
-  try {
-    const dir  = dirname(absPath);
-    const file = absPath.split('/').pop();
-    const out  = execSync(`git log -1 --format=%cI -- "${file}"`, {
-      cwd: dir, encoding: 'utf8', stdio: ['pipe','pipe','pipe']
-    }).trim();
-    if (out) return out.slice(0, 10); // YYYY-MM-DD
-  } catch { /* fall through */ }
+  const rel = relative(PUBLIC, absPath).replace(/\\/g, '/');
+  const [top, ...rest] = rel.split('/');
+  const project = PROJECTS.find(p => p.name === top);
+  if (project) {
+    const inner = join(project.outDir, rest.join('/')).replace(/\\/g, '/');
+    const sub = subDates[project.name];
+    if (sub) {
+      if (sub.has(inner)) return sub.get(inner);
+      const newest = [...sub.values()].sort().pop();
+      if (newest) return newest;
+    } else if (repoDates.has(`${project.dir}/${inner}`)) {
+      return repoDates.get(`${project.dir}/${inner}`);
+    }
+  } else if (repoDates.has(rel)) {
+    return repoDates.get(rel);
+  }
   return new Date(statSync(absPath).mtime).toISOString().slice(0, 10);
 }
 
@@ -304,5 +399,9 @@ function countFiles(dir) {
 manifest.total_files = countFiles(PUBLIC);
 writeFileSync(resolve(PUBLIC, '_build-manifest.json'), JSON.stringify(manifest, null, 2));
 console.log(`   → _build-manifest.json (${manifest.total_files} files)`);
+
+// Remember what was built, for the next incremental run.
+mkdirSync(CACHE, { recursive: true });
+writeFileSync(STATE, JSON.stringify(next, null, 2));
 
 console.log('\n✅ public/ ready for deployment');

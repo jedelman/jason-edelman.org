@@ -6,7 +6,8 @@
     "build": "node scripts/build.mjs",
     "deploy": "npm run build && wrangler deploy --config wrangler.toml",
     "install-hooks": "sh scripts/install-hooks.sh",
-    "check": "node scripts/pre-commit.mjs"
+    "check": "node scripts/pre-commit.mjs",
+    "build:clean": "node scripts/build.mjs --clean"
   },
   "devDependencies": {
     "wrangler": "^4.90.1"
