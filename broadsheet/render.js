@@ -97,6 +97,8 @@ function viaCredit(slot, link = false) {
     : el('span', { class: 'via' }, `via ${name}`)
 }
 
+const botTag = (who) => (who?.bot ? el('span', { class: 'bot', title: 'This account labels itself a bot' }, 'bot') : null)
+
 function author(doc) {
   const c = doc.contributors.find((x) => x.displayName)
   return c?.displayName || doc.author?.displayName || (doc.author?.handle ? '@' + doc.author.handle : '')
@@ -122,7 +124,7 @@ export function story(slot, variant = 'page') {
     dek && role === 'brief' ? el('p', { class: 'dek' }, excerpt(dek, 110)) : null,
     art,
     bodyText ? el('p', { class: 'body' }, bodyText) : null,
-    role !== 'brief' ? el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min`) : null, viaCredit(slot)) : el('p', { class: 'byline' }, el('span', {}, fmtDate(doc.publishedAt)), viaCredit(slot)),
+    role !== 'brief' ? el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, botTag(doc.author), el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min`) : null, viaCredit(slot)) : el('p', { class: 'byline' }, el('span', {}, fmtDate(doc.publishedAt)), viaCredit(slot)),
     role === 'lead' || role === 'second' ? (href ? el('a', { class: 'more', href, target: '_blank', rel: 'noopener' }, `Continue at ${host(href)} →`) : null) : null,
   ]
   const node = el('article', { class: `story ${role}${art ? ' with-art' : ''}` }, kids)
@@ -165,7 +167,7 @@ export function renderPaper(root, model, edit = null, variant = 'page') {
         el('span', {}, 'Syndicated from standard.site'),
       ),
       el('h1', { class: 'mast-name' }, model.masthead || 'Broadsheet'),
-      el('div', { class: 'mast-bottom' }, el('span', {}, ((n) => `${n} piece${n === 1 ? '' : 's'}`)(model.slots.filter((s) => s.doc).length)), el('span', {}, editor ? `Edited by ${editor}` : ''), el('span', {}, `${pubs.size} publication${pubs.size === 1 ? '' : 's'}`)),
+      el('div', { class: 'mast-bottom' }, el('span', {}, ((n) => `${n} piece${n === 1 ? '' : 's'}`)(model.slots.filter((s) => s.doc).length)), el('span', {}, editor ? `Edited by ${editor}` : '', botTag(model.editor)), el('span', {}, `${pubs.size} publication${pubs.size === 1 ? '' : 's'}`)),
     ),
     model.note ? el('p', { class: 'note' }, model.note) : null,
     el(
@@ -199,7 +201,7 @@ export function expandedStory(slot) {
     dek ? el('p', { class: 'dek' }, excerpt(dek, 400)) : null,
     doc.cover ? el('div', { class: 'art' }, img(doc.cover, 'full')) : null,
     body ? el('p', { class: 'body' }, body) : null,
-    el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min read`) : null, viaCredit(slot, true)),
+    el('p', { class: 'byline' }, author(doc) ? el('span', { class: 'who' }, author(doc)) : null, botTag(doc.author), el('span', {}, fmtDate(doc.publishedAt)), doc.words > 150 ? el('span', {}, `${Math.max(1, Math.round(doc.words / 230))} min read`) : null, viaCredit(slot, true)),
     doc.url ? el('a', { class: 'read', href: doc.url, target: '_blank', rel: 'noopener' }, `Read it at ${host(doc.url)} →`) : null,
   )
 }

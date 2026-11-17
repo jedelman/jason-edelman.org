@@ -112,8 +112,9 @@ export async function resolveActor(input) {
   return resolveDid(s.startsWith('did:') ? s : await resolveHandle(s))
 }
 
-// Profiles as Bluesky's AppView verified them, 25 per request.
-// -> Map did -> { handle, displayName }
+// Profiles as Bluesky's AppView verified them, 25 per request. `bot` is the
+// account's own "bot" self-label: agents say so, and Broadsheet shows it.
+// -> Map did -> { handle, displayName, bot }
 export async function profiles(dids) {
   const out = new Map()
   const batches = []
@@ -122,7 +123,12 @@ export async function profiles(dids) {
     const q = new URLSearchParams()
     for (const d of batch) q.append('actors', d)
     const { profiles } = await getJson(`${APPVIEW}/xrpc/app.bsky.actor.getProfiles?${q}`)
-    for (const p of profiles) out.set(p.did, { handle: p.handle !== 'handle.invalid' ? p.handle : null, displayName: p.displayName || '' })
+    for (const p of profiles)
+      out.set(p.did, {
+        handle: p.handle !== 'handle.invalid' ? p.handle : null,
+        displayName: p.displayName || '',
+        bot: (p.labels || []).some((l) => l.val === 'bot' && l.src === p.did && !l.neg),
+      })
   })
   return out
 }
@@ -261,7 +267,9 @@ export function readPublication(rec) {
   const did = parseAtUri(rec.uri)?.did
   const rgb = v.basicTheme?.accent
   const accent = rgb && [rgb.r, rgb.g, rgb.b].every((x) => Number.isInteger(x) && x >= 0 && x <= 255) ? [rgb.r, rgb.g, rgb.b] : null
-  return { uri: rec.uri, cid: rec.cid, did, name, url, description: str(v.description, 600), icon: did ? imageUrls(did, v.icon) : null, accent }
+  // showInDiscover defaults to true; false asks discovery feeds to leave it out.
+  const discover = v.preferences?.showInDiscover !== false
+  return { uri: rec.uri, cid: rec.cid, did, name, url, description: str(v.description, 600), icon: did ? imageUrls(did, v.icon) : null, accent, discover }
 }
 
 export function canonicalUrl(base, path) {
@@ -773,7 +781,7 @@ export async function findMastheads(max = 5000) {
 // The rack: editors with at least one edition, each with their editions newest
 // first. The reader's own broadsheet comes first, then the people they follow,
 // then everyone else, each group by its latest edition.
-// -> [{ did, handle, displayName, masthead, group: 'you'|'following'|'everyone',
+// -> [{ did, handle, displayName, bot, masthead, group: 'you'|'following'|'everyone',
 //       editions: [{ uri, cid, rkey, title, publishedAt, number, date, period }] }]
 export async function rack(readerDid = null) {
   const [heads, follows] = await Promise.all([
@@ -793,12 +801,18 @@ export async function rack(readerDid = null) {
   got.forEach((g, i) => {
     if (!g.ok || !g.value.length) return
     const did = dids[i]
+    const pub = pubs[i].ok && pubs[i].value ? readPublication(pubs[i].value) : null
+    const group = did === readerDid ? 'you' : follows.has(did) ? 'following' : 'everyone'
+    // The Everyone shelf is a discovery feed: a masthead that opted out of
+    // discovery stays off it, but its editor's followers still see it.
+    if (group === 'everyone' && pub && !pub.discover) return
     editors.push({
       did,
       handle: prof.get(did)?.handle ?? null,
       displayName: prof.get(did)?.displayName ?? '',
-      masthead: (pubs[i].ok && pubs[i].value ? readPublication(pubs[i].value)?.name : null) ?? null,
-      group: did === readerDid ? 'you' : follows.has(did) ? 'following' : 'everyone',
+      bot: !!prof.get(did)?.bot,
+      masthead: pub?.name ?? null,
+      group,
       editions: editionList(g.value),
     })
   })
