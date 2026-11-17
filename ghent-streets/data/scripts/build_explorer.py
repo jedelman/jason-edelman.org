@@ -45,7 +45,7 @@ FT = 0.3048                      # US survey foot ≈ international foot at this
 UA = {"User-Agent": "ghent-streets-explorer/1.0 (+https://github.com/jedelman/ghent-zoning-reform)"}
 OUT = os.path.join(os.path.dirname(__file__), "../../explorer/data/ghent.json")
 # Lots the explorer builds by hand and the site writes up as case studies; they get a photo like the corners.
-CASE_STUDIES = {"1428706223", "1428629200"}   # 715 Colonial Avenue, 740 W Princess Anne Road
+CASE_STUDIES = {"1428706223", "1428629200", "1428615872"}   # 715 Colonial Ave, 740 W Princess Anne Rd, 1012 Colley Ave
 
 
 def head(url, tries=3):
@@ -270,9 +270,23 @@ def main():
             h_ft = min(max(elev - 7, 10), 140)
         else:
             h_ft = 11 if area_ft2 < 450 else 26
-        for poly in polys(g):
-            buildings.append({"parcel": owner["gpin"] if owner else None,
-                              "h": round(h_ft * FT, 1), "poly": ring(poly.simplify(0.5))})
+        # A row house's footprint is often one polygon for the whole row. Where a case study's lot
+        # takes a real piece of a footprint it doesn't own, cut that piece out and give it to the lot,
+        # so the hand-built model replaces only its own house and the rest of the row still stands.
+        pieces = [(g, owner)]
+        for cp in parcels:
+            if cp["gpin"] not in CASE_STUDIES or (owner and cp["gpin"] == owner["gpin"]):
+                continue
+            if g.intersects(cp["geom"]) and g.intersection(cp["geom"]).area > 200:   # ft², about 19 m²
+                pieces = [(g.difference(cp["geom"]), owner), (g.intersection(cp["geom"]), cp)]
+                break
+        for piece, who in pieces:
+            parts = [q for q in getattr(piece, "geoms", [piece]) if isinstance(q, (Polygon, MultiPolygon))]
+            for poly in (pp for q in parts for pp in polys(q)):
+                if poly.area < 20:   # ft²: slivers left by the cut
+                    continue
+                buildings.append({"parcel": who["gpin"] if who else None,
+                                  "h": round(h_ft * FT, 1), "poly": ring(poly.simplify(0.5))})
 
     # 5. Addresses and assessment, by GPIN (owner deliberately not requested).
     gpins = [p["gpin"] for p in parcels]

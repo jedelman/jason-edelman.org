@@ -140,7 +140,17 @@ function buildPanel() {
     o.textContent = titleCase(p.address);
     pick.append(o);
   }
-  const cases = Object.keys(HEROES).filter((g) => HEROES[g].page && parcels.has(g));
+  const cases = Object.keys(HEROES).filter((g) => HEROES[g].page && parcels.has(g))
+    .sort((a, b) => parseInt(parcels.get(a).address, 10) - parseInt(parcels.get(b).address, 10));   // by street number, as the pages list them
+  // The case studies, first in the intro: one tap goes to each (the hash link selects the lot and flies there).
+  if (cases.length) {
+    for (const g of cases) {
+      const li = document.createElement('li'), a = document.createElement('a');
+      a.href = `#p=${g}`; a.textContent = titleCase(parcels.get(g).address);
+      li.append(a); $('case-list').append(li);
+    }
+    $('case-links').hidden = false;
+  }
   if (cases.length) {
     const group = document.createElement('optgroup');
     group.label = 'Case studies';
@@ -2817,11 +2827,116 @@ function heroView740(mode) {
   return { pos: to3(px, py, 21), target: to3(tx, ty, 7) };
 }
 
+// ── 1012 Colley Avenue (case study): the end house of a 1908 row ──
+// The city's footprint is one polygon for the whole row: 1012 and 1014 Colley and 741–747 Graydon, an L
+// around the corner. The build cuts out 1012's piece (data/scripts/build_explorer.py), and this model
+// replaces only that. In its own axes (u toward Colley, v along it, + to the south) the piece's front is
+// 9.2 m on Colley (v −3.2…6.0), 6.6 m deep; behind 1014's entry bay it runs on to v −6.4. The row is 9.7 m
+// high. The assessor's photos (2007, August 2025, June 2026) show painted white brick, two floors over a
+// raised base, a raised stoop with dark railings, a black door with a transom, a wide window under a flat
+// arch, dark shutters upstairs, a cornice, dormers in the roof, and at the south end a porch behind brick
+// piers. The FY2026 record: built 1908, an attached single-family house, 2,028 sq ft, on a 1,149 sq ft lot.
+const H1012 = {
+  c: [-128.4, 233.26], U: [-0.916, 0.4], V: [-0.4, -0.916],
+  front: 3.4, back: -3.2, v0: -3.2, vN: -6.4, uN: 1.8, v1: 6.0,
+  baseY: 0.9, f2: 4.3, eave: 7.4, top: 9.7, stoop: 1.2, porchIn: 1.9, porchV: [2.4, 6.0],
+};
+function buildHero1012(p) {
+  const h = H1012;
+  const M = heroMatsFor({ brick: '#f7f4ee', mortar: '#e9e4da', roof: '#4a4d51', trim: '#fbf9f4', base: '#d6cdbd' });
+  const iron = new THREE.MeshLambertMaterial({ color: dk('#23272b') });
+  const tan = heroMatsFor({ brick: '#c9ab86', mortar: '#b39373', roof: '#4a4d51', trim: '#f7f3ea', base: '#b39373' }).wall;
+  const dark = { white: iron };   // railRun draws in M.white; the railings here are painted dark
+  const g = heroGroup(h); g.userData.trim = M.trim; g.userData.brackets = false;
+  const pick = [];
+  const wall = (...a) => { const m = hbox(g, ...a, M.wall, 2.4); m.userData.gpin = p.gpin; pick.push(m); return m; };
+  const { front: uf, back: ub, v0, vN, uN, v1, baseY: y0, f2, eave: e, top, stoop: sd, porchIn: ui } = h;
+  const [pv0, pv1] = h.porchV;
+  // The house: the front block, its piece behind 1014's entry bay, and the south porch cut into the corner.
+  hbox(g, ub, uf, v0, pv0, 0, y0, M.base);
+  wall(ub, uf, v0, pv0, y0, e);
+  hbox(g, ub, ui, pv0, v1, 0, y0, M.base);
+  wall(ub, ui, pv0, v1, y0, e);
+  wall(ui, uf, pv0, v1, f2, e);                      // the second floor runs on over the porch
+  wall(ub, uN, vN, v0, 0, top);                      // behind 1014's bay, up to the row's flat roof
+  // The cornice and a low hip roof that meets the row's height, with two dormers facing Colley.
+  hbox(g, ub - 0.2, uf + 0.28, v0 - 0.05, v1 + 0.28, e, e + 0.32, M.trim);
+  hipRoof(g, ub, uf, v0, v1, e + 0.32, 0.2, 0.55, M.roof);
+  for (const v of [-1.3, 3.6]) {   // set forward on the slope so each window clears the roof
+    hbox(g, uf - 2.0, uf - 0.7, v - 0.65, v + 0.65, e + 0.3, e + 2.0, M.wall);
+    gableRoof(g, uf - 2.0, uf - 0.7, v - 0.65, v + 0.65, e + 2.0, 0.5, 0.12, M);
+    hwin(g, 'u+', uf - 0.7, v, e + 1.0, e + 1.8, 0.7, M, null);
+  }
+  // First floor: the wide window under its flat arch, the door with its transom and a lamp.
+  const winList = [];
+  hwin(g, 'u+', uf, -1.3, y0 + 0.45, y0 + 2.55, 2.0, M, winList);
+  hbox(g, uf, uf + 0.14, -2.55, -0.05, y0 + 2.7, y0 + 2.95, M.trim);
+  hbox(g, uf, uf + 0.12, 0.35, 1.65, y0, y0 + 3.05, M.trim);
+  const door = hbox(g, uf + 0.1, uf + 0.16, 0.5, 1.5, y0, y0 + 2.3, new THREE.MeshLambertMaterial({ color: dk('#1d2024') }));
+  hwin(g, 'u+', uf, 1.0, y0 + 2.42, y0 + 2.88, 0.9, M, null);   // the transom
+  hbox(g, uf + 0.12, uf + 0.3, 1.85, 2.0, y0 + 1.9, y0 + 2.3, iron);
+  // Second floor: three windows with dark shutters.
+  for (const [v, w] of [[-1.3, 1.0], [1.0, 0.9], [4.2, 1.0]]) {
+    hwin(g, 'u+', uf, v, f2 + 0.55, f2 + 2.35, w, M, null);
+    for (const s of [-1, 1]) hbox(g, uf + 0.02, uf + 0.08, v + s * (w / 2 + 0.16) - 0.22, v + s * (w / 2 + 0.16) + 0.22, f2 + 0.5, f2 + 2.4, iron);
+  }
+  // The stoop across the front, dark railings, steps down to the walk at the door.
+  hbox(g, uf, uf + sd, v0 + 0.15, pv0, 0, y0 - 0.06, M.base);
+  hbox(g, uf, uf + sd, v0 + 0.15, pv0, y0 - 0.06, y0, M.deck);
+  railRun(g, uf + sd - 0.08, v0 + 0.2, uf + sd - 0.08, 0.35, y0, dark, 0.9);
+  railRun(g, uf + sd - 0.08, 1.65, uf + sd - 0.08, pv0 - 0.05, y0, dark, 0.9);
+  railRun(g, uf + 0.1, v0 + 0.2, uf + sd - 0.08, v0 + 0.2, y0, dark, 0.9);
+  const nSteps = 4, rise = y0 / nSteps;
+  for (let i = 1; i <= nSteps; i++) hbox(g, uf + sd, uf + sd + (nSteps - i + 1) * 0.3, 0.4, 1.6, 0, i * rise, M.deck);
+  // The south porch: brick piers at its corners, a floor on a brick base, dark railings, a window at its back.
+  hbox(g, ui, uf, pv0, v1, 0, y0 - 0.06, tan);
+  hbox(g, ui, uf, pv0, v1, y0 - 0.06, y0, M.deck);
+  for (const v of [pv0 + 0.25, v1 - 0.25]) hbox(g, uf - 0.5, uf, v - 0.25, v + 0.25, 0, f2, tan);
+  railRun(g, uf - 0.25, pv0 + 0.55, uf - 0.25, v1 - 0.55, y0, dark, 0.9);
+  railRun(g, ui + 0.1, v1 - 0.2, uf - 0.55, v1 - 0.2, y0, dark, 0.9);
+  hwin(g, 'u+', ui, 4.2, y0 + 0.45, y0 + 2.55, 1.1, M, winList);
+  // Plantings along the stoop and in the side yard, the walk to the steps.
+  const rng = rngFor('1012-hero');
+  hedgeRun(g, uf + sd + 0.55, v0 + 0.3, uf + sd + 0.55, 0.0, M, rng, 0.8, 0.7);
+  hedgeRun(g, uf + sd + 0.55, 2.0, uf + 0.6, v1 + 0.6, M, rng, 0.8, 0.7);
+  hedgeRun(g, uf - 0.4, v1 + 1.2, ub + 0.4, v1 + 1.2, M, rng, 1.1, 0.9);
+  hbox(g, uf + sd + 1.2, uf + sd + 3.4, 0.45, 1.55, 0, 0.03, M.path);
+  return { group: g, pick, winList, door, mats: M };
+}
+function heroTransform1012(kit, p) {
+  const h = H1012, uf = h.front, y0 = h.baseY, f2 = h.f2, sd = h.stoop;
+  const [pv0, pv1] = h.porchV;
+  return caseTransform(kit, p, {
+    h,
+    letters: [[uf + 0.3, -1.3, y0 + 1.5, 1.2]],
+    sign: { u: uf - 0.25, v: (pv0 + pv1) / 2, y: f2 },
+    awnings: [[uf + 0.05, -1.3, y0 + 3.05, 2.3]],
+    lanterns: [[uf + 0.25, 0.25, y0 + 2.0], [uf + 0.25, 1.75, y0 + 2.0]],
+    light: [uf + 1.0, 0, y0 + 2.2],
+    tables: [[uf + 0.62, -2.35, y0], [h.porchIn + 0.75, 4.4, y0]],
+    cart: [uf + 0.62, -1.4, y0],
+    benches: [[uf + 0.62, -1.3, y0]],
+    board: [uf + sd + 2.6, 2.3],
+    bulbs: [[uf - 0.25, pv0 + 0.5, uf - 0.25, pv1 + 0.2, f2 - 0.2]],
+    greeter: [uf + 0.6, 1.0, y0],
+    walkers: [[8.2, -16, uf + sd + 2.4, 0.9], [8.6, 15, uf + sd + 2.6, 1.3]],
+  });
+}
+function heroView1012(mode) {
+  const h = H1012;
+  // From the south-west, across Colley: the house, its stoop and porch, with the stand of trees at the
+  // corner beyond it rather than in front.
+  if (mode === 'street') { const [px, py] = huv(h, 23, 10), [tx, ty] = huv(h, 3.4, 1.2); return { pos: to3(px, py, 2.3), target: to3(tx, ty, 4.6) }; }
+  const [px, py] = huv(h, 27, 15), [tx, ty] = huv(h, 1, 1);
+  return { pos: to3(px, py, 14), target: to3(tx, ty, 5) };
+}
+
 // The buildings drawn by hand, by GPIN: 801 Stockley Gardens and the case studies, which also get a page.
 const HEROES = {
   '1428701712': { build: buildHero801, transform: heroTransform801, view: heroView },
   '1428706223': { build: buildHero715, transform: heroTransform715, view: heroView715, page: '../case-studies/715-colonial.html' },
   '1428629200': { build: buildHero740, transform: heroTransform740, view: heroView740, page: '../case-studies/740-w-princess-anne.html' },
+  '1428615872': { build: buildHero1012, transform: heroTransform1012, view: heroView1012, page: '../case-studies/1012-colley.html' },
 };
 
 // ── Frame ──

@@ -657,3 +657,9 @@ del { text-decoration: line-through; color: rgba(var(--ink-rgb),0.4); }
   /* Print attribution line */
   .zine-body::after { display: none; }
 }
+
+/* Case studies: the homepage's "open in 3D" line and the switcher at the top of each case page. */
+.case-jump { margin-top: 1.25rem; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.04em; line-height: 2; color: rgba(var(--ink-rgb), 0.75); }
+.case-jump a, .cs-switch a { color: var(--gold); text-decoration: none; border-bottom: 1px solid currentColor; }
+.cs-switch { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin-top: 1.25rem; font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(var(--ink-rgb), 0.7); }
+.cs-switch a[aria-current="page"] { color: var(--ink); border-bottom-color: transparent; pointer-events: none; }
