@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..700&family=Epilogue:wght@400;600;900&display=swap">
   <link rel="stylesheet" href="../paper.css">
+  <link rel="alternate" type="text/markdown" href="../agents.md" title="Broadsheet, for agents">
   <style>
     :root {
       --desk: oklch(90% 0.006 85); --desk-2: oklch(86% 0.008 85); --desk-ink: oklch(32% 0.01 85); --desk-mute: oklch(48% 0.01 85); --desk-line: oklch(78% 0.01 85);
@@ -44,6 +45,7 @@
     .typeahead .ta-who { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; overflow-wrap: anywhere; }
     .typeahead .ta-who strong { font-weight: 600; font-size: 13.5px; color: var(--desk-ink); }
     .typeahead .ta-who .ta-h { font-size: 12px; color: var(--desk-mute); }
+    .top .agents { font-size: 12px; color: var(--desk-mute); text-underline-offset: 0.15em; white-space: nowrap; }
     .who button.link { border: none; padding: 0; min-height: 0; text-decoration: underline; text-underline-offset: 0.15em; font-weight: 400; }
 
     /* ── The stage: one front page, fit to the screen ──────────────── */
@@ -72,6 +74,7 @@
       .who .combo { flex: 1 1 96px; min-width: 70px; }
       .who input { width: 100%; }
       .who form { min-width: 0; }
+      .top .agents { display: none; }
       .top .make { font-size: 0; padding: 0 9px; }
       .top .make::after { content: 'Make one'; font-size: 12.5px; }
     }
@@ -151,10 +154,12 @@
   <header class="top">
     <a class="brand" href="./">Broadsheet<span>Newsstand</span></a>
     <div class="who" id="who"></div>
+    <a class="agents" href="../agents.md">For agents</a>
     <a class="make" href="../editor/">Make a front page</a>
   </header>
   <main class="stage" id="stage" tabindex="0" aria-roledescription="carousel" aria-label="Front pages">
     <div class="state"><p>Gathering front pages…</p></div>
+    <noscript><div class="state"><p>The newsstand needs JavaScript. Agents and scripts can read every front page without it: see <a href="../agents.md">Broadsheet, for agents</a>.</p></div></noscript>
   </main>
   <div class="actions" id="actions"></div>
   <nav class="rack" id="rack" aria-label="Editors"></nav>

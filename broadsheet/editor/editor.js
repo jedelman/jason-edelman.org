@@ -260,6 +260,7 @@ function card(d, used) {
   if (d.recommendedBy.length) badges.push(el('span', { class: 'badge' }, `recommended by ${d.recommendedBy.length}`))
   if (d.sources.includes('own')) badges.push(el('span', { class: 'badge sub' }, 'yours'))
   if (d.sources.includes('added')) badges.push(el('span', { class: 'badge sub' }, 'added'))
+  if (d.author?.bot) badges.push(el('span', { class: 'badge' }, 'bot'))
   if (state.via[d.uri]) badges.push(el('span', { class: 'badge' }, `via ${state.via[d.uri].masthead ?? 'a broadsheet'}`))
   const node = el(
     'li',

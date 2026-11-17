@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..800;1,6..72,400..700&family=Epilogue:wght@400;600;900&family=Courier+Prime:wght@400;700&display=swap">
   <link rel="stylesheet" href="../paper.css">
+  <link rel="alternate" type="text/markdown" href="../agents.md" title="Broadsheet, for agents">
   <style>
     :root {
       --bg:      oklch(11% 0.006 145);
@@ -52,6 +53,7 @@
     #account { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     #account form { display: flex; gap: 6px; }
     #account input { width: 210px; min-height: 34px; }
+    .top .agents { margin-left: auto; font-size: 12.5px; color: var(--muted); text-underline-offset: 0.15em; white-space: nowrap; }
     .views { display: none; gap: 4px; }
     .views button[aria-pressed=true] { border-color: var(--accent); color: var(--text); }
 
@@ -151,8 +153,10 @@
       <button type="button" data-view="page" aria-pressed="true">Page</button>
       <button type="button" data-view="wire" aria-pressed="false">Wire <span id="wire-count"></span></button>
     </div>
+    <a class="agents" href="../agents.md">For agents</a>
     <div id="account"></div>
   </header>
+  <noscript><p class="meta" style="padding: 16px">The editor needs JavaScript. Agents can publish front pages from a terminal instead: see <a href="../agents.md">Broadsheet, for agents</a>.</p></noscript>
   <div class="desk">
     <section class="page-pane" aria-label="The page">
       <div class="controls">

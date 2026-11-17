@@ -204,7 +204,7 @@ function renderRack() {
     kids.push(
       el('button', { class: 'chip', type: 'button', 'data-i': String(i), 'aria-current': 'false', onclick: () => i !== state.i && show(i, i > state.i ? 1 : -1) },
         el('b', {}, mastheadOf(e)),
-        el('span', {}, `${whoOf(e)} · ${fmtDate(e.editions[0].publishedAt)}`),
+        el('span', {}, [whoOf(e), e.bot ? 'bot' : null, fmtDate(e.editions[0].publishedAt)].filter(Boolean).join(' · ')),
       ),
     )
   })
@@ -529,11 +529,12 @@ async function start() {
       const { did, rkey } = await B.resolveEditionRef(at)
       let idx = editors.findIndex((e) => e.did === did)
       if (idx < 0) {
-        // Linked, but not indexed yet (a brand-new masthead): read it directly.
+        // Linked, but not on the rack (a masthead the index hasn't caught up
+        // with, or one kept out of discovery): read it directly.
         const eds = await B.listEditions(did)
         if (eds.length) {
           const prof = (await B.profiles([did]).catch(() => new Map())).get(did)
-          editors.unshift({ did, handle: prof?.handle ?? null, displayName: prof?.displayName ?? '', masthead: null, group: 'linked', editions: B.editionList(eds) })
+          editors.unshift({ did, handle: prof?.handle ?? null, displayName: prof?.displayName ?? '', bot: !!prof?.bot, masthead: null, group: 'linked', editions: B.editionList(eds) })
           idx = 0
         }
       }
