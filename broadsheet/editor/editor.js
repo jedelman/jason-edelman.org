@@ -94,6 +94,9 @@ function renderAccount() {
       el('button', { type: 'button', class: 'quiet', onclick: signOut }, 'Sign out'),
     )
   } else {
+    // Already showing the sign-in form (start() renders it, then again once the
+    // OAuth client loads): keep it, so a handle typed meanwhile isn't wiped.
+    if (box.querySelector('form')) return
     const input = el('input', { name: 'handle', placeholder: 'your.handle', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', 'aria-label': 'Your handle' })
     box.replaceChildren(el('form', { onsubmit: (e) => (e.preventDefault(), signIn(input.value)) }, input, el('button', { type: 'submit', class: 'primary' }, 'Sign in')))
     attachTypeahead(input, (h) => signIn(h))
