@@ -6,18 +6,19 @@
  *   node scripts/build.mjs --clean   wipe public/ and build everything
  *
  * The site is a set of units: the root's static files and folders, the in-repo projects
- * (plain static HTML, copied whole: ghent-streets, mithlond, eastside-commons), and the
- * two submodules that have a build step (abolish-lawns, qri). Each unit gets a content
+ * (plain static HTML, copied whole: ghent-streets, mithlond, eastside-commons, qri), and
+ * the one submodule with a build step (abolish-lawns). Each unit gets a content
  * fingerprint. A unit whose fingerprint matches the last build's, and whose output is
  * still in public/, is left alone; a changed unit is rebuilt from scratch, so files it no
  * longer has disappear too. The state is kept in .build-cache/state.json (gitignored).
  *
- * A change to this script or to build-qri.mjs rebuilds everything. CI builds from a fresh
+ * A change to this script rebuilds everything. CI builds from a fresh
  * clone, so it always does a full build; wrangler uploads only changed assets anyway.
  * The sitemap, robots.txt, the deploy stamp and the manifest are rewritten every run.
  *
- * Monorepo since 2026-11-17: ghent-streets and mithlond were submodules; they now live
- * here with their history. Only projects with a build step stay submodules.
+ * Monorepo since 2026-11-17: ghent-streets and mithlond (11-17) and qri (11-18) were
+ * submodules; they now live here with their history. Only abolish-lawns, which has a
+ * real build step, stays a submodule.
  */
 
 import { execSync } from 'node:child_process';
@@ -54,11 +55,12 @@ const STATIC = [
   'llms.txt',
 ];
 
-// Projects, each served at /<name>/: { name, dir, buildCmd, outDir, required, ignore }
+// Projects, each served at /<name>/: { name, dir, buildCmd, outDir, required, ignore, after }
 //   buildCmd null: plain static HTML, copied whole (outDir '.').
 //   required: the build fails if the directory is missing (in-repo projects).
 //   ignore: paths, relative to dir, left out of the fingerprint: build outputs and
 //           files a build step writes back into its own source folder.
+//   after(src, dest): runs once the project is copied, writing only into dest (public/).
 const PROJECTS = [
   {
     name: 'abolish-lawns',            // submodule, SvelteKit
@@ -89,11 +91,22 @@ const PROJECTS = [
     required: true,
   },
   {
-    name: 'qri',                      // submodule; build-qri.mjs picks the latest system doc render
+    name: 'qri',                      // in-repo since 2026-11-18 (was jedelman/quantum-resonator-inference)
     dir: 'qri',
-    buildCmd: 'node ../scripts/build-qri.mjs',
+    buildCmd: null,
     outDir: '.',
-    ignore: ['index.html', 'system-doc.html', 'system-doc.pdf'],
+    required: true,
+    // /qri/system-doc.{pdf,html}: the newest system doc render (the names carry dates).
+    // This was scripts/build-qri.mjs, which also wrote qri/index.html; that's a plain file now.
+    after: (src, dest) => {
+      const renders = readdirSync(join(src, 'renders')).sort();
+      for (const ext of ['pdf', 'html']) {
+        const latest = renders.filter(f => f.startsWith('QRI_System_Doc_') && f.endsWith(`.${ext}`)).pop();
+        if (!latest) throw new Error(`qri: no renders/QRI_System_Doc_*.${ext}`);
+        cpSync(join(src, 'renders', latest), join(dest, `system-doc.${ext}`));
+        console.log(`   system-doc.${ext} ← renders/${latest}`);
+      }
+    },
   },
 ];
 
@@ -133,7 +146,7 @@ function fingerprint(absPath, ignore = []) {
 }
 
 // A change to the build itself invalidates every unit.
-const BUILD_KEY = fingerprint(resolve(ROOT, 'scripts/build.mjs')) + fingerprint(resolve(ROOT, 'scripts/build-qri.mjs'));
+const BUILD_KEY = fingerprint(resolve(ROOT, 'scripts/build.mjs'));
 
 let state = { key: null, units: {} };
 try { state = JSON.parse(readFileSync(STATE, 'utf8')); } catch { /* first run, or no cache */ }
@@ -200,6 +213,7 @@ for (const project of PROJECTS) {
                !rel.startsWith('/.wrangler');
       }
     });
+    project.after?.(projectDir, destDir);
   });
 }
 
