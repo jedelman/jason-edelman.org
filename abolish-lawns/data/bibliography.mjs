@@ -15,21 +15,7 @@
  *   status:    "verified" | "needs-update" | "watch" — our confidence in the claim
  */
 
-export interface Reference {
-	id: string;
-	authors: string[];
-	year: number;
-	title: string;
-	source: string;
-	url: string;
-	accessed: string;
-	type: 'peer-reviewed' | 'government' | 'advocacy' | 'industry' | 'news' | 'primary';
-	claims: string[];
-	notes?: string;
-	status: 'verified' | 'needs-update' | 'watch';
-}
-
-export const references: Reference[] = [
+export const references = [
 
 	// ── ACREAGE ───────────────────────────────────────────────────────────────
 
@@ -501,7 +487,7 @@ export const references: Reference[] = [
 ];
 
 // Claim ID registry — what each claim ID means
-export const claimIndex: Record<string, string> = {
+export const claimIndex = {
 	// Lawn ecology and scale
 	'acreage':           'Total US lawn acreage estimate',
 	'irrigated-crop':    'Lawns exceed any single irrigated food crop',

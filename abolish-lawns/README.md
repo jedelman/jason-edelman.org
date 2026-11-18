@@ -1,42 +1,15 @@
-# sv
+# Abolish Lawns
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Served at https://jason-edelman.org/abolish-lawns/ from the jason-edelman.org repo, where it has lived since
+2026-11-18 (it was jedelman/abolish-lawns, a SvelteKit app; its history came along).
 
-## Creating a project
+It's plain files now, built by the repo's own `scripts/build.mjs` like everything else:
 
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.15.1 create --template minimal --types ts --install npm .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- `site/`: what's served. One HTML file per page, `app.css` (the shared design tokens and type), the favicon,
+  `robots.txt` and the zine PDFs. Each page carries its own `<style>`.
+- `data/bibliography.mjs`: every source, with its claims and status. `node abolish-lawns/scripts/bibliography.mjs`
+  writes the entries into `site/bibliography.html` (between the `generated:bibliography` markers); `--check`
+  fails when the page is behind the data.
+- `zines/`: the Python scripts that make the zine PDFs in `site/zines/`.
+- `polemic/`: Polemic, the argument-mapping engine (Prolog knowledge base, Python reasoning; see its README). Not served.
+- `.impeccable.md`: the design context.

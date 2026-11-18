@@ -18,7 +18,7 @@ The goal is not to convert skeptics. It is to give ammunition and permission to 
 **Page size:** 5.5" × 8.5" (A5 / half-letter)
 **Pages:** 4 (prints front and back of one letter sheet, fold in half)
 **Color:** Full color in PDF; must also work in black-and-white print (test this)
-**Output:** PDF in `abolish-lawns/static/zines/`
+**Output:** PDF in `abolish-lawns/site/zines/`
 
 **Page order:**
 1. **Cover** — the hook. Must work as a standalone object. This is what someone picks up.
@@ -214,18 +214,18 @@ If a stat isn't in the bibliography, don't use it. If you add a new stat to a zi
 
 3. Build the PDF.
    Script lives at: abolish-lawns/zines/build-zine-NN.py
-   Output goes to: abolish-lawns/static/zines/abolish-lawns-zine-NN.pdf
+   Output goes to: abolish-lawns/site/zines/abolish-lawns-zine-NN.pdf
 
 4. Verify in a PDF viewer.
    Check: text legibility, image quality, caption visibility,
    headline reading order, print-to-black-and-white test.
 
 5. Add to the zines page.
-   Update src/routes/zines/+page.svelte with the new entry.
+   Update site/zines.html with the new entry.
 
 6. Commit both the script and the PDF.
    The PDF is a static asset — commit it directly to the repo.
-   git add static/zines/ zines/build-zine-NN.py
+   git add site/zines/ zines/build-zine-NN.py
    git commit -m "feat: zine no. NN — [hook]"
 ```
 
@@ -251,7 +251,7 @@ Each zine stands alone. A reader should not need to have read the manifesto firs
 
 ```
 zines/build-zine-01.py           — build script, committed to repo
-static/zines/abolish-lawns-zine-01.pdf   — output, committed to repo
+site/zines/abolish-lawns-zine-01.pdf   — output, committed to repo
 ```
 
 PDFs go in `static/` so SvelteKit serves them as static assets at:
