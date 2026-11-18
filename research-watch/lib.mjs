@@ -22,7 +22,8 @@ export function loadProject(p) {
         .map((f) => ({ week: f.slice(0, -3), ...frontMatter(readFileSync(join(dir, 'weekly', f), 'utf8')) }))
     : [];
   const claims = readJSON(join(dir, 'claims.json'), { claims: [] }).claims;
-  return { dir, digests, weeklies, claims };
+  const requests = readJSON(join(dir, 'requests.json'), { requests: [] }).requests;
+  return { dir, digests, weeklies, claims, requests };
 }
 
 // ── Claim status: computed from distinct origins, never written by hand ────────

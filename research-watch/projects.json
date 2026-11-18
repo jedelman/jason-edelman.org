@@ -5,7 +5,8 @@
     "subject": "data centers and compute infrastructure in Hampton Roads",
     "data": "mithlond/research/watch",
     "out": "mithlond/watch",
-    "url": "https://jason-edelman.org/mithlond/watch/"
+    "url": "https://jason-edelman.org/mithlond/watch/",
+    "requests": true
   },
   {
     "id": "abolish-lawns",

@@ -35,7 +35,7 @@ function page(tpl, { title, description, label, h1, deck, body }) {
 
 function renderProject(p) {
   const tpl = readFileSync(resolve(ROOT, 'research-watch/templates', `${p.id}.tpl`), 'utf8');
-  const { digests, weeklies, claims } = loadProject(p);
+  const { digests, weeklies, claims, requests } = loadProject(p);
   const byId = new Map(claims.map((c) => [c.id, c]));
   const status = new Map(claims.map((c) => [c.id, claimStatus(c)]));
   const files = new Map();
@@ -49,23 +49,25 @@ function renderProject(p) {
     if (!s.verified) errors.push(`${p.id} claim ${c.id} source ${i + 1}: not verified`);
   }
 
+  const flag = (c) => (c && c.unrelated ? ` <span class="w-flag">unrelated so far</span>` : '');
   const claimLink = (id) => {
     const c = byId.get(id), st = status.get(id)?.status || 'provisional';
-    return c ? `<a href="./claims#${esc(id)}">${esc(short(c.statement))}</a> ${badge(st)}` : esc(id);
+    return c ? `<a href="./claims#${esc(id)}">${esc(short(c.statement))}</a> ${badge(st)}${flag(c)}` : esc(id);
   };
   const cite = (id) => {
     const c = byId.get(id);
     if (!c) { errors.push(`${p.id} weekly: unknown claim [[${id}]]`); return esc(id); }
     const st = status.get(id).status;
-    return `<a class="w-cite w-status--${st}" href="./claims#${esc(id)}" title="${esc(c.statement)}">${st}</a>`;
+    return `<a class="w-cite w-status--${st}" href="./claims#${esc(id)}" title="${esc(c.statement)}">${st}${c.unrelated ? ', unrelated so far' : ''}</a>`;
   };
 
   // ── Digest pages ──
   digests.forEach((d, i) => {
     const newer = digests[i - 1], older = digests[i + 1];
     const items = (d.items || []).map((it) => `
-<article class="w-item">
+<article class="w-item${it.unrelated ? ' w-item--unrelated' : ''}">
   <h3>${esc(it.title)}</h3>
+  ${it.unrelated ? `<p class="w-unrelated"><span class="w-flag">Unrelated so far</span> ${esc(it.unrelated)}</p>` : ''}
   <p class="w-src"><a href="${esc(it.url)}">${esc(it.publisher)}</a>${it.origin && it.origin !== it.publisher ? ` · origin: ${esc(it.origin)}` : ''} · ${esc(it.kind)}${it.published ? ` · ${esc(it.published)}` : ''}</p>
   <blockquote class="w-quote">${esc(it.quote)}</blockquote>
   <p class="w-note">${esc(it.note)}</p>
@@ -101,26 +103,34 @@ ${unreachable}
   });
 
   // ── Claims ledger ──
-  const groups = ['disputed', 'corroborated', 'provisional'].map((st) => {
-    const list = claims.filter((c) => status.get(c.id).status === st)
-      .sort((a, b) => (b.first_seen || '').localeCompare(a.first_seen || '') || a.id.localeCompare(b.id));
-    if (!list.length) return '';
-    return `
-<section class="w-group">
-  <h2>${badge(st)} ${list.length} ${st} (${STATUS_NOTE[st]})</h2>
-  ${list.map((c) => {
+  const byNewest = (a, b) => (b.first_seen || '').localeCompare(a.first_seen || '') || a.id.localeCompare(b.id);
+  const claimArticle = (c) => {
     const s = status.get(c.id);
     return `
-  <article class="w-claim" id="${esc(c.id)}">
+  <article class="w-claim${c.unrelated ? ' w-claim--unrelated' : ''}" id="${esc(c.id)}">
     <h3>${esc(c.statement)}</h3>
-    <p class="w-meta">${esc(c.topic || '')}${c.topic ? ' · ' : ''}first seen ${esc(c.first_seen || '')} · asserted by ${s.asserting} origin${s.asserting === 1 ? '' : 's'}${s.disputing ? `, disputed by ${s.disputing}` : ''}</p>
+    ${c.unrelated ? `<p class="w-unrelated"><span class="w-flag">Unrelated so far</span> ${esc(c.unrelated)}</p>` : ''}
+    <p class="w-meta">${badge(s.status)} ${esc(c.topic || '')}${c.topic ? ' · ' : ''}first seen ${esc(c.first_seen || '')} · asserted by ${s.asserting} origin${s.asserting === 1 ? '' : 's'}${s.disputing ? `, disputed by ${s.disputing}` : ''}</p>
     <ul class="w-sources">${(c.sources || []).map((src) => `
       <li><span class="w-stance w-stance--${src.stance === 'disputes' ? 'disputes' : 'asserts'}">${src.stance === 'disputes' ? 'disputes' : 'asserts'}</span> <a href="${esc(src.url)}">${esc(src.publisher)}</a>${src.origin && src.origin !== src.publisher ? ` (origin: ${esc(src.origin)})` : ''}${src.date ? `, ${esc(src.date)}` : ''}: <q>${esc(src.quote)}</q></li>`).join('')}
     </ul>
   </article>`;
-  }).join('')}
+  };
+  const connected = claims.filter((c) => !c.unrelated), unrelated = claims.filter((c) => c.unrelated);
+  const groups = ['disputed', 'corroborated', 'provisional'].map((st) => {
+    const list = connected.filter((c) => status.get(c.id).status === st).sort(byNewest);
+    if (!list.length) return '';
+    return `
+<section class="w-group">
+  <h2>${badge(st)} ${STATUS_NOTE[st]} (${list.length})</h2>
+  ${list.map(claimArticle).join('')}
 </section>`;
-  }).join('');
+  }).join('') + (unrelated.length ? `
+<section class="w-group w-group--unrelated">
+  <h2><span class="w-flag">Unrelated so far</span> Tracked, not connected to ${esc(p.subject)} (${unrelated.length})</h2>
+  <p class="w-summary">About people, places or organizations the project follows, recorded because they may matter later. No source connects them to the subject; if one does, the connection goes in the ledger as its own claim.</p>
+  ${unrelated.sort(byNewest).map(claimArticle).join('')}
+</section>` : '');
   files.set('claims.html', page(tpl, {
     title: `${p.name} watch: claims`, description: `Every claim the ${p.name} watch has recorded, with who asserts and who disputes it.`,
     label: 'Claims ledger', h1: 'Claims',
@@ -128,9 +138,43 @@ ${unreachable}
     body: groups || '<p class="w-summary">No claims recorded yet.</p>',
   }));
 
+  // ── Source requests (projects with requests: true) ──
+  let requestsSection = '';
+  if (p.requests) {
+    const ask = `https://github.com/jedelman/jason-edelman.org/issues/new?template=source-request.yml`;
+    const STATE = { open: 'Open', fulfilled: 'Fulfilled', blocked: "Couldn't be done", closed: 'Closed' };
+    const reqGroups = ['open', 'fulfilled', 'blocked', 'closed'].map((st) => {
+      const list = requests.filter((r) => (r.status || 'open') === st).sort((a, b) => (b.updated || b.asked || '').localeCompare(a.updated || a.asked || ''));
+      if (!list.length) return '';
+      return `
+<section class="w-group">
+  <h2>${STATE[st]} (${list.length})</h2>
+  ${list.map((r) => `
+  <article class="w-request" id="request-${esc(r.issue)}">
+    <h3><a href="${esc(r.url)}">#${esc(r.issue)}</a> ${esc(r.title)}</h3>
+    <p class="w-meta">asked ${esc(r.asked || '')}${r.updated ? ` · updated ${esc(r.updated)}` : ''}</p>
+    ${r.outcome ? `<p>${esc(r.outcome)}</p>` : ''}
+    ${(r.links || []).length ? `<ul class="w-claims">${r.links.map((l) => `<li><a href="${esc(l)}">${esc(l.replace(/^\.\//, ''))}</a></li>`).join('')}</ul>` : ''}
+  </article>`).join('')}
+</section>`;
+    }).join('');
+    files.set('requests.html', page(tpl, {
+      title: `${p.name} watch: source requests`, description: `Sources people have asked the ${p.name} watch to find, check or keep watching, and what came of each.`,
+      label: 'Source requests', h1: 'Requests',
+      deck: `Sources people have asked the watch to find, check or keep watching, and what came of each. Anyone can ask; Jason accepts a request before the watch works it, one a day.`,
+      body: `<p class="w-summary"><a href="${ask}">Ask for a source</a> (a public GitHub issue).</p>${reqGroups || '<p>No accepted requests yet.</p>'}`,
+    }));
+    const open = requests.filter((r) => (r.status || 'open') === 'open').length;
+    requestsSection = `
+<section>
+  <h2>Source requests</h2>
+  <p><a href="./requests">${requests.length} request${requests.length === 1 ? '' : 's'}</a>, ${open} open. Know a source the watch should find, check or keep an eye on? <a href="${ask}">Ask for it</a>.</p>
+</section>`;
+  }
+
   // ── Index ──
   const counts = { provisional: 0, corroborated: 0, disputed: 0 };
-  for (const s of status.values()) counts[s.status]++;
+  for (const c of connected) counts[status.get(c.id).status]++;
   const body = `
 <section class="w-intro">
   <p>A daily record of what's newly said about ${esc(p.subject)}, and by whom, with a weekly analysis. It runs on one rule, <strong>attribution over trust</strong>: nothing here is taken as true. Every item quotes its source, checked against the page, and every claim is recorded as who says what.</p>
@@ -145,9 +189,10 @@ ${weeklies.length ? `
   <h2>Daily digests</h2>
   ${digests.length ? digests.map((d) => `<div class="w-entry"><p class="w-meta">${esc(longDate(d.date))} · ${d.items.length} item${d.items.length === 1 ? '' : 's'}</p><h3><a href="./${d.date}">${esc(d.date)}</a></h3><p>${esc(d.summary)}</p></div>`).join('\n  ') : '<p>No digests yet.</p>'}
 </section>
+${requestsSection}
 <section>
   <h2>Claims</h2>
-  <p><a href="./claims">The ledger</a>: ${claims.length} claim${claims.length === 1 ? '' : 's'}, ${counts.corroborated} corroborated, ${counts.disputed} disputed, ${counts.provisional} provisional.</p>
+  <p><a href="./claims">The ledger</a>: ${connected.length} claim${connected.length === 1 ? '' : 's'}, ${counts.corroborated} corroborated, ${counts.disputed} disputed, ${counts.provisional} provisional${unrelated.length ? `; and ${unrelated.length} tracked but unrelated so far` : ''}.</p>
   <p class="w-meta"><a href="./feed.xml">Atom feed</a> · researched and published by a scheduled Claude Code routine · <a href="https://github.com/jedelman/jason-edelman.org/tree/main/research-watch">how it works</a></p>
 </section>`;
   files.set('index.html', page(tpl, {
@@ -182,7 +227,7 @@ ${entries.map((e) => `  <entry>
 
   // ── Write or check ──
   const out = resolve(ROOT, p.out);
-  const ours = (f) => /^(index|claims|\d{4}-\d{2}-\d{2}|week-\d{4}-W\d{2})\.html$|^feed\.xml$/.test(f);
+  const ours = (f) => /^(index|claims|requests|\d{4}-\d{2}-\d{2}|week-\d{4}-W\d{2})\.html$|^feed\.xml$/.test(f);
   if (!CHECK) mkdirSync(out, { recursive: true });
   for (const [name, content] of files) {
     const f = join(out, name);

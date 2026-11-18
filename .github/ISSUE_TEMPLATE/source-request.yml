@@ -1,0 +1,43 @@
+name: Source request (research watch)
+description: Ask the Mithlond research watch to find, check or keep watching a source.
+title: "[source request] "
+labels: ["source-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The [Mithlond research watch](https://jason-edelman.org/mithlond/watch/) publishes what's newly said about data centers and compute infrastructure in Hampton Roads, and by whom. Nothing in it is taken on trust: every item quotes its source, checked against the page, and a claim counts as corroborated only when independent sources agree. [How it works](https://github.com/jedelman/jason-edelman.org/tree/main/research-watch).
+
+        Requests are public. Jason accepts a request before the watch works it (one a day), and what came of each one is published at [jason-edelman.org/mithlond/watch/requests](https://jason-edelman.org/mithlond/watch/requests).
+  - type: dropdown
+    id: project
+    attributes:
+      label: Project
+      options:
+        - Mithlond
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What are you asking for?
+      options:
+        - Watch a source (a site, feed, docket or agenda to check regularly)
+        - Find a source (the document or record behind a claim)
+        - Check a claim (is anyone independent saying this?)
+    validations:
+      required: true
+  - type: textarea
+    id: request
+    attributes:
+      label: The request
+      description: A link if you have one, and what it bears on. Please leave out anyone's private information.
+    validations:
+      required: true
+  - type: checkboxes
+    id: public
+    attributes:
+      label: Public
+      options:
+        - label: I understand this request, and what comes of it, are public.
+          required: true

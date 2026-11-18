@@ -125,6 +125,35 @@
           "verified": "2026-11-18T16:57:06.088Z"
         }
       ]
+    },
+    {
+      "id": "lucas-federal-indictment-allegations",
+      "statement": "A federal indictment unsealed October 22, 2026 alleges that Sen. Louise Lucas led a criminal marijuana distribution enterprise.",
+      "topic": "officials",
+      "first_seen": "2026-11-18",
+      "unrelated": "Mithlond's research tracks Sen. Lucas (research/TASKS.md, track E1). These charges concern a marijuana business; no source connects them to data centers. An indictment is a charge, not a finding of guilt.",
+      "sources": [
+        {
+          "url": "https://www.justice.gov/usao-edva/pr/virginia-state-senator-indicted-leading-criminal-marijuana-distribution-enterprise",
+          "publisher": "U.S. Attorney's Office, Eastern District of Virginia",
+          "origin": "U.S. Attorney's Office, Eastern District of Virginia",
+          "date": "2026-10-22",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "According to the indictment, Virginia state senator Lillie Louise Lucas, 82, of Portsmouth, Virginia, led a criminal enterprise (the Lucas Enterprise) comprised of a close-knit group of associates and family members, including her two daughters and her grandson.",
+          "verified": "2026-11-18T17:10:07.471Z"
+        },
+        {
+          "url": "https://www.wtvr.com/news/local-news/lucas-pleads-not-guilty-virginia-recreational-marijuana-market-nov-16-2026",
+          "publisher": "WTVR CBS 6",
+          "origin": "Sen. Louise Lucas (plea, reported by WTVR CBS 6)",
+          "date": "2026-11-16",
+          "seen": "2026-11-18",
+          "stance": "disputes",
+          "quote": "State Sen. Louise Lucas was back in federal court in Newport News Monday, entering a \"not guilty\" plea against federal charges including racketeering, money laundering and illegally selling marijuana.",
+          "verified": "2026-11-18T17:10:07.471Z"
+        }
+      ]
     }
   ]
 }

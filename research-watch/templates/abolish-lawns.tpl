@@ -51,6 +51,11 @@ main p { max-width: 72ch; }
 .w-analysis blockquote { border-left: 3px solid var(--acid-dim); padding-left: var(--space-4); font-style: italic; margin: 0 0 var(--space-4); }
 .w-legend { font-size: var(--text-sm); color: var(--text-secondary); padding-top: var(--space-4); }
 .w-pager { display: flex; justify-content: space-between; gap: var(--space-4); padding-top: var(--space-8); font-family: var(--font-display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.w-flag { display: inline-block; font-family: var(--font-display); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 0 6px; border: 1px dashed var(--border-heavy); color: var(--text-secondary); border-radius: 2px; vertical-align: .1em; }
+.w-unrelated { font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-3); }
+.w-item--unrelated { opacity: .85; }
+.w-group--unrelated { border-top: 1px dashed var(--border-heavy); }
+.w-request { padding: var(--space-4) 0; border-bottom: 1px solid var(--border); }
 q { font-style: italic; }
 		</style>
 	</head>

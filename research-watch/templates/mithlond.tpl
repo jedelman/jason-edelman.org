@@ -43,6 +43,13 @@
     .w-analysis blockquote { border-left: 2px solid var(--salt); padding-left: 1rem; font-style: italic; margin: 0 0 1.2rem; }
     .w-legend { font-size: 0.85rem; color: var(--tide); border-top: 1px solid var(--mist); padding-top: 1rem; margin-top: 2rem; }
     .w-pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; }
+    .w-flag { display: inline-block; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.1rem 0.45rem; border: 1px dashed var(--horizon); color: var(--horizon); background: var(--paper); border-radius: 2px; vertical-align: 0.1em; }
+    .w-unrelated { font-size: 0.88rem; color: var(--tide); margin-bottom: 0.8rem; }
+    .w-item--unrelated { background: var(--paper); border-left: 3px dashed var(--fog); }
+    .w-claim--unrelated h3 { color: var(--tide); }
+    .w-group--unrelated { border-top: 1px dashed var(--fog); padding-top: 1.5rem; }
+    .w-request { border-bottom: 1px solid var(--mist); padding: 1rem 0; }
+    .w-request h3 { margin-top: 0; }
     q { quotes: "\201C" "\201D"; font-style: italic; }
   </style>
 </head>

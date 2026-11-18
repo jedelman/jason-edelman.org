@@ -2,7 +2,7 @@
   "date": "2026-11-18",
   "project": "mithlond",
   "run": "https://claude.ai/code/session_01Sqvwr6hkSFEKHhWDSZxL63",
-  "summary": "The watch's first run: the past week, plus one catch-up on Hampton Roads. Virginia Mercury reports Gov. Spanberger and Democrats will propose local approval for data centers over 25 MW, while environmental groups call for a statewide pause. DatacenterDynamics reports Loudoun County adopted a moratorium of up to 12 months. At the Dominion–NextEra merger hearing, Dominion's counsel said the case isn't the place to decide whether data centers pay their fair share. WHRO reported in October that Suffolk paused data centers until it writes rules.",
+  "summary": "The watch's first run: the past week, plus one catch-up on Hampton Roads. Virginia Mercury reports Gov. Spanberger and Democrats will propose local approval for data centers over 25 MW, while environmental groups call for a statewide pause. DatacenterDynamics reports Loudoun County adopted a moratorium of up to 12 months. At the Dominion–NextEra merger hearing, Dominion's counsel said the case isn't the place to decide whether data centers pay their fair share. WHRO reported in October that Suffolk paused data centers until it writes rules. Also tracked, and unrelated to data centers so far: Sen. Louise Lucas pleaded not guilty to federal charges (WTVR) in a case the U.S. Attorney's Office says concerns a marijuana enterprise.",
   "checked": [
     "virginia-mercury",
     "cardinal-news",
@@ -113,6 +113,36 @@
         "suffolk-data-center-moratorium"
       ],
       "verified": "2026-11-18T16:57:06.088Z"
+    },
+    {
+      "title": "Sen. Louise Lucas pleads not guilty to federal charges",
+      "url": "https://www.wtvr.com/news/local-news/lucas-pleads-not-guilty-virginia-recreational-marijuana-market-nov-16-2026",
+      "publisher": "WTVR CBS 6",
+      "origin": "WTVR CBS 6",
+      "kind": "news",
+      "published": "2026-11-16",
+      "quote": "State Sen. Louise Lucas was back in federal court in Newport News Monday, entering a \"not guilty\" plea against federal charges including racketeering, money laundering and illegally selling marijuana.",
+      "note": "Her plea disputes the indictment's allegations.",
+      "claims": [
+        "lucas-federal-indictment-allegations"
+      ],
+      "unrelated": "Mithlond's research tracks Sen. Lucas (research/TASKS.md, track E1). These charges concern a marijuana business; no source connects them to data centers. An indictment is a charge, not a finding of guilt.",
+      "verified": "2026-11-18T17:10:07.471Z"
+    },
+    {
+      "title": "U.S. Attorney's Office: an indictment alleges Sen. Lucas led a marijuana distribution enterprise (October; catch-up)",
+      "url": "https://www.justice.gov/usao-edva/pr/virginia-state-senator-indicted-leading-criminal-marijuana-distribution-enterprise",
+      "publisher": "U.S. Attorney's Office, Eastern District of Virginia",
+      "origin": "U.S. Attorney's Office, Eastern District of Virginia",
+      "kind": "government",
+      "published": "2026-10-22",
+      "quote": "According to the indictment, Virginia state senator Lillie Louise Lucas, 82, of Portsmouth, Virginia, led a criminal enterprise (the Lucas Enterprise) comprised of a close-knit group of associates and family members, including her two daughters and her grandson.",
+      "note": "The prosecutors' allegation, in their own words.",
+      "claims": [
+        "lucas-federal-indictment-allegations"
+      ],
+      "unrelated": "Mithlond's research tracks Sen. Lucas (research/TASKS.md, track E1). These charges concern a marijuana business; no source connects them to data centers. An indictment is a charge, not a finding of guilt.",
+      "verified": "2026-11-18T17:10:07.471Z"
     }
   ],
   "unreachable": [
