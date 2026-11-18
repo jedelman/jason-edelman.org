@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<link rel="icon" href="../favicon.svg" />
+		<meta name="theme-color" content="#0d1a0d" media="(prefers-color-scheme: dark)" />
+		<meta name="theme-color" content="#f5f7f3" media="(prefers-color-scheme: light)" />
+		<link rel="stylesheet" href="../app.css" />
+		<link rel="alternate" type="application/atom+xml" title="Abolish Lawns watch" href="./feed.xml" />
+		<title>Abolish Lawns — {{TITLE}}</title>
+		<meta name="description" content="{{DESCRIPTION}}" />
+		<style>
+/* The research watch, in Abolish Lawns' tokens (app.css) and the bibliography page's type. */
+main { max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6); }
+.masthead { padding: var(--space-12) 0 var(--space-8); }
+.kicker { display: flex; gap: var(--space-4); margin-bottom: var(--space-4); }
+.label { font-family: var(--font-display); font-size: var(--text-sm); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-secondary); }
+.page-title { font-family: var(--font-display); font-size: clamp(3rem, 7vw, 6rem); font-weight: 900; line-height: .92; letter-spacing: -.02em; text-transform: uppercase; color: var(--ink); margin: var(--space-6) 0; }
+.deck { font-size: var(--text-lg); line-height: 1.6; max-width: 68ch; margin-top: var(--space-6); color: var(--text-primary); }
+main > section, main > article, .w-body > section { padding: var(--space-8) 0; border-top: 1px solid var(--border); }
+main h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 700; text-transform: uppercase; margin-bottom: var(--space-4); }
+main h3 { font-size: var(--text-base); font-weight: 700; color: var(--ink); margin-bottom: var(--space-2); }
+main p { max-width: 72ch; }
+.w-body { padding-bottom: var(--space-16); }
+.w-meta { font-family: var(--font-display); font-size: var(--text-sm); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: var(--space-2); }
+.w-meta a { color: inherit; }
+.w-summary { font-size: var(--text-lg); line-height: 1.6; margin-bottom: var(--space-8); }
+.w-intro p { margin-bottom: var(--space-3); }
+.w-entry { padding: var(--space-4) 0; border-bottom: 1px solid var(--border); }
+.w-entry:last-child { border-bottom: none; }
+.w-item { padding: var(--space-6) 0; border-top: 1px solid var(--border); }
+.w-src { font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-3); }
+.w-quote { border-left: 3px solid var(--acid-dim); padding: var(--space-1) 0 var(--space-1) var(--space-4); margin: 0 0 var(--space-3); font-style: italic; color: var(--text-primary); max-width: 72ch; }
+.w-note { color: var(--text-secondary); margin-bottom: var(--space-2); }
+.w-claims, .w-sources { list-style: none; padding: 0; margin: var(--space-2) 0 0; font-size: var(--text-sm); }
+.w-claims li, .w-sources li { margin: var(--space-2) 0; max-width: 90ch; }
+.w-status, a.w-cite { display: inline-block; font-family: var(--font-display); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 1px 6px; border-radius: 2px; vertical-align: .1em; text-decoration: none; }
+.w-status--provisional { background: var(--bg-raised); color: var(--text-secondary); }
+.w-status--corroborated { background: oklch(88% 0.12 128); color: oklch(25% 0.1 128); }
+.w-status--disputed { background: oklch(90% 0.10 20); color: oklch(30% 0.12 20); }
+.w-claim { padding: var(--space-6) 0; border-bottom: 1px solid var(--border); scroll-margin-top: var(--space-4); }
+.w-claim:target { background: var(--bg-raised); }
+.w-stance { font-family: var(--font-display); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--acid-dim); }
+.w-stance--disputes { color: oklch(55% 0.15 20); }
+.w-group h2 .w-status { font-size: var(--text-sm); margin-right: var(--space-2); }
+.w-unreachable li { margin: var(--space-1) 0; overflow-wrap: anywhere; font-size: var(--text-sm); }
+.w-analysis p, .w-analysis li { margin-bottom: var(--space-4); line-height: 1.65; }
+.w-analysis ul { padding-left: var(--space-6); }
+.w-analysis blockquote { border-left: 3px solid var(--acid-dim); padding-left: var(--space-4); font-style: italic; margin: 0 0 var(--space-4); }
+.w-legend { font-size: var(--text-sm); color: var(--text-secondary); padding-top: var(--space-4); }
+.w-pager { display: flex; justify-content: space-between; gap: var(--space-4); padding-top: var(--space-8); font-family: var(--font-display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+q { font-style: italic; }
+		</style>
+	</head>
+	<body>
+
+<main>
+	<header class="masthead">
+		<div class="kicker">
+			<span class="label"><a href="../" style="color:inherit">Abolish Lawns</a></span>
+			<span class="label">{{LABEL}}</span>
+		</div>
+		<hr class="rule rule--acid" />
+		<h1 class="page-title">{{H1}}</h1>
+		<hr class="rule" />
+		<p class="deck">{{DECK}}</p>
+	</header>
+	<div class="w-body">
+{{BODY}}
+	</div>
+</main>
+
+	</body>
+</html>

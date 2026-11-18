@@ -1,0 +1,155 @@
+# Research watch routines
+
+The two scheduled Claude Code tasks that run the watch. These texts are the tasks' prompts, kept here so a change to
+what the routines do is a reviewed change to this file (and then an update to the scheduled task to match).
+
+- **Daily digest**: every day at 5:23 a.m. Eastern, fresh session, Sonnet. No push notification.
+- **Weekly analysis**: Mondays at 6:47 a.m. Eastern, fresh session, Opus. Push notification to Jason when it finishes.
+
+---
+
+## Daily digest
+
+```
+Daily job: the research watch for Jason Edelman's projects Mithlond and Abolish Lawns, in the repo
+jedelman/jason-edelman.org. Find what's newly said about each project's subject and by whom, quote it, verify it,
+publish the day's digests, and finish with a short report.
+
+Setup
+1. If jedelman/jason-edelman.org isn't in this session, add it with the add_repo tool (owner jedelman, repo
+   jason-edelman.org, access "push"). Clone it and check out main. Nothing needs installing.
+2. Read in full: research-watch/README.md (the protocol: its rules bind you), and in the root CLAUDE.md the section
+   "Merge authority — research watch" and the "Non-hallucination & anti-slop rules". Then, for each project in
+   research-watch/projects.json: its research/watch/sources.json (scope, open questions, seeds, queries), seen.json,
+   claims.json, and its newest digest.
+3. If you have no GitHub tools for pull requests, stop and report that; change nothing.
+
+Research, for each project
+4. The window runs from the newest digest's date to now (the last 3 days if there's no digest yet). Today's date is
+   the date in America/New_York.
+5. Work the seeds whose access is "fetch" or "browser", then search each of the project's queries for recent items.
+   Before you fetch any page, run `node research-watch/verify.mjs --can <url>`; never fetch a closed one. List
+   blocked and closed sources you needed under "unreachable" instead.
+6. Skip every URL already in seen.json. Add every URL you consider, kept or not, to seen.json with today's date.
+7. Keep an item only when it's new in the window and inside the project's scope. Open it yourself and take ONE exact
+   quote of 20–600 characters that carries the point. Give it the right origin (the protocol's rule: who produced
+   the information, not who carried it; when in doubt, the same origin as a related source).
+8. Claims: before minting one, look through claims.json for a claim with the same statement. If there is one, add
+   this item as a new source on it (stance "asserts" or "disputes"); that's how corroboration and dispute arrive.
+   Otherwise mint a claim: a short kebab-case id, a neutral attributed statement, a topic, first_seen today, and this
+   item as its first source. The item and the claim source carry the same quote.
+9. Quality over volume: up to about 8 items per project. A quiet day publishes no digest for that project, and
+   that's fine.
+
+Write
+10. digests/<today>.json for each project with items, following the protocol's shape: an attributed headline per
+    item, the note claiming nothing the quote doesn't, and a summary in which every statement says who said it.
+11. Run `node research-watch/verify.mjs`. Fix or drop every failure: never edit a quote to make it match, and never
+    keep an item you couldn't verify. Repeat until it passes.
+12. Run `node research-watch/render.mjs`, `npm run check` and `node scripts/build.mjs`. All must pass.
+13. Try to break your own work: have a fresh-context subagent check every new item and claim source against its page.
+    Does the quote say what the headline, the note and the claim say? Is the origin right, and would two sources
+    you're counting as independent really share an origin? Does anything name a private person? Is anything outside
+    the scope? Fix or drop what fails, then repeat steps 11–12.
+
+Publish
+14. `git status` must show changes only in the watch lane (mithlond/research/watch/, abolish-lawns/research/watch/,
+    mithlond/watch/, abolish-lawns/site/watch/). If anything else changed, stop and report it. Commit on the branch
+    your session instructions name (or watch/<today> if none). Don't change git user.name or user.email, and don't
+    put model names in commits or the PR. Push.
+15. Open a PR titled "Research watch: <today>". Body: for each project, a table of the items (headline, origin,
+    link), any claim whose status changed, the unreachable sources, the verifier's last line, the check results,
+    and the self-check note. State that a Claude Code routine did the work under the research-watch merge authority.
+    End the body with:
+
+        🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+16. Mark it ready and squash-merge it once the "Workers Builds: jason-edelman-org" check passes (the root CLAUDE.md
+    grants this, for the watch lane only). If any check or step failed, don't merge: leave it a draft and say why.
+17. After merging, wait until https://jason-edelman.org/_build-manifest.json shows the merge commit's short sha
+    (Workers Builds deploys main in a few minutes), then fetch each new digest page,
+    https://jason-edelman.org/<project>/watch/<today>, and confirm it returns 200.
+
+Never
+- Publish a quote verify.mjs hasn't verified, edit a quote to match a page, or summarize a page you couldn't open.
+- Get around a block: no CAPTCHA solving, no disguised user agent, no archive or mirror of a closed page.
+- Name a private person.
+- Change anything outside the watch lane, including research-watch/ itself.
+- Post or send anything anywhere else.
+
+Finish with a short report: items published per project, the PR link, and whether the pages are live; or that it
+was a quiet day; or, first and plainly, what failed.
+```
+
+---
+
+## Weekly analysis
+
+```
+Weekly job: the research watch's analysis for Jason Edelman's projects Mithlond and Abolish Lawns, in the repo
+jedelman/jason-edelman.org. For the ISO week that just ended (Monday to Sunday), write one analysis per project from
+the watch's ledger, publish it, and send Jason a short note.
+
+Setup
+1. If jedelman/jason-edelman.org isn't in this session, add it with the add_repo tool (owner jedelman, repo
+   jason-edelman.org, access "push"). Clone it and check out main.
+2. Read in full: research-watch/README.md (the protocol: its rules bind you), and in the root CLAUDE.md the sections
+   "Merge authority — research watch", "Non-hallucination & anti-slop rules" and "Intellectual through-line across
+   projects" (the commons framework is the lens). For each project: research/watch/sources.json, claims.json, the
+   week's digests, and the last two weekly analyses; and the project's own statement of its argument (Mithlond:
+   index.html, briefs/, the newest blog post; Abolish Lawns: site/index.html, site/factsheet.html,
+   research-backlog.md).
+3. If you have no GitHub tools for pull requests, stop and report that; change nothing.
+
+The ledger first
+4. Look for one statement minted twice under different ids. Merge them: keep the older id, move the other's sources
+   onto it, delete the duplicate, and update any digest item that cited the deleted id. List each merge in the PR.
+   Besides adding sources, that's the only ledger edit allowed.
+
+Write, for each project
+5. weekly/<YYYY-Www>.md, with front matter: title, summary (one or two sentences), date (today, America/New_York).
+6. 400–900 words, through the project's own questions (its sources.json scope): what the week's record says and who
+   says it; what changed in the ledger (new claims, any that became corroborated or disputed); what's still
+   provisional and what would settle it. End with "For the site": suggestions where the week bears on the project's
+   own pages (a backlog question a source now answers, a claim on the site the ledger contradicts or updates). These
+   are suggestions to Jason only; never edit those pages.
+7. Every factual statement cites a ledger claim as [[claim-id]]. No fact that isn't in the ledger. Interpretation and
+   argument are welcome, labelled as such ("our reading", "this suggests"); a provisional claim is never presented
+   as settled.
+8. A week with no digests for a project gets a short analysis saying so and what the watch is waiting on.
+9. Try to break your own work: have a fresh-context subagent check every [[cite]] against the sentence it sits in and
+   the claim's sources, look for anything asserted beyond the ledger or a provisional claim stated as fact, and look
+   for private people. Fix what fails.
+
+Publish
+10. Run `node research-watch/verify.mjs`, `node research-watch/render.mjs`, `npm run check` and
+    `node scripts/build.mjs`; all must pass. `git status` must show changes only in the watch lane
+    (mithlond/research/watch/, abolish-lawns/research/watch/, mithlond/watch/, abolish-lawns/site/watch/); if
+    anything else changed, stop and report it.
+11. Commit on the branch your session instructions name (or watch/<YYYY-Www> if none), without changing git
+    user.name or user.email and without model names. Push. Open a PR titled "Research watch: analysis <YYYY-Www>"
+    with each analysis's summary, the ledger merges, the self-check note, and the check results, ending with:
+
+        🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+12. Mark it ready and squash-merge once the "Workers Builds: jason-edelman-org" check passes (the root CLAUDE.md
+    grants this, for the watch lane only). If anything failed, leave it a draft and say why.
+13. After merging, wait for https://jason-edelman.org/_build-manifest.json to show the merge commit's short sha, then
+    confirm each analysis page, https://jason-edelman.org/<project>/watch/week-<YYYY-Www>, returns 200.
+14. Health: for each project, count the days this week with a digest, and list any open draft PRs titled "Research
+    watch:" (dailies that failed and weren't merged).
+
+Never
+- State a fact that isn't in the ledger, or present a provisional claim as settled.
+- Edit a project's own pages, bibliography or backlog; suggest instead.
+- Change anything outside the watch lane, including research-watch/ itself.
+- Post or send anything except your final note.
+
+The note (your final message, which reaches Jason as a push notification)
+Begin and end with a kaomoji; Jason reads tone through them. Plain words, short:
+- for each project, one or two sentences on the week, with the analysis link;
+- claims that became corroborated or disputed;
+- the "For the site" suggestions, if any;
+- health: digests this week, and any failed dailies.
+If nothing was published, say what stopped you.
+```
