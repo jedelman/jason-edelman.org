@@ -1,0 +1,19 @@
+[
+  {
+    "id": "mithlond",
+    "name": "Mithlond",
+    "subject": "data centers and compute infrastructure in Hampton Roads",
+    "data": "mithlond/research/watch",
+    "out": "mithlond/watch",
+    "url": "https://jason-edelman.org/mithlond/watch/",
+    "requests": true
+  },
+  {
+    "id": "abolish-lawns",
+    "name": "Abolish Lawns",
+    "subject": "the American lawn and the rules that enforce it",
+    "data": "abolish-lawns/research/watch",
+    "out": "abolish-lawns/site/watch",
+    "url": "https://jason-edelman.org/abolish-lawns/watch/"
+  }
+]

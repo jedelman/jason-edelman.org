@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<link rel="icon" href="../favicon.svg" />
+		<meta name="theme-color" content="#0d1a0d" media="(prefers-color-scheme: dark)" />
+		<meta name="theme-color" content="#f5f7f3" media="(prefers-color-scheme: light)" />
+		<link rel="stylesheet" href="../app.css" />
+		<link rel="alternate" type="application/atom+xml" title="Abolish Lawns watch" href="./feed.xml" />
+		<title>Abolish Lawns — Abolish Lawns watch: 2026-11-18</title>
+		<meta name="description" content="The watch's first run. The City of Alexandria says its ban on gas leaf blowers took effect November 17. A new review of the German Lawn Research Project by Norbert Müller and Maria Ignatieva (Urban Ecosystems) reports that frequently mowed lawns support less plant diversity and wildlife value than meadows." />
+		<style>
+/* The research watch, in Abolish Lawns' tokens (app.css) and the bibliography page's type. */
+main { max-width: 1100px; margin: 0 auto; padding: 0 var(--space-6); }
+.masthead { padding: var(--space-12) 0 var(--space-8); }
+.kicker { display: flex; gap: var(--space-4); margin-bottom: var(--space-4); }
+.label { font-family: var(--font-display); font-size: var(--text-sm); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--text-secondary); }
+.page-title { font-family: var(--font-display); font-size: clamp(3rem, 7vw, 6rem); font-weight: 900; line-height: .92; letter-spacing: -.02em; text-transform: uppercase; color: var(--ink); margin: var(--space-6) 0; }
+.deck { font-size: var(--text-lg); line-height: 1.6; max-width: 68ch; margin-top: var(--space-6); color: var(--text-primary); }
+main > section, main > article, .w-body > section { padding: var(--space-8) 0; border-top: 1px solid var(--border); }
+main h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3vw, 2.25rem); font-weight: 700; text-transform: uppercase; margin-bottom: var(--space-4); }
+main h3 { font-size: var(--text-base); font-weight: 700; color: var(--ink); margin-bottom: var(--space-2); }
+main p { max-width: 72ch; }
+.w-body { padding-bottom: var(--space-16); }
+.w-meta { font-family: var(--font-display); font-size: var(--text-sm); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: var(--space-2); }
+.w-meta a { color: inherit; }
+.w-summary { font-size: var(--text-lg); line-height: 1.6; margin-bottom: var(--space-8); }
+.w-intro p { margin-bottom: var(--space-3); }
+.w-entry { padding: var(--space-4) 0; border-bottom: 1px solid var(--border); }
+.w-entry:last-child { border-bottom: none; }
+.w-item { padding: var(--space-6) 0; border-top: 1px solid var(--border); }
+.w-src { font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-3); }
+.w-quote { border-left: 3px solid var(--acid-dim); padding: var(--space-1) 0 var(--space-1) var(--space-4); margin: 0 0 var(--space-3); font-style: italic; color: var(--text-primary); max-width: 72ch; }
+.w-note { color: var(--text-secondary); margin-bottom: var(--space-2); }
+.w-claims, .w-sources { list-style: none; padding: 0; margin: var(--space-2) 0 0; font-size: var(--text-sm); }
+.w-claims li, .w-sources li { margin: var(--space-2) 0; max-width: 90ch; }
+.w-status, a.w-cite { display: inline-block; font-family: var(--font-display); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 1px 6px; border-radius: 2px; vertical-align: .1em; text-decoration: none; }
+.w-status--provisional { background: var(--bg-raised); color: var(--text-secondary); }
+.w-status--corroborated { background: oklch(88% 0.12 128); color: oklch(25% 0.1 128); }
+.w-status--disputed { background: oklch(90% 0.10 20); color: oklch(30% 0.12 20); }
+.w-claim { padding: var(--space-6) 0; border-bottom: 1px solid var(--border); scroll-margin-top: var(--space-4); }
+.w-claim:target { background: var(--bg-raised); }
+.w-stance { font-family: var(--font-display); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--acid-dim); }
+.w-stance--disputes { color: oklch(55% 0.15 20); }
+.w-group h2 .w-status { font-size: var(--text-sm); margin-right: var(--space-2); }
+.w-unreachable li { margin: var(--space-1) 0; overflow-wrap: anywhere; font-size: var(--text-sm); }
+.w-analysis p, .w-analysis li { margin-bottom: var(--space-4); line-height: 1.65; }
+.w-analysis ul { padding-left: var(--space-6); }
+.w-analysis blockquote { border-left: 3px solid var(--acid-dim); padding-left: var(--space-4); font-style: italic; margin: 0 0 var(--space-4); }
+.w-legend { font-size: var(--text-sm); color: var(--text-secondary); padding-top: var(--space-4); }
+.w-pager { display: flex; justify-content: space-between; gap: var(--space-4); padding-top: var(--space-8); font-family: var(--font-display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.w-flag { display: inline-block; font-family: var(--font-display); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 0 6px; border: 1px dashed var(--border-heavy); color: var(--text-secondary); border-radius: 2px; vertical-align: .1em; }
+.w-unrelated { font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-3); }
+.w-item--unrelated { opacity: .85; }
+.w-group--unrelated { border-top: 1px dashed var(--border-heavy); }
+.w-request { padding: var(--space-4) 0; border-bottom: 1px solid var(--border); }
+q { font-style: italic; }
+		</style>
+	</head>
+	<body>
+
+<main>
+	<header class="masthead">
+		<div class="kicker">
+			<span class="label"><a href="../" style="color:inherit">Abolish Lawns</a></span>
+			<span class="label">Daily digest · 2026-11-18</span>
+		</div>
+		<hr class="rule rule--acid" />
+		<h1 class="page-title">Wednesday, November 18, 2026</h1>
+		<hr class="rule" />
+		<p class="deck">The watch's first run. The City of Alexandria says its ban on gas leaf blowers took effect November 17. A new review of the German Lawn Research Project by Norbert Müller and Maria Ignatieva (Urban Ecosystems) reports that frequently mowed lawns support less plant diversity and wildlife value than meadows.</p>
+	</header>
+	<div class="w-body">
+
+<p class="w-meta">Wednesday, November 18, 2026 · 2 items · 6 sources checked · <a href="https://claude.ai/code/session_01Sqvwr6hkSFEKHhWDSZxL63">run</a></p>
+
+<article class="w-item">
+  <h3>Alexandria, Va.: the gas leaf blower ban is in force, with citations from November 17</h3>
+  
+  <p class="w-src"><a href="https://www.alexandriava.gov/environmental-quality/leaf-blower-ordinance">City of Alexandria</a> · government</p>
+  <blockquote class="w-quote">Effective November 17, 2026, citations for use of gas-powered leaf blowers will be issued for residents and contractors.</blockquote>
+  <p class="w-note">Gas lawn equipment's emissions are one of the costs the site's infographic counts; here a city has banned one kind of it.</p>
+  <ul class="w-claims"><li><a href="./claims#alexandria-gas-leaf-blower-ban">Alexandria, Virginia issues citations for gas-powered leaf blower use by residents and…</a> <span class="w-status w-status--provisional">provisional</span></li></ul>
+</article>
+
+<article class="w-item">
+  <h3>Review of the German Lawn Research Project: frequently mowed lawns support less plant diversity and wildlife value than meadows</h3>
+  
+  <p class="w-src"><a href="https://link.springer.com/article/10.1007/s11252-026-02083-4">Urban Ecosystems (Springer)</a> · origin: Norbert Müller and Maria Ignatieva · academic · 2026-11-10</p>
+  <blockquote class="w-quote">Due to the high cutting frequency, lawns generally support lower plant biodiversity and provide less value for wildlife than meadows.</blockquote>
+  <p class="w-note">Bears on the backlog's &quot;Lawns support almost no insect life&quot;: a peer-reviewed review on plants and wildlife value generally, not insects specifically.</p>
+  <ul class="w-claims"><li><a href="./claims#mowed-lawns-less-biodiverse-than-meadows">Frequently mowed lawns generally support lower plant biodiversity and provide less value…</a> <span class="w-status w-status--provisional">provisional</span></li></ul>
+</article>
+
+<section class="w-unreachable">
+  <h2>Couldn't open</h2>
+  <ul><li><a href="https://homegrownnationalpark.org/">https://homegrownnationalpark.org/</a>: a security challenge refuses automated access</li><li><a href="https://legiscan.com/">https://legiscan.com/</a>: a security challenge refuses automated access</li></ul>
+</section>
+<div class="w-pager"><span></span><a href="./">All digests</a><span></span></div>
+	</div>
+</main>
+
+	</body>
+</html>

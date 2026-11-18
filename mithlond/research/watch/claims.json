@@ -1,0 +1,159 @@
+{
+  "claims": [
+    {
+      "id": "va-2027-local-approval-over-25mw",
+      "statement": "Gov. Spanberger and Virginia Democrats propose, for the 2027 General Assembly, requiring local approval for data centers using more than 25 megawatts, banning nondisclosure agreements with local officials, and tightening oversight of cooling water.",
+      "topic": "law",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://virginiamercury.com/2026/11/11/spanberger-va-democrats-pitch-medical-debt-relief-data-center-limits-for-2027/",
+          "publisher": "Virginia Mercury",
+          "origin": "Virginia Mercury",
+          "date": "2026-11-11",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "The lawmakers presented several data center proposals, including requirements for local approval of facilities using more than 25 megawatts, a ban on nondisclosure agreements with local officials and stronger oversight of cooling water use.",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    },
+    {
+      "id": "dominion-merger-case-not-for-cost-allocation",
+      "statement": "Dominion's counsel argued at the SCC's merger hearing that the merger case is not the place to decide who pays their fair share, including data centers.",
+      "topic": "rates",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://virginiamercury.com/2026/11/18/in-dominion-nextera-merger-opening-arguments-parties-clash-over-potential-risk-ratepayer-protections/",
+          "publisher": "Virginia Mercury",
+          "origin": "Virginia Mercury",
+          "date": "2026-11-18",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "This case, in our view, is simply not the one to litigate that cost of service, and nor is it the case to litigate who’s paying their fair share, and ensuring everybody pays their fair share, including the data centers",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    },
+    {
+      "id": "dominion-residential-bill-doubled-2007-2026",
+      "statement": "The average monthly Dominion residential bill rose from $90.59 on July 1, 2007 to $180.79 on July 1, 2026, an increase of 99.57%.",
+      "topic": "rates",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://virginiamercury.com/2026/11/18/in-dominion-nextera-merger-opening-arguments-parties-clash-over-potential-risk-ratepayer-protections/",
+          "publisher": "Virginia Mercury",
+          "origin": "Virginia State Corporation Commission",
+          "date": "2026-11-18",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "In a report to the Energy Commission of Virginia, the SCC reported that the average monthly Dominion residential bill “was $90.59 as of July 1, 2007. The bill has increased by $90.20, or 99.57%, to $180.79 per month as of July 1, 2026.”",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    },
+    {
+      "id": "residential-customers-subsidize-data-center-grid",
+      "statement": "Residential customers still subsidize too much of the cost of building Virginia's grid for demand driven largely by data centers.",
+      "topic": "rates",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://virginiamercury.com/2026/11/13/five-virginia-members-of-congress-demand-state-regulators-deny-dominion-nextera-merger/",
+          "publisher": "Virginia Mercury",
+          "origin": "Reps. Beyer, McClellan, Subramanyam, Vindman and Walkinshaw (letter to the SCC)",
+          "date": "2026-11-13",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "But the congressional delegation said that too much of the cost to build out the grid in Virginia to support the skyrocketing energy demands, largely driven by data centers, is still subsidized by residential customers.",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    },
+    {
+      "id": "groups-call-statewide-data-center-pause",
+      "statement": "A coalition of Virginia environmental groups calls for a statewide pause on new data center permits and grid connections until stricter water, energy and siting rules are enacted.",
+      "topic": "law",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://virginiamercury.com/2026/11/12/environmental-groups-rally-for-statewide-data-center-moratorium-in-hanover-county/",
+          "publisher": "Virginia Mercury",
+          "origin": "Virginia Mercury",
+          "date": "2026-11-12",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "A united front of environmental groups representing all corners of the commonwealth on Wednesday in Hanover urged the state government to implement a statewide pause on all new data center permit approvals and connections to the grid until stricter regulations for water use, energy infrastructure, and siting are enacted.",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    },
+    {
+      "id": "loudoun-data-center-moratorium",
+      "statement": "Loudoun County's Board of Supervisors paused consideration of data center and substation applications for up to 12 months, backdated to September 15, 2026, by a 7-1 vote with one abstention.",
+      "topic": "local",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://www.datacenterdynamics.com/en/news/virginias-loudoun-county-officially-adopts-12-month-moratorium-on-data-center-development/",
+          "publisher": "DatacenterDynamics",
+          "origin": "DatacenterDynamics",
+          "date": "2026-11-18",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "The adopted resolution, which passed 7-1 with one abstention, sees the board pause consideration of applications for data centers and substations for a period not to exceed 12 months, effective backdated from September 15, 2026.",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    },
+    {
+      "id": "suffolk-data-center-moratorium",
+      "statement": "Suffolk won't let data center projects move forward until it has rules and restrictions in place.",
+      "topic": "local",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://www.whro.org/local-government/2026-10-22/suffolk-approves-temporary-data-center-ban",
+          "publisher": "WHRO",
+          "origin": "WHRO",
+          "date": "2026-10-22",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "Suffolk will not allow data center projects to move forward until it has rules and restrictions in place.",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    },
+    {
+      "id": "lucas-federal-indictment-allegations",
+      "statement": "A federal indictment unsealed October 22, 2026 alleges that Sen. Louise Lucas led a criminal marijuana distribution enterprise.",
+      "topic": "officials",
+      "first_seen": "2026-11-18",
+      "unrelated": "Mithlond's research tracks Sen. Lucas (research/TASKS.md, track E1). These charges concern a marijuana business; no source connects them to data centers. An indictment is a charge, not a finding of guilt.",
+      "sources": [
+        {
+          "url": "https://www.justice.gov/usao-edva/pr/virginia-state-senator-indicted-leading-criminal-marijuana-distribution-enterprise",
+          "publisher": "U.S. Attorney's Office, Eastern District of Virginia",
+          "origin": "U.S. Attorney's Office, Eastern District of Virginia",
+          "date": "2026-10-22",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "According to the indictment, Virginia state senator Lillie Louise Lucas, 82, of Portsmouth, Virginia, led a criminal enterprise (the Lucas Enterprise) comprised of a close-knit group of associates and family members, including her two daughters and her grandson.",
+          "verified": "2026-11-18T17:10:07.471Z"
+        },
+        {
+          "url": "https://www.wtvr.com/news/local-news/lucas-pleads-not-guilty-virginia-recreational-marijuana-market-nov-16-2026",
+          "publisher": "WTVR CBS 6",
+          "origin": "Sen. Louise Lucas (plea, reported by WTVR CBS 6)",
+          "date": "2026-11-16",
+          "seen": "2026-11-18",
+          "stance": "disputes",
+          "quote": "State Sen. Louise Lucas was back in federal court in Newport News Monday, entering a \"not guilty\" plea against federal charges including racketeering, money laundering and illegally selling marijuana.",
+          "verified": "2026-11-18T17:10:07.471Z"
+        }
+      ]
+    }
+  ]
+}

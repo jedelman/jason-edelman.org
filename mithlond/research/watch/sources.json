@@ -1,0 +1,150 @@
+{
+  "project": "mithlond",
+  "scope": "From Mithlond's front page: \"Data centers are coming to Hampton Roads. The question is who will own them, who will pay the costs, and who will share in any benefit.\" Its three questions: \"Who Can Own This?\" (\"Can a municipality, port authority, or utility district own and operate compute infrastructure? What would that cost? What legal structures exist in Virginia?\"), \"Who Bears the Cost?\" (\"Data centers consume water and electricity at enormous scale. In a region already facing accelerating flood risk, who absorbs those externalities — and who decides?\") and \"Who Gets the Benefit?\" (\"If the infrastructure lands here, does Norfolk's workforce, its universities, its communities get a structural piece — or just construction jobs?\"). In scope: data centers and compute in Hampton Roads (Norfolk, Virginia Beach, Chesapeake, Portsmouth, Suffolk, Hampton, Newport News, Isle of Wight and neighbors); Virginia law, tax policy, utility rates and grid capacity that govern them; their water, power and flood exposure; public or community ownership of compute anywhere, as a model.",
+  "open_questions": [
+    "Track D2: any new data center permit applications in Hampton Roads filed since January 2026 (research/TASKS.md).",
+    "Track D1: current operators and announced expansions at 3800 Village Ave and Corporate Landing (Virginia Beach).",
+    "Track C4: statutory provisions that let a public authority (e.g. BVU Authority) run broadband or utility service.",
+    "Track E2: Hampton Roads delegation members on the General Assembly's Finance and Commerce and Labor committees.",
+    "Dominion's rates and rate classes for large loads (the GS-5 class above 25 MW) and the interconnection queue.",
+    "Virginia's data center retail sales and use tax exemption (DCRSUT): repeal, extension or conditions.",
+    "The Southside Network Authority's regional fiber ring: completion and open-access terms."
+  ],
+  "seeds": [
+    {
+      "id": "virginia-mercury",
+      "publisher": "Virginia Mercury",
+      "kind": "news",
+      "url": "https://virginiamercury.com/feed/",
+      "how": "RSS: state policy reporting on energy, utilities, the General Assembly and data centers.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "cardinal-news",
+      "publisher": "Cardinal News",
+      "kind": "news",
+      "url": "https://cardinalnews.org/feed/",
+      "how": "RSS: statewide reporting; energy and data center coverage outside Northern Virginia.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "whro-local-government",
+      "publisher": "WHRO",
+      "kind": "news",
+      "url": "https://www.whro.org/local-government",
+      "how": "Hampton Roads public media: council and planning decisions across the region.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "datacenterdynamics",
+      "publisher": "DatacenterDynamics",
+      "kind": "news",
+      "url": "https://www.datacenterdynamics.com/en/rss/",
+      "how": "RSS: trade press. Look for Virginia, Hampton Roads, Dominion, subsea cables landing at Virginia Beach.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "pjm-inside-lines",
+      "publisher": "PJM Interconnection",
+      "kind": "industry",
+      "url": "https://insidelines.pjm.com/",
+      "how": "PJM's own news: capacity auctions, load forecasts, large-load interconnection rules (origin: PJM).",
+      "access": "browser",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "dominion-news",
+      "publisher": "Dominion Energy",
+      "kind": "industry",
+      "url": "https://news.dominionenergy.com/",
+      "how": "Dominion's press releases (origin: Dominion Energy).",
+      "access": "browser",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "vedp-press",
+      "publisher": "Virginia Economic Development Partnership",
+      "kind": "government",
+      "url": "https://www.vedp.org/press-releases",
+      "how": "State economic development announcements; data center projects and incentives.",
+      "access": "browser",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "norfolk-council",
+      "publisher": "City of Norfolk",
+      "kind": "primary",
+      "url": "https://norfolkcityva.iqm2.com/Citizens/Calendar.aspx",
+      "how": "Council agendas and minutes: anything on data centers, Dominion, the SNA, telecom or large power loads.",
+      "access": "browser",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "norfolk-permits",
+      "publisher": "City of Norfolk open data",
+      "kind": "primary",
+      "url": "https://data.norfolk.gov/resource/fahm-yuh4.json",
+      "how": "Building permits (Socrata). Query e.g. ?$where=issue_date>'YYYY-MM-DD' and look for data center, server, generator, substation work.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "virginia-lis",
+      "publisher": "Virginia Legislative Information System",
+      "kind": "primary",
+      "url": "https://lis.virginia.gov/",
+      "how": "Bills mentioning data centers, large loads or the DCRSUT; the 2027 session's prefiling opens in late 2026.",
+      "access": "browser",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "scc",
+      "publisher": "Virginia State Corporation Commission",
+      "kind": "primary",
+      "url": "https://www.scc.virginia.gov/",
+      "how": "Closed: robots.txt disallows the whole site to agents like this one. Don't fetch it. SCC actions reach the watch through attributed coverage.",
+      "access": "closed",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "deq-air-permits",
+      "publisher": "Virginia DEQ",
+      "kind": "primary",
+      "url": "https://www.deq.virginia.gov/news-info/shortcuts/permits/air/issued-air-permits-for-data-centers",
+      "how": "Blocked: the server refuses automated access (403, even to a browser). List as unreachable when relevant.",
+      "access": "blocked",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "virginia-business",
+      "publisher": "Virginia Business",
+      "kind": "news",
+      "url": "https://www.virginiabusiness.com/",
+      "how": "Blocked: refuses automated access (403).",
+      "access": "blocked",
+      "added": "2026-11-18"
+    }
+  ],
+  "queries": [
+    "Hampton Roads data center",
+    "Norfolk data center",
+    "Virginia Beach data center",
+    "Chesapeake data center",
+    "Portsmouth data center",
+    "Suffolk data center",
+    "Newport News data center",
+    "Isle of Wight data center",
+    "Dominion Energy data center rate class",
+    "Virginia data center sales tax exemption",
+    "Virginia data center bill",
+    "Southside Network Authority fiber",
+    "Virginia Beach subsea cable landing",
+    "data center water use Virginia",
+    "municipal broadband Virginia authority",
+    "public ownership of compute"
+  ]
+}

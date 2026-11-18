@@ -1,0 +1,121 @@
+{
+  "project": "abolish-lawns",
+  "scope": "From the manifesto: \"The American lawn is not a neutral aesthetic choice. It is an enforced land use regime—backed by HOA covenants, municipal weed ordinances, chemical industry lobbying, and a century of suburban ideology—that converts potentially productive, biodiverse, community-serving land into sterile, performative monoculture. It is an enclosure. It should be abolished.\" In scope: the rules that enforce lawns (HOA covenants, weed and grass-height ordinances, state laws preempting or protecting them, enforcement cases); what lawns cost (water, pesticides and fertilizer, fuel and emissions from equipment, the lawn care industry); what they displace or could become (native plantings, food, habitat, pollinators, stormwater); changes that loosen the regime (turf-removal rebates, nonfunctional-turf bans, gas equipment rules, native-landscaping laws); and new research on any of it. National and international, with US state and local law at the center.",
+  "open_questions": [
+    "research-backlog.md: \"Survey after survey finds homeowners describe lawn maintenance as a chore\"",
+    "research-backlog.md: \"Hundreds of municipalities have weed ordinances\"",
+    "research-backlog.md: \"The evidence from jurisdictions that have relaxed lawn ordinances — most people choose something else\"",
+    "research-backlog.md: \"Lawns sequester negligible carbon\"",
+    "research-backlog.md: \"Lawns support almost no insect life\"",
+    "research-backlog.md: \"Compacted turf soil has significantly lower infiltration rates than diverse ground cover\"",
+    "research-backlog.md: \"$153B landscaping industry — larger than the film industry\"",
+    "research-backlog.md: \"Water rates up 24% in 5 years — faster than inflation\"",
+    "research-backlog.md: \"Buffalo, NY Thoreau scholar — $25,000 in fines\"",
+    "research-backlog.md: \"Turf industry lobbyists understood that a mandate is better than a marketing campaign\"",
+    "research-backlog.md: \"Frederick Law Olmsted designed the front lawn as continuous unfenced space\"",
+    "research-backlog.md: \"Several states have already preempted HOA restrictions on native planting\"",
+    "research-backlog.md: \"One bottle of water per 100-word AI prompt (519 mL)\"",
+    "research-backlog.md: \"In some cities, minimum-wage earners work 20 hours a month to cover the water bill\""
+  ],
+  "seeds": [
+    {
+      "id": "crossref-new-papers",
+      "publisher": "Crossref",
+      "kind": "academic",
+      "url": "https://api.crossref.org/works?query=lawn+turfgrass&filter=from-pub-date:{SINCE}&sort=published&order=desc&rows=40&select=DOI,title,published,container-title,author",
+      "how": "New papers since {SINCE} (the last digest's date). Also try query=residential+lawn, query=turfgrass+irrigation, query=lawn+pollinators, query=homeowners+association+landscaping. Crossref is an index, not a source: open each paper's DOI page and quote the paper (its abstract), with its authors as origin.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "xerces-blog",
+      "publisher": "Xerces Society",
+      "kind": "advocacy",
+      "url": "https://xerces.org/blog",
+      "how": "Pollinator and invertebrate conservation; lawn alternatives, pesticide policy.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "audubon-news",
+      "publisher": "National Audubon Society",
+      "kind": "advocacy",
+      "url": "https://www.audubon.org/news",
+      "how": "Native plants for birds, lawn conversion, state native-plant laws.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "wild-ones",
+      "publisher": "Wild Ones",
+      "kind": "advocacy",
+      "url": "https://wildones.org/",
+      "how": "Native landscaping advocacy; ordinance fights and HOA cases.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "epa-watersense",
+      "publisher": "US EPA WaterSense",
+      "kind": "government",
+      "url": "https://www.epa.gov/watersense",
+      "how": "Federal outdoor water use figures and programs.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "chesapeake-bay-program",
+      "publisher": "Chesapeake Bay Program",
+      "kind": "government",
+      "url": "https://www.chesapeakebay.net/news/blog",
+      "how": "Turf, fertilizer and stormwater in the Bay watershed.",
+      "access": "fetch",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "homegrown-national-park",
+      "publisher": "Homegrown National Park",
+      "kind": "advocacy",
+      "url": "https://homegrownnationalpark.org/",
+      "how": "Blocked: a security challenge refuses automated access.",
+      "access": "blocked",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "legiscan",
+      "publisher": "LegiScan",
+      "kind": "primary",
+      "url": "https://legiscan.com/",
+      "how": "Blocked: a security challenge refuses automated access. Find bill text on the state legislature's own site instead.",
+      "access": "blocked",
+      "added": "2026-11-18"
+    },
+    {
+      "id": "carb-sore",
+      "publisher": "California Air Resources Board",
+      "kind": "government",
+      "url": "https://ww2.arb.ca.gov/our-work/programs/small-off-road-engines-sore",
+      "how": "Blocked to automated access (HTTP 419). Small off-road engine (gas lawn equipment) rules.",
+      "access": "blocked",
+      "added": "2026-11-18"
+    }
+  ],
+  "queries": [
+    "lawn ordinance",
+    "weed ordinance fine",
+    "grass height ordinance",
+    "HOA native plants law",
+    "HOA lawn requirement law",
+    "native landscaping bill",
+    "turf removal rebate",
+    "nonfunctional turf ban",
+    "gas leaf blower ban",
+    "gas lawn mower ban",
+    "lawn watering restrictions",
+    "lawn pesticide ban",
+    "No Mow May",
+    "lawn to meadow conversion",
+    "artificial turf ban",
+    "lawn care industry"
+  ]
+}

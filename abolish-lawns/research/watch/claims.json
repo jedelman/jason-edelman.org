@@ -1,0 +1,40 @@
+{
+  "claims": [
+    {
+      "id": "alexandria-gas-leaf-blower-ban",
+      "statement": "Alexandria, Virginia issues citations for gas-powered leaf blower use by residents and contractors from November 17, 2026.",
+      "topic": "equipment",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://www.alexandriava.gov/environmental-quality/leaf-blower-ordinance",
+          "publisher": "City of Alexandria",
+          "origin": "City of Alexandria",
+          "date": null,
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "Effective November 17, 2026, citations for use of gas-powered leaf blowers will be issued for residents and contractors.",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    },
+    {
+      "id": "mowed-lawns-less-biodiverse-than-meadows",
+      "statement": "Frequently mowed lawns generally support lower plant biodiversity and provide less value for wildlife than meadows.",
+      "topic": "ecology",
+      "first_seen": "2026-11-18",
+      "sources": [
+        {
+          "url": "https://link.springer.com/article/10.1007/s11252-026-02083-4",
+          "publisher": "Urban Ecosystems (Springer)",
+          "origin": "Norbert Müller and Maria Ignatieva",
+          "date": "2026-11-10",
+          "seen": "2026-11-18",
+          "stance": "asserts",
+          "quote": "Due to the high cutting frequency, lawns generally support lower plant biodiversity and provide less value for wildlife than meadows.",
+          "verified": "2026-11-18T16:57:06.088Z"
+        }
+      ]
+    }
+  ]
+}
