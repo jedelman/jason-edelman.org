@@ -51,6 +51,11 @@ main p { max-width: 72ch; }
 .w-analysis blockquote { border-left: 3px solid var(--acid-dim); padding-left: var(--space-4); font-style: italic; margin: 0 0 var(--space-4); }
 .w-legend { font-size: var(--text-sm); color: var(--text-secondary); padding-top: var(--space-4); }
 .w-pager { display: flex; justify-content: space-between; gap: var(--space-4); padding-top: var(--space-8); font-family: var(--font-display); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.w-flag { display: inline-block; font-family: var(--font-display); font-size: var(--text-xs); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 0 6px; border: 1px dashed var(--border-heavy); color: var(--text-secondary); border-radius: 2px; vertical-align: .1em; }
+.w-unrelated { font-size: var(--text-sm); color: var(--text-secondary); margin-bottom: var(--space-3); }
+.w-item--unrelated { opacity: .85; }
+.w-group--unrelated { border-top: 1px dashed var(--border-heavy); }
+.w-request { padding: var(--space-4) 0; border-bottom: 1px solid var(--border); }
 q { font-style: italic; }
 		</style>
 	</head>
@@ -73,6 +78,7 @@ q { font-style: italic; }
 
 <article class="w-item">
   <h3>Alexandria, Va.: the gas leaf blower ban is in force, with citations from November 17</h3>
+  
   <p class="w-src"><a href="https://www.alexandriava.gov/environmental-quality/leaf-blower-ordinance">City of Alexandria</a> · government</p>
   <blockquote class="w-quote">Effective November 17, 2026, citations for use of gas-powered leaf blowers will be issued for residents and contractors.</blockquote>
   <p class="w-note">Gas lawn equipment's emissions are one of the costs the site's infographic counts; here a city has banned one kind of it.</p>
@@ -81,6 +87,7 @@ q { font-style: italic; }
 
 <article class="w-item">
   <h3>Review of the German Lawn Research Project: frequently mowed lawns support less plant diversity and wildlife value than meadows</h3>
+  
   <p class="w-src"><a href="https://link.springer.com/article/10.1007/s11252-026-02083-4">Urban Ecosystems (Springer)</a> · origin: Norbert Müller and Maria Ignatieva · academic · 2026-11-10</p>
   <blockquote class="w-quote">Due to the high cutting frequency, lawns generally support lower plant biodiversity and provide less value for wildlife than meadows.</blockquote>
   <p class="w-note">Bears on the backlog's &quot;Lawns support almost no insect life&quot;: a peer-reviewed review on plants and wildlife value generally, not insects specifically.</p>
