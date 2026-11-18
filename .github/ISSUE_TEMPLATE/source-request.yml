@@ -1,7 +1,7 @@
 name: Source request (research watch)
 description: Ask the Mithlond research watch to find, check or keep watching a source.
 title: "[source request] "
-labels: ["source-request"]
+labels: ["source-requests"]
 body:
   - type: markdown
     attributes:
