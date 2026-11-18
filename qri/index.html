@@ -1,42 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const qriDir = path.join(__dirname, '..', 'qri');
-const rendersDir = path.join(qriDir, 'renders');
-const qriOutDir = path.join(__dirname, '..', 'qri');
-
-// Find latest System_Doc files
-const files = fs.readdirSync(rendersDir);
-const pdfFile = files.find(f => f.startsWith('QRI_System_Doc') && f.endsWith('.pdf'));
-const htmlFile = files.find(f => f.startsWith('QRI_System_Doc') && f.endsWith('.html'));
-
-if (!pdfFile || !htmlFile) {
-  console.error('Error: No QRI_System_Doc files found in renders/');
-  process.exit(1);
-}
-
-const pdfPath = path.join(rendersDir, pdfFile);
-const htmlPath = path.join(rendersDir, htmlFile);
-
-// Symlink or copy latest renders
-const targetPdf = path.join(qriOutDir, 'system-doc.pdf');
-const targetHtml = path.join(qriOutDir, 'system-doc.html');
-
-if (fs.existsSync(targetPdf)) fs.unlinkSync(targetPdf);
-if (fs.existsSync(targetHtml)) fs.unlinkSync(targetHtml);
-
-try {
-  fs.symlinkSync(pdfPath, targetPdf, 'file');
-  fs.symlinkSync(htmlPath, targetHtml, 'file');
-} catch (e) {
-  fs.copyFileSync(pdfPath, targetPdf);
-  fs.copyFileSync(htmlPath, targetHtml);
-}
-
-// Generate index.html
-const indexHtml = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -204,10 +166,4 @@ const indexHtml = `<!DOCTYPE html>
 
   </main>
 </body>
-</html>`;
-
-fs.writeFileSync(path.join(qriOutDir, 'index.html'), indexHtml);
-console.log('✓ ORI build complete');
-console.log('  - Symlinked latest PDF:', pdfFile);
-console.log('  - Symlinked latest HTML:', htmlFile);
-console.log('  - Generated index.html');
+</html>

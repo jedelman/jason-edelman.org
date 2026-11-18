@@ -1,0 +1,211 @@
+# ORI System Design Parameters
+# RULE: Every entry MUST have an explicit rationale.
+# Rationale must reference either a physics derivation, experimental data,
+# or a constraint from architecture. No arbitrary numbers.
+# Stale entries from retracted architectures (LiNbO3 MZM, Glass Brain interposer)
+# have been removed. See architecture.md for full derivation chain.
+
+[optical]
+wavelength_nm = 850
+# Rationale: GaAs VCSEL OTS maturity at 850nm. PTR glass transparent 300-3000nm.
+# Si PD responsivity ~0.6 A/W at 850nm. 532nm write / 850nm infer wavelength isolation
+# is physics-grounded: sigma_r(850nm) ~= 0 in PTR glass (EXP-2 open assumption).
+# ARCH-1 locked.
+
+[resonator]
+geometry = "Fabry-Perot"
+# Rationale: Simplest geometry with well-characterized standing-wave modes.
+# Retroreflection naturally implements the u_{t-1} term in the wave equation RNN (eq. 1.2).
+# Hughes 2019 exact mapping applies directly. ARCH-1 locked.
+
+medium = "PTR_glass"
+# Rationale: Non-volatile holographic weight storage. Delta_n(x,y) = trained weight grating.
+# Thermally fixed after 532nm development. Transparent at 850nm. sigma_r(850nm) ~= 0 gives
+# read/write wavelength isolation without rate/overlap tradeoffs.
+# Psaltis 1990 + Glebov 2010. ARCH-1 locked.
+
+cavity_length_L_mm = 20
+# Rationale: Sets round-trip time tau = 2L/c = 133 ps.
+# T_coh = c / (2L * delta_nu) = 750 round trips at SM-VCSEL linewidth delta_nu = 10 MHz.
+# T_op = 100 << T_coh = 750: coherent regime confirmed.
+# Token throughput = 1/(T * tau) = 75M tok/s. ARCH-4 locked.
+
+mirror_reflectivity_R = 0.9990
+# Rationale: Practical dielectric HR at 850nm. Finesse = pi*sqrt(R)/(1-R) ~= 3140.
+# Round-trip loss = 0.023 dB. Drives SNR budget over T=100 round trips.
+# ARCH-5 locked.
+
+round_trips_T = 100
+# Rationale: T_op derived from intersection of two constraints:
+#   (1) Coherence: T << T_coh = 750 (SM-VCSEL, L=20mm)
+#   (2) SNR budget: cumulative round-trip loss over T=100 leaves 2 dB margin above 38 dB target
+# T=100 satisfies both. See theory_derivations.md §1.3. ARCH-5 locked.
+
+finesse = 3140
+# Rationale: Derived from R=0.9990: F = pi*sqrt(R)/(1-R). Informational — not independently set.
+
+[spatial]
+modes_N = 512
+# Rationale: Target embedding dimension. One mode per embedding component.
+# Hermite-Gaussian basis at 850nm, 50um mode spacing, 2.5mm aperture -> 529 modes available.
+# ARCH-3 locked.
+
+pixel_pitch_um = 50
+# Rationale: Conservative choice well above diffraction limit (lambda/2 = 0.425um).
+# Mode-matched detector pixel pitch <=50um required for field-basis readout.
+# ARCH-3 / theory_derivations.md §3 locked.
+
+aperture_mm = 2.5
+# Rationale: 23x23 = 529 modes >= 512 at 50um spacing -> 1.15mm minimum.
+# 2.5mm gives 2x margin for alignment tolerance. PTR plate is 10x10x0.5mm.
+# ARCH-3 locked.
+
+ptr_plate_mm = "10x10x0.5"
+# Rationale: Standard PTR glass substrate. Aperture (2.5mm) fits with margin.
+# Thickness 0.5mm sets grating depth and coupling tensor integral bounds.
+# ARCH-2 locked.
+
+[snr]
+target_snr_dB = 38.0
+# Rationale: 6-bit inference precision requires SNR >= 6.02*6 + 1.76 = 37.9 dB.
+# Rounded to 38.0 dB. Dettmers 2022, Frantar 2022. ARCH-5 locked.
+
+achieved_snr_dB = 40.0
+# Rationale: Noise budget closure with R=0.9990, T=100, 512 modes, rank-50 baseline.
+# 2 dB margin above 38 dB target. Gates rank ceiling and scaling decisions.
+# ARCH-5 locked.
+
+snr_margin_dB = 2.0
+# Rationale: achieved - target. Fundamental constraint for all scaling decisions.
+# Rank ceiling, NARG parallelism, ptychography feasibility all reduce to this margin.
+
+[weights]
+encoding = "permanent_holographic_PTR"
+# Rationale: Ephemeral LiNbO3 MZM approach retracted. 0.1 dB/pass * 100 passes = 10 dB loss
+# consumes entire SNR budget by deterministic arithmetic. PTR permanent holography is the
+# only viable weight encoding scheme given the SNR constraint. ARCH locked.
+
+write_wavelength_nm = 532
+# Rationale: PTR glass photosensitivity peak ~532nm. sigma_r(850nm) ~= 0 gives isolation.
+# Only scheme grounded in a physics argument (not rate/overlap tradeoff). EXP-2 validates.
+
+training = "in_situ_mandatory"
+# Rationale: Sub-wavelength manufacturing imprecision compounds over T=100 round trips.
+# Weight translation from digital simulation to physical cavity is fundamentally infeasible.
+# In-situ training is a physical necessity, not a design choice. ARCH locked.
+
+[rank]
+baseline = 50
+# Rationale: Safe operating point. SNR margin >= 2 dB confirmed at rank-50.
+# 1.254M parameters per expert module (differential encoding, 512 modes, rank-50).
+
+production_target = 100
+# Rationale: 1-2% accuracy loss vs baseline. SNR margin tighter but within budget.
+# Gated on EXP-6 (LiNbO3 MZM insertion loss) confirming rank-100 SNR margin.
+
+ceiling = 200
+# Rationale: All SNR margins consumed. Not recommended for production.
+
+params_per_expert = 1254000
+# Rationale: Differential encoding (x_i = x_i_plus - x_i_minus on two spatial modes,
+# input layer only). Corrected from earlier 1.23M estimate after differential encoding fix.
+# Derivation: theory_derivations.md §4. ARCH locked.
+
+[throughput]
+tokens_per_second = 75000000
+# Rationale: 1/(T * tau) = 1/(100 * 133ps) = 75M tok/s. ARCH-4 locked.
+
+round_trip_time_ps = 133
+# Rationale: tau = 2L/c = 2*0.020/3e8 = 133 ps at L=20mm. ARCH-4 locked.
+
+[training_cycle]
+furnace_development_min = 30
+# Rationale: PTR glass 532nm exposure + furnace development cycle dominates training
+# cost per epoch — not optical exposure time. At 75M tok/s, enables massive training
+# corpora per furnace cycle.
+
+[activation]
+mechanism = "VCSEL_threshold_intensity"
+# Rationale: ReLU on intensity via VCSEL threshold nonlinearity.
+# Kerr SPM proven negligible at operating intensity (~1e-15 rad/pass).
+# ARCH-9 retracted (Kerr SPM). ARCH-10 locked.
+
+[scaling]
+strategy = "clone_and_fine_tune"
+# Rationale: ARCH-17. Trained gratings encode W plus cavity-specific corrections.
+# Cloning transfers W approximately; fine-tuning corrects cavity mismatch in fewer
+# cycles than full training from scratch. Lab validation pending (EXP-7 Phase B).
+
+[open]
+# Parameters genuinely TBD — pending experiments or future architecture decisions.
+# Do not insert placeholder values here.
+
+ptr_chi3_at_850nm = "TBD — EXP-1"
+# Required to confirm Kerr SPM negligibility at production intensity.
+
+two_wavelength_photosensitivity = "TBD — EXP-2"
+# sigma_r(850nm) ~= 0 assumption. Critical for write/read wavelength isolation.
+
+thermal_lensing_dn_dT = "TBD — EXP-4"
+# dn/dT under intra-cavity CW power. Affects mode stability at T=100.
+
+kinematic_mount_reinstallation_um = "TBD — EXP-8"
+# Actual reinstallation precision: ~1um. Required: ~212nm. Engineering gap not yet closed.
+
+model_layer_count = "TBD — depends on target model"
+model_target_params = "TBD — depends on target model"
+system_power_W = "TBD — post Phase 1 experiments"
+
+[t1_architecture]
+# T=1 single-pass feedforward mode — alternative to T=100 RNN inference.
+# Each cavity performs one holographic matrix-vector multiply; depth comes
+# from stacking cavities with SOA inter-stage amplification, not recirculation.
+# Derived 2026-05-08. See theory_derivations.md §7.
+
+inter_stage_amplifier = "GaAs_AlGaAs_SOA_850nm"
+# Rationale: EDFAs operate at 1530-1625nm (fixed by Er atomic physics — not
+# tunable to 850nm). GaAs/AlGaAs SOAs are commercially available at 780-870nm
+# (Thorlabs, Innolume). Gain ~20-30dB, NF ~6-8dB, saturation power ~10mW.
+# SOA NF adds to inter-stage SNR budget but does not consume it at T=1 since
+# per-stage loss is 0.023dB vs 2.3dB accumulated over T=100 round trips.
+
+ptr_plate_thickness_t1_mm = 2.0
+# Rationale: At T=1, rank is grating-capacity-limited (not SNR-limited).
+# Binding constraint is dynamic range: R = (π·Δn_max·d/λ) / sqrt(η_threshold)
+# with η_threshold = 0.01 (1% min diffraction efficiency for 38dB readout SNR).
+# d=0.5mm → R=92; d=2.0mm → R=370; d=5.0mm → R=924.
+# 2.0mm chosen as conservative step: R=370 > T=100 rank-100 production target,
+# absorption loss negligible (0.017dB), PTR glass available at this thickness.
+# Full derivation: theory_derivations.md §7.
+
+rank_t1_at_2mm = 370
+# Rationale: min(R_angular=438, R_dynamic=370) at d=2mm.
+# R_angular = 2·NA·n₀·d/λ = 2×0.0625×1.49×2e-3/850e-9 = 438 (Mok 1993)
+# R_dynamic = (π·Δn_max·d/λ)/sqrt(η_threshold) = 370 (Psaltis 1994)
+# Dynamic range is binding. η_per_grating = 1.0% at R=370.
+
+rank_t1_at_0p5mm = 92
+# Rationale: Current PTR plate geometry. R_dynamic=92 at d=0.5mm.
+# Still exceeds T=100 rank-50 baseline, but below rank-100 production target.
+# 0.5mm plate insufficient for T=1 production use — upgrade to 2mm required.
+
+eta_threshold_t1 = 0.01
+# Rationale: 1% minimum diffraction efficiency per hologram ensures signal
+# at readout detector exceeds noise floor for 38dB SNR target.
+# Conservative lower bound — actual threshold depends on detector NEP and
+# intra-cavity power (EXP open).
+
+snr_margin_t1_dB = ">>2"
+# Rationale: At T=1, cumulative round-trip loss = 0.023dB (vs 2.3dB at T=100).
+# Essentially the entire SNR budget is preserved for spatial mode capacity.
+# Inter-stage SOA NF ~7dB adds noise at each stage boundary — this is the
+# binding SNR constraint for multi-stage T=1 FFN, not intra-cavity loss.
+# Full multi-stage SNR budget TBD (EXP open).
+
+t1_sequence_modeling = "none"
+# Rationale: At T=1, each token is processed independently. No hidden state
+# h_t persists across tokens — the RNN temporal dynamics require T>>1.
+# T=1 implements a feedforward layer, not a sequence model.
+# Implication: T=1 cavities cannot replace T=100 RNN for autoregressive
+# inference. Role is FFN layers within a hybrid architecture, or
+# single-pass associative retrieval tasks.

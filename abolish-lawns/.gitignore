@@ -1,0 +1,11 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Python (zines/, polemic/)
+__pycache__/
+*.pyc
+
+# Env
+.env
+.env.*

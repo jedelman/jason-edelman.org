@@ -1,0 +1,353 @@
+{
+  "version": "0.1",
+  "domain": "lawns",
+  "title": "The Lawn Debate: Abolition vs. Preservation",
+  "description": "A complete debate map of arguments for and against residential lawns in America",
+  "participants": [
+    {
+      "name": "abolitionist",
+      "role": "advocate",
+      "position": "Lawns should be abolished through policy and social change"
+    },
+    {
+      "name": "preservationist",
+      "role": "opponent",
+      "position": "Lawns provide value and should remain"
+    }
+  ],
+  "metadata": {
+    "created": "2025-04-30",
+    "last_updated": "2025-04-30",
+    "source": "abolish-lawns.org"
+  },
+  "facts": [
+    {
+      "id": "fact_water_001",
+      "domain": "water",
+      "assertion": "US lawn irrigation consumes 2.9 trillion gallons annually",
+      "source": "EPA WaterSense Program",
+      "verified": true
+    },
+    {
+      "id": "fact_water_002",
+      "domain": "water",
+      "assertion": "Lawn irrigation is 8-9 billion gallons per day",
+      "source": "EPA WaterSense Program",
+      "verified": true
+    },
+    {
+      "id": "fact_water_003",
+      "domain": "water",
+      "assertion": "US public water supply is ~39 billion gallons per day",
+      "source": "USGS",
+      "verified": true
+    },
+    {
+      "id": "fact_water_004",
+      "domain": "water",
+      "assertion": "50% of lawn irrigation water is wasted through evaporation and runoff",
+      "source": "EPA WaterSense Program",
+      "verified": true
+    },
+    {
+      "id": "fact_land_001",
+      "domain": "land",
+      "assertion": "US lawn coverage is approximately 40 million acres",
+      "source": "Milesi et al. (2005), NASA/UCSB satellite data",
+      "verified": true
+    },
+    {
+      "id": "fact_land_002",
+      "domain": "land",
+      "assertion": "All US vegetables occupy roughly 4 million acres harvested",
+      "source": "USDA Census of Agriculture",
+      "verified": true
+    },
+    {
+      "id": "fact_ecology_001",
+      "domain": "ecology",
+      "assertion": "Lawns are monocultures that support minimal insect and wildlife life",
+      "source": "Ecological research consensus",
+      "verified": true
+    },
+    {
+      "id": "fact_ecology_002",
+      "domain": "ecology",
+      "assertion": "Lawns receive 3-9x more pesticide per acre than agricultural crops",
+      "source": "Beyond Pesticides, Pimentel et al.",
+      "verified": true
+    },
+    {
+      "id": "fact_law_001",
+      "domain": "law",
+      "assertion": "~45-49 million Americans live under HOA lawn governance",
+      "source": "Foundation for Community Association Research 2025",
+      "verified": true
+    },
+    {
+      "id": "fact_law_002",
+      "domain": "law",
+      "assertion": "Hundreds of municipalities have weed ordinances classifying unmowed grass as public nuisance",
+      "source": "City codes (varied jurisdictions)",
+      "verified": true
+    },
+    {
+      "id": "fact_economics_001",
+      "domain": "economics",
+      "assertion": "US landscaping industry revenue is ~$153 billion annually (2024)",
+      "source": "IBIS World / National Association of Landscape Professionals",
+      "verified": true
+    },
+    {
+      "id": "fact_economics_002",
+      "domain": "economics",
+      "assertion": "Water and sewer rates have risen 24% over five years",
+      "source": "Utility industry data",
+      "verified": true
+    },
+    {
+      "id": "fact_economics_003",
+      "domain": "economics",
+      "assertion": "50-70% of summer water bills go to lawn irrigation",
+      "source": "EPA WaterSense Program",
+      "verified": true
+    },
+    {
+      "id": "fact_comparison_001",
+      "domain": "comparison",
+      "assertion": "US data centers consume 17 billion gallons of water annually",
+      "source": "Lawrence Berkeley Lab",
+      "verified": true
+    },
+    {
+      "id": "fact_comparison_002",
+      "domain": "comparison",
+      "assertion": "Lawn water use is 170x greater than all US data centers",
+      "source": "Derived from EPA + LBL data",
+      "verified": true
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim_abol_001",
+      "speaker": "abolitionist",
+      "text": "Lawns are the largest irrigated land use in the United States",
+      "type": "empirical",
+      "confidence": 0.98,
+      "grounded_in": ["fact_land_001", "fact_land_002"]
+    },
+    {
+      "id": "claim_abol_002",
+      "speaker": "abolitionist",
+      "text": "Lawn irrigation consumes nearly 25% of all public water supply",
+      "type": "empirical",
+      "confidence": 0.95,
+      "grounded_in": ["fact_water_002", "fact_water_003"]
+    },
+    {
+      "id": "claim_abol_003",
+      "speaker": "abolitionist",
+      "text": "This water is wasted and could feed millions",
+      "type": "normative",
+      "confidence": 0.85,
+      "grounded_in": ["fact_water_004"]
+    },
+    {
+      "id": "claim_abol_004",
+      "speaker": "abolitionist",
+      "text": "Lawns are ecological wastelands with minimal wildlife value",
+      "type": "empirical",
+      "confidence": 0.90,
+      "grounded_in": ["fact_ecology_001"]
+    },
+    {
+      "id": "claim_abol_005",
+      "speaker": "abolitionist",
+      "text": "Lawn maintenance is enforced by law, not chosen freely",
+      "type": "empirical",
+      "confidence": 0.92,
+      "grounded_in": ["fact_law_001", "fact_law_002"]
+    },
+    {
+      "id": "claim_abol_006",
+      "speaker": "abolitionist",
+      "text": "The lawn is a system of land enclosure enforced by four legal mechanisms",
+      "type": "definitional",
+      "confidence": 0.88,
+      "grounded_in": ["fact_law_001", "fact_law_002"]
+    },
+    {
+      "id": "claim_abol_007",
+      "speaker": "abolitionist",
+      "text": "Lawns cost homeowners money through inflated water bills",
+      "type": "empirical",
+      "confidence": 0.90,
+      "grounded_in": ["fact_economics_002", "fact_economics_003"]
+    },
+    {
+      "id": "claim_pres_001",
+      "speaker": "preservationist",
+      "text": "Lawns provide essential green space for recreation and mental health",
+      "type": "normative",
+      "confidence": 0.75
+    },
+    {
+      "id": "claim_pres_002",
+      "speaker": "preservationist",
+      "text": "Lawns are beautiful and contribute to neighborhood aesthetics",
+      "type": "normative",
+      "confidence": 0.70
+    },
+    {
+      "id": "claim_pres_003",
+      "speaker": "preservationist",
+      "text": "Eliminating lawns would reduce property values",
+      "type": "empirical",
+      "confidence": 0.60
+    },
+    {
+      "id": "claim_pres_004",
+      "speaker": "preservationist",
+      "text": "Lawns are a matter of personal property rights and choice",
+      "type": "normative",
+      "confidence": 0.80
+    },
+    {
+      "id": "claim_pres_005",
+      "speaker": "preservationist",
+      "text": "Technology and efficiency improvements can address water use concerns",
+      "type": "hypothetical",
+      "confidence": 0.65
+    }
+  ],
+  "relations": [
+    {
+      "type": "entails",
+      "from": "fact_land_001",
+      "to": "claim_abol_001",
+      "strength": 1.0
+    },
+    {
+      "type": "entails",
+      "from": "fact_water_002",
+      "to": "claim_abol_002",
+      "strength": 0.95
+    },
+    {
+      "type": "supports",
+      "from": "fact_water_004",
+      "to": "claim_abol_003",
+      "strength": 0.90
+    },
+    {
+      "type": "entails",
+      "from": "fact_ecology_001",
+      "to": "claim_abol_004",
+      "strength": 0.95
+    },
+    {
+      "type": "entails",
+      "from": "fact_law_001",
+      "to": "claim_abol_005",
+      "strength": 0.90
+    },
+    {
+      "type": "supports",
+      "from": "fact_law_002",
+      "to": "claim_abol_005",
+      "strength": 0.85
+    },
+    {
+      "type": "entails",
+      "from": "claim_abol_002",
+      "to": "claim_abol_003",
+      "strength": 0.80
+    },
+    {
+      "type": "supports",
+      "from": "fact_economics_003",
+      "to": "claim_abol_007",
+      "strength": 0.88
+    },
+    {
+      "type": "contradicts",
+      "from": "claim_abol_003",
+      "to": "claim_pres_001",
+      "strength": 0.75
+    },
+    {
+      "type": "contradicts",
+      "from": "claim_abol_005",
+      "to": "claim_pres_004",
+      "strength": 0.85
+    },
+    {
+      "type": "weakens",
+      "from": "claim_abol_004",
+      "to": "claim_pres_002",
+      "strength": 0.70
+    },
+    {
+      "type": "weakens",
+      "from": "claim_abol_007",
+      "to": "claim_pres_001",
+      "strength": 0.65
+    },
+    {
+      "type": "presupposes",
+      "from": "claim_pres_003",
+      "to": "claim_abol_004",
+      "strength": 0.60
+    },
+    {
+      "type": "supports",
+      "from": "fact_comparison_002",
+      "to": "claim_abol_002",
+      "strength": 0.80
+    }
+  ],
+  "affects": [
+    {
+      "claim": "claim_abol_002",
+      "emotion": "shame",
+      "intensity": 0.85
+    },
+    {
+      "claim": "claim_abol_004",
+      "emotion": "disgust",
+      "intensity": 0.70
+    },
+    {
+      "claim": "claim_abol_005",
+      "emotion": "anger",
+      "intensity": 0.75
+    },
+    {
+      "claim": "claim_pres_001",
+      "emotion": "comfort",
+      "intensity": 0.80
+    },
+    {
+      "claim": "claim_pres_002",
+      "emotion": "pride",
+      "intensity": 0.70
+    }
+  ],
+  "stasis_candidates": [
+    {
+      "point": "Do lawns provide net benefit or net harm to society?",
+      "type": "quality",
+      "disagreement_level": 0.95
+    },
+    {
+      "point": "Are lawns a matter of individual choice or system enforcement?",
+      "type": "definition",
+      "disagreement_level": 0.90
+    },
+    {
+      "point": "Can water conservation and lawn maintenance coexist?",
+      "type": "conjecture",
+      "disagreement_level": 0.80
+    }
+  ]
+}

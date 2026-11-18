@@ -1,6 +1,0 @@
-[submodule "abolish-lawns"]
-	path = abolish-lawns
-	url = https://github.com/jedelman/abolish-lawns.git
-[submodule "qri"]
-	path = qri
-	url = https://github.com/jedelman/quantum-resonator-inference.git

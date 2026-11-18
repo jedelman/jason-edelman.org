@@ -5,24 +5,25 @@
  *   node scripts/build.mjs           build only what changed since the last build
  *   node scripts/build.mjs --clean   wipe public/ and build everything
  *
- * The site is a set of units: the root's static files and folders, the in-repo projects
- * (plain static HTML, copied whole: ghent-streets, mithlond, eastside-commons), and the
- * two submodules that have a build step (abolish-lawns, qri). Each unit gets a content
+ * The site is a set of units: the root's static files and folders, and the projects
+ * (plain static files, copied whole: abolish-lawns, ghent-streets, mithlond,
+ * eastside-commons, qri). Each unit gets a content
  * fingerprint. A unit whose fingerprint matches the last build's, and whose output is
  * still in public/, is left alone; a changed unit is rebuilt from scratch, so files it no
  * longer has disappear too. The state is kept in .build-cache/state.json (gitignored).
  *
- * A change to this script or to build-qri.mjs rebuilds everything. CI builds from a fresh
+ * A change to this script rebuilds everything. CI builds from a fresh
  * clone, so it always does a full build; wrangler uploads only changed assets anyway.
  * The sitemap, robots.txt, the deploy stamp and the manifest are rewritten every run.
  *
- * Monorepo since 2026-11-17: ghent-streets and mithlond were submodules; they now live
- * here with their history. Only projects with a build step stay submodules.
+ * Monorepo since 2026-11-17: ghent-streets and mithlond (11-17), then qri and
+ * abolish-lawns (11-18) were submodules; they now live here with their history, and
+ * none has a build step any more. buildCmd stays available for a project that needs one.
  */
 
 import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve, dirname, relative, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -54,18 +55,19 @@ const STATIC = [
   'llms.txt',
 ];
 
-// Projects, each served at /<name>/: { name, dir, buildCmd, outDir, required, ignore }
+// Projects, each served at /<name>/: { name, dir, buildCmd, outDir, required, ignore, after }
 //   buildCmd null: plain static HTML, copied whole (outDir '.').
 //   required: the build fails if the directory is missing (in-repo projects).
 //   ignore: paths, relative to dir, left out of the fingerprint: build outputs and
 //           files a build step writes back into its own source folder.
+//   after(src, dest): runs once the project is copied, writing only into dest (public/).
 const PROJECTS = [
   {
-    name: 'abolish-lawns',            // submodule, SvelteKit
+    name: 'abolish-lawns',            // in-repo since 2026-11-18 (was jedelman/abolish-lawns, SvelteKit)
     dir: 'abolish-lawns',
-    buildCmd: 'npm install && npm run build',
-    outDir: 'build',
-    ignore: ['build', '.svelte-kit'],
+    buildCmd: null,
+    outDir: 'site',                   // only site/ is served; data/, scripts/, zines/, polemic/ aren't
+    required: true,
   },
   {
     name: 'ghent-streets',            // in-repo since 2026-11-17 (was jedelman/ghent-zoning-reform)
@@ -89,11 +91,22 @@ const PROJECTS = [
     required: true,
   },
   {
-    name: 'qri',                      // submodule; build-qri.mjs picks the latest system doc render
+    name: 'qri',                      // in-repo since 2026-11-18 (was jedelman/quantum-resonator-inference)
     dir: 'qri',
-    buildCmd: 'node ../scripts/build-qri.mjs',
+    buildCmd: null,
     outDir: '.',
-    ignore: ['index.html', 'system-doc.html', 'system-doc.pdf'],
+    required: true,
+    // /qri/system-doc.{pdf,html}: the newest system doc render (the names carry dates).
+    // This was scripts/build-qri.mjs, which also wrote qri/index.html; that's a plain file now.
+    after: (src, dest) => {
+      const renders = readdirSync(join(src, 'renders')).sort();
+      for (const ext of ['pdf', 'html']) {
+        const latest = renders.filter(f => f.startsWith('QRI_System_Doc_') && f.endsWith(`.${ext}`)).pop();
+        if (!latest) throw new Error(`qri: no renders/QRI_System_Doc_*.${ext}`);
+        cpSync(join(src, 'renders', latest), join(dest, `system-doc.${ext}`));
+        console.log(`   system-doc.${ext} ← renders/${latest}`);
+      }
+    },
   },
 ];
 
@@ -133,7 +146,7 @@ function fingerprint(absPath, ignore = []) {
 }
 
 // A change to the build itself invalidates every unit.
-const BUILD_KEY = fingerprint(resolve(ROOT, 'scripts/build.mjs')) + fingerprint(resolve(ROOT, 'scripts/build-qri.mjs'));
+const BUILD_KEY = fingerprint(resolve(ROOT, 'scripts/build.mjs'));
 
 let state = { key: null, units: {} };
 try { state = JSON.parse(readFileSync(STATE, 'utf8')); } catch { /* first run, or no cache */ }
@@ -179,7 +192,7 @@ for (const project of PROJECTS) {
   let entries = [];
   try { entries = readdirSync(projectDir).filter(e => e !== '.git'); } catch { /* missing */ }
   if (entries.length === 0) {
-    console.log(`\n⚠️  Skipping ${project.name} — directory empty or missing (submodule not checked out)`);
+    console.log(`\n⚠️  Skipping ${project.name} — directory empty or missing`);
     rmSync(destDir, { recursive: true, force: true });
     continue;
   }
@@ -200,6 +213,7 @@ for (const project of PROJECTS) {
                !rel.startsWith('/.wrangler');
       }
     });
+    project.after?.(projectDir, destDir);
   });
 }
 
@@ -250,12 +264,10 @@ function collectHtml(dir, files = []) {
  * CI (Workers Builds) clones shallow, so `git log` ends at a boundary commit that seems
  * to add every file it holds. A path whose newest commit is a boundary commit has an
  * unknown date: it's left out of the map, and its sitemap entry gets no <lastmod>
- * (optional in the protocol, and better absent than wrong). `newest` is the date of the
- * newest commit, which a shallow clone still has right.
+ * (optional in the protocol, and better absent than wrong).
  */
 function gitDates(cwd) {
   const map = new Map();
-  let newest = null;
   try {
     const run = (cmd) => execSync(cmd, { cwd, encoding: 'utf8', maxBuffer: 512 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] });
     let boundary = new Set();
@@ -269,22 +281,20 @@ function gitDates(cwd) {
         const [sha, iso] = line.slice(1).split(' ');
         date = iso.slice(0, 10);
         cut = boundary.has(sha);
-        newest = newest || date;
       } else if (line && date && !seen.has(line)) {
         seen.add(line);
         if (!cut) map.set(line, date);
       }
     }
   } catch { /* not a git checkout */ }
-  return { map, newest };
+  return map;
 }
 const repoDates = gitDates(ROOT);
-const subDates = Object.fromEntries(PROJECTS.filter(p => existsSync(resolve(ROOT, p.dir, '.git'))).map(p => [p.name, gitDates(resolve(ROOT, p.dir))]));
 
 /**
  * The last-modified date of a public file: the last commit that touched its source.
- * Pages a build step generates in a submodule (no source file of the same path) get
- * their submodule's newest commit. Anything else is unknown (null: no <lastmod>).
+ * A file with no source of the same path (qri's system-doc aliases) is unknown
+ * (null: no <lastmod>).
  */
 function lastmod(absPath) {
   const rel = relative(PUBLIC, absPath).replace(/\\/g, '/');
@@ -292,15 +302,9 @@ function lastmod(absPath) {
   const project = PROJECTS.find(p => p.name === top);
   if (project) {
     const inner = join(project.outDir, rest.join('/')).replace(/\\/g, '/');
-    const sub = subDates[project.name];
-    if (sub) {
-      if (sub.map.has(inner)) return sub.map.get(inner);
-      const tracked = execSync(`git ls-files -- "${inner}"`, { cwd: resolve(ROOT, project.dir), encoding: 'utf8' }).trim();
-      return tracked ? null : sub.newest;   // a tracked file of unknown date stays unknown
-    }
-    return repoDates.map.get(`${project.dir}/${inner}`) || null;
+    return repoDates.get(`${project.dir}/${inner}`) || null;
   }
-  return repoDates.map.get(rel) || null;
+  return repoDates.get(rel) || null;
 }
 
 /**

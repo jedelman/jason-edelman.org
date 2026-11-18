@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="text-scale" content="scale" />
+		<link rel="icon" href="./favicon.svg" />
+		<meta name="theme-color" content="#0d1a0d" media="(prefers-color-scheme: dark)" />
+		<meta name="theme-color" content="#f5f7f3" media="(prefers-color-scheme: light)" />
+		<link rel="stylesheet" href="./app.css" />
+		<title>Abolish Lawns — Bibliography</title>
+		<meta name="description" content="Sources, citations, and research status for Abolish Lawns." />
+		<style>
+main {
+	max-width: 1100px;
+	margin: 0 auto;
+	padding: 0 var(--space-6);
+}
+
+.masthead { padding: var(--space-12) 0 var(--space-8); }
+
+.kicker { display: flex; gap: var(--space-4); margin-bottom: var(--space-4); }
+
+.label {
+	font-family: var(--font-display);
+	font-size: var(--text-sm);
+	font-weight: 600;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+	color: var(--text-secondary);
+}
+
+.page-title {
+	font-family: var(--font-display);
+	font-size: clamp(3rem, 7vw, 6rem);
+	font-weight: 900;
+	line-height: .92;
+	letter-spacing: -.02em;
+	text-transform: uppercase;
+	color: var(--ink);
+	margin: var(--space-6) 0;
+}
+
+.deck {
+	font-size: var(--text-lg);
+	line-height: 1.6;
+	max-width: 68ch;
+	margin-top: var(--space-6);
+	color: var(--text-primary);
+}
+
+.section { padding: var(--space-12) 0; border-top: 1px solid var(--border); }
+
+.section--alert {
+	border-top: none;
+	background: var(--bg-raised);
+	margin: 0 calc(-1 * var(--space-6));
+	padding: var(--space-8) var(--space-6);
+	border-bottom: 1px solid var(--border);
+}
+
+.section__header {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-4);
+	margin-bottom: var(--space-4);
+}
+
+.section__number {
+	font-family: var(--font-display);
+	font-size: var(--text-sm);
+	font-weight: 600;
+	letter-spacing: .1em;
+	color: var(--acid-dim);
+	text-transform: uppercase;
+}
+
+.section__title {
+	font-family: var(--font-display);
+	font-size: clamp(1.5rem, 3vw, 2.25rem);
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.prose { margin-top: var(--space-6); display: flex; flex-direction: column; gap: var(--space-3); }
+.prose p { color: var(--text-secondary); max-width: 72ch; font-size: var(--text-sm); }
+
+/* ── Refs ─── */
+.ref-list { margin-top: var(--space-8); display: flex; flex-direction: column; }
+
+.ref {
+	display: grid;
+	grid-template-columns: 160px 1fr;
+	gap: var(--space-6);
+	padding: var(--space-6) 0;
+	border-bottom: 1px solid var(--border);
+	align-items: start;
+}
+
+.ref:last-child { border-bottom: none; }
+
+.ref--todo { grid-template-columns: 1fr; opacity: .7; }
+
+.ref__meta {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+	align-items: flex-start;
+	padding-top: 2px;
+}
+
+.ref__year {
+	font-family: var(--font-display);
+	font-size: var(--text-sm);
+	font-weight: 600;
+	color: var(--text-tertiary);
+	letter-spacing: .04em;
+}
+
+.ref__body { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.ref__authors {
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
+	font-weight: 500;
+	max-width: none;
+}
+
+.ref__title {
+	font-size: var(--text-base);
+	font-weight: 700;
+	color: var(--ink);
+	max-width: none;
+}
+
+.ref__title a {
+	color: var(--ink);
+	text-decoration-color: var(--acid);
+}
+
+.ref__source {
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
+	font-style: italic;
+	max-width: none;
+}
+
+.ref__notes {
+	font-size: var(--text-sm);
+	color: var(--text-secondary);
+	line-height: 1.6;
+	max-width: 70ch;
+	border-left: 2px solid var(--border);
+	padding-left: var(--space-4);
+	margin-top: var(--space-2);
+}
+
+.ref__claims {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2);
+	margin-top: var(--space-2);
+}
+
+/* ── Badges ─── */
+.badge {
+	font-family: var(--font-display);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: .08em;
+	text-transform: uppercase;
+	padding: 2px 6px;
+	display: inline-block;
+}
+
+.badge--type { background: var(--bg-raised); color: var(--text-secondary); }
+.badge--verified { background: oklch(88% 0.12 128); color: oklch(25% 0.1 128); }
+.badge--watch { background: oklch(93% 0.12 75); color: oklch(30% 0.12 75); }
+.badge--update { background: oklch(90% 0.10 20); color: oklch(30% 0.12 20); }
+.badge--needs-update { background: oklch(90% 0.10 20); color: oklch(30% 0.12 20); }
+
+.claim-tag {
+	font-size: var(--text-xs);
+	color: var(--text-tertiary);
+	background: var(--bg-raised);
+	padding: 2px 6px;
+	font-family: var(--font-display);
+	letter-spacing: .05em;
+}
+
+.back {
+	padding: var(--space-8) 0 var(--space-12);
+	font-family: var(--font-display);
+	font-weight: 600;
+	font-size: var(--text-sm);
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+
+@media (max-width: 640px) {
+	.ref { grid-template-columns: 1fr; gap: var(--space-3); }
+	.ref__meta { flex-direction: row; flex-wrap: wrap; }
+}
+
+@media print {
+	.ref__notes { border-left: 1pt solid black; }
+}
+		</style>
+	</head>
+	<body>
+
+<main>
+
+	<header class="masthead">
+		<div class="kicker">
+			<span class="label">Reference Library</span>
+		</div>
+		<hr class="rule rule--acid" />
+		<h1 class="page-title">Bibliography</h1>
+		<hr class="rule" />
+		<p class="deck">
+			All claims on this site are sourced. This page documents every reference,
+			its evidentiary status, and known limitations. Entries marked
+			<span class="badge badge--watch">Use with care</span> are used cautiously;
+			entries marked <span class="badge badge--update">Needs update</span> flag
+			corrections needed in the site text.
+		</p>
+	</header>
+
+	<!-- generated:bibliography (abolish-lawns/scripts/bibliography.mjs) -->
+	<section class="section section--alert">
+		<div class="section__header">
+			<span class="section__number">⚠</span>
+			<h2 class="section__title">Known corrections needed</h2>
+		</div>
+		<hr class="rule rule--thin" />
+		<div class="prose">
+			<p><strong>epa-watersense-outdoor</strong> — EPA states residential outdoor water use = "nearly 8 billion gallons per day, mainly for landscape irrigation."</p>
+			<p><strong>nalp-industry-stats-2025</strong> — IBIS World estimates landscaping services market size at $188.8B in 2025.</p>
+			<p><strong>cai-factbook-2025</strong> — Most current figure: 78.1 million residents in community associations (HOAs, condominiums, cooperatives).</p>
+			<p><strong>todo-weed-ordinances</strong> — The manifesto states "hundreds of American municipalities" have weed ordinances.</p>
+			<p><strong>todo-buffalo-scholar</strong> — Pollan describes this case in 1989 as ongoing.</p>
+			<p><strong>todo-lawn-satisfaction</strong> — The manifesto states "survey after survey finds homeowners describe lawn maintenance as a chore."</p>
+		</div>
+	</section>
+
+	<section class="section">
+		<div class="section__header">
+			<span class="section__number">§</span>
+			<h2 class="section__title">Sources (29)</h2>
+		</div>
+		<hr class="rule rule--thin" />
+
+		<div class="ref-list">
+			<div class="ref" id="milesi-2005">
+				<div class="ref__meta">
+					<span class="badge badge--type">Peer-reviewed</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2005</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Milesi, Cristina, Running, Steven W., Elvidge, Christopher D., Feddema, Johannes J., Nemani, Ramakrishna R.</p>
+					<p class="ref__title"><a href="https://doi.org/10.1007/s00267-004-0316-2" target="_blank" rel="noopener noreferrer">Mapping and Modeling the Biogeochemical Cycling of Turf Grasses in the United States</a></p>
+					<p class="ref__source">Environmental Management, 36(3): 426–438</p>
+					<p class="ref__notes">Satellite-derived estimate: ~163,812 km² (±35,850 km²) = ~40.5 million acres. This is the primary peer-reviewed source for the "larger than any irrigated crop" claim. The estimate is for all turf grass including golf courses, parks, roadsides — not just residential lawns. Total including non-irrigated may be higher.</p>
+					<div class="ref__claims"><span class="claim-tag">Total US lawn acreage estimate</span><span class="claim-tag">Lawns exceed any single irrigated food crop</span></div>
+				</div>
+			</div>
+			<div class="ref" id="cdc-turfgrass-2003">
+				<div class="ref__meta">
+					<span class="badge badge--type">Peer-reviewed</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2003</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Milesi, Cristina, Elvidge, Christopher D., Dietz, James B., Tuttle, Benjamin T., Nemani, Ramakrishna R., Running, Steven W.</p>
+					<p class="ref__title"><a href="https://legacy.geog.ucsb.edu/the-lawn-is-the-largest-irrigated-crop-in-the-usa/" target="_blank" rel="noopener noreferrer">A strategy for mapping and modeling the ecological effects of US lawns</a></p>
+					<p class="ref__source">Journal of Turfgrass and Sports Surface Science, 81: 10–19</p>
+					<p class="ref__notes">Earlier version of the Milesi et al. analysis; same research group. UCSB hosted summary confirms "three times larger than any irrigated crop."</p>
+					<div class="ref__claims"><span class="claim-tag">Total US lawn acreage estimate</span><span class="claim-tag">Lawns exceed any single irrigated food crop</span></div>
+				</div>
+			</div>
+			<div class="ref" id="epa-watersense-outdoor">
+				<div class="ref__meta">
+					<span class="badge badge--type">Government</span>
+					<span class="badge badge--needs-update">Needs update</span>
+					<span class="ref__year">2023</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">U.S. Environmental Protection Agency</p>
+					<p class="ref__title"><a href="https://www.epa.gov/watersense/outdoors" target="_blank" rel="noopener noreferrer">Outdoors — WaterSense</a></p>
+					<p class="ref__source">U.S. EPA WaterSense Program</p>
+					<p class="ref__notes">EPA states residential outdoor water use = "nearly 8 billion gallons per day, mainly for landscape irrigation." An earlier EPA WaterSense page cited "nearly 9 billion gallons per day." The current figure is ~8B gpd for all residential outdoor use; lawn irrigation is a subset of this. The manifesto's "3 billion gallons" figure appears to be outdated or mis-sourced — the actual EPA figure is substantially higher. NEEDS CORRECTION.</p>
+					<div class="ref__claims"><span class="claim-tag">Daily water used for lawn/landscape irrigation</span></div>
+				</div>
+			</div>
+			<div class="ref" id="epa-watersense-stats">
+				<div class="ref__meta">
+					<span class="badge badge--type">Government</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2024</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">U.S. Environmental Protection Agency</p>
+					<p class="ref__title"><a href="https://www.epa.gov/watersense/statistics-and-facts" target="_blank" rel="noopener noreferrer">Statistics and Facts — WaterSense</a></p>
+					<p class="ref__source">U.S. EPA WaterSense Program</p>
+					<p class="ref__notes">States landscape irrigation accounts for "nearly one-third of all residential water use, totaling nearly 9 billion gallons per day." Also notes up to 50% of irrigation water is wasted due to inefficiency.</p>
+					<div class="ref__claims"><span class="claim-tag">Daily water used for lawn/landscape irrigation</span><span class="claim-tag">Percentage of irrigation water wasted</span></div>
+				</div>
+			</div>
+			<div class="ref" id="beyond-pesticides-factsheet">
+				<div class="ref__meta">
+					<span class="badge badge--type">Advocacy org</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">2005</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Beyond Pesticides</p>
+					<p class="ref__title"><a href="https://www.beyondpesticides.org/assets/media/documents/lawn/factsheets/LAWNFACTS&amp;FIGURES_8_05.pdf" target="_blank" rel="noopener noreferrer">Lawn Pesticide Facts and Figures</a></p>
+					<p class="ref__source">Beyond Pesticides Factsheet</p>
+					<p class="ref__notes">States: "Suburban lawns and gardens receive more pesticide applications per acre (3.2–9.8 lbs) than agriculture (2.7 lbs per acre on average)." Primary source cited is a 1991 CRC Press handbook on agricultural pesticide use — a secondary citation through an advocacy organization. The underlying data is from peer-reviewed/government sources but this is not itself peer-reviewed. Use with explicit sourcing. The 90 million pounds/year figure is also cited here.</p>
+					<div class="ref__claims"><span class="claim-tag">Lawn pesticide application rate vs. agriculture</span></div>
+				</div>
+			</div>
+			<div class="ref" id="okstate-residential-pesticides">
+				<div class="ref__meta">
+					<span class="badge badge--type">Government</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2017</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Oklahoma State University Extension</p>
+					<p class="ref__title"><a href="https://extension.okstate.edu/fact-sheets/pesticides-in-residential-areas-protecting-the-environment.html" target="_blank" rel="noopener noreferrer">Pesticides in Residential Areas — Protecting the Environment</a></p>
+					<p class="ref__source">Oklahoma State University Extension Fact Sheet</p>
+					<p class="ref__notes">States: "Some lawns receive 10 or more pesticide applications per season, and two or three times as much nitrogen as a typical field crop." Extension service source — more credible than advocacy org for the per-acre comparison.</p>
+					<div class="ref__claims"><span class="claim-tag">Lawn pesticide application rate vs. agriculture</span></div>
+				</div>
+			</div>
+			<div class="ref" id="foe-jardineros-2021">
+				<div class="ref__meta">
+					<span class="badge badge--type">Advocacy org</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">2021</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Friends of the Earth</p>
+					<p class="ref__title"><a href="https://foe.org/blog/human-cost-perfect-lawn/" target="_blank" rel="noopener noreferrer">The Human Cost of a Perfect Lawn</a></p>
+					<p class="ref__source">Friends of the Earth</p>
+					<p class="ref__notes">States lawn pesticide use "can be up to 10 times more intensive per acre than farms." Also documents disproportionate exposure of Latinx immigrant lawn care workers. Advocacy source; useful for labor angle.</p>
+					<div class="ref__claims"><span class="claim-tag">Lawn pesticide application rate vs. agriculture</span><span class="claim-tag">Pesticide exposure of lawn care workers</span></div>
+				</div>
+			</div>
+			<div class="ref" id="nalp-industry-stats-2025">
+				<div class="ref__meta">
+					<span class="badge badge--type">Industry</span>
+					<span class="badge badge--needs-update">Needs update</span>
+					<span class="ref__year">2025</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">National Association of Landscape Professionals</p>
+					<p class="ref__title"><a href="https://www.landscapeprofessionals.org/LP/LP/Media/landscape-industry-statistics.aspx" target="_blank" rel="noopener noreferrer">Landscape Industry Statistics</a></p>
+					<p class="ref__source">NALP / IBIS World</p>
+					<p class="ref__notes">IBIS World estimates landscaping services market size at $188.8B in 2025. This covers all landscaping services (commercial, residential, design, construction) not just lawn maintenance. The manifesto's "$40B" figure is significantly outdated — it appears to originate from early-2000s EPA/Lawn Institute data. The current figure for lawn care services specifically (narrower than total landscaping) is approximately $60-65B. NEEDS CORRECTION in manifesto.</p>
+					<div class="ref__claims"><span class="claim-tag">Total annual US lawn/landscape industry spend</span></div>
+				</div>
+			</div>
+			<div class="ref" id="cai-factbook-2025">
+				<div class="ref__meta">
+					<span class="badge badge--type">Industry</span>
+					<span class="badge badge--needs-update">Needs update</span>
+					<span class="ref__year">2025</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Foundation for Community Association Research</p>
+					<p class="ref__title"><a href="https://foundation.caionline.org/publications/factbook/statistical-review/" target="_blank" rel="noopener noreferrer">Community Association Fact Book 2025</a></p>
+					<p class="ref__source">Community Associations Institute</p>
+					<p class="ref__notes">Most current figure: 78.1 million residents in community associations (HOAs, condominiums, cooperatives). The manifesto uses 74 million — accurate for 2021-2022 but now understated. Update to 78 million with 2025 citation. Note: this includes condominiums and co-ops, not just HOAs with lawn requirements — lawn enforcement is HOA-specific. HOAs account for ~58-63% of the total, suggesting ~45-49M people specifically in HOA-governed single-family communities.</p>
+					<div class="ref__claims"><span class="claim-tag">Number of Americans living under HOA governance</span></div>
+				</div>
+			</div>
+			<div class="ref" id="cai-statistical-review-2022">
+				<div class="ref__meta">
+					<span class="badge badge--type">Industry</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2022</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Foundation for Community Association Research</p>
+					<p class="ref__title"><a href="https://www.caionline.org/new-report-highlights-key-statistics-and-trends-for-u-s-community-association-housing-market/" target="_blank" rel="noopener noreferrer">2021-2022 U.S. National and State Statistical Review for Community Association Data</a></p>
+					<p class="ref__source">Community Associations Institute</p>
+					<p class="ref__notes">74.2 million Americans in community associations as of 2021. 358,000 total associations. Based on American Community Survey and American Housing Survey data.</p>
+					<div class="ref__claims"><span class="claim-tag">Number of Americans living under HOA governance</span></div>
+				</div>
+			</div>
+			<div class="ref" id="pollan-why-mow-1989">
+				<div class="ref__meta">
+					<span class="badge badge--type">Primary source</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">1989</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Pollan, Michael</p>
+					<p class="ref__title"><a href="https://web.stanford.edu/~jonahw/AOE-SM06/WhyMow.html" target="_blank" rel="noopener noreferrer">Why Mow? The Case Against Lawns</a></p>
+					<p class="ref__source">New York Times Magazine, May 28, 1989. Reprinted in Second Nature: A Gardener's Education (Grove Press, 1991)</p>
+					<p class="ref__notes">Primary source for the Olmsted history, the Buffalo Thoreau scholar anecdote, and the ideological history of the American lawn. The Buffalo scholar/$25,000 figure comes from this essay — Pollan wrote it in 1989 and describes it as current at that time. Needs independent verification for currency; this is a 35-year-old anecdote. Also source for: Scott's "it is unchristian" quote; the Gatsby/Nick lawn anecdote; the characterization of lawn as "sacrament."</p>
+					<div class="ref__claims"><span class="claim-tag">Historical origins of the American lawn</span><span class="claim-tag">Olmsted and the design of the suburban lawn</span><span class="claim-tag">Buffalo Thoreau scholar weed ordinance case</span><span class="claim-tag">Social enforcement of lawn conformity</span></div>
+				</div>
+			</div>
+			<div class="ref" id="scott-1870">
+				<div class="ref__meta">
+					<span class="badge badge--type">Primary source</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">1870</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Scott, Frank J.</p>
+					<p class="ref__title"><a href="https://archive.org/details/artofbeautifying00scot" target="_blank" rel="noopener noreferrer">The Art of Beautifying Suburban Home Grounds of Small Extent</a></p>
+					<p class="ref__source">D. Appleton and Company, New York</p>
+					<p class="ref__notes">Primary historical source. Available via Internet Archive. Olmsted's Riverside commission (1868) is the key design precedent; Scott's 1870 book popularized Olmsted's ideas for the middle class. The "unchristian to hedge" quote from Scott is cited via Pollan — should be verified against the original text.</p>
+					<div class="ref__claims"><span class="claim-tag">Historical origins of the American lawn</span><span class="claim-tag">Olmsted and the design of the suburban lawn</span></div>
+				</div>
+			</div>
+			<div class="ref" id="july-no-one-belongs-2007">
+				<div class="ref__meta">
+					<span class="badge badge--type">Primary source</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2007</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">July, Miranda</p>
+					<p class="ref__title"><a href="https://www.simonandschuster.com/books/No-One-Belongs-Here-More-Than-You/Miranda-July/9780743299992" target="_blank" rel="noopener noreferrer">No One Belongs Here More Than You</a></p>
+					<p class="ref__source">Scribner</p>
+					<p class="ref__notes">Source of quote used in Zine No. 01: "We don't really believe in mowing the lawn; we do it only to avoid unnecessary engagement with the neighbors." Captures the social coercion mechanism with literary precision. Fiction, not social science, but illustrative.</p>
+					<div class="ref__claims"><span class="claim-tag">Social enforcement of lawn conformity</span><span class="claim-tag">Documented attitudes toward lawn maintenance</span></div>
+				</div>
+			</div>
+			<div class="ref" id="hatch-magazine-sisyphus">
+				<div class="ref__meta">
+					<span class="badge badge--type">Primary source</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">2023</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Anonymous commenter</p>
+					<p class="ref__title"><a href="https://www.hatchmag.com" target="_blank" rel="noopener noreferrer">Reader comment on lawn maintenance</a></p>
+					<p class="ref__source">Hatch Magazine (hatchmag.com)</p>
+					<p class="ref__notes">Source of quote used in Zine No. 01: "I hate mowing the lawn. Hate it. My body goes on autopilot while my brain tries to figure a way out of ever doing this again. I am Sisyphus." Forum comment; not independently verified as of access date. Used as illustrative testimony of common sentiment.</p>
+					<div class="ref__claims"><span class="claim-tag">Documented attitudes toward lawn maintenance</span><span class="claim-tag">Homeowner attitudes: lawn as chore not pleasure</span></div>
+				</div>
+			</div>
+			<div class="ref" id="lawn-forum-spirits">
+				<div class="ref__meta">
+					<span class="badge badge--type">Primary source</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">2023</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Anonymous commenter</p>
+					<p class="ref__title"><a href="https://www.thelawnforum.com" target="_blank" rel="noopener noreferrer">Thread: Monthly water bill / lawn maintenance attitudes</a></p>
+					<p class="ref__source">The Lawn Forum (thelawnforum.com)</p>
+					<p class="ref__notes">Source of quote used in Zine No. 01: "Their spirits were probably broken ten years ago." — referring to neighbors who had stopped maintaining their lawn to standard. Forum comment; robots.txt blocks direct access. Used as illustrative testimony.</p>
+					<div class="ref__claims"><span class="claim-tag">Documented attitudes toward lawn maintenance</span><span class="claim-tag">Social enforcement of lawn conformity</span></div>
+				</div>
+			</div>
+			<div class="ref" id="bluefield-water-rates-2024">
+				<div class="ref__meta">
+					<span class="badge badge--type">Industry</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2024</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Bluefield Research</p>
+					<p class="ref__title"><a href="https://www.bluefieldresearch.com" target="_blank" rel="noopener noreferrer">US Municipal Water and Wastewater Rates Survey</a></p>
+					<p class="ref__source">Bluefield Research</p>
+					<p class="ref__notes">Source for the claim that US water and sewer rates rose approximately 24% over five years (2019–2024), faster than general inflation. Bluefield Research is a market research firm specializing in water industry analysis. Their rate surveys are widely cited in municipal water utility reporting and policy contexts. The 24% figure is for combined water + sewer rates nationally; individual markets vary significantly.</p>
+					<div class="ref__claims"><span class="claim-tag">Rate of increase in US water and sewer bills</span><span class="claim-tag">Water affordability for low-income households</span></div>
+				</div>
+			</div>
+			<div class="ref" id="aroundtheyard-water-bill">
+				<div class="ref__meta">
+					<span class="badge badge--type">Primary source</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">2023</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Anonymous commenter</p>
+					<p class="ref__title"><a href="https://www.aroundtheyard.com" target="_blank" rel="noopener noreferrer">Thread: Summer water bills from lawn irrigation</a></p>
+					<p class="ref__source">Around the Yard Forum (aroundtheyard.com)</p>
+					<p class="ref__notes">Source of quote used in Zine No. 02: "My bill just came in. I knew it was going to be astronomical. $765.44 for the quarter — about $255 a month. That's $56.70 per month per thousand square feet of lawn." — homeowner in New Jersey. Forum comment; used as illustrative real-world testimony of household water bill impact. Not independently verified.</p>
+					<div class="ref__claims"><span class="claim-tag">Real homeowner testimony on water bill impact</span><span class="claim-tag">Rate of increase in US water and sewer bills</span></div>
+				</div>
+			</div>
+			<div class="ref" id="lawnforum-sewer-irrigation">
+				<div class="ref__meta">
+					<span class="badge badge--type">Primary source</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">2023</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Anonymous commenter</p>
+					<p class="ref__title"><a href="https://www.thelawnforum.com" target="_blank" rel="noopener noreferrer">Thread: Sewer charges on irrigation water</a></p>
+					<p class="ref__source">The Lawn Forum (thelawnforum.com)</p>
+					<p class="ref__notes">Source of quote used in Zine No. 02: "Mine is $175–$200 during the growing season. It wouldn't be more than $75 but the sewer formula uses total gallons — so I'm paying sewer prices on irrigation water." Illustrates the structural mechanism of sewer billing based on total water consumption. The underlying mechanism (billing sewer on all water withdrawn, including irrigation that doesn't enter the drain system) is confirmed by utility billing practice documentation.</p>
+					<div class="ref__claims"><span class="claim-tag">Real homeowner testimony on water bill impact</span><span class="claim-tag">Sewer billing on irrigation water that never enters drains</span></div>
+				</div>
+			</div>
+			<div class="ref" id="bogleheads-lawn-removal">
+				<div class="ref__meta">
+					<span class="badge badge--type">Primary source</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">2022</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Anonymous commenter</p>
+					<p class="ref__title"><a href="https://www.bogleheads.org" target="_blank" rel="noopener noreferrer">Thread: Water savings from lawn removal</a></p>
+					<p class="ref__source">Bogleheads.org personal finance forum</p>
+					<p class="ref__notes">Source of quote used in Zine No. 02: "We eliminated our lawn. Summer water usage is literally 10–15% of what it was. The combined rebates paid for half the cost to change." — California homeowner. Used as real-world evidence of water savings from lawn removal. Consistent with EPA and academic literature on outdoor water use reduction from native plant conversion.</p>
+					<div class="ref__claims"><span class="claim-tag">Real homeowner testimony on water bill impact</span><span class="claim-tag">Water savings and outcomes from lawn removal</span></div>
+				</div>
+			</div>
+			<div class="ref" id="epa-watersense-sewer">
+				<div class="ref__meta">
+					<span class="badge badge--type">Government</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2024</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">U.S. Environmental Protection Agency</p>
+					<p class="ref__title"><a href="https://www.epa.gov/watersense" target="_blank" rel="noopener noreferrer">Sewer billing and outdoor water use</a></p>
+					<p class="ref__source">U.S. EPA WaterSense Program</p>
+					<p class="ref__notes">Many utilities bill sewer fees based on total water consumption including outdoor irrigation. WaterSense materials acknowledge this creates a disincentive for outdoor water efficiency since customers pay sewer rates on water that never enters the sewer system. Some utilities offer irrigation meters or seasonal sewer rate adjustments to address this.</p>
+					<div class="ref__claims"><span class="claim-tag">Sewer billing on irrigation water that never enters drains</span><span class="claim-tag">Percentage of irrigation water wasted</span></div>
+				</div>
+			</div>
+			<div class="ref" id="shehabi-lbl-2024">
+				<div class="ref__meta">
+					<span class="badge badge--type">Government</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2024</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Shehabi, Arman, Smith, Sarah J., Hubbard, Jonathan, Newkirk, Joanie, Lei, Norman, Wehner, Michael F., Masanet, Eric, Koomey, Jonathan, Nordman, Bruce</p>
+					<p class="ref__title"><a href="https://eta.lbl.gov/publications/united-states-data-center-energy" target="_blank" rel="noopener noreferrer">United States Data Center Energy Usage Report</a></p>
+					<p class="ref__source">Lawrence Berkeley National Laboratory, LBNL-2001643</p>
+					<p class="ref__notes">The primary peer-reviewed government source for US data center water consumption. Estimates 17 billion gallons direct water consumption in 2023, and 211 billion gallons indirect (through electricity generation). Projects doubling or quadrupling by 2028. This is the source for the 170x ratio claim (2.9 trillion lawn gallons ÷ 17 billion data center gallons). The indirect figure is more contested — see construction-physics.com for methodology critique.</p>
+					<div class="ref__claims"><span class="claim-tag">US/global data center water consumption</span><span class="claim-tag">Data center energy consumption</span></div>
+				</div>
+			</div>
+			<div class="ref" id="most-policy-datacenter-water">
+				<div class="ref__meta">
+					<span class="badge badge--type">Government</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2025</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">MOST Policy Initiative</p>
+					<p class="ref__title"><a href="https://mostpolicyinitiative.org/science-note/data-center-water-use/" target="_blank" rel="noopener noreferrer">Data Center Water Use — Science Note</a></p>
+					<p class="ref__source">MOST Policy Initiative</p>
+					<p class="ref__notes">Synthesizes Lawrence Berkeley Lab and EPA data. Confirms 17.4 billion gallons direct consumption in 2023 (EPA 2025 / Shehabi et al. 2024). Projects 38–73 billion gallons by 2028. Clear methodology explanation of direct vs. indirect water consumption distinction. Most recent comprehensive policy synthesis available.</p>
+					<div class="ref__claims"><span class="claim-tag">US/global data center water consumption</span></div>
+				</div>
+			</div>
+			<div class="ref" id="eesi-datacenter-water">
+				<div class="ref__meta">
+					<span class="badge badge--type">Advocacy org</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2024</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Environmental and Energy Study Institute</p>
+					<p class="ref__title"><a href="https://www.eesi.org/articles/view/data-centers-and-water-consumption" target="_blank" rel="noopener noreferrer">Data Centers and Water Consumption</a></p>
+					<p class="ref__source">EESI Article</p>
+					<p class="ref__notes">Comprehensive overview including local impact data. Key figures: Northern Virginia data centers consumed ~2 billion gallons in 2023 (63% increase from 2019); single large data centers can consume up to 5 million gallons/day. States 449 million gallons/day for all US data centers (2021 estimate, older than LBL 2024). Also notes: "each 100-word AI prompt is estimated to use roughly one bottle of water (519 mL)" — University of California Riverside estimate.</p>
+					<div class="ref__claims"><span class="claim-tag">US/global data center water consumption</span><span class="claim-tag">Local/community impact of data center water use</span></div>
+				</div>
+			</div>
+			<div class="ref" id="lincoln-institute-data-lawns">
+				<div class="ref__meta">
+					<span class="badge badge--type">Advocacy org</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2026</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Lincoln Institute of Land Policy</p>
+					<p class="ref__title"><a href="https://www.lincolninst.edu/publications/land-lines-magazine/articles/land-water-impacts-data-centers/" target="_blank" rel="noopener noreferrer">Data Drain: The Land and Water Impacts of the AI Boom</a></p>
+					<p class="ref__source">Lincoln Institute of Land Policy — Land Lines Magazine</p>
+					<p class="ref__notes">Explicitly addresses the lawns-vs-data-centers comparison. States: "Americans use more water each year to irrigate golf courses (more than 500 billion gallons) and lawns (over 2 trillion gallons) than AI data centers use." Quotes water experts saying "the solution lies in water conservation and consumer education, not comparing one wasteful use to another." Also documents Newton County, GA: Meta data center uses 500,000 gallons/day = 10% of entire county's consumption. Source of quote used in Zine No. 03.</p>
+					<div class="ref__claims"><span class="claim-tag">US/global data center water consumption</span><span class="claim-tag">Annual US lawn water consumption total</span><span class="claim-tag">Local/community impact of data center water use</span></div>
+				</div>
+			</div>
+			<div class="ref" id="undark-datacenter-water-2025">
+				<div class="ref__meta">
+					<span class="badge badge--type">News</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2025</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Undark Magazine</p>
+					<p class="ref__title"><a href="https://undark.org/2025/12/16/ai-data-centers-water/" target="_blank" rel="noopener noreferrer">How Much Water Do AI Data Centers Really Use?</a></p>
+					<p class="ref__source">Undark Magazine</p>
+					<p class="ref__notes">Good contextualizing piece on the data center water debate. Compares data centers to golf courses: Google's global footprint equals ~43 golf courses. Notes Arizona has 370+ golf courses and expanding data center presence. Useful for the "consistent framework" argument — the same commons critique applies to both.</p>
+					<div class="ref__claims"><span class="claim-tag">US/global data center water consumption</span><span class="claim-tag">Local/community impact of data center water use</span></div>
+				</div>
+			</div>
+			<div class="ref" id="heathscott-water-comparison-2026">
+				<div class="ref__meta">
+					<span class="badge badge--type">News</span>
+					<span class="badge badge--watch">Use with care</span>
+					<span class="ref__year">2026</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Heath Scott, Joshua</p>
+					<p class="ref__title"><a href="https://joshuaheathscott.substack.com/p/you-dont-actually-care-about-the" target="_blank" rel="noopener noreferrer">You Don't Actually Care About the Water</a></p>
+					<p class="ref__source">Substack (joshuaheathscott.substack.com)</p>
+					<p class="ref__notes">Source of the key comparison figures used in Zine No. 03: "US lawn irrigation sucks down about 2.9 trillion gallons a year. Eleven times more than global AI. For grass." The 2.9 trillion gallons figure for US lawn irrigation is consistent with EPA and academic sources (9B gallons/day × 365 ≈ 3.3T gallons; the 2.9T figure may use a seasonal estimate). The "11× global AI" ratio uses global AI data center consumption vs US lawns — a different comparison than the 170× ratio (US lawns vs US data centers direct only). Both are valid depending on scope. Substack; not peer-reviewed, but the underlying data is sourced.</p>
+					<div class="ref__claims"><span class="claim-tag">Annual US lawn water consumption total</span><span class="claim-tag">US/global data center water consumption</span></div>
+				</div>
+			</div>
+			<div class="ref" id="brookings-datacenter-water-2025">
+				<div class="ref__meta">
+					<span class="badge badge--type">Advocacy org</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2025</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Brookings Institution</p>
+					<p class="ref__title"><a href="https://www.brookings.edu/articles/ai-data-centers-and-water/" target="_blank" rel="noopener noreferrer">AI, Data Centers, and Water</a></p>
+					<p class="ref__source">Brookings Institution</p>
+					<p class="ref__notes">Brookings overview of data center water policy. Key figure: typical data center uses 300,000 gallons/day (1,000 household equivalent); large ones up to 5 million gallons/day (50,000 people equivalent). Projections show cooling water use may increase by 870% as facilities expand. Useful for policy framing of data center water governance.</p>
+					<div class="ref__claims"><span class="claim-tag">US/global data center water consumption</span><span class="claim-tag">Local/community impact of data center water use</span></div>
+				</div>
+			</div>
+			<div class="ref" id="uiuc-datacenter-water">
+				<div class="ref__meta">
+					<span class="badge badge--type">Government</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2024</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">University of Illinois Urbana-Champaign, Dept. of Civil &amp; Environmental Engineering</p>
+					<p class="ref__title"><a href="https://cee.illinois.edu/news/AIs-Challenging-Waters" target="_blank" rel="noopener noreferrer">AI's Challenging Waters</a></p>
+					<p class="ref__source">CEE Illinois</p>
+					<p class="ref__notes">Academic overview from UIUC CEE. Useful per-user context: Google hyperscale data centers average ~550,000 gallons/day; smaller data centers average ~18,000 gallons/day. Notes that 20% of US data centers draw from moderately to highly stressed watersheds. Data centers rank in top 10 water-consuming commercial industries in the US.</p>
+					<div class="ref__claims"><span class="claim-tag">US/global data center water consumption</span><span class="claim-tag">Data center energy consumption</span></div>
+				</div>
+			</div>
+			<div class="ref" id="construction-physics-datacenter-water-2025">
+				<div class="ref__meta">
+					<span class="badge badge--type">News</span>
+					<span class="badge badge--verified">Verified</span>
+					<span class="ref__year">2025</span>
+				</div>
+				<div class="ref__body">
+					<p class="ref__authors">Potter, Brian</p>
+					<p class="ref__title"><a href="https://www.construction-physics.com/p/i-was-wrong-about-data-center-water" target="_blank" rel="noopener noreferrer">I Was Wrong About Data Center Water Consumption</a></p>
+					<p class="ref__source">Construction Physics (Substack)</p>
+					<p class="ref__notes">Important methodology correction piece. Notes that the Lawrence Berkeley Lab "211 billion gallons indirect" figure is consumptive use (water lost to evaporation from power generation), not total withdrawal — a distinction that significantly changes the comparison. Also notes hyperscalers (Amazon, Google, Meta, Microsoft) report 100% renewable electricity via PPAs, which affects the indirect water calculation. Use when citing indirect water figures — the methodology is more contested than the direct cooling figure.</p>
+					<div class="ref__claims"><span class="claim-tag">US/global data center water consumption</span></div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="section">
+		<div class="section__header">
+			<span class="section__number">→</span>
+			<h2 class="section__title">Research needed (3)</h2>
+		</div>
+		<hr class="rule rule--thin" />
+		<div class="ref-list">
+			<div class="ref ref--todo">
+				<div class="ref__body">
+					<p class="ref__title">Municipal weed ordinance prevalence — needs primary source</p>
+					<p class="ref__notes">The manifesto states "hundreds of American municipalities" have weed ordinances. Pollan and others assert this but no single study counts them. Need: a legal database search (Municode, American Legal Publishing) or a law review article surveying ordinance prevalence. This claim is qualitatively defensible but currently unsourced.</p>
+				</div>
+			</div>
+			<div class="ref ref--todo">
+				<div class="ref__body">
+					<p class="ref__title">Buffalo Thoreau scholar — verification needed</p>
+					<p class="ref__notes">Pollan describes this case in 1989 as ongoing. Need newspaper archive search (Buffalo News) to verify the case existed and the $25,000 figure. The case is plausible and cited by multiple sources (all citing Pollan). If cannot verify from primary sources, should be attributed explicitly to Pollan 1989 rather than stated as fact.</p>
+				</div>
+			</div>
+			<div class="ref ref--todo">
+				<div class="ref__body">
+					<p class="ref__title">Survey data on lawn maintenance as chore vs. pleasure</p>
+					<p class="ref__notes">The manifesto states "survey after survey finds homeowners describe lawn maintenance as a chore." This is an important claim for the realism objection. Need: a specific citation. Candidates: American Time Use Survey (BLS), National Gardening Association surveys, or academic social science literature on lawn care attitudes.</p>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- /generated:bibliography -->
+
+	<div class="back">
+		<a href="./">← Return to manifesto</a>
+	</div>
+
+</main>
+
+	</body>
+</html>

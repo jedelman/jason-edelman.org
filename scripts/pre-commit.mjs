@@ -9,6 +9,7 @@
  *   2. wrangler.toml has no [[routes]] block
  *   3. eastside-commons HTML files are non-empty and contain </html>
  *   4. Staged deletions don't wipe more than 5 tracked source files at once
+ *   5. Abolish Lawns' bibliography page is up to date with its data
  */
 
 import { execSync } from 'node:child_process';
@@ -113,6 +114,15 @@ if (stagedDeletions.length === 0) {
   fail(`${stagedDeletions.length} source files staged for deletion — this is likely a mistake:`);
   stagedDeletions.forEach(f => console.error(`    - ${f}`));
   fail('If intentional, commit with --no-verify');
+}
+
+// ── 5. Abolish Lawns bibliography ───────────────────────────────────────────
+console.log('\n[5] Abolish Lawns bibliography');
+try {
+  execSync('node abolish-lawns/scripts/bibliography.mjs --check', { cwd: ROOT, stdio: 'pipe' });
+  pass('site/bibliography.html matches data/bibliography.mjs');
+} catch (e) {
+  fail('abolish-lawns/site/bibliography.html is behind data/bibliography.mjs: run node abolish-lawns/scripts/bibliography.mjs');
 }
 
 // ── Result ───────────────────────────────────────────────────────────────────
