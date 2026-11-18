@@ -38,8 +38,13 @@ const real = references.filter((r) => r.authors.length > 0);
 const todos = references.filter((r) => r.authors.length === 0);
 const needsUpdate = references.filter((r) => r.status === 'needs-update');
 
-// The text before a note's first period, as the SvelteKit template showed it.
-const firstSentence = (s = '') => s.split('.')[0];
+// The first sentence of a note, with its closing punctuation. A period ends a sentence only when
+// a space or the end follows it (a closing quote or bracket may come between), so "$188.8B" and
+// "78.1 million" stay whole.
+const firstSentence = (s = '') => {
+	const m = s.match(/^[\s\S]*?[.!?]["'”’)]?(?=\s|$)/);
+	return m ? m[0] : s.replace(/\s+$/, '') + '.';
+};
 
 const out = [];
 const put = (tabs, line) => out.push('\t'.repeat(tabs) + line);
@@ -52,7 +57,7 @@ if (needsUpdate.length > 0) {
 	put(2, '</div>');
 	put(2, '<hr class="rule rule--thin" />');
 	put(2, '<div class="prose">');
-	for (const ref of needsUpdate) put(3, `<p><strong>${text(ref.id)}</strong> — ${text(firstSentence(ref.notes))}.</p>`);
+	for (const ref of needsUpdate) put(3, `<p><strong>${text(ref.id)}</strong> — ${text(firstSentence(ref.notes))}</p>`);
 	put(2, '</div>');
 	put(1, '</section>');
 	out.push('');
