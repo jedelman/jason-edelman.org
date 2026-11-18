@@ -1,0 +1,14 @@
+name = "abolish-lawns-proxy"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+account_id = "543fde7feabd0af945bfae926ceea7ad"
+
+# Route: only fires for jason-edelman.org/abolish-lawns and /abolish-lawns/*
+# Zone ID for jason-edelman.org is required — fill in after confirming zone ID
+[[routes]]
+pattern = "jason-edelman.org/abolish-lawns"
+zone_name = "jason-edelman.org"
+
+[[routes]]
+pattern = "jason-edelman.org/abolish-lawns/*"
+zone_name = "jason-edelman.org"
