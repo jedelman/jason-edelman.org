@@ -5,8 +5,11 @@ Served at https://jason-edelman.org/abolish-lawns/ from the jason-edelman.org re
 
 It's plain files now, built by the repo's own `scripts/build.mjs` like everything else:
 
-- `site/`: what's served. One HTML file per page, `app.css` (the shared design tokens and type), the favicon,
-  `robots.txt` and the zine PDFs. Each page carries its own `<style>`.
+- `site/`: what's served. One HTML file per page, `app.css` (the shared design tokens and type), the icons
+  (`favicon.ico`, `icon-192.png`, `apple-touch-icon.png`), `robots.txt` and the zine PDFs. Each page carries its own
+  `<style>`.
+- `design/`: source art, not served. `logo-instagram-500.png` is Jason's Instagram logo (from his Canva design); the
+  icons in `site/` are made from it.
 - `data/bibliography.mjs`: every source, with its claims and status. `node abolish-lawns/scripts/bibliography.mjs`
   writes the entries into `site/bibliography.html` (between the `generated:bibliography` markers); `--check`
   fails when the page is behind the data.
