@@ -131,6 +131,11 @@ console.log('\n[6] Research watch');
 try {
   execSync('node research-watch/render.mjs --check', { cwd: ROOT, stdio: 'pipe' });
   pass('watch pages match their data, and every published quote is verified');
+  // The check above reads the working tree; make sure what it checked is what's being committed.
+  const lane = ['mithlond/research/watch', 'mithlond/watch', 'abolish-lawns/research/watch', 'abolish-lawns/site/watch'];
+  const loose = execSync(`git status --porcelain -- ${lane.join(' ')}`, { cwd: ROOT, encoding: 'utf8' })
+    .split('\n').filter((l) => l && (l[1] !== ' ' || l.startsWith('??')));
+  if (loose.length) fail(`watch files changed but not staged (stage them with the commit):\n      ${loose.join('\n      ')}`);
 } catch (e) {
   fail(`research watch: ${String(e.stderr || e.stdout || e.message).trim().split('\n').slice(0, 4).join(' / ')}`);
 }
