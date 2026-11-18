@@ -1,0 +1,54 @@
+{
+  "date": "2026-11-18",
+  "project": "abolish-lawns",
+  "run": "https://claude.ai/code/session_01Sqvwr6hkSFEKHhWDSZxL63",
+  "summary": "The watch's first run. The City of Alexandria says its ban on gas leaf blowers took effect November 17. A new review of the German Lawn Research Project by Norbert Müller and Maria Ignatieva (Urban Ecosystems) reports that frequently mowed lawns support less plant diversity and wildlife value than meadows.",
+  "checked": [
+    "crossref-new-papers",
+    "xerces-blog",
+    "audubon-news",
+    "wild-ones",
+    "epa-watersense",
+    "chesapeake-bay-program"
+  ],
+  "items": [
+    {
+      "title": "Alexandria, Va.: the gas leaf blower ban is in force, with citations from November 17",
+      "url": "https://www.alexandriava.gov/environmental-quality/leaf-blower-ordinance",
+      "publisher": "City of Alexandria",
+      "origin": "City of Alexandria",
+      "kind": "government",
+      "published": null,
+      "quote": "Effective November 17, 2026, citations for use of gas-powered leaf blowers will be issued for residents and contractors.",
+      "note": "Gas lawn equipment's emissions are one of the costs the site's infographic counts; here a city has banned one kind of it.",
+      "claims": [
+        "alexandria-gas-leaf-blower-ban"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    },
+    {
+      "title": "Review of the German Lawn Research Project: frequently mowed lawns support less plant diversity and wildlife value than meadows",
+      "url": "https://link.springer.com/article/10.1007/s11252-026-02083-4",
+      "publisher": "Urban Ecosystems (Springer)",
+      "origin": "Norbert Müller and Maria Ignatieva",
+      "kind": "academic",
+      "published": "2026-11-10",
+      "quote": "Due to the high cutting frequency, lawns generally support lower plant biodiversity and provide less value for wildlife than meadows.",
+      "note": "Bears on the backlog's \"Lawns support almost no insect life\": a peer-reviewed review on plants and wildlife value generally, not insects specifically.",
+      "claims": [
+        "mowed-lawns-less-biodiverse-than-meadows"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    }
+  ],
+  "unreachable": [
+    {
+      "url": "https://homegrownnationalpark.org/",
+      "why": "a security challenge refuses automated access"
+    },
+    {
+      "url": "https://legiscan.com/",
+      "why": "a security challenge refuses automated access"
+    }
+  ]
+}

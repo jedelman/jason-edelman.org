@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mithlond watch: claims — Mithlond</title>
+  <meta name="description" content="Every claim the Mithlond watch has recorded, with who asserts and who disputes it.">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="alternate" type="application/atom+xml" title="Mithlond watch" href="./feed.xml">
+  <style>
+    /* The research watch, in Mithlond's own tokens (css/style.css). */
+    .w-meta { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.08em; color: var(--horizon); margin-bottom: 0.5rem; text-transform: uppercase; }
+    .w-meta a { color: inherit; }
+    .w-summary { font-size: 1.05rem; margin-bottom: 2rem; }
+    .w-intro p { margin-bottom: 1rem; }
+    .w-entry { border-bottom: 1px solid var(--mist); padding: 1.4rem 0; }
+    .w-entry h3 { margin-top: 0; }
+    .w-item { background: var(--mist); border-left: 3px solid var(--horizon); padding: 1.2rem 1.5rem; margin: 1.5rem 0; font-size: 0.95rem; }
+    .w-item h3 { margin-top: 0; }
+    .w-src { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.04em; color: var(--tide); margin-bottom: 0.8rem; }
+    .w-quote { border-left: 2px solid var(--salt); margin: 0 0 0.8rem; padding: 0.2rem 0 0.2rem 1rem; font-style: italic; color: var(--ink); }
+    .w-note { margin-bottom: 0.6rem; }
+    .w-claims, .w-sources { list-style: none; padding: 0; margin: 0.4rem 0 0; font-size: 0.88rem; }
+    .w-claims li, .w-sources li { margin: 0.35rem 0; }
+    .w-status { display: inline-block; font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.1rem 0.45rem; border-radius: 2px; vertical-align: 0.1em; }
+    .w-status--provisional { background: var(--paper); color: var(--tide); border: 1px solid var(--fog); }
+    .w-status--corroborated { background: var(--tide); color: var(--paper); border: 1px solid var(--tide); }
+    .w-status--disputed { background: #fff5ed; color: var(--signal); border: 1px solid var(--signal); }
+    a.w-cite { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none; padding: 0 0.35rem; border-radius: 2px; vertical-align: 0.15em; }
+    a.w-cite.w-status--provisional { border: 1px solid var(--fog); color: var(--tide); }
+    a.w-cite.w-status--corroborated { background: var(--tide); color: var(--paper); }
+    a.w-cite.w-status--disputed { border: 1px solid var(--signal); color: var(--signal); }
+    .w-claim { border-bottom: 1px solid var(--mist); padding: 1.2rem 0; scroll-margin-top: 1rem; }
+    .w-claim:target { background: #fff5ed; }
+    .w-claim h3 { margin-top: 0; }
+    .w-stance { font-family: var(--mono); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--horizon); }
+    .w-stance--disputes { color: var(--signal); }
+    .w-group h2 .w-status { margin-right: 0.4rem; }
+    .w-unreachable { margin-top: 2.5rem; font-size: 0.9rem; }
+    .w-unreachable li { margin: 0.3rem 0; overflow-wrap: anywhere; }
+    .w-analysis p, .w-analysis li { margin-bottom: 1.1rem; }
+    .w-analysis ul { padding-left: 1.2rem; }
+    .w-analysis blockquote { border-left: 2px solid var(--salt); padding-left: 1rem; font-style: italic; margin: 0 0 1.2rem; }
+    .w-legend { font-size: 0.85rem; color: var(--tide); border-top: 1px solid var(--mist); padding-top: 1rem; margin-top: 2rem; }
+    .w-pager { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2.5rem; font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.06em; }
+    q { quotes: "\201C" "\201D"; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-brand" href="../index.html">MITHLOND</a>
+  <a href="../index.html">About</a>
+  <a href="../blog/index.html">Research Log</a>
+  <a href="./" class="active">Watch</a>
+  <a href="../links.html">Links</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-label">// Claims ledger</div>
+    <h1>Claims</h1>
+    <p class="hero-sub">Every claim the watch has recorded, with every source that asserts or disputes it. A claim is corroborated only when independent origins agree; two outlets repeating one press release count once.</p>
+  </div>
+</div>
+
+<main>
+
+<section class="w-group">
+  <h2><span class="w-status w-status--provisional">provisional</span> 7 provisional (one origin says so)</h2>
+  
+  <article class="w-claim" id="dominion-merger-case-not-for-cost-allocation">
+    <h3>Dominion's counsel argued at the SCC's merger hearing that the merger case is not the place to decide who pays their fair share, including data centers.</h3>
+    <p class="w-meta">rates · first seen 2026-11-18 · asserted by 1 origin</p>
+    <ul class="w-sources">
+      <li><span class="w-stance w-stance--asserts">asserts</span> <a href="https://virginiamercury.com/2026/11/18/in-dominion-nextera-merger-opening-arguments-parties-clash-over-potential-risk-ratepayer-protections/">Virginia Mercury</a>, 2026-11-18: <q>This case, in our view, is simply not the one to litigate that cost of service, and nor is it the case to litigate who’s paying their fair share, and ensuring everybody pays their fair share, including the data centers</q></li>
+    </ul>
+  </article>
+  <article class="w-claim" id="dominion-residential-bill-doubled-2007-2026">
+    <h3>The average monthly Dominion residential bill rose from $90.59 on July 1, 2007 to $180.79 on July 1, 2026, an increase of 99.57%.</h3>
+    <p class="w-meta">rates · first seen 2026-11-18 · asserted by 1 origin</p>
+    <ul class="w-sources">
+      <li><span class="w-stance w-stance--asserts">asserts</span> <a href="https://virginiamercury.com/2026/11/18/in-dominion-nextera-merger-opening-arguments-parties-clash-over-potential-risk-ratepayer-protections/">Virginia Mercury</a> (origin: Virginia State Corporation Commission), 2026-11-18: <q>In a report to the Energy Commission of Virginia, the SCC reported that the average monthly Dominion residential bill “was $90.59 as of July 1, 2007. The bill has increased by $90.20, or 99.57%, to $180.79 per month as of July 1, 2026.”</q></li>
+    </ul>
+  </article>
+  <article class="w-claim" id="groups-call-statewide-data-center-pause">
+    <h3>A coalition of Virginia environmental groups calls for a statewide pause on new data center permits and grid connections until stricter water, energy and siting rules are enacted.</h3>
+    <p class="w-meta">law · first seen 2026-11-18 · asserted by 1 origin</p>
+    <ul class="w-sources">
+      <li><span class="w-stance w-stance--asserts">asserts</span> <a href="https://virginiamercury.com/2026/11/12/environmental-groups-rally-for-statewide-data-center-moratorium-in-hanover-county/">Virginia Mercury</a>, 2026-11-12: <q>A united front of environmental groups representing all corners of the commonwealth on Wednesday in Hanover urged the state government to implement a statewide pause on all new data center permit approvals and connections to the grid until stricter regulations for water use, energy infrastructure, and siting are enacted.</q></li>
+    </ul>
+  </article>
+  <article class="w-claim" id="loudoun-data-center-moratorium">
+    <h3>Loudoun County's Board of Supervisors paused consideration of data center and substation applications for up to 12 months, backdated to September 15, 2026, by a 7-1 vote with one abstention.</h3>
+    <p class="w-meta">local · first seen 2026-11-18 · asserted by 1 origin</p>
+    <ul class="w-sources">
+      <li><span class="w-stance w-stance--asserts">asserts</span> <a href="https://www.datacenterdynamics.com/en/news/virginias-loudoun-county-officially-adopts-12-month-moratorium-on-data-center-development/">DatacenterDynamics</a>, 2026-11-18: <q>The adopted resolution, which passed 7-1 with one abstention, sees the board pause consideration of applications for data centers and substations for a period not to exceed 12 months, effective backdated from September 15, 2026.</q></li>
+    </ul>
+  </article>
+  <article class="w-claim" id="residential-customers-subsidize-data-center-grid">
+    <h3>Residential customers still subsidize too much of the cost of building Virginia's grid for demand driven largely by data centers.</h3>
+    <p class="w-meta">rates · first seen 2026-11-18 · asserted by 1 origin</p>
+    <ul class="w-sources">
+      <li><span class="w-stance w-stance--asserts">asserts</span> <a href="https://virginiamercury.com/2026/11/13/five-virginia-members-of-congress-demand-state-regulators-deny-dominion-nextera-merger/">Virginia Mercury</a> (origin: Reps. Beyer, McClellan, Subramanyam, Vindman and Walkinshaw (letter to the SCC)), 2026-11-13: <q>But the congressional delegation said that too much of the cost to build out the grid in Virginia to support the skyrocketing energy demands, largely driven by data centers, is still subsidized by residential customers.</q></li>
+    </ul>
+  </article>
+  <article class="w-claim" id="suffolk-data-center-moratorium">
+    <h3>Suffolk won't let data center projects move forward until it has rules and restrictions in place.</h3>
+    <p class="w-meta">local · first seen 2026-11-18 · asserted by 1 origin</p>
+    <ul class="w-sources">
+      <li><span class="w-stance w-stance--asserts">asserts</span> <a href="https://www.whro.org/local-government/2026-10-22/suffolk-approves-temporary-data-center-ban">WHRO</a>, 2026-10-22: <q>Suffolk will not allow data center projects to move forward until it has rules and restrictions in place.</q></li>
+    </ul>
+  </article>
+  <article class="w-claim" id="va-2027-local-approval-over-25mw">
+    <h3>Gov. Spanberger and Virginia Democrats propose, for the 2027 General Assembly, requiring local approval for data centers using more than 25 megawatts, banning nondisclosure agreements with local officials, and tightening oversight of cooling water.</h3>
+    <p class="w-meta">law · first seen 2026-11-18 · asserted by 1 origin</p>
+    <ul class="w-sources">
+      <li><span class="w-stance w-stance--asserts">asserts</span> <a href="https://virginiamercury.com/2026/11/11/spanberger-va-democrats-pitch-medical-debt-relief-data-center-limits-for-2027/">Virginia Mercury</a>, 2026-11-11: <q>The lawmakers presented several data center proposals, including requirements for local approval of facilities using more than 25 megawatts, a ban on nondisclosure agreements with local officials and stronger oversight of cooling water use.</q></li>
+    </ul>
+  </article>
+</section>
+</main>
+
+<footer>
+  <p>
+    MITHLOND &nbsp;·&nbsp; Hampton Roads, Virginia &nbsp;·&nbsp;
+    Research under Creative Commons BY 4.0 &nbsp;·&nbsp;
+    <a href="https://github.com/jedelman/jason-edelman.org/tree/main/mithlond">Source</a>
+  </p>
+</footer>
+
+</body>
+</html>

@@ -32,6 +32,24 @@ it, since no tool available to Claude can configure those. If Jason wants
 it enforced at the GitHub level too (e.g. a CODEOWNERS entry or branch
 protection exemption), that's a manual step on his end.
 
+## Merge authority — research watch (granted 2026-11-18)
+
+Jason, setting up the research watch for Mithlond and Abolish Lawns: daily digests "auto-publish"; weekly analysis
+"publish directly and send me a notification"; "site pages only"; and the rule the watch runs on, "i'm inclined to
+take everything as provisional and only trust independent agreement. attribution over trust." The protocol is
+`research-watch/README.md`.
+
+**What this covers**: PRs from the research watch routines whose diff is confined to the watch lane:
+`mithlond/research/watch/**`, `abolish-lawns/research/watch/**`, and the pages rendered from them in
+`mithlond/watch/**` and `abolish-lawns/site/watch/**`. Claude may open and merge these into `main` without per-PR
+approval, but only when `node research-watch/verify.mjs` has verified every new quote against its page,
+`node research-watch/render.mjs --check` and `npm run check` pass, and the build succeeds. Squash merges are fine here.
+
+**What this does NOT cover**: the watch's own code and templates (`research-watch/*.mjs`, `templates/`, the README),
+`sources.json` scope changes beyond adding or retiring seeds, any project's other pages (its bibliography, backlog,
+briefs or blog), and everything else in this repo. Those still need Jason's go-ahead per PR. A finding that should
+change a project's own pages goes to Jason as a suggestion in the weekly analysis, never straight in.
+
 ---
 
 ## Non-hallucination & anti-slop rules

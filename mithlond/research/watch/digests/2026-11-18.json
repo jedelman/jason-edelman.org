@@ -1,0 +1,132 @@
+{
+  "date": "2026-11-18",
+  "project": "mithlond",
+  "run": "https://claude.ai/code/session_01Sqvwr6hkSFEKHhWDSZxL63",
+  "summary": "The watch's first run: the past week, plus one catch-up on Hampton Roads. Virginia Mercury reports Gov. Spanberger and Democrats will propose local approval for data centers over 25 MW, while environmental groups call for a statewide pause. DatacenterDynamics reports Loudoun County adopted a moratorium of up to 12 months. At the Dominion–NextEra merger hearing, Dominion's counsel said the case isn't the place to decide whether data centers pay their fair share. WHRO reported in October that Suffolk paused data centers until it writes rules.",
+  "checked": [
+    "virginia-mercury",
+    "cardinal-news",
+    "whro-local-government",
+    "datacenterdynamics",
+    "pjm-inside-lines",
+    "dominion-news",
+    "vedp-press",
+    "norfolk-council",
+    "norfolk-permits",
+    "virginia-lis"
+  ],
+  "items": [
+    {
+      "title": "Virginia Mercury: Spanberger and Democrats propose local approval for data centers over 25 MW in the 2027 session",
+      "url": "https://virginiamercury.com/2026/11/11/spanberger-va-democrats-pitch-medical-debt-relief-data-center-limits-for-2027/",
+      "publisher": "Virginia Mercury",
+      "origin": "Virginia Mercury",
+      "kind": "news",
+      "published": "2026-11-11",
+      "quote": "The lawmakers presented several data center proposals, including requirements for local approval of facilities using more than 25 megawatts, a ban on nondisclosure agreements with local officials and stronger oversight of cooling water use.",
+      "note": "Would move the siting decision for large data centers to localities: the question of who decides.",
+      "claims": [
+        "va-2027-local-approval-over-25mw"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    },
+    {
+      "title": "Dominion's counsel at the merger hearing: this isn't the case to decide whether data centers pay their fair share",
+      "url": "https://virginiamercury.com/2026/11/18/in-dominion-nextera-merger-opening-arguments-parties-clash-over-potential-risk-ratepayer-protections/",
+      "publisher": "Virginia Mercury",
+      "origin": "Virginia Mercury",
+      "kind": "news",
+      "published": "2026-11-18",
+      "quote": "This case, in our view, is simply not the one to litigate that cost of service, and nor is it the case to litigate who’s paying their fair share, and ensuring everybody pays their fair share, including the data centers",
+      "note": "Who pays for the grid data centers need is Mithlond's question of who bears the cost; Dominion says the merger case won't answer it.",
+      "claims": [
+        "dominion-merger-case-not-for-cost-allocation"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    },
+    {
+      "title": "SCC report, via Virginia Mercury: the average Dominion residential bill has doubled since 2007",
+      "url": "https://virginiamercury.com/2026/11/18/in-dominion-nextera-merger-opening-arguments-parties-clash-over-potential-risk-ratepayer-protections/",
+      "publisher": "Virginia Mercury",
+      "origin": "Virginia State Corporation Commission",
+      "kind": "news",
+      "published": "2026-11-18",
+      "quote": "In a report to the Energy Commission of Virginia, the SCC reported that the average monthly Dominion residential bill “was $90.59 as of July 1, 2007. The bill has increased by $90.20, or 99.57%, to $180.79 per month as of July 1, 2026.”",
+      "note": "A baseline for what residential customers already pay, before the cost of serving data centers is divided up.",
+      "claims": [
+        "dominion-residential-bill-doubled-2007-2026"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    },
+    {
+      "title": "Five Virginia members of Congress to the SCC: residential customers still subsidize the grid build-out for data centers",
+      "url": "https://virginiamercury.com/2026/11/13/five-virginia-members-of-congress-demand-state-regulators-deny-dominion-nextera-merger/",
+      "publisher": "Virginia Mercury",
+      "origin": "Reps. Beyer, McClellan, Subramanyam, Vindman and Walkinshaw (letter to the SCC)",
+      "kind": "news",
+      "published": "2026-11-13",
+      "quote": "But the congressional delegation said that too much of the cost to build out the grid in Virginia to support the skyrocketing energy demands, largely driven by data centers, is still subsidized by residential customers.",
+      "note": "A claim about who bears the cost, made by elected officials opposing the merger; their letter is the primary source.",
+      "claims": [
+        "residential-customers-subsidize-data-center-grid"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    },
+    {
+      "title": "Environmental groups call for a statewide pause on new data center permits and grid connections",
+      "url": "https://virginiamercury.com/2026/11/12/environmental-groups-rally-for-statewide-data-center-moratorium-in-hanover-county/",
+      "publisher": "Virginia Mercury",
+      "origin": "Virginia Mercury",
+      "kind": "news",
+      "published": "2026-11-12",
+      "quote": "A united front of environmental groups representing all corners of the commonwealth on Wednesday in Hanover urged the state government to implement a statewide pause on all new data center permit approvals and connections to the grid until stricter regulations for water use, energy infrastructure, and siting are enacted.",
+      "note": "A demand that goes past the governor's framework: stop, then regulate.",
+      "claims": [
+        "groups-call-statewide-data-center-pause"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    },
+    {
+      "title": "Loudoun County adopts a moratorium of up to 12 months on data center and substation applications",
+      "url": "https://www.datacenterdynamics.com/en/news/virginias-loudoun-county-officially-adopts-12-month-moratorium-on-data-center-development/",
+      "publisher": "DatacenterDynamics",
+      "origin": "DatacenterDynamics",
+      "kind": "news",
+      "published": "2026-11-18",
+      "quote": "The adopted resolution, which passed 7-1 with one abstention, sees the board pause consideration of applications for data centers and substations for a period not to exceed 12 months, effective backdated from September 15, 2026.",
+      "note": "Local moratoriums are one answer to who decides.",
+      "claims": [
+        "loudoun-data-center-moratorium"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    },
+    {
+      "title": "Suffolk's council approves a temporary data center ban (October; the first run's catch-up on Hampton Roads)",
+      "url": "https://www.whro.org/local-government/2026-10-22/suffolk-approves-temporary-data-center-ban",
+      "publisher": "WHRO",
+      "origin": "WHRO",
+      "kind": "news",
+      "published": "2026-10-22",
+      "quote": "Suffolk will not allow data center projects to move forward until it has rules and restrictions in place.",
+      "note": "A Hampton Roads city pausing data centers until it writes its own rules.",
+      "claims": [
+        "suffolk-data-center-moratorium"
+      ],
+      "verified": "2026-11-18T16:57:06.088Z"
+    }
+  ],
+  "unreachable": [
+    {
+      "url": "https://www.scc.virginia.gov/",
+      "why": "robots.txt closes the site to automated agents; SCC actions appear here only through attributed coverage"
+    },
+    {
+      "url": "https://www.deq.virginia.gov/news-info/shortcuts/permits/air/issued-air-permits-for-data-centers",
+      "why": "403: refuses automated access"
+    },
+    {
+      "url": "https://www.virginiabusiness.com/",
+      "why": "403: refuses automated access"
+    }
+  ]
+}

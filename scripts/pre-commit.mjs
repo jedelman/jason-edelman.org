@@ -10,6 +10,7 @@
  *   3. eastside-commons HTML files are non-empty and contain </html>
  *   4. Staged deletions don't wipe more than 5 tracked source files at once
  *   5. Abolish Lawns' bibliography page is up to date with its data
+ *   6. The research watch pages are up to date with their data, and everything published is verified
  */
 
 import { execSync } from 'node:child_process';
@@ -123,6 +124,15 @@ try {
   pass('site/bibliography.html matches data/bibliography.mjs');
 } catch (e) {
   fail('abolish-lawns/site/bibliography.html is behind data/bibliography.mjs: run node abolish-lawns/scripts/bibliography.mjs');
+}
+
+// ── 6. Research watch ────────────────────────────────────────────────────────
+console.log('\n[6] Research watch');
+try {
+  execSync('node research-watch/render.mjs --check', { cwd: ROOT, stdio: 'pipe' });
+  pass('watch pages match their data, and every published quote is verified');
+} catch (e) {
+  fail(`research watch: ${String(e.stderr || e.stdout || e.message).trim().split('\n').slice(0, 4).join(' / ')}`);
 }
 
 // ── Result ───────────────────────────────────────────────────────────────────
