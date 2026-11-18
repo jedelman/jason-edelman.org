@@ -1,0 +1,138 @@
+
+============================================================
+1. GHENT HC-G2 PARCEL OVERVIEW (FY26)
+============================================================
+  Total parcels (PD 61-64):                  3,138
+
+  By planning district:
+    PD 64 - GHENT                              945
+    PD 61 - WEST GHENT                         891
+    PD 62 - NORTH GHENT                        779
+    PD 63 - EAST GHENT                         523
+
+  By property use:
+    Single Family - Detached                 1,141
+    Condominium                                915
+    Single Family - Attached                   390
+    Duplex                                     143
+    Apartment                                  140
+    Vacant Land                                117
+    Non-Taxable                                109
+    Commercial                                  84
+    Fourplex                                    46
+    Triplex                                     39
+    Co-op                                        9
+    Residential Outbuilding                      4
+    Industrial                                   1
+
+============================================================
+2. ASSESSED VALUES — GHENT (FY26)
+============================================================
+  Total assessed value (all uses):           $  3,359,240,700
+  Mean assessed value per parcel:            $      1,070,504
+  Median assessed value per parcel:          $        461,400
+
+  Residential parcels:                       2,450
+    Avg assessed value:                      $        456,372
+  Apartment parcels:                         140
+    Avg assessed value:                      $      1,683,524
+  Commercial parcels:                        84
+    Avg assessed value:                      $        823,858
+
+============================================================
+3. YEAR-OVER-YEAR ASSESSMENT CHANGE (FY25 → FY26)
+============================================================
+  Parcels with both years of data:           29,189
+  Median value change FY25→FY26:             $        +13,800
+  Median % change:                                     +6.4%
+  Mean % change:                                       +8.6%
+  Total appreciation (sum of gains):         $    485,389,500
+
+============================================================
+4. COLLEY AVENUE PCO — COMPARISON BASELINE
+============================================================
+  Total Colley Ave parcels:                  229
+  Commercial parcels:                        106
+    Avg assessed value:                      $      2,787,206
+  Residential parcels:                       64
+    Avg assessed value:                      $        218,633
+  Apartment parcels:                         6
+
+  Colley commercial property use breakdown:
+    Commercial                                 106
+
+  Colley property class breakdown:
+    429 Com Other Retail Bldg                            44
+    447 Com 1 & 2 Sty Office Bldg                        14
+    430 Commercial Restaurant/Bar                        11
+    418 Retail/Apartment Over                             6
+    456 Commercial Parking Lot                            4
+    480 Commercial Warehouse                              4
+    450 Com Condominium                                   3
+    425 Com Neighbor Shopping Ctr                         2
+    428 Com Convenience Mkt                               2
+    423 General Commercial                                2
+    408 Retirement Home                                   2
+    444 Com Full Service Bank                             2
+    453 Commercial Car Wash                               1
+    440 Com Dry Clean/Laundry                             1
+    449 Com Office O/T 47 Elev                            1
+
+============================================================
+5. COMMERCIAL VALUE PREMIUM (COLLEY VS GHENT RESIDENTIAL)
+============================================================
+  Ghent residential mean AV:       $     456,372
+  Ghent commercial mean AV:        $     823,858
+  Colley commercial mean AV:       $   2,787,206
+  Colley commercial premium over
+    Ghent residential:                    +510.7%
+
+============================================================
+6. REVENUE PROJECTION — UPDATED WITH REAL PARCEL DATA
+============================================================
+  PD 64 (core Ghent) total parcels:          945
+  PD 64 non-commercial parcels:              932
+  PD 64 small urban lots w/ structure:       817
+    (proxy for street-facing activatable parcels)
+  Colley mixed-use (418) small-lot mean AV: $   346,700
+  Ghent single-family mean AV:              $   603,593
+  AV uplift assumption (conservative):      $   100,000
+  AV uplift assumption (aggressive):        $   200,000
+
+  CONSERVATIVE (15 activations):
+    Property tax uplift ($100,000/parcel × 15): $    18,750
+    Meals tax (8 fb locations):                       $   182,000
+    Sales tax (city share, 4 retail):             $     6,000
+    BPOL:                                                 $     5,680
+    Adjacent residential uplift:                          $    14,262
+    ─────────────────────────────────────────────────────────
+    TOTAL ANNUAL CITY REVENUE:                            $   226,692
+
+  AGGRESSIVE (40 activations):
+    Property tax uplift ($200,000/parcel × 40): $   100,000
+    Meals tax (20 fb locations):                       $   455,000
+    Sales tax (city share, 12 retail):             $    18,000
+    BPOL:                                                 $    14,880
+    Adjacent residential uplift:                          $    14,262
+    ─────────────────────────────────────────────────────────
+    TOTAL ANNUAL CITY REVENUE:                            $   602,142
+
+
+============================================================
+7. PD 64 (CORE GHENT) DETAIL
+============================================================
+  Property use breakdown in PD 64:
+    Single Family - Detached                   280
+    Single Family - Attached                   218
+    Condominium                                195
+    Apartment                                   70
+    Non-Taxable                                 48
+    Duplex                                      40
+    Vacant Land                                 37
+    Fourplex                                    24
+    Triplex                                     18
+    Commercial                                  13
+    Residential Outbuilding                      2
+
+  PD 64 total assessed value:                $  2,146,886,100
+  PD 64 mean AV per parcel:                  $      2,271,837

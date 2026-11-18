@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ghent Streets — Bring Norfolk's Historic District Back to Life</title>
+  <meta name="description" content="A campaign to permit street-facing retail uses by right in Norfolk's HC-G2 Historic and Cultural Conservation district." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Ghent Streets" />
+  <meta property="og:title" content="Ghent Streets — Bring Norfolk's Historic District Back to Life" />
+  <meta property="og:description" content="A campaign to permit street-facing retail uses by right in Norfolk's HC-G2 Historic and Cultural Conservation district." />
+  <meta property="og:url" content="https://jason-edelman.org/ghent-streets/" />
+  <meta property="og:image" content="https://jason-edelman.org/ghent-streets/assets/media/hero-801-share.jpg" />
+  <meta property="og:image:alt" content="801 Stockley Gardens in Ghent Streets' parcel explorer, its porch set as a bistro under string lights." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="canonical" href="https://jason-edelman.org/ghent-streets/" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <a class="site-name" href="/ghent-streets/">Ghent <span>Streets</span></a>
+    <span class="issue-line">Norfolk, Virginia · HC-G2 Campaign</span>
+  </div>
+  <div class="container">
+    <nav>
+      <a href="/ghent-streets/" class="active">Home</a>
+      <a href="blog/">Blog</a>
+      <a href="policy/">Policy</a>
+      <a href="case-studies/">Case Studies</a>
+      <a href="zines/">Zines</a>
+      <a href="about.html">About</a>
+      <a href="get-involved.html">Get Involved</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container">
+    <p class="hero-label">Zoning Reform · Norfolk, VA</p>
+    <h1>Our streets should be alive.</h1>
+    <p class="hero-deck">Ghent's HC-G2 district has some of the most beautiful residential architecture in Hampton Roads, and some of the deadest streets. Zoning is why. We're changing it.</p>
+    <a href="policy/brief-01.html" style="font-family:var(--mono);font-size:0.7rem;letter-spacing:0.10em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold);padding-bottom:2px;">Read the Policy Brief →</a>
+    <a href="explorer/" style="font-family:var(--mono);font-size:0.7rem;letter-spacing:0.10em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold);padding-bottom:2px;margin-left:1.5rem;">Explore the corners in 3D →</a>
+    <a href="#case-studies" style="font-family:var(--mono);font-size:0.7rem;letter-spacing:0.10em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid var(--gold);padding-bottom:2px;margin-left:1.5rem;">Case studies →</a>
+  </div>
+  <figure class="container--wide hero-film">
+    <div class="hero-film-frame">
+      <video id="hero-video" muted loop playsinline preload="none" width="1280" height="720"
+             poster="assets/media/hero-801-after.webp"
+             aria-label="801 Stockley Gardens in 3D. Its windows light, a sign is hung at the door, string lights come on along the porch, and people take the tables.">
+        <source src="assets/media/hero-801.mp4" type="video/mp4">
+      </video>
+      <button type="button" class="hero-film-toggle" id="hero-toggle" aria-pressed="false" hidden>Pause</button>
+    </div>
+    <figcaption>801 Stockley Gardens, modeled from the city's maps and the assessor's photo, with its ground floor as a bistro. HC-G2's zoning prohibits restaurants. <a href="explorer/#p=1428701712&amp;t=bistro">Try it in the parcel explorer →</a></figcaption>
+  </figure>
+  <script>
+    // The loop plays unless the reader has asked for less motion; then the still shows the porch lit.
+    (() => {
+      const v = document.getElementById('hero-video'), b = document.getElementById('hero-toggle');
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      v.poster = 'assets/media/hero-801-before.webp';
+      v.preload = 'auto';
+      v.play().then(() => { b.hidden = false; }).catch(() => { v.poster = 'assets/media/hero-801-after.webp'; });
+      b.addEventListener('click', () => {
+        const stop = !v.paused;
+        if (stop) v.pause(); else v.play();
+        b.textContent = stop ? 'Play' : 'Pause';
+        b.setAttribute('aria-pressed', String(stop));
+      });
+    })();
+  </script>
+</section>
+
+<section style="padding: 3rem 0 2rem;">
+  <div class="container">
+    <div class="stat-row">
+      <div class="stat">
+        <span class="stat-number">0</span>
+        <span class="stat-label">Street-level retail<br>permitted by right</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">HC-G2</span>
+        <span class="stat-label">Norfolk zoning district<br>this campaign targets</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">1890</span>
+        <span class="stat-label">Year Ghent's development began,<br>one of Norfolk's first planned suburbs</span>
+      </div>
+      <div class="stat">
+        <span class="stat-number">PCO</span>
+        <span class="stat-label">The model that works —<br>Colley Ave, 21st Street</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="case-studies" style="padding: 2rem 0 2.5rem; border-top: 1px solid var(--rule-strong); border-bottom: 1px solid var(--rule-strong); scroll-margin-top: 1rem;">
+  <div class="container">
+    <p class="section-label">Case Studies</p>
+    <h2>Three buildings, one rule</h2>
+    <p>Two houses and an apartment building on streets the City classes as arterials or collectors, where NFK2050 says a neighborhood's shops belong. Each is built by hand in the parcel explorer, to show what its first floor could hold and what the zoning code says about it.</p>
+    <div class="card-grid">
+      <a class="card" href="case-studies/715-colonial.html">
+        <img class="card-img" src="case-studies/img/715-colonial-bistro.webp" width="960" height="720" loading="lazy" alt="The explorer's model of 715 Colonial Avenue with its porch set as a bistro under string lights.">
+        <p class="card-tag">Case Study · Colonial Avenue</p>
+        <h3>715 Colonial Avenue</h3>
+        <p>An 1888 brick house whose porch could seat a café, on a street the city's plan points shops toward.</p>
+      </a>
+      <a class="card" href="case-studies/740-w-princess-anne.html">
+        <img class="card-img" src="case-studies/img/740-w-princess-anne-coffee.webp" width="1280" height="720" loading="lazy" alt="The explorer's model of 740 W Princess Anne Road with a coffee shop on its first floor under striped awnings.">
+        <p class="card-tag">Case Study · W Princess Anne Road</p>
+        <h3>740 W Princess Anne Road</h3>
+        <p>A 1919 apartment building with porches stacked four high, and a shop on its first floor under the apartments.</p>
+      </a>
+      <a class="card" href="case-studies/1012-colley.html">
+        <img class="card-img" src="case-studies/img/1012-colley-books.webp" width="960" height="720" loading="lazy" alt="The explorer's model of 1012 Colley Avenue with a bookshop in its front room under a striped awning.">
+        <p class="card-tag">Case Study · Colley Avenue</p>
+        <h3>1012 Colley Avenue</h3>
+        <p>The end house of a 1908 row on Colley Avenue, whose front room could hold a bookshop.</p>
+      </a>
+    </div>
+    <p class="case-jump">Open one in 3D: <a href="explorer/#p=1428706223&amp;t=bistro">715 Colonial</a> · <a href="explorer/#p=1428629200&amp;t=coffee">740 W Princess Anne</a> · <a href="explorer/#p=1428615872&amp;t=books">1012 Colley</a> · <a href="case-studies/">all case studies →</a></p>
+  </div>
+</section>
+
+<section style="padding: 2rem 0;">
+  <div class="container">
+    <p class="section-label">The Problem</p>
+    <h2>Historic protection shouldn't mean commercial prohibition.</h2>
+    <p>Norfolk's HC-G2 district was designed to protect Ghent's historic residential fabric, and it does. But it also prohibits street-facing commercial activity outright. No café, no corner store, no bookshop, no neighborhood bar can open on Colonial Avenue: Table 3.6.11 leaves those uses blank in HC-G2, and a blank cell means prohibited. There's no permit to apply for, at any price. Only City Council can change that, by amending the table.</p>
+    <p>The result is what you see: a neighborhood of extraordinary houses behind dead sidewalks. Of the district's 420 parcels, nine are commercial, and under today's table no new shop can join them. The pedestrian life that should naturally attach to Ghent's dense, walkable grid isn't there. Residents want it, and the zoning code forbids it.</p>
+    <p>Nearby, Colley Avenue and 21st Street are alive. They have Pedestrian Commercial Overlay districts, and their ground floors produce tax revenue, foot traffic, and neighbors who know each other. HC-G2 has no such overlay. That's a policy failure, and it's fixable.</p>
+  </div>
+</section>
+
+<section style="padding: 2rem 0;">
+  <div class="container">
+    <div class="demand-box">
+      <h3>What We're Asking For</h3>
+      <ul>
+        <li>Permit neighborhood-scale retail uses <strong>by right</strong> on ground floors of parcels with street frontage in HC-G2</li>
+        <li>Use performance standards to manage scale, hours, and compatibility</li>
+        <li>Preserve ARB review for exterior alterations; don't require it for change of use alone</li>
+        <li>Model the amendment on Norfolk's existing PCO districts, which the city has already proven work</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 2rem 0 3rem;">
+  <div class="container">
+    <p class="section-label">Start Here</p>
+    <div class="card-grid">
+      <a class="card" href="policy/brief-01.html">
+        <p class="card-tag">Policy Brief · No. 1</p>
+        <h3>The Case for By-Right Retail in HC-G2</h3>
+        <p>The legal and planning argument: what the zoning code says, what it should say, and the exact text amendment language.</p>
+      </a>
+      <a class="card" href="policy/brief-02.html">
+        <p class="card-tag">Policy Brief · No. 2</p>
+        <h3>HC-G2 Retail and City Revenue: A Model and Its Limits</h3>
+        <p>A scenario model of what 15 to 40 new ground-floor businesses could bring the city. The meals tax carries most of the result; the evidence on property values is mixed.</p>
+      </a>
+      <a class="card" href="zines/zine-01.html">
+        <p class="card-tag">Zine · No. 1</p>
+        <h3>Why Is Your Street Dead?</h3>
+        <p>Plain-language explainer for neighbors, renters, and anyone who has ever wondered why Ghent feels more like a suburb at 8pm.</p>
+      </a>
+      <a class="card" href="zines/zine-02.html">
+        <p class="card-tag">Zine · No. 2</p>
+        <h3>A Tale of Two Streets</h3>
+        <p>Colonial Avenue vs. Colley Avenue: same city, same era, same type of neighborhood, and wildly different streets. One rule explains the difference.</p>
+      </a>
+      <a class="card" href="blog/">
+        <p class="card-tag">Blog</p>
+        <h3>Campaign Updates &amp; Analysis</h3>
+        <p>Long reads for activists and urbanists: process reporting, comparable cities, and arguments for the hearing room.</p>
+      </a>
+      <a class="card" href="get-involved.html">
+        <p class="card-tag">Action</p>
+        <h3>Get Involved</h3>
+        <p>How to show up at hearings, write letters, print zines, and talk to neighbors.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section style="padding: 2rem 0 3rem; border-top: 1px solid var(--rule-strong);">
+  <div class="container">
+    <p class="section-label">From the Blog</p>
+    <div class="card-grid">
+      <a class="card" href="blog/how-norfolk-zoning-kills-street-life.html">
+        <p class="card-tag">Blog · Urbanism</p>
+        <h3>How Norfolk's Zoning Code Kills Street Life</h3>
+        <p>A close reading of Table 3.6.11: what it permits and prohibits in HC-G2.</p>
+      </a>
+      <a class="card" href="blog/pco-precedent.html">
+        <p class="card-tag">Blog · Precedent</p>
+        <h3>The PCO Model: What Norfolk Already Knows How to Do</h3>
+        <p>Colley Avenue and 21st Street have it. Why doesn't Colonial?</p>
+      </a>
+      <a class="card" href="blog/ghent-unhoused.html">
+        <p class="card-tag">Blog · Equity</p>
+        <h3>Dead Streets and Displacement: The Link No One Talks About</h3>
+        <p>Why a street with nothing open becomes the default place to be, and how active ground floors make it safer through presence, not policing.</p>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-note">
+      <p>Ghent Streets is a community advocacy campaign for zoning reform in Norfolk, Virginia.<br>
+      Not affiliated with the City of Norfolk or any official body.</p>
+    </div>
+    <div class="footer-note" style="text-align:right;">
+      <p>HC-G2 · Norfolk Zoning Ordinance § 3.6<br>
+      NFK2050 · Sustain – Traditional</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

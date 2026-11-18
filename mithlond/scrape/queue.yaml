@@ -1,0 +1,94 @@
+# Mithlond Scrape Queue
+# Sources blocked by Claude's egress proxy — fetched by GitHub Actions from GitHub infra.
+#
+# Types:
+#   socrata   — Socrata Open Data API (JSON)
+#   scc_case  — SCC docket case page → render JS + extract + download all PDFs
+#   http      — Direct HTTP GET (JSON or binary)
+
+sources:
+
+  # ── Norfolk Open Data (Socrata: data.norfolk.gov) ─────────────────────────
+  # Note: $order param omitted — field names unknown without live schema inspection.
+  # Records come back in default order; sort/filter in analysis.
+
+  - id: norfolk-permits
+    type: socrata
+    host: data.norfolk.gov
+    dataset_id: fahm-yuh4
+    # https://data.norfolk.gov/Permits/Permits/fahm-yuh4
+    params:
+      $limit: 5000
+    output: data/norfolk-permits.json
+    cadence: weekly
+    notes: >
+      Norfolk DSC permits: building, plumbing, electrical, mechanical, fire.
+      Filter in analysis for generator, electrical service >1MW, commercial
+      new construction in industrial zones. 400 error on previous run was
+      caused by incorrect $order field name — removed.
+
+  - id: norfolk-right-of-way-permits
+    type: socrata
+    host: data.norfolk.gov
+    dataset_id: mi4h-8pn3
+    # Right of Way permits — excavations, installations, lane closures
+    params:
+      $limit: 2000
+    output: data/norfolk-row-permits.json
+    cadence: weekly
+    notes: >
+      ROW excavation permits signal underground conduit/fiber runs.
+      Useful for mapping cable routing from Norfolk Industrial Park
+      (3800 Village Ave) toward fiber ring.
+
+  # ── Virginia DEQ Air Permits ───────────────────────────────────────────────
+  - id: deq-data-center-air-permits
+    type: deq_permit_table
+    # The direct showpublisheddocument URL 403s even from GH Actions.
+    # Fetch the page that links to it and follow the download link.
+    index_url: https://www.deq.virginia.gov/news-info/shortcuts/permits/air/issued-air-permits-for-data-centers
+    output: data/deq-air-permit-table.xlsx
+    cadence: monthly
+    notes: >
+      DEQ issued air permits for data centers — full Excel table.
+      Last known state (Jan 29, 2026): Tidewater = 1 entry (Sentara, 2015).
+      Northern VA = 155+. Monitor for Hampton Roads entries.
+
+  # ── SCC Docket Cases ──────────────────────────────────────────────────────
+  # SCC docket is a JS SPA — docs don't appear in static HTML.
+  # Fetcher uses Playwright (headless Chromium) to render and extract links.
+
+  - id: scc-pur-2024-00184
+    type: scc_case
+    case_number: PUR-2024-00184
+    output_dir: data/scc/PUR-2024-00184
+    cadence: once
+    notes: >
+      Dominion Energy Virginia 2024 IRP filing. Public witness April 14 2025.
+      Appalachian Voices, Sierra Club, Clean Virginia all filed testimony here.
+      Contains load growth projections, data center demand analysis,
+      critique of Dominion's interconnect assumptions. Key Mithlond source.
+
+  - id: scc-pur-2024-00144
+    type: scc_case
+    case_number: PUR-2024-00144
+    output_dir: data/scc/PUR-2024-00144
+    cadence: once
+    notes: >
+      "Ex Parte: Electric Utilities and Data Center Load Growth" — SCC-initiated
+      technical conference Dec 16 2024. Amazon, Old Dominion Electric Coop,
+      and others filed post-conference comments Jan 2025. Highest priority:
+      this is the SCC directly grappling with data center demand. Not in
+      original queue — added after case number correction.
+
+  - id: scc-pur-2025-00058
+    type: scc_case
+    case_number: PUR-2025-00058
+    output_dir: data/scc/PUR-2025-00058
+    cadence: once
+    notes: >
+      Dominion 2025 biennial rate review. Final Order Nov 25 2025.
+      Key outcome: new GS-5 rate class for customers >25MW (effective Jan 1 2027);
+      large customers must pay 85% contracted distribution/transmission demand,
+      60% generation demand. Rejected $822M base rate increase, approved $565.7M.
+      Consumer Counsel interconnect queue brief filed here.

@@ -1,0 +1,51 @@
+name: Post Queue to Bluesky
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (print without posting)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Post queue
+        env:
+          ATPROTO_IDENTIFIER: ${{ vars.ATPROTO_IDENTIFIER }}
+          ATPROTO_APP_PASSWORD: ${{ secrets.ATPROTO_APP_PASSWORD }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: npm run post
+
+      - name: Commit archived posts
+        if: github.event.inputs.dry_run == 'false'
+        run: |
+          git config user.name "mithlond-bot"
+          git config user.email "bot@mithlond.research"
+          git add queue/ posted/
+          git diff --staged --quiet || git commit -m "chore: archive posted queue items [$(date -u +%Y-%m-%dT%H:%M:%SZ)]"
+          git push
