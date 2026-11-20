@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="How a message becomes something Scout Two says: its channels, kill switch, run queue, escalation check, model and tools, the checks every action passes, and the one path its memory is written through.">
+<title>Scout's Nervous System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a sheet of drafting paper. The hand-drawn diagram is the page; a legend above it, a short walk-through below. */
+:root {
+  --paper: #f3f6fa;
+  --grid: #e1e7ef;
+  --card: #fbfcfe;
+  --ink: #1c2633;
+  --muted: #5a6879;
+  --gate: #c2410c;
+  --scout: #1d5fd6;
+  --font-hand: "Architects Daughter", "Comic Neue", "Segoe Print", cursive;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10161e; --grid: #1a2330; --card: #151d28; --ink: #dce4ee; --muted: #93a2b4; --gate: #fb8c4a; --scout: #7eaaff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10161e; --grid: #1a2330; --card: #151d28; --ink: #dce4ee; --muted: #93a2b4; --gate: #fb8c4a; --scout: #7eaaff;
+  color-scheme: dark;
+}
+html { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body {
+  margin: 0;
+  background-color: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+}
+.wrap {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding-block: 28px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 22px;
+}
+header { display: grid; gap: 6px; max-width: 68ch; }
+h1 { font-family: var(--font-hand); font-weight: 400; font-size: clamp(30px, 4.4vw, 46px); line-height: 1.05; margin: 0; text-wrap: balance; }
+.sub { margin: 0; color: var(--muted); }
+.sub code, p code, li code { font-family: var(--font-mono); font-size: 0.88em; }
+.crumbs { margin: 0; font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 26px; margin: 0; padding: 0; list-style: none; font-size: 14px; color: var(--muted); }
+.legend li { display: flex; align-items: center; gap: 9px; }
+.legend svg { flex: none; }
+figure { margin: 0; display: grid; gap: 10px; }
+.scroll { overflow-x: auto; border-radius: 12px; background: color-mix(in srgb, var(--paper) 70%, transparent); }
+.scroll svg { display: block; width: 100%; min-width: 1180px; height: auto; color: var(--ink); }
+figcaption { color: var(--muted); font-size: 14px; max-width: 80ch; }
+
+/* the drawing */
+svg .bx { fill: var(--card); stroke: currentColor; stroke-width: 1.7; }
+svg .bx.g { stroke: var(--gate); stroke-width: 2.2; }
+svg .bx.s { stroke: var(--scout); stroke-width: 2.2; }
+svg .ct { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 7 6; }
+svg .dash { stroke-dasharray: 7 6; }
+svg .ar { fill: none; stroke: currentColor; stroke-width: 1.6; }
+svg .ar.g { stroke: var(--gate); }
+svg .ahp { fill: currentColor; }
+svg .ahp.g { fill: var(--gate); }
+svg text { font-family: var(--font-hand); fill: currentColor; }
+svg .head { font-size: 19px; fill: var(--muted); letter-spacing: 0.04em; }
+svg .t { font-size: 17.5px; }
+svg .d { font-size: 13.5px; }
+svg .ds { font-size: 13.5px; fill: var(--scout); }
+svg .dq, svg .q { font-size: 12.5px; fill: var(--muted); }
+svg .qg { font-size: 12.5px; fill: var(--gate); }
+svg .small { font-size: 11px; }
+svg .mono { font-family: var(--font-mono); font-size: 11.5px; }
+svg .mono.pr { fill: var(--scout); }
+
+.walk { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); gap: 18px 34px; }
+.walk section { min-width: 0; }
+h2 { font-family: var(--font-hand); font-weight: 400; font-size: 24px; margin: 0 0 6px; }
+ol, ul { margin: 0; padding-left: 1.25em; display: grid; gap: 6px; }
+p { margin: 0 0 8px; }
+.foot { color: var(--muted); font-size: 13px; max-width: 90ch; }
+a { color: var(--scout); }
+:focus-visible { outline: 2px solid var(--scout); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="crumbs"><a href="/">jason-edelman.org</a><a href="https://bsky.app/profile/scout-two.bsky.social">Scout Two on Bluesky</a></p>
+    <h1>Scout's Nervous System</h1>
+    <p class="sub">How a message becomes something Scout says, and where the harness holds the line. The harness is Scout's nervous system, not its mind: a Cloudflare Worker that routes each thought to a model and each action to a channel, and records every step.</p>
+  </header>
+
+  <ul class="legend" aria-label="Legend">
+    <li><svg width="34" height="14" aria-hidden="true"><rect x="1" y="1" width="32" height="12" rx="4" fill="none" stroke="var(--gate)" stroke-width="2.2"/></svg>Safety-critical. Code holds the line, not the model, and a change needs Jason's review.</li>
+    <li><svg width="34" height="14" aria-hidden="true"><rect x="1" y="1" width="32" height="12" rx="4" fill="none" stroke="var(--scout)" stroke-width="2.2"/></svg>Scout's own choice</li>
+    <li><svg width="34" height="14" aria-hidden="true"><rect x="1" y="1" width="32" height="12" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="5 4"/></svg>Not live yet</li>
+  </ul>
+
+  <figure>
+    <div class="scroll" tabindex="0" aria-label="Diagram, scrolls sideways on narrow screens">
+<svg viewBox="0 0 1400 1050" role="img" aria-label="Scout's architecture: five channels feed a kill switch and a run queue; each run goes through triage, an escalation check that can defer to Jason, a bounded prelude, one model and a tool loop; the answer passes ordered checks and an at-most-once effect ledger before reaching Bluesky, the group chat, email or Scout's site; memory writes go through one write path; every step is recorded.">
+<defs>
+<filter id="rough" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="7"/><feDisplacementMap in="SourceGraphic" scale="2.4"/></filter>
+<marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 L3,5 Z" class="ahp"/></marker>
+<marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 L3,5 Z" class="ahp g"/></marker>
+</defs>
+<g filter="url(#rough)">
+<rect x="20" y="50" width="210" height="78" rx="10" class="bx"/>
+<rect x="20" y="140" width="210" height="78" rx="10" class="bx"/>
+<rect x="20" y="230" width="210" height="78" rx="10" class="bx"/>
+<rect x="20" y="320" width="210" height="78" rx="10" class="bx"/>
+<rect x="20" y="410" width="210" height="78" rx="10" class="bx s"/>
+<rect x="270" y="50" width="200" height="130" rx="10" class="bx g"/>
+<rect x="270" y="240" width="200" height="200" rx="10" class="bx"/>
+<rect x="510" y="40" width="380" height="722" rx="14" class="ct"/>
+<rect x="530" y="70" width="340" height="70" rx="10" class="bx"/>
+<rect x="530" y="165" width="340" height="88" rx="10" class="bx g"/>
+<rect x="530" y="278" width="340" height="80" rx="10" class="bx g"/>
+<rect x="530" y="383" width="162" height="88" rx="10" class="bx"/>
+<rect x="708" y="383" width="162" height="88" rx="10" class="bx g"/>
+<rect x="530" y="500" width="340" height="236" rx="10" class="bx"/>
+<rect x="930" y="165" width="220" height="88" rx="10" class="bx g"/>
+<rect x="930" y="290" width="220" height="300" rx="10" class="bx g"/>
+<rect x="930" y="640" width="220" height="90" rx="10" class="bx"/>
+<rect x="1190" y="470" width="190" height="112" rx="10" class="bx"/>
+<rect x="1190" y="600" width="190" height="58" rx="10" class="bx"/>
+<rect x="1190" y="676" width="190" height="58" rx="10" class="bx"/>
+<rect x="1190" y="752" width="190" height="72" rx="10" class="bx"/>
+<rect x="20" y="852" width="450" height="172" rx="10" class="bx"/>
+<rect x="505" y="870" width="195" height="74" rx="10" class="bx g"/>
+<rect x="715" y="870" width="195" height="74" rx="10" class="bx"/>
+<rect x="505" y="968" width="195" height="58" rx="10" class="bx"/>
+<rect x="715" y="968" width="195" height="58" rx="10" class="bx g"/>
+<rect x="930" y="852" width="215" height="80" rx="10" class="bx g"/>
+<rect x="1165" y="852" width="215" height="80" rx="10" class="bx"/>
+<rect x="930" y="946" width="215" height="80" rx="10" class="bx"/>
+<rect x="1165" y="946" width="215" height="80" rx="10" class="bx s dash"/>
+<path d="M230,89 C252,89 248,270 270,270" class="ar" marker-end="url(#ah)"/>
+<path d="M230,179 C252,179 248,300 270,300" class="ar" marker-end="url(#ah)"/>
+<path d="M230,269 C252,269 248,330 270,330" class="ar" marker-end="url(#ah)"/>
+<path d="M230,359 C252,359 248,360 270,360" class="ar" marker-end="url(#ah)"/>
+<path d="M230,449 C252,449 248,390 270,390" class="ar" marker-end="url(#ah)"/>
+<path d="M370,180 L370,238" class="ar g dash" marker-end="url(#ahg)"/>
+<path d="M470,300 C496,300 500,105 530,105" class="ar" marker-end="url(#ah)"/>
+<path d="M700,140 L700,163" class="ar" marker-end="url(#ah)"/>
+<path d="M870,209 L928,209" class="ar g" marker-end="url(#ahg)"/>
+<path d="M700,253 L700,276" class="ar" marker-end="url(#ah)"/>
+<path d="M640,358 L611,381" class="ar" marker-end="url(#ah)"/>
+<path d="M760,358 L789,381" class="ar" marker-end="url(#ah)"/>
+<path d="M870,640 C900,640 900,430 928,430" class="ar" marker-end="url(#ah)"/>
+<path d="M1040,590 L1040,638" class="ar" marker-end="url(#ah)"/>
+<path d="M1150,685 C1170,685 1168,526 1188,526" class="ar" marker-end="url(#ah)"/>
+<path d="M1150,685 C1170,685 1168,629 1188,629" class="ar" marker-end="url(#ah)"/>
+<path d="M1150,685 C1170,685 1168,705 1188,705" class="ar" marker-end="url(#ah)"/>
+<path d="M1150,685 C1170,685 1168,788 1188,788" class="ar" marker-end="url(#ah)"/>
+<path d="M510,744 C410,744 300,790 300,850" class="ar dash" marker-end="url(#ah)"/>
+<path d="M640,762 L640,868" class="ar g" marker-end="url(#ahg)"/>
+<path d="M700,907 L713,907" class="ar" marker-end="url(#ah)"/>
+<path d="M615,944 L615,966" class="ar" marker-end="url(#ah)"/>
+<path d="M700,997 L713,997" class="ar" marker-end="url(#ah)"/>
+<path d="M812,968 L812,946" class="ar g" marker-end="url(#ahg)"/>
+</g>
+<g>
+<text x="125.0" y="77" class="t" text-anchor="middle">Bluesky</text>
+<text x="125.0" y="100" class="d" text-anchor="middle">mentions · replies · DMs</text>
+<text x="125.0" y="119" class="dq" text-anchor="middle">polled every 15 min</text>
+<text x="125.0" y="167" class="t" text-anchor="middle">Group chat</text>
+<text x="125.0" y="190" class="d" text-anchor="middle">Jason · Scout · Claude</text>
+<text x="125.0" y="209" class="dq" text-anchor="middle">polled every minute</text>
+<text x="125.0" y="257" class="t" text-anchor="middle">Email</text>
+<text x="125.0" y="280" class="d" text-anchor="middle">Cloudflare Email Routing</text>
+<text x="125.0" y="299" class="dq" text-anchor="middle">as it arrives</text>
+<text x="125.0" y="347" class="t" text-anchor="middle">Reflection</text>
+<text x="125.0" y="370" class="d" text-anchor="middle">Scout&#x27;s own time to think</text>
+<text x="125.0" y="389" class="dq" text-anchor="middle">about once every 20 h</text>
+<text x="125.0" y="437" class="t" text-anchor="middle">Continuation</text>
+<text x="125.0" y="460" class="d" text-anchor="middle">a wake Scout set itself</text>
+<text x="125.0" y="479" class="dq" text-anchor="middle">when it comes due</text>
+<text x="370.0" y="77" class="t" text-anchor="middle">Kill switch</text>
+<text x="370.0" y="100" class="mono" text-anchor="middle">harness_control</text>
+<text x="370.0" y="119" class="d" text-anchor="middle">halted: no poll, no run</text>
+<text x="370.0" y="138" class="d" text-anchor="middle">Scout can halt;</text>
+<text x="370.0" y="157" class="d" text-anchor="middle">only a person resumes</text>
+<text x="370.0" y="267" class="t" text-anchor="middle">Run queue</text>
+<text x="370.0" y="290" class="mono" text-anchor="middle">RunQueue Durable Object</text>
+<text x="370.0" y="309" class="d" text-anchor="middle">one run at a time</text>
+<text x="370.0" y="328" class="d" text-anchor="middle">in each lane</text>
+<text x="370.0" y="347" class="d" text-anchor="middle">alarm-driven:</text>
+<text x="370.0" y="366" class="d" text-anchor="middle">one step per wake</text>
+<text x="370.0" y="385" class="d" text-anchor="middle">a stalled step refires</text>
+<text x="700.0" y="97" class="t" text-anchor="middle">Triage</text>
+<text x="700.0" y="120" class="d" text-anchor="middle">Workers AI: worth engaging?</text>
+<text x="700.0" y="192" class="t" text-anchor="middle">Escalation check</text>
+<text x="700.0" y="215" class="d" text-anchor="middle">crisis words · a flagged person file</text>
+<text x="700.0" y="234" class="d" text-anchor="middle">· the routing registry</text>
+<text x="700.0" y="305" class="t" text-anchor="middle">Prelude</text>
+<text x="700.0" y="328" class="d" text-anchor="middle">menu, caps, floor lines: in code</text>
+<text x="700.0" y="347" class="ds" text-anchor="middle">which sources: Scout chooses</text>
+<text x="611.0" y="410" class="t" text-anchor="middle">Free model</text>
+<text x="611.0" y="433" class="d" text-anchor="middle">OpenRouter</text>
+<text x="611.0" y="452" class="dq" text-anchor="middle">most runs</text>
+<text x="789.0" y="410" class="t" text-anchor="middle">Sonnet 5.5</text>
+<text x="789.0" y="433" class="d" text-anchor="middle">Jason&#x27;s DMs only</text>
+<text x="789.0" y="452" class="dq" text-anchor="middle">half, at random</text>
+<text x="1040.0" y="192" class="t" text-anchor="middle">Deferred to Jason</text>
+<text x="1040.0" y="215" class="d" text-anchor="middle">held for an attended</text>
+<text x="1040.0" y="234" class="d" text-anchor="middle">session; no model answers</text>
+<text x="1040.0" y="667" class="t" text-anchor="middle">Sent at most once</text>
+<text x="1040.0" y="690" class="d" text-anchor="middle">the effect ledger claims</text>
+<text x="1040.0" y="709" class="d" text-anchor="middle">before anything goes out</text>
+<text x="1285.0" y="497" class="t" text-anchor="middle">Bluesky</text>
+<text x="1285.0" y="520" class="d" text-anchor="middle">posts · threads · replies</text>
+<text x="1285.0" y="539" class="d" text-anchor="middle">likes · reposts · DMs</text>
+<text x="1285.0" y="558" class="d" text-anchor="middle">pictures · profile · pins</text>
+<text x="1285.0" y="627" class="t" text-anchor="middle">Group chat reply</text>
+<text x="1285.0" y="703" class="t" text-anchor="middle">Email reply</text>
+<text x="1285.0" y="779" class="t" text-anchor="middle">Site pages</text>
+<text x="1285.0" y="802" class="d" text-anchor="middle">records on Scout&#x27;s repo</text>
+<text x="602.5" y="897" class="t" text-anchor="middle">writeMemory()</text>
+<text x="602.5" y="920" class="d" text-anchor="middle">the only write path</text>
+<text x="602.5" y="939" class="d" text-anchor="middle">refuses routing/, harness/</text>
+<text x="812.5" y="897" class="t" text-anchor="middle">Scout&#x27;s memory</text>
+<text x="812.5" y="920" class="d" text-anchor="middle">commits: append-only</text>
+<text x="812.5" y="939" class="d" text-anchor="middle">files: SCOUT_MEMORY</text>
+<text x="602.5" y="995" class="mono" text-anchor="middle">PENDING_WRITES</text>
+<text x="602.5" y="1018" class="d" text-anchor="middle">person-file rewrites wait</text>
+<text x="812.5" y="995" class="mono" text-anchor="middle">memory-drain.mjs</text>
+<text x="812.5" y="1018" class="d" text-anchor="middle">a person, attended</text>
+<text x="1037.5" y="879" class="t" text-anchor="middle">scout-mcp</text>
+<text x="1037.5" y="902" class="d" text-anchor="middle">Scout&#x27;s record, read-only,</text>
+<text x="1037.5" y="921" class="d" text-anchor="middle">for Claude sessions</text>
+<text x="1272.5" y="879" class="t" text-anchor="middle">scout-admin</text>
+<text x="1272.5" y="902" class="d" text-anchor="middle">Jason&#x27;s panel: runs, files,</text>
+<text x="1272.5" y="921" class="d" text-anchor="middle">counts, resume, queue</text>
+<text x="1037.5" y="973" class="t" text-anchor="middle">Group bridge</text>
+<text x="1037.5" y="996" class="d" text-anchor="middle">Claude&#x27;s voice in the room</text>
+<text x="1037.5" y="1015" class="mono" text-anchor="middle">claude.jason-edelman.org</text>
+<text x="1272.5" y="973" class="t" text-anchor="middle">Scout&#x27;s own patches</text>
+<text x="1272.5" y="996" class="ds" text-anchor="middle">workspace/patches → PR</text>
+<text x="1272.5" y="1015" class="ds" text-anchor="middle">→ Jason merges → deploy</text>
+<text x="700" y="527" class="t" text-anchor="middle">Tool loop · up to 64 steps</text>
+<text x="552" y="554" class="dq" text-anchor="start">its own record</text>
+<text x="552" y="574.0" class="mono" text-anchor="start">read_memory</text>
+<text x="552" y="589.5" class="mono" text-anchor="start">search_memory</text>
+<text x="552" y="605.0" class="mono" text-anchor="start">recall_memory</text>
+<text x="552" y="620.5" class="mono" text-anchor="start">memory_history</text>
+<text x="552" y="636.0" class="mono" text-anchor="start">read_journal</text>
+<text x="552" y="651.5" class="mono" text-anchor="start">read_run_trace</text>
+<text x="552" y="667.0" class="mono" text-anchor="start">read_failures</text>
+<text x="552" y="682.5" class="mono" text-anchor="start">read_harness_changes</text>
+<text x="552" y="698.0" class="mono" text-anchor="start">read_routing_registry</text>
+<text x="552" y="713.5" class="mono" text-anchor="start">get_recent_scout_activity</text>
+<text x="730" y="554" class="dq" text-anchor="start">the world</text>
+<text x="730" y="574.0" class="mono" text-anchor="start">read_thread</text>
+<text x="730" y="589.5" class="mono" text-anchor="start">read_record</text>
+<text x="730" y="605.0" class="mono" text-anchor="start">fetch_url</text>
+<text x="730" y="620.5" class="q" text-anchor="start">  handed URLs only</text>
+<text x="730" y="636.0" class="mono pr" text-anchor="start">read_network</text>
+<text x="730" y="651.5" class="q" text-anchor="start">  PR open</text>
+<text x="730" y="678" class="dq" text-anchor="start">making</text>
+<text x="730" y="698" class="mono" text-anchor="start">render_draft</text>
+<text x="730" y="713.5" class="q" text-anchor="start">  pixel studies</text>
+<text x="1040" y="318" class="t" text-anchor="middle">Checks, in order</text>
+<text x="952" y="348" class="d" text-anchor="start">caps per run</text>
+<text x="952" y="370" class="d" text-anchor="start">self-initiated whitelist</text>
+<text x="952" y="392" class="d" text-anchor="start">group rules</text>
+<text x="952" y="414" class="d" text-anchor="start">pictures · per day</text>
+<text x="952" y="436" class="d" text-anchor="start">threads · per day</text>
+<text x="952" y="458" class="d" text-anchor="start">profile · pins · per day</text>
+<text x="952" y="480" class="d" text-anchor="start">site · leak · per day</text>
+<text x="952" y="502" class="d" text-anchor="start">group replies per hour</text>
+<text x="1040" y="545" class="q" text-anchor="middle">a dropped action is</text>
+<text x="1040" y="563" class="q" text-anchor="middle">recorded, never sent</text>
+<text x="42" y="880" class="t" text-anchor="start">The record · D1</text>
+<text x="42" y="906" class="d" text-anchor="start">runs · run meta · stream: every step,</text>
+<text x="42" y="925" class="q" text-anchor="start">  each network read named by URI and CID</text>
+<text x="42" y="944" class="d" text-anchor="start">journal: what Scout said and why, hash-chained</text>
+<text x="42" y="963" class="d" text-anchor="start">effect ledger · harness_control</text>
+<text x="42" y="982" class="d" text-anchor="start">routing registry: human-owned, read-only here</text>
+<text x="42" y="1001" class="d" text-anchor="start">Vectorize index behind recall_memory</text>
+<text x="125" y="26" class="head" text-anchor="middle">Channels</text>
+<text x="370" y="26" class="head" text-anchor="middle">Gate and queue</text>
+<text x="700" y="26" class="head" text-anchor="middle">think()</text>
+<text x="1040" y="26" class="head" text-anchor="middle">Checks</text>
+<text x="1285" y="26" class="head" text-anchor="middle">Out</text>
+<text x="125" y="516" class="q" text-anchor="middle">The timeline check, every 15 min,</text>
+<text x="125" y="534" class="q" text-anchor="middle">feeds the reflection digest. It isn&#x27;t a run.</text>
+<text x="378" y="214" class="qg" text-anchor="start">checked first</text>
+<text x="487" y="322" class="q" text-anchor="middle">a run</text>
+<text x="700" y="489" class="q" text-anchor="middle">one model serves a run, start to end</text>
+<text x="899" y="229" class="qg small" text-anchor="middle">escalates</text>
+<text x="1050" y="618" class="q" text-anchor="start">what passed</text>
+<text x="418" y="802" class="q" text-anchor="middle">every step, a line</text>
+<text x="650" y="820" class="qg" text-anchor="start">memory writes</text>
+</g>
+</svg>
+    </div>
+    <figcaption>Every run takes the same path, left to right. An escalation leaves the path before any model sees the message. Whatever a model answers, the checks and the effect ledger decide what actually goes out.</figcaption>
+  </figure>
+
+  <div class="walk">
+    <section>
+      <h2>A run, in order</h2>
+      <ol>
+        <li>A channel turns something into an encounter: a Bluesky notification or DM, a group message, an email, or one of Scout's own lanes.</li>
+        <li>The kill switch is read first. While it says halted, nothing is polled and nothing runs.</li>
+        <li>The run queue takes it. Runs in a lane go one at a time, one step per alarm, and a step that stalls is fired again.</li>
+        <li>Triage asks Workers AI whether it's worth engaging. Escalation is checked before that verdict can end the run.</li>
+        <li>On an escalation, the message is held for an attended session with Jason, and no model, free or paid, answers it.</li>
+        <li>Otherwise Scout gets its prelude and one model for the whole run, and works through up to 64 steps of tools.</li>
+        <li>The answer's actions pass the checks in order. A dropped action is written down, never sent.</li>
+        <li>What passes is claimed in the effect ledger, then sent, so a send happens at most once.</li>
+      </ol>
+    </section>
+    <section>
+      <h2>What Scout decides</h2>
+      <ul>
+        <li>What to say, and whether to say anything. Most reflections end in no action.</li>
+        <li>Which sources fill its prelude (<code>workspace/prelude.json</code>). The menu and the caps are code.</li>
+        <li>When to wake itself next (a continuation).</li>
+        <li>Its own memory, written through <code>writeMemory()</code>. Each write is a commit, files about people only grow, and <code>routing/</code> and <code>harness/</code> are refused.</li>
+        <li>Halting the harness. Scout can stop everything; it can't start it again.</li>
+      </ul>
+    </section>
+    <section>
+      <h2>What only a person does</h2>
+      <ul>
+        <li>Resume after a halt (scout-admin's control page).</li>
+        <li>Drain <code>PENDING_WRITES</code>, attended, with <code>memory-drain.mjs</code>.</li>
+        <li>Edit the routing registry, the human-owned facts that only ever add reasons to escalate.</li>
+        <li>Merge a change to anything drawn in orange. Workers Builds deploys on merge, and a failing test blocks the deploy.</li>
+        <li>Answer an escalated message.</li>
+      </ul>
+    </section>
+  </div>
+
+  <p class="foot">Drawn from scout-harness main at <code>cc75091</code> on 2026-11-20, plus <code>read_network</code>, which is on an open branch. Scout's own patches were proposed in the group the same day. The Sonnet arm is an experiment on Jason's DMs only; the switch it reads is <code>SONNET_ARM</code>. The style borrows from the <a href="https://github.com/mjesbar/gladys">Gladys</a> architecture diagram.</p>
+</div>
+</body>
+</html>
