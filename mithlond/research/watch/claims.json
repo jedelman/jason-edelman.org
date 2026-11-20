@@ -154,6 +154,24 @@
           "verified": "2026-11-18T17:10:07.471Z"
         }
       ]
+    },
+    {
+      "id": "roanoke-council-asks-state-data-center-moratorium",
+      "statement": "Roanoke City Council asked the General Assembly, in its 2027 legislative agenda, for a data center moratorium until public health and consumer protection standards are adopted.",
+      "topic": "law",
+      "first_seen": "2026-11-20",
+      "sources": [
+        {
+          "url": "https://cardinalnews.org/2026/11/20/two-year-data-center-moratorium-is-needed-and-is-now-part-of-legislative-wish-list-roanoke-council-decides/",
+          "publisher": "Cardinal News",
+          "origin": "Cardinal News",
+          "date": "2026-11-20",
+          "seen": "2026-11-20",
+          "stance": "asserts",
+          "quote": "The council’s request, approved as a part of the city’s 2027 legislative agenda this week, asks for the moratorium “until public health and consumer protection standards are adopted to address impacts on energy and water use, drinking water, air and water quality, utility rates, agriculture, parks, historic sites, forests and infrastructure.”",
+          "verified": "2026-11-20T10:25:32.840Z"
+        }
+      ]
     }
   ]
 }

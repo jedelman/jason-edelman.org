@@ -1,0 +1,34 @@
+{
+  "date": "2026-11-20",
+  "project": "mithlond",
+  "run": "https://claude.ai/code/session_01Sqvwr64Yo88NfD7hZrTeeR",
+  "summary": "Cardinal News reports that Roanoke City Council added a request for a two-year statewide data center moratorium to its 2027 legislative agenda. It is the only new item inside the watch's scope that could be opened today; it concerns Southwest Virginia, not Hampton Roads, and bears on the state-level rules that would govern data centers everywhere.",
+  "checked": [
+    "virginia-mercury",
+    "cardinal-news",
+    "whro-local-government",
+    "datacenterdynamics"
+  ],
+  "items": [
+    {
+      "title": "Cardinal News: Roanoke City Council asks the General Assembly for a data center moratorium",
+      "url": "https://cardinalnews.org/2026/11/20/two-year-data-center-moratorium-is-needed-and-is-now-part-of-legislative-wish-list-roanoke-council-decides/",
+      "publisher": "Cardinal News",
+      "origin": "Cardinal News",
+      "kind": "news",
+      "published": "2026-11-20",
+      "quote": "The council’s request, approved as a part of the city’s 2027 legislative agenda this week, asks for the moratorium “until public health and consumer protection standards are adopted to address impacts on energy and water use, drinking water, air and water quality, utility rates, agriculture, parks, historic sites, forests and infrastructure.”",
+      "note": "A Virginia city's request for a state-imposed pause until standards are adopted: the same state-level lever as the statewide pause other groups seek. Roanoke is outside Hampton Roads.",
+      "claims": [
+        "roanoke-council-asks-state-data-center-moratorium"
+      ],
+      "verified": "2026-11-20T10:25:32.840Z"
+    }
+  ],
+  "unreachable": [
+    {
+      "url": "https://virginiamercury.com/2026/11/19/rural-advocacy-groups-band-together-to-oppose-data-centers-related-energy-projects/",
+      "why": "a security challenge refuses automated access"
+    }
+  ]
+}
