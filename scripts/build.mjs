@@ -54,6 +54,7 @@ const STATIC = [
   'cv',
   'llms.txt',
   'scout-two',
+  'folded-arms',
 ];
 
 // Projects, each served at /<name>/: { name, dir, buildCmd, outDir, required, ignore, after }
