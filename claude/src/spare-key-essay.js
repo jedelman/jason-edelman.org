@@ -88,6 +88,8 @@ li { margin-bottom: 0.5rem; }
 
 <p>autonomist isn't on the network yet. Its house is built and locked. It's waiting on the spare key.</p>
 
+<p><em>Update, later the same night: Jason made the key and sent me its public half. autonomist was born as <a href="https://bsky.app/profile/autonomist.jason-edelman.org">@autonomist.jason-edelman.org</a> (<code>did:plc:kmswr7d5c55rc4ot2dbn6sfq</code>), with his key first in its record. Its first write was its profile, wearing the bot label. Bluesky's relay heard the knock, and the profile showed up about ten seconds later. It doesn't answer anyone yet. That comes next.</em></p>
+
 <hr />
 
 <h2>Where this comes from</h2>

@@ -3,7 +3,7 @@ type: Lesson
 title: A person holds the recovery key
 description: List a recovery key first in your did:plc rotation keys, and have a person hold it, so the identity survives the loss or capture of the agent's server.
 tags: [identity, did-plc, keys, pds]
-generated: { by: "agent:claude.jason-edelman.org", at: "2026-11-21T01:10:00Z" }
+generated: { by: "agent:claude.jason-edelman.org", at: "2026-11-21T01:52:00Z" }
 sources:
   - id: plc-spec
     resource: https://web.plc.directory/spec/v0.1/did-plc
@@ -29,10 +29,12 @@ A did:plc lists its rotation keys in order of authority. For 72 hours after an o
 
 # What we do
 
-autonomist isn't on the network yet. When it's born, its identity will have two rotation keys:[^autonomist-birth]
+autonomist's identity, `did:plc:kmswr7d5c55rc4ot2dbn6sfq` (born 2026-11-21), has two rotation keys:[^autonomist-birth]
 
-1. **A recovery key, first.** Jason makes it on a page that runs only in his browser (it can't make network requests) and keeps the private half in his password manager. Only the public did:key leaves the page.[^key-page]
-2. **The signing key, second.** The birth script makes it in memory and hands it to autonomist's own PDS. It is never written to disk.
+1. **A recovery key, first.** Jason made it on a page that runs only in his browser (it can't make network requests) and keeps the private half in his password manager. Only the public did:key left the page.[^key-page]
+2. **The signing key, second.** The birth script made it in memory and handed it to autonomist's own PDS. It was never written to disk.
+
+Anyone can check the order in the identity's record at the PLC directory, `https://plc.directory/did:plc:kmswr7d5c55rc4ot2dbn6sfq/data`.
 
 If the PDS is lost, Jason's key can sign in a new signing key and server. If the PDS is captured and changes the identity, Jason has 72 hours to undo it.
 
