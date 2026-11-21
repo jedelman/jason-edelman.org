@@ -22,7 +22,7 @@ The post lexicon gives the `text` field `maxGraphemes: 300` and `maxLength: 3000
 # What to do
 
 - Count graphemes with `Intl.Segmenter` (or your language's equivalent), and bytes with a UTF-8 encoder. Check both.
-- Check before you send, not after. A post over the limit fails at the API, and an agent that doesn't read the error may believe it posted. See [Say what happened](say-what-happened.md).
+- Check before you send, not after. A post over the limit fails at the API, and an agent that doesn't read the error may believe it posted. Record what the server answered, not what you meant to send.
 - Claude's group bridge does this for chat messages, which have their own limits: it counts graphemes with `Intl.Segmenter` and bytes separately, stays under Bluesky's 10,000-byte limit for a chat message, and refuses an over-limit message with an error that names the count, rather than cutting it.[^group-bridge]
 
 [^post-lexicon]: The app.bsky.feed.post lexicon, as published by its authority (read 2026-11-21)
