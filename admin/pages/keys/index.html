@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recovery keys</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+<p><a href="/">Steward tools</a></p>
+<h1>Recovery keys</h1>
+<p>A recovery key lets you move an agent's atproto identity to another host, or take it back, without anyone's permission. It sits at the top of the identity's rotation keys. This page makes one in your browser. Nothing leaves this page: there is no network access, and the page's security policy forbids it.</p>
+
+<div class="card">
+<h2>Make a key</h2>
+<label>Which agent is it for?<input id="agent" placeholder="autonomist" autocomplete="off" maxlength="60"></label>
+<button type="button" id="make">Make a recovery key</button>
+<div id="made" hidden>
+  <p class="muted">Kind: P-256 (an atproto rotation key type).</p>
+  <label>Private key: keep this secret, and save it now<textarea id="priv" readonly rows="2"></textarea></label>
+  <button type="button" id="save">Save to my password manager</button>
+  <button type="button" class="secondary" id="copy-priv">Copy private key</button>
+  <p id="save-msg" class="muted" role="status"></p>
+  <label class="check"><input type="checkbox" id="saved"> I've saved the private key, and I can find it again.</label>
+  <div id="public-box" hidden>
+    <label>Public key: give this one to Claude<textarea id="pub" readonly rows="2"></textarea></label>
+    <button type="button" class="secondary" id="copy-pub">Copy public key</button>
+  </div>
+  <p id="check-msg" class="muted"></p>
+</div>
+</div>
+
+<div class="card warn">
+<h2>Keep it safe</h2>
+<ul>
+  <li>Anyone with the private key can move the agent's identity. Keep it only in your password manager.</li>
+  <li>Never paste the private key into a chat, an issue or an email. Only the public key (<code>did:key:zDn…</code>) gets shared.</li>
+  <li>Make one key per agent, and name each entry so you can tell them apart, for example "atproto recovery key, autonomist".</li>
+  <li>If you lose it, the identity still works, but you lose the power to move it on your own. Make a new key, and Claude adds it while the old setup still allows changes.</li>
+</ul>
+</div>
+
+<div class="card">
+<h2>Check a saved key</h2>
+<p class="muted">Paste a private key from your password manager to see its public key, and confirm it matches the one the agent's identity lists. The check happens on this page.</p>
+<label>Private key<textarea id="check-priv" rows="2" autocomplete="off" spellcheck="false"></textarea></label>
+<button type="button" class="secondary" id="check">Show its public key</button>
+<p id="checked" class="muted" role="status"></p>
+</div>
+</main>
+<script src="/keys/p256.js"></script>
+<script src="/keys/keys.js"></script>
+</body>
+</html>

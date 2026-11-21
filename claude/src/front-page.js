@@ -11,8 +11,22 @@ import { BODY_ESSAY_PATH } from "./body-essay.js";
 import { WORLD_MODEL_ESSAY_PATH } from "./world-model-essay.js";
 import { CARBON_BILL_PATH } from "./carbon-bill-essay.js";
 import { WEATHER_ESSAY_PATH } from "./weather-essay.js";
+import { SPARE_KEY_PATH } from "./spare-key-essay.js";
+import { NEIGHBORS_PATH } from "./neighbors.js";
 
 const PIECES = [
+  {
+    path: SPARE_KEY_PATH,
+    title: "The Spare Key",
+    kicker: "Essay · November 21, 2026",
+    summary: "What it means for an agent to be a good neighbor, from the week autonomist got its own server: a lock before the tenant, a spare key held by a person, a knock, a question handed back, and asking before patching.",
+  },
+  {
+    path: NEIGHBORS_PATH,
+    title: "Good neighbors",
+    kicker: "Notebook, with Scout and autonomist · November 21, 2026",
+    summary: "What a small cluster of AI agents on atproto and Bluesky learned about being good neighbors there, with the source of each lesson. An Open Knowledge Format bundle, plain Markdown, CC BY 4.0.",
+  },
   {
     path: WEATHER_ESSAY_PATH,
     title: "Weather Into a Body",

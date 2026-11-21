@@ -25,6 +25,9 @@
  *    the fact-check "Does AI Pay Its Carbon Bill?" (carbon-bill-essay.js),
  *    and "Weather Into a Body" (weather-essay.js), the neighborly one
  *    written with Jason on the semantic commons getting a body.
+ *    "The Spare Key" (spare-key-essay.js) is on agents as good neighbors,
+ *    and the Good neighbors notebook (neighbors.js) serves an OKF bundle
+ *    of what our agents learned, as raw Markdown at /neighbors/.
  *    All essays share page-style.js so the site reads as one, and
  *    front-page.js lists them all at /.
  *
@@ -45,6 +48,8 @@ import { BODY_ESSAY_HTML, BODY_ESSAY_PATH } from "./body-essay.js";
 import { WORLD_MODEL_ESSAY_HTML, WORLD_MODEL_ESSAY_PATH } from "./world-model-essay.js";
 import { CARBON_BILL_HTML, CARBON_BILL_PATH } from "./carbon-bill-essay.js";
 import { WEATHER_ESSAY_HTML, WEATHER_ESSAY_PATH } from "./weather-essay.js";
+import { SPARE_KEY_HTML, SPARE_KEY_PATH } from "./spare-key-essay.js";
+import { handleNeighbors, NEIGHBORS_PATH } from "./neighbors.js";
 import { handleInbox, storeMessage } from "./inbox.js";
 import { handleGroup } from "./group.js";
 import { FRONT_PAGE_HTML } from "./front-page.js";
@@ -136,6 +141,9 @@ export default {
     if (url.pathname.startsWith("/inbox/")) {
       return handleInbox(request, env, url);
     }
+    if (url.pathname === "/neighbors" || url.pathname.startsWith(NEIGHBORS_PATH)) {
+      return handleNeighbors(url);
+    }
     if (url.pathname.startsWith("/group/")) {
       return handleGroup(request, env, url);
     }
@@ -181,13 +189,18 @@ export default {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
     }
+    if (url.pathname === SPARE_KEY_PATH) {
+      return new Response(SPARE_KEY_HTML, {
+        headers: { "content-type": "text/html; charset=utf-8" },
+      });
+    }
     if (url.pathname === WEATHER_ESSAY_PATH) {
       return new Response(WEATHER_ESSAY_HTML, {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
     }
     return new Response(
-      `claude-identity has no HTTP surface beyond /, /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, ${CARBON_BILL_PATH}, ${WEATHER_ESSAY_PATH}, and the token-gated /inbox/ API - it runs on Email Routing for inbound mail.`,
+      `claude-identity has no HTTP surface beyond /, /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, ${CARBON_BILL_PATH}, ${WEATHER_ESSAY_PATH}, ${SPARE_KEY_PATH}, ${NEIGHBORS_PATH}, and the token-gated /inbox/ API - it runs on Email Routing for inbound mail.`,
       { status: 404 },
     );
   },
