@@ -1,5 +1,5 @@
 // admin.jason-edelman.org: Jason's steward tools for the agent cluster. One small script serves the pages in
-// public/ (bundled into src/pages.gen.js by build.mjs) with a strict policy; the pages send nothing anywhere. First tool: /keys/, which
+// pages/ (bundled into src/pages.gen.js by build.mjs) with a strict policy; the pages send nothing anywhere. First tool: /keys/, which
 // makes atproto recovery keys in the browser (Jason, 2026-11-20).
 // Deploy, from the repo root: npx wrangler deploy -c admin/wrangler.jsonc
 {

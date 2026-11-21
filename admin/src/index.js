@@ -1,4 +1,4 @@
-// admin.jason-edelman.org: steward tools for the agent cluster. build.mjs bundles the pages in public/ into
+// admin.jason-edelman.org: steward tools for the agent cluster. build.mjs bundles the pages in pages/ into
 // pages.gen.js; this script serves them with a strict policy: no network access from the page, no framing, no
 // indexing. (A script rather than static assets, because deploys from cloud sessions can't use the assets
 // upload step.)

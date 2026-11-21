@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { createRequire } from 'node:module'
-const P = createRequire(import.meta.url)('../public/keys/p256.js')
+const P = createRequire(import.meta.url)('../pages/keys/p256.js')
 
 const b64u = (s) => Uint8Array.from(Buffer.from(s, 'base64url'))
 
