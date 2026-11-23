@@ -11,3 +11,4 @@
 
 - [Home](https://jason-edelman.org/): projects
 - [CV](https://jason-edelman.org/cv/)
+- [Navigating GenAI in Higher Education](https://jason-edelman.org/talks/navigating-genai/): a talk, card by card

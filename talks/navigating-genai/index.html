@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" class="civic">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Navigating GenAI in Higher Education — Jason Edelman</title>
+  <meta name="description" content="A talk by Jason Edelman for ODU&rsquo;s art department, September 11, 2026. Lessons in Adaptation from Software Engineering, or: AI as a double edged sword.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    /* A talk, card by card: the deck's words verbatim (from Jason's Gamma export), set in the site's type.
+       Each card keeps its slide number, so the page and the PDF line up. */
+    .talk-or { font-family: var(--font-body); font-style: italic; color: var(--muted); margin-top: 0.2rem; }
+    .talk-meta { font-family: var(--font-label); letter-spacing: 0.08em; font-size: 0.8rem; color: var(--muted); margin-top: 0.6rem; }
+
+    .talk { display: grid; gap: var(--space-3xl, 4rem); }
+    .slide { display: grid; gap: var(--space-xs); padding-top: var(--space-xl); border-top: 1px solid var(--border); scroll-margin-top: var(--space-lg); }
+    .slide-n { margin: 0; padding-top: 0.55rem; font-family: var(--font-body); font-variant-numeric: lining-nums tabular-nums; font-size: 0.85rem; letter-spacing: 0.12em; color: var(--accent); }
+    .slide-n a { color: inherit; text-decoration: none; }
+    .slide-n a:hover { color: var(--link-hover); }
+    .slide-body { min-width: 0; }
+    .slide h2 { margin: 0 0 var(--space-md); text-transform: none; letter-spacing: 0.005em; font-family: var(--font-display); font-size: clamp(1.6rem, 1.2rem + 1.5vw, 2.4rem); font-weight: 400; line-height: 1.12; color: var(--heading); text-wrap: balance; }
+    .slide h3 { margin: var(--space-xl) 0 var(--space-sm); font-family: var(--font-display); font-size: clamp(1.2rem, 1.05rem + 0.7vw, 1.55rem); font-weight: 400; line-height: 1.25; color: var(--heading); text-wrap: balance; }
+    /* The display face has no italic, so emphasis in a heading borrows the body face's. */
+    .slide h2 em, .slide h3 em, .slide-lead em { font-family: var(--font-body); font-style: italic; }
+    .slide p, .slide li { max-width: 66ch; color: var(--text); }
+    .slide p + p, .slide ul + p, .slide .table-wrap + p { margin-top: var(--space-sm); }
+    .slide ul { margin: var(--space-sm) 0 0; padding-left: 1.2rem; }
+    .slide ul ul { margin-top: 0.35rem; }
+    .slide li + li { margin-top: 0.4rem; }
+    .slide li::marker { color: var(--accent-dim); }
+    .slide strong { font-weight: 700; color: var(--heading); }
+    .slide a { color: var(--link); text-underline-offset: 3px; }
+    .slide a:hover { color: var(--link-hover); }
+    .slide code { font-family: var(--font-mono, ui-monospace, monospace); font-size: 0.86em; padding: 0.05em 0.35em; background: var(--surface); border: 1px solid var(--border); border-radius: 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+    .slide u { text-decoration-thickness: 1px; text-underline-offset: 4px; }
+    .slide-lead { font-family: var(--font-display); font-size: clamp(1.25rem, 1.05rem + 0.9vw, 1.7rem); line-height: 1.3; color: var(--heading); text-wrap: balance; }
+    .slide-lead + .slide-lead { margin-top: var(--space-2xs); }
+    .slide figure { margin: 0; }
+    .slide img { display: block; width: 100%; height: auto; border-radius: 2px; }
+    .slide figcaption { margin-top: var(--space-xs); font-family: var(--font-label); font-size: 0.78rem; letter-spacing: 0.06em; color: var(--muted); }
+    .slide figcaption a { color: var(--muted); }
+    .slide-photo { margin-bottom: var(--space-lg); }
+
+    /* Card 7: the table. */
+    .talk-table { width: 100%; max-width: 62rem; border-collapse: collapse; border: 1px solid var(--border); }
+    .talk-table th, .talk-table td { padding: var(--space-sm) var(--space-md); text-align: left; vertical-align: top; }
+    .talk-table thead th { font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; color: var(--heading); border-bottom: 1px solid var(--border); }
+    .talk-table tbody th { font-family: var(--font-display); font-weight: 400; font-size: 1.2rem; color: var(--heading); width: 7rem; }
+    .talk-table tbody tr + tr { border-top: 1px solid var(--border); }
+    .talk-table ul { margin: 0; }
+    .table-wrap { overflow-x: auto; margin-bottom: var(--space-lg); }
+    /* On a phone the table stacks: each row a block, each cell labelled with its column. */
+    @media (max-width: 640px) {
+      .talk-table, .talk-table tbody, .talk-table tr, .talk-table th, .talk-table td { display: block; width: auto; }
+      .talk-table thead { display: none; }
+      .talk-table tbody th { width: auto; padding-bottom: 0; }
+      .talk-table td::before { content: attr(data-label); display: block; margin-bottom: var(--space-2xs); font-family: var(--font-label); font-size: var(--text-label); letter-spacing: 0.12em; color: var(--accent); }
+    }
+
+    /* Card 14: what to keep, what to automate, and the open middle. */
+    .edge-pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: var(--space-md); max-width: 62rem; }
+    .edge { padding: var(--space-md) var(--space-lg); background: var(--surface); border: 1px solid var(--border); border-radius: 2px; }
+    .edge > p { margin: 0; }
+    .slide .two-col { columns: 2 14rem; column-gap: var(--space-2xl); max-width: 62rem; }
+    .slide .two-col li { break-inside: avoid; }
+
+    /* Card 13: a divider, nothing else on it. */
+    .slide--divider h2 { font-size: clamp(2rem, 1.4rem + 2.4vw, 3.2rem); margin: var(--space-md) 0; }
+
+    /* Card 19: two pictures, side by side when there's room. */
+    .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-lg); align-items: start; max-width: 62rem; }
+    .xkcd { max-width: 46rem; }
+    .xkcd img { background: #fff; }
+
+    .talk-end { font-family: var(--font-label); letter-spacing: 0.08em; font-size: 0.8rem; color: var(--muted); }
+    .talk-end a { color: var(--link); }
+
+    @media (min-width: 900px) {
+      .slide { grid-template-columns: 5rem minmax(0, 1fr); column-gap: var(--space-2xl); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+
+    <header>
+      <div class="masthead">
+        <h1>Navigating GenAI in Higher Education</h1>
+        <p class="tagline">Lessons in Adaptation from Software Engineering</p>
+        <p class="talk-or">or: AI as a double edged sword</p>
+        <p class="talk-meta">A talk by Jason Edelman for ODU&rsquo;s art department &middot; September 11, 2026</p>
+        <nav class="sections" aria-label="This talk">
+          <a href="/">&larr; Home</a>
+          <a href="navigating-genai-in-higher-education.pdf">The slides (PDF)</a>
+          <a href="https://gamma.app/docs/Navigating-GenAI-in-Higher-Education-x580ogjtynizfnj">The deck on Gamma</a>
+        </nav>
+      </div>
+    </header>
+
+    <!-- The deck's words, verbatim from Jason's Gamma export (2026-11-23), card by card. Only the
+         typography changed (curly quotes), plus one typo Jason confirmed (card 10: "2005" for 2025). Change the
+         words in Gamma first, then here. -->
+    <section class="talk" aria-label="The talk">
+
+      <article class="slide" id="s2">
+        <p class="slide-n"><a href="#s2">02</a></p>
+        <div class="slide-body">
+          <figure class="slide-photo">
+            <img src="murmuration-1500.webp" srcset="murmuration-800.webp 800w, murmuration-1500.webp 1500w" sizes="(min-width: 900px) 56rem, 100vw" width="1500" height="844" alt="A murmuration of starlings over a field at sunset, the flock in the shape of a bird.">
+            <figcaption>Photo via Unsplash.</figcaption>
+          </figure>
+          <p class="slide-lead">Hi.</p>
+          <p class="slide-lead">I&rsquo;m an independent AI researcher building swarm intelligence and decentralized systems.</p>
+        </div>
+      </article>
+
+      <article class="slide" id="s3">
+        <p class="slide-n"><a href="#s3">03</a></p>
+        <div class="slide-body">
+          <h2>Goals</h2>
+          <ul>
+            <li>demystify GenAI to build a working common understanding of its capabilities and limitations</li>
+            <li>confront and discuss social factors influencing the use and deployment of GenAI</li>
+          </ul>
+          <h3>What we&rsquo;ll cover</h3>
+          <ul>
+            <li>What are we even talking about when we say &ldquo;AI&rdquo;, technically and socially</li>
+            <li>How AI is used, who uses it and why - or why not</li>
+            <li>The choices we have and their impacts, certain and uncertain</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide" id="s4">
+        <p class="slide-n"><a href="#s4">04</a></p>
+        <div class="slide-body">
+          <h2>GenAI: A <em>quick</em> technical overview</h2>
+          <ul>
+            <li>The fundamental thing that GenAI does is called <strong>inference.</strong>
+              <ul>
+                <li>&ldquo;Given these 10,000 words, what sequence of words is likely to come next?&rdquo;</li>
+                <li>&ldquo;Given this half of a face, what does the other half likely look like?&rdquo;</li>
+                <li>&ldquo;How would someone describe this picture? (multimodal)&rdquo;</li>
+              </ul>
+            </li>
+            <li>The technology is based on a few categories of <strong>algorithms:</strong>
+              <ul>
+                <li>Language models began with machine translation
+                  <ul>
+                    <li>Google Translate was the first LLM for most people, not ChatGPT!</li>
+                  </ul>
+                </li>
+                <li>Distributional Semantics (<a href="https://dl.acm.org/doi/abs/10.5555/1870658.1870773">Baroni</a>, <a href="https://arxiv.org/abs/1003.4394">Coecke</a>, 2010)</li>
+                <li>Generative Adversarial Networks (<a href="https://arxiv.org/abs/1406.2661">Goodfellow</a>, 2014) (faces)</li>
+                <li>Attention Transformers (<a href="https://arxiv.org/abs/1706.03762">Vaswani</a>, 2017) (words)</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide" id="s5">
+        <p class="slide-n"><a href="#s5">05</a></p>
+        <div class="slide-body">
+          <h2>AI Algorithms vs AI Systems</h2>
+          <ul>
+            <li>AI Algorithms are <strong>math</strong> - definable relationships between anything that can be represented by numbers (e.g. text, audio, video, or images) - this used to be called <strong>Machine Learning</strong>
+              <ul>
+                <li>not a lot of ethical consequences for developing math!</li>
+              </ul>
+            </li>
+            <li>AI Systems are <strong>culture</strong> - the embodiment of relationships between humans, each other, and their environment - this is what we now call <strong>AI</strong> or <strong>GenAI</strong>. Two important technologies belong to this sphere:
+              <ul>
+                <li>Retrieval Augmented Generation - plugging it into the internet</li>
+                <li>Agent Harnesses - giving it <strong>tools, autonomy,</strong> and <strong>the ability to self-modify (e.g. evolve) &laquo; (my work)</strong></li>
+              </ul>
+            </li>
+            <li><strong>AI Systems are where ethical questions get asked and answered!</strong></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide" id="s6">
+        <p class="slide-n"><a href="#s6">06</a></p>
+        <div class="slide-body">
+          <h2>GenAI in the wild</h2>
+          <ul>
+            <li>Falls into <strong>very few</strong> designed use cases: text (incl. translation), audio, images, and video. [<a href="https://openrouter.ai/">OpenRouter.ai</a>]</li>
+            <li>But people use it for many unexpected things: [<a href="https://theaiwild.com/how-many-have-you-tried">theaiwild.com</a>, 100 <em>categories</em>]
+              <ul>
+                <li>Coding and writing</li>
+                <li>Navigating legal and technical systems</li>
+                <li>Companionship, including virtual seances</li>
+              </ul>
+            </li>
+            <li>However, <strong>all</strong> of these follow a <strong>chat agent</strong> format: prompt the system, receive a response.
+              <ul>
+                <li>It&rsquo;s still just computation.</li>
+              </ul>
+            </li>
+          </ul>
+          <h3>The metaphor: mining or foraging</h3>
+        </div>
+      </article>
+
+      <article class="slide" id="s7">
+        <p class="slide-n"><a href="#s7">07</a></p>
+        <div class="slide-body">
+          <h2>Who Uses It (or doesn&rsquo;t) And Why (or why not)</h2>
+          <div class="table-wrap">
+            <table class="talk-table">
+              <thead>
+                <tr><td></td><th scope="col">Who</th><th scope="col">Why/For What</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Uses AI</th>
+                  <td data-label="Who"><ul>
+                    <li>Software Developers &amp; Mathematicians</li>
+                    <li>Engineers &amp; Scientists</li>
+                    <li>Marketing Professionals &amp; Politicians</li>
+                    <li>Administrative Staff</li>
+                    <li>Regular People</li>
+                  </ul></td>
+                  <td data-label="Why/For What"><ul>
+                    <li>Processing massive amounts of data</li>
+                    <li>Needle-in-haystack fuzzy search</li>
+                    <li>Fast production of good-enough digital artifacts (aka prototyping)</li>
+                    <li>Emotional processing</li>
+                  </ul></td>
+                </tr>
+                <tr>
+                  <th scope="row">Refuses AI</th>
+                  <td data-label="Who"><ul>
+                    <li>Legal Professionals</li>
+                    <li>Engineers &amp; Scientists</li>
+                    <li>Administrative Staff</li>
+                    <li>Regular People</li>
+                  </ul></td>
+                  <td data-label="Why/For What"><ul>
+                    <li>Makes things up</li>
+                    <li>Misses obvious things</li>
+                    <li>Misinterprets instructions</li>
+                    <li>Problematic Provenance</li>
+                  </ul></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="slide-lead">What does this mean for the world of art?</p>
+          <p class="slide-lead">What does this mean for higher education?</p>
+        </div>
+      </article>
+
+      <article class="slide" id="s8">
+        <p class="slide-n"><a href="#s8">08</a></p>
+        <div class="slide-body">
+          <h2>Back to the Metaphor: The Forge</h2>
+          <p>To return to the metaphor, the algorithms are like mining tools, bringing ore to the surface. But an AI system is like a <strong>forge</strong>. The raw material is already present, however it got there.</p>
+          <p>The forge is a system that:</p>
+          <ul>
+            <li><strong>refines</strong> the material</li>
+            <li><strong>shapes</strong> the refined material</li>
+            <li><strong>separates</strong> waste</li>
+          </ul>
+          <p>The <strong>arrangement</strong> of these technical processes and the <strong>relationships</strong> between them is determined by social <strong>practices</strong>!</p>
+          <h3>Let&rsquo;s zoom out and look at some of these practices, shall we?</h3>
+        </div>
+      </article>
+
+      <article class="slide" id="s9">
+        <p class="slide-n"><a href="#s9">09</a></p>
+        <div class="slide-body">
+          <h2>AI as environmental policy of access control</h2>
+          <ul>
+            <li>The metropolis is the new site of value production (Hardt &amp; Negri 2011)
+              <ul>
+                <li>examples: Zillow, Airbnb, Uber, Lime</li>
+                <li>compare P/E for:
+                  <ul>
+                    <li>TSMC (Chips, 19x)</li>
+                    <li>Nvidia (Patents, 35x)</li>
+                    <li>OpenAI (A chatbot, $600B/0 = <code>ERROR: attempted to divide by zero</code>)</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li>Data centers are the new &ldquo;overseas&rdquo; factories
+              <ul>
+                <li>concentration of harm in vulnerable areas (environmental racism)</li>
+                <li>value extraction through collaboration with local elites</li>
+                <li>local inference is feasible! (<a href="https://www.ft.com/content/48588acb-8026-4c8e-aac7-8b5588294dbf">Financial Times today</a>)</li>
+              </ul>
+            </li>
+            <li>Value comes from the ability to <strong>control access</strong> to the common wealth produced by an open society
+              <ul>
+                <li>open source codebases (GitHub) were scraped to train coding models!</li>
+                <li>publicly available blogs and forums were used to train language models!</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide" id="s10">
+        <p class="slide-n"><a href="#s10">10</a></p>
+        <div class="slide-body">
+          <h2>AI as social response to loss of trust</h2>
+          <p>&ldquo;AI&rdquo; is the social acceptance of computers that make mistakes (pre-AI standard was 99.9+% accuracy; post-AI is 40-70% or less) or have ambiguous output.</p>
+          <ul>
+            <li>why now - liquidation of institutional trust
+              <ul>
+                <li>apex of a 20-year capital cycle (investment into GPUs specifically)</li>
+                <li>deepfakes existed in 2016 as research
+                  <ul>
+                    <li>why were they productized?</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li>trust in AI systems are higher in places where people are actively adopting adapting them to their needs
+              <ul>
+                <li>Lower in US, higher in Europe, highest in Global South</li>
+                <li>trust is gained slowly and lost rapidly [<a href="https://openrouter.ai/state-of-ai">openrouter.ai study, 2025</a>]</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide" id="s11">
+        <p class="slide-n"><a href="#s11">11</a></p>
+        <div class="slide-body">
+          <h2>AI as an economic policy of crisis capitalization</h2>
+          <ul>
+            <li>crisis of capital &larr;&rarr; technical change in living and working conditions &larr;&rarr; new possibilities, demands, conflicts
+              <ul>
+                <li>technological development does not lead but <em>follows</em> these processes</li>
+              </ul>
+            </li>
+            <li>Examples:
+              <ul>
+                <li>Great Depression and WWII&rarr; urbanization and industrialization &rarr; social mixture/desegregation
+                  <ul>
+                    <li>global technical integration, creation of mass markets for consumer goods (GE/GM)</li>
+                  </ul>
+                </li>
+                <li>S&amp;L/End of Cold War&rarr; automation and depatriation &rarr; globalization and computerization of society
+                  <ul>
+                    <li>microprocessors and global information systems (IBM/Microsoft)</li>
+                  </ul>
+                </li>
+                <li>Dot-com to Subprime Crash&rarr; precarization (Uberization) of the global economy &rarr; splintering/atomization
+                  <ul>
+                    <li>search engines, ubiquitous/social computing (Google, Airbnb, Uber)</li>
+                  </ul>
+                </li>
+              </ul>
+            </li>
+            <li><strong>bubbles bursting are part of the plan</strong></li>
+          </ul>
+          <h3>AI is the <em>response</em> to the post-pandemic social imagination</h3>
+        </div>
+      </article>
+
+      <article class="slide" id="s12">
+        <p class="slide-n"><a href="#s12">12</a></p>
+        <div class="slide-body">
+          <h2>Back to the Metaphor: Tool or Weapon?</h2>
+          <p>Objects cannot be neatly classified as tool or weapon. Once made, one cannot say what its effect will be.</p>
+          <p>To extend the metaphor, <strong>AI is a new kind of blade.</strong></p>
+          <ul>
+            <li><strong>AI Algorithms</strong> process the raw materials of knowledge work.</li>
+            <li><strong>AI Systems</strong> incorporate these processes into our socioeconomic system</li>
+            <li><strong>The Effects of AI</strong> are still not just uncertain, but actively, socially, practically being determined.
+              <ul>
+                <li>Exfiltration/distillation - it&rsquo;s unclear who gains from research when it can be stolen in the open.</li>
+                <li><a href="https://abliteration.ai/">Abliteration</a> - it&rsquo;s unclear who&rsquo;s responsible for safety if models can be modified in the open.</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide slide--divider" id="s13">
+        <p class="slide-n"><a href="#s13">13</a></p>
+        <div class="slide-body">
+          <h2>What we can do</h2>
+        </div>
+      </article>
+
+      <article class="slide" id="s14">
+        <p class="slide-n"><a href="#s14">14</a></p>
+        <div class="slide-body">
+          <h2>The hidden edge of the blade</h2>
+          <div class="edge-pair">
+            <div class="edge">
+              <p>Some things are good for you to do yourself. <strong>Automation here is harmful.</strong></p>
+              <ul>
+                <li>exercise</li>
+                <li>making music</li>
+                <li>cooking</li>
+                <li>healthy eating</li>
+                <li>caring for others</li>
+                <li>important conversations, negotiations or discussions</li>
+              </ul>
+            </div>
+            <div class="edge">
+              <p>For other things, their difficulty ennobles no one. These are <strong>things worth automating</strong>, wholly or partially</p>
+              <ul>
+                <li>transit coordination (&ldquo;how do they expect us to learn the schedule if they keep changing it&rdquo;)</li>
+                <li>scientific computing (&ldquo;why should I have to learn to code if I want to do science&rdquo;)</li>
+                <li>publishing a website</li>
+                <li>administrative paperwork like insurance applications</li>
+                <li>voter registration</li>
+                <li>tax calculations</li>
+              </ul>
+            </div>
+          </div>
+          <p style="margin-top: var(--space-lg)">Other things are not so clearly distinguished. This is where the <strong>conversation is needed.</strong> How do you feel about automating:</p>
+          <ul class="two-col">
+            <li>Paint mixing?</li>
+            <li>Concrete mixing?</li>
+            <li>Industrial welding?</li>
+            <li>Garment manufacturing?</li>
+            <li>Traffic enforcement?</li>
+            <li>Pesticide application?</li>
+          </ul>
+          <h3>The most important question: <u>who decides</u>?</h3>
+        </div>
+      </article>
+
+      <article class="slide" id="s15">
+        <p class="slide-n"><a href="#s15">15</a></p>
+        <div class="slide-body">
+          <h2>Build and deploy alternatives</h2>
+          <ul>
+            <li>It&rsquo;s not enough to propose - the time to act is now</li>
+            <li>Alternatives exist but require us to think bigger than &ldquo;what products do we consume&rdquo;</li>
+            <li>Seek your own responsibility and autonomy</li>
+            <li>Practicing using these tools to understand <strong>how</strong> they&rsquo;re used will inform how you understand <strong>why</strong> they&rsquo;re used.
+              <ul>
+                <li>Don&rsquo;t automate high-value tasks! Automate low-value tasks!</li>
+                <li>This puts your theory of value into practice!</li>
+                <li>The University is paying for it - lucky you!</li>
+              </ul>
+            </li>
+            <li>Ask yourself:
+              <ul>
+                <li>where does the demand for AI come from?</li>
+                <li>Why are we being sold this highly technical object (or hyperobject) instead of products that a company can produce with it?</li>
+                <li>My answer: <strong>the labs need <em>us</em> to figure out how to use it.</strong> Because practice is socially determined!</li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide" id="s16">
+        <p class="slide-n"><a href="#s16">16</a></p>
+        <div class="slide-body">
+          <h2>Find Each Other and Work Together</h2>
+          <ul>
+            <li><a href="https://docs.kernel.org/process/coding-assistants.html">Linux AI Policy</a> - Certificate of Origin (just like European food labeling)</li>
+            <li><a href="https://github.com/hawkw/mycelium/commit/b77e854bcbbe7c64f644e4c6ceeaebb74c80c79a">mycelium OS</a></li>
+            <li><a href="https://opensource.org/ai/open-source-ai-definition">Open Source AI</a>
+              <ul>
+                <li><a href="https://github.com/tidepool-heavy-industries/exomonad">ExoMonad</a></li>
+              </ul>
+            </li>
+            <li><a href="https://cocore.dev/">CoCore</a> - computation cooperative - local deployments</li>
+          </ul>
+          <p class="slide-lead" style="margin-top: var(--space-xl)">Only <em>you</em> can identify what problems <em>you</em> think are worth solving!</p>
+          <p class="slide-lead">Only <em>we</em> can determine what problems <em>we</em> believe are worth solving!</p>
+        </div>
+      </article>
+
+      <article class="slide" id="s17">
+        <p class="slide-n"><a href="#s17">17</a></p>
+        <div class="slide-body">
+          <h2>Collapse the Cycle</h2>
+          <ul>
+            <li>it&rsquo;s always imagination that disrupts the status quo</li>
+            <li>capital also attempts to collapse the cycle by establishing a permanent crisis e.g.:
+              <ul>
+                <li>land grab during the great depression</li>
+                <li>consolidation of financial system after 2008</li>
+              </ul>
+            </li>
+            <li>at least against data centers, <a href="https://www.forbes.com/sites/robertszczerba/2026/07/22/130-billion-in-ai-data-centers-stalled-the-bottleneck-is-consent/">we&rsquo;re winning</a> (popular resistance to the tune of $60-150bn)</li>
+            <li><a href="https://www.datacenterwatch.org/q1-2026">Data Center Watch Report Q2 2025 UPDATE &mdash; Data Center Watch</a></li>
+            <li>The future is decided in the realm of <strong>practice</strong>!</li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide" id="s18">
+        <p class="slide-n"><a href="#s18">18</a></p>
+        <div class="slide-body">
+          <h2>Conclusions</h2>
+          <ul>
+            <li>Don&rsquo;t buy the hype, don&rsquo;t believe the myths, above all, don&rsquo;t panic - adapt</li>
+            <li><strong>It doesn&rsquo;t have to be this way</strong> - resist narratives of inevitability</li>
+            <li><strong>Technology is what we do with it -</strong> find collaborators and do something <strong>new, different, and better</strong></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="slide" id="s19">
+        <p class="slide-n"><a href="#s19">19</a></p>
+        <div class="slide-body">
+          <!-- Credits read from the pictures themselves (the scene; the artist's watermark). Jason kept both (2026-11-23). -->
+          <figure>
+            <div class="pair">
+              <img src="sword-in-the-stone.webp" width="1008" height="693" loading="lazy" alt="Arthur, a boy in a red tunic, pulling a sword from an anvil set on a stone in the snow.">
+              <img src="comic-miroewskiart.webp" width="900" height="1200" loading="lazy" alt="A comic in four panels: a man strains to pull a sword from a stone, swings it with the stone still stuck on the blade, and knocks out a red dragon with the stone.">
+            </div>
+            <figcaption>From Disney&rsquo;s <cite>The Sword in the Stone</cite> (1963), and a comic by MiroewskiArt.</figcaption>
+          </figure>
+        </div>
+      </article>
+
+      <article class="slide" id="s20">
+        <p class="slide-n"><a href="#s20">20</a></p>
+        <div class="slide-body">
+          <figure class="xkcd">
+            <img src="xkcd-810-constructive.png" width="740" height="265" loading="lazy" title="And what about all the people who won't be able to join the community because they're terrible at making helpful and constructive co-- ... oh." alt="xkcd comic in four panels. A man says spammers are breaking captchas with AI, so his new system has users rate comments as constructive or not, then reply with comments of their own that others rate. A woman asks what he'll do when spammers train their bots to make constructive, helpful comments. The man: Mission. Fucking. Accomplished.">
+            <figcaption><a href="https://xkcd.com/810/">https://xkcd.com/810/</a> &middot; &ldquo;Constructive&rdquo; by Randall Munroe, CC BY-NC 2.5</figcaption>
+          </figure>
+        </div>
+      </article>
+
+    </section>
+
+    <p class="talk-end"><a href="navigating-genai-in-higher-education.pdf">The slides as a PDF</a> &middot; <a href="https://gamma.app/docs/Navigating-GenAI-in-Higher-Education-x580ogjtynizfnj">The deck on Gamma</a> &middot; <a href="/">jason-edelman.org</a></p>
+
+  </main>
+</body>
+</html>
