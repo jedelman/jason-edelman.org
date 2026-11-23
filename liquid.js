@@ -121,9 +121,27 @@
       kick();
     });
 
+    // The first time a pond is seen, a stone skips across it: three drops, left to right, to catch the eye and
+    // hint that the water answers the pointer. On page load it waits for the header's fade-in to mostly land.
+    let skipped = false;
+    function skip() {
+      if (skipped || still.matches) return;
+      skipped = true;
+      const r = btn.getBoundingClientRect();
+      const at = now() + (performance.now() < 2500 ? 0.6 : 0.05);
+      [[0.16, 0.58, 0], [0.44, 0.42, 0.26], [0.74, 0.56, 0.5]]
+        .forEach(([fx, fy, dt]) => drop(r.width * fx, r.height * fy, at + dt));
+    }
+
     let onScreen = true;
     if (window.IntersectionObserver) {
-      new IntersectionObserver(([entry]) => { onScreen = entry.isIntersecting; kick(); }).observe(btn);
+      new IntersectionObserver(([entry]) => {
+        onScreen = entry.isIntersecting;
+        if (onScreen) skip();
+        kick();
+      }).observe(btn);
+    } else {
+      skip();
     }
 
     const data = new Float32Array(MAX * 3);
