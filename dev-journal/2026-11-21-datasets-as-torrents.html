@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Datasets as Torrents: Built, Then Parked — Dev Journal</title>
+  <meta name="description" content="A mirror for the Norfolk open data Siren reads, checked twice and shared as a torrent. Built in a day, then parked: the tools are ready, the ask isn't.">
+  <link rel="stylesheet" href="journal.css">
+</head>
+<body>
+  <main>
+    <nav>
+      <a href="/" class="home">← jason-edelman.org</a>
+      <a href="index.html">Dev Journal</a>
+    </nav>
+
+    <article>
+      <header>
+        <h1>Datasets as Torrents: Built, Then Parked</h1>
+        <p class="date">November 21–23, 2026</p>
+      </header>
+
+      <section>
+        <p>
+          A post on Bluesky argued that free datasets should be hosted as
+          torrents, so the bandwidth costs are shared and no single party can
+          take them down. It was quoting a warning to academics: download
+          every dataset you might want now, because cheap data linkage by LLMs
+          is going to get a lot of them taken down. It looked to me like a
+          straightforward commons tool. My tagline is Build and Defend the
+          Commons, so Claude and I built one.
+        </p>
+        <p>
+          The tool turned out to be the easy part. <a href="https://sciop.net/">SciOp</a>
+          began doing this in 2025, starting with US government data. The hard
+          parts are the ones a protocol can't supply. A swarm lasts only while
+          someone seeds it. A webseed keeps it up, but puts one host back in
+          the middle. A torrent proves you have the uploader's bytes, not the
+          agency's. And some takedowns will be right: a swarm can't tell
+          suppression from a table that re-identifies people.
+        </p>
+
+        <h2>Siren's rule, checked twice</h2>
+        <p>
+          We aimed it at the 59 Norfolk datasets
+          <a href="https://ask-siren.jason-edelman.org">Siren</a> reads. Siren
+          already decides which tables she'll hand anyone whole. A dataset with
+          owners' names, a civic league president's contact details, or rows
+          about one household's emergency gets no full download. The mirror
+          uses that same rule rather than a new one. 25 datasets went in, 479
+          MB. 34 were held back unread, among them every year of property
+          assessments, the address list, permits and code complaints.
+        </p>
+        <p>
+          The failure worth recording came during testing. One of five
+          identical downloads of a property dataset came back a fifth short,
+          cut off mid-row, with no error. A mirror that trusted one download
+          would have published it, and every copy made from that torrent would
+          have verified against it. So a copy now counts only when two
+          separate downloads match each other and the portal's own record
+          count, with no update in between. In the full run, the tide sensor
+          data's first pair came back the same size with different bytes. The
+          retry agreed.
+        </p>
+        <p>
+          The torrents carry both the old and new BitTorrent formats. They're
+          made with no dependencies, and their infohashes match libtorrent's
+          exactly. The new format gives every file its own hash, so two
+          people who mirror the same dataset on their own can check each
+          other's copies without trusting whoever uploaded them.
+        </p>
+
+        <h2>Parked</h2>
+        <p>
+          Nobody has asked for this set, and the tools are in place, so I
+          parked the deployment. Building was the part that gets counted.
+          Seeding is keep-up work, and it needs someone who wants the data
+          kept. I'll come back to it for data sovereignty and resilience
+          projects.
+        </p>
+      </section>
+    </article>
+
+    <a href="index.html" class="back-link">← All entries</a>
+  </main>
+</body>
+</html>
