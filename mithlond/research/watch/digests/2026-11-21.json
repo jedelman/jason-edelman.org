@@ -1,0 +1,77 @@
+{
+  "date": "2026-11-21",
+  "project": "mithlond",
+  "run": "https://claude.ai/code/session_01Sqvwr7h43DWzqvXUp6JLRo",
+  "summary": "WHRO reports that Norfolk's Planning Director briefed City Council on proposed zoning that would require a conditional use permit and public hearing for data centers over 25 MW or 30,000 square feet, with the amendment expected to come before the council in December. DatacenterDynamics reports that PJM has filed a plan with FERC to speed grid connection of power plants and data centers, with data centers expected to bear the cost, and that the US Senate passed a bill to make data centers pay a larger share of grid costs. Virginia Mercury reports the Data Center Coalition's testimony against Loudoun County's one-year pause.",
+  "checked": [
+    "virginia-mercury",
+    "cardinal-news",
+    "whro-local-government",
+    "datacenterdynamics",
+    "norfolk-permits"
+  ],
+  "items": [
+    {
+      "title": "WHRO: Norfolk considers requiring a conditional use permit and public hearing for large data centers (Planning Commission recommended two new categories)",
+      "url": "https://www.whro.org/local-government/2026-11-20/261120-norfolkdatacenterszoning-saunders",
+      "publisher": "WHRO",
+      "origin": "City of Norfolk (Planning Commission recommendation and Planning Director's briefing to City Council)",
+      "kind": "news",
+      "published": "2026-11-20",
+      "quote": "Data centers under 30,000 square feet or consuming less than 25 megawatts of power would be permitted by default in office, business commerce, industrial and institutional areas. Larger data centers would require a conditional use permit in general industrial, deep waterfront industrial and certain business commerce park districts.",
+      "note": "Norfolk's proposed zoning would allow smaller data centers by default and require a public hearing for larger ones; WHRO says the amendment is expected to come before the council in December. WHRO also reports the same 25 MW benchmark appears in Gov. Spanberger's Data Center Accountability Framework.",
+      "claims": [
+        "norfolk-proposed-data-center-zoning"
+      ],
+      "verified": "2026-11-21T10:26:13.846Z"
+    },
+    {
+      "title": "DatacenterDynamics: PJM files plan with FERC to speed grid connection of power plants and data centers; data centers expected to bear the cost",
+      "url": "https://www.datacenterdynamics.com/en/news/pjm-plan-could-cut-data-center-and-power-plant-grid-connection-times-to-12-months/",
+      "publisher": "DatacenterDynamics",
+      "origin": "PJM Interconnection",
+      "kind": "industry",
+      "published": "2026-11-20",
+      "quote": "The US’ largest Regional Transmission Operator (RTO), PJM Interconnection, has filed a plan with the Federal Energy Regulatory Commission (FERC) to expedite the connection of power plants and data centers, with the latter expected to foot the bill.",
+      "note": "The filing concerns grid connection and who pays for transmission driven by data center load, per DatacenterDynamics' account. It is a regional plan: DatacenterDynamics says PJM covers Northern Virginia, and the quoted sentence does not name Hampton Roads or Dominion.",
+      "claims": [
+        "pjm-filing-combined-large-load-study"
+      ],
+      "verified": "2026-11-21T10:26:13.846Z"
+    },
+    {
+      "title": "DatacenterDynamics: US Senate passes bill that would make data centers pay a larger share of grid costs",
+      "url": "https://www.datacenterdynamics.com/en/news/us-senate-passes-bill-requiring-data-centers-to-pay-more-for-grid-infrastructure/",
+      "publisher": "DatacenterDynamics",
+      "origin": "U.S. Senate",
+      "kind": "news",
+      "published": "2026-11-20",
+      "quote": "The US Senate has passed a bipartisan bill that would require AI data centers to pay a larger share of the cost of building the energy infrastructure they need.",
+      "note": "A federal bill on who pays for grid infrastructure that data centers need, reported as one provision of a larger permitting and energy package; the quoted sentence does not mention Virginia, and the bill still has to pass the House.",
+      "claims": [
+        "senate-passes-data-center-grid-cost-bill"
+      ],
+      "verified": "2026-11-21T10:26:13.846Z"
+    },
+    {
+      "title": "Virginia Mercury: Data Center Coalition tells Loudoun supervisors a moratorium does not solve infrastructure challenges",
+      "url": "https://virginiamercury.com/2026/11/20/loudoun-county-pauses-new-data-center-applications-for-a-year/",
+      "publisher": "Virginia Mercury",
+      "origin": "Data Center Coalition (testimony to the Loudoun County Board of Supervisors)",
+      "kind": "industry",
+      "published": "2026-11-20",
+      "quote": "While we recognize that growth can raise important questions that are worthy of public discussion, sweeping policies to impose a moratorium do not solve complex infrastructure challenges",
+      "note": "The industry trade group's objection to Loudoun's one-year pause on new data center applications. Out of region (Northern Virginia); included as Virginia local data center policy and the industry's stated position.",
+      "claims": [
+        "dcc-opposes-loudoun-data-center-pause"
+      ],
+      "verified": "2026-11-21T10:26:13.846Z"
+    }
+  ],
+  "unreachable": [
+    {
+      "url": "https://virginiamercury.com/2026/11/19/rural-advocacy-groups-band-together-to-oppose-data-centers-related-energy-projects/",
+      "why": "a security challenge refuses automated access"
+    }
+  ]
+}

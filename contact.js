@@ -71,31 +71,52 @@
     return solving;
   }
 
+  const dialog = document.getElementById('contact-dialog');
   const form = document.getElementById('contact');
-  const opener = document.querySelector('.contact-open');
-  if (!form || !opener) return;
+  const reach = document.querySelector('.reach-out');
+  if (!dialog || !form || !reach || typeof dialog.showModal !== 'function') return;
+  const button = reach.querySelector('.contact-open');
+  const menu = reach.querySelector('.reach-menu');
   const check = form.querySelector('#contact-human');
   const status = form.querySelector('.contact-status');
   const send = form.querySelector('button[type="submit"]');
   const topic = form.querySelector('#contact-topic');
+  const name = form.querySelector('#contact-name');
   let address = null;
 
-  // The form waits behind the "Write to me" button (liquid.js paints it).
-  opener.hidden = false;
-  form.parentElement.querySelector('.contact-nojs')?.remove();
+  // With JavaScript, the pond replaces the plain links (liquid.js paints it).
+  reach.querySelector('.reach-nojs')?.remove();
+  document.querySelector('.contact-nojs')?.remove();
+  button.hidden = false;
+  document.querySelectorAll('[data-contact-open][hidden]').forEach((a) => { a.hidden = false; });
 
-  function reveal() {
-    if (!form.hidden) return;
-    form.hidden = false;
-    opener.hidden = true;
-    opener.setAttribute('aria-expanded', 'true');
+  // "Reach out" opens into its options; Escape, a click elsewhere, or tabbing away closes them.
+  function setMenu(open, { refocus = false } = {}) {
+    menu.hidden = !open;
+    button.setAttribute('aria-expanded', String(open));
+    if (!open && refocus) button.focus();
+  }
+  button.addEventListener('click', () => setMenu(menu.hidden));
+  reach.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !menu.hidden) { e.preventDefault(); setMenu(false, { refocus: true }); }
+  });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !reach.contains(e.target)) setMenu(false); });
+  reach.addEventListener('focusout', (e) => { if (e.relatedTarget && !reach.contains(e.relatedTarget)) setMenu(false); });
+
+  // "Write to me" opens the form in a dialog, wherever it was chosen from.
+  let returnTo = null;
+  function openForm(from, chosenTopic) {
+    returnTo = menu.contains(from) ? button : from;
+    setMenu(false);
+    if (chosenTopic) topic.value = chosenTopic;
+    dialog.showModal();
+    name.focus();
     solve(() => {}); // start the work quietly while they write
   }
-
-  opener.addEventListener('click', () => {
-    reveal();
-    form.querySelector('#contact-name').focus();
-  });
+  dialog.addEventListener('close', () => returnTo?.focus());
+  dialog.querySelector('.contact-close').addEventListener('click', () => dialog.close());
+  // A click on the backdrop (the dialog element itself, outside its content) closes it too.
+  dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
 
   check.addEventListener('change', async () => {
     if (!check.checked) return;
@@ -126,12 +147,11 @@
     location.href = url;
   });
 
-  // Elsewhere on the page, "Email" buttons open the form with a topic chosen.
-  document.querySelectorAll('a[data-contact-topic]').forEach((a) => {
-    a.addEventListener('click', () => {
-      reveal();
-      topic.value = a.dataset.contactTopic;
-      setTimeout(() => form.querySelector('#contact-name').focus({ preventScroll: true }), 300);
+  // "Write to me" links, and elsewhere on the page "Email" buttons that choose a topic.
+  document.querySelectorAll('a[data-contact-open], a[data-contact-topic]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      openForm(a, a.dataset.contactTopic);
     });
   });
 })();

@@ -172,6 +172,78 @@
           "verified": "2026-11-20T10:25:32.840Z"
         }
       ]
+    },
+    {
+      "id": "norfolk-proposed-data-center-zoning",
+      "statement": "Norfolk is considering zoning rules under which data centers under 30,000 square feet or below 25 MW would be allowed by default, while larger ones would need a conditional use permit with a public hearing (reported by WHRO, from the Planning Director's briefing).",
+      "topic": "law",
+      "first_seen": "2026-11-21",
+      "sources": [
+        {
+          "url": "https://www.whro.org/local-government/2026-11-20/261120-norfolkdatacenterszoning-saunders",
+          "publisher": "WHRO",
+          "origin": "City of Norfolk (Planning Commission recommendation and Planning Director's briefing to City Council)",
+          "date": "2026-11-20",
+          "seen": "2026-11-21",
+          "stance": "asserts",
+          "quote": "Data centers under 30,000 square feet or consuming less than 25 megawatts of power would be permitted by default in office, business commerce, industrial and institutional areas. Larger data centers would require a conditional use permit in general industrial, deep waterfront industrial and certain business commerce park districts.",
+          "verified": "2026-11-21T10:26:13.846Z"
+        }
+      ]
+    },
+    {
+      "id": "pjm-filing-combined-large-load-study",
+      "statement": "PJM Interconnection has filed a plan with FERC to speed the connection of power plants and data centers, with data centers expected to pay the cost (reported by DatacenterDynamics).",
+      "topic": "grid",
+      "first_seen": "2026-11-21",
+      "sources": [
+        {
+          "url": "https://www.datacenterdynamics.com/en/news/pjm-plan-could-cut-data-center-and-power-plant-grid-connection-times-to-12-months/",
+          "publisher": "DatacenterDynamics",
+          "origin": "PJM Interconnection",
+          "date": "2026-11-20",
+          "seen": "2026-11-21",
+          "stance": "asserts",
+          "quote": "The US’ largest Regional Transmission Operator (RTO), PJM Interconnection, has filed a plan with the Federal Energy Regulatory Commission (FERC) to expedite the connection of power plants and data centers, with the latter expected to foot the bill.",
+          "verified": "2026-11-21T10:26:13.846Z"
+        }
+      ]
+    },
+    {
+      "id": "senate-passes-data-center-grid-cost-bill",
+      "statement": "The US Senate has passed a bipartisan bill that would require AI data centers to pay a larger share of the cost of the energy infrastructure they need; it now goes to the House (reported by DatacenterDynamics).",
+      "topic": "rates",
+      "first_seen": "2026-11-21",
+      "sources": [
+        {
+          "url": "https://www.datacenterdynamics.com/en/news/us-senate-passes-bill-requiring-data-centers-to-pay-more-for-grid-infrastructure/",
+          "publisher": "DatacenterDynamics",
+          "origin": "U.S. Senate",
+          "date": "2026-11-20",
+          "seen": "2026-11-21",
+          "stance": "asserts",
+          "quote": "The US Senate has passed a bipartisan bill that would require AI data centers to pay a larger share of the cost of building the energy infrastructure they need.",
+          "verified": "2026-11-21T10:26:13.846Z"
+        }
+      ]
+    },
+    {
+      "id": "dcc-opposes-loudoun-data-center-pause",
+      "statement": "The Data Center Coalition testified to the Loudoun County Board of Supervisors that sweeping moratorium policies do not solve complex infrastructure challenges (reported by Virginia Mercury).",
+      "topic": "law",
+      "first_seen": "2026-11-21",
+      "sources": [
+        {
+          "url": "https://virginiamercury.com/2026/11/20/loudoun-county-pauses-new-data-center-applications-for-a-year/",
+          "publisher": "Virginia Mercury",
+          "origin": "Data Center Coalition (testimony to the Loudoun County Board of Supervisors)",
+          "date": "2026-11-20",
+          "seen": "2026-11-21",
+          "stance": "asserts",
+          "quote": "While we recognize that growth can raise important questions that are worthy of public discussion, sweeping policies to impose a moratorium do not solve complex infrastructure challenges",
+          "verified": "2026-11-21T10:26:13.846Z"
+        }
+      ]
     }
   ]
 }
