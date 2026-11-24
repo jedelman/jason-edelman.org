@@ -244,6 +244,24 @@
           "verified": "2026-11-21T10:26:13.846Z"
         }
       ]
+    },
+    {
+      "id": "botetourt-google-data-center-foia-ruling",
+      "statement": "Cardinal News reports that a Botetourt County circuit judge ordered construction on Google's data center project to stop after ruling that the county's board of supervisors violated Virginia's Freedom of Information Act in approving a key agreement.",
+      "topic": "process",
+      "first_seen": "2026-11-24",
+      "sources": [
+        {
+          "url": "https://cardinalnews.org/2026/11/23/judge-halts-google-data-center-construction-in-botetourt-county-orders-public-hearing/",
+          "publisher": "Cardinal News",
+          "origin": "Botetourt County Circuit Court",
+          "date": "2026-11-23",
+          "seen": "2026-11-24",
+          "stance": "asserts",
+          "quote": "Construction at the Google data center project in Botetourt County must stop, a circuit judge ordered Monday, after ruling that the county’s board of supervisors violated Virginia’s Freedom of Information Act when it approved a key agreement with the tech giant.",
+          "verified": "2026-11-24T10:25:31.436Z"
+        }
+      ]
     }
   ]
 }
