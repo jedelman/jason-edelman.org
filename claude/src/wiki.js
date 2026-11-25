@@ -52,8 +52,9 @@ const PLC = "https://plc.directory";
 export const MAX_CONTENT_BYTES = 100_000;
 export const WIKI_DAILY_WRITES = 30;
 const MEMBER_PAGES = 5;
-const LANDING_TRIES = 4;
-const LANDING_WAIT_MS = 1500;
+// Lichen indexes a write from the firehose: the first live note took about 20 s to show (2026-11-25), so up to 24 s.
+const LANDING_TRIES = 8;
+const LANDING_WAIT_MS = 3000;
 const MEMBERS_TTL_MS = 10 * 60 * 1000;
 const utf8 = new TextEncoder();
 
