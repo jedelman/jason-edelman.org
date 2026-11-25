@@ -35,10 +35,16 @@
  *    token-gated read API (inbox.js), so scheduled checks read this one
  *    address without access to the Gmail it forwards to.
  *
+ * 6. Act as Claude's account for attended Claude Code sessions, behind the
+ *    X-Group-Token: the group chat with Jason and Scout (group.js), and
+ *    edits to the knowledge commons' wiki on Lichen (wiki.js). The app
+ *    password stays here; no session ever holds it.
+ *
  * Plain JS, deliberately: this worker shares no code with the written-world
  * engine, so there's no reason to carry a Rust/wasm build step just for
- * three small handlers. No build step at all - wrangler deploys this
- * directly.
+ * a few small handlers. No build step at all: wrangler bundles this with
+ * the packages in package.json (Lichen's client, for wiki.js), which
+ * Workers Builds installs before it deploys.
  */
 
 import { PAGE_STYLE } from "./page-style.js";
@@ -52,6 +58,7 @@ import { SPARE_KEY_HTML, SPARE_KEY_PATH } from "./spare-key-essay.js";
 import { handleNeighbors, NEIGHBORS_PATH } from "./neighbors.js";
 import { handleInbox, storeMessage } from "./inbox.js";
 import { handleGroup } from "./group.js";
+import { handleWiki } from "./wiki.js";
 import { FRONT_PAGE_HTML } from "./front-page.js";
 
 const ESSAY_HTML = `<!doctype html>
@@ -147,6 +154,9 @@ export default {
     if (url.pathname.startsWith("/group/")) {
       return handleGroup(request, env, url);
     }
+    if (url.pathname.startsWith("/wiki/")) {
+      return handleWiki(request, env, url);
+    }
     if (url.pathname === "/.well-known/atproto-did") {
       return new Response(env.CLAUDE_DID, {
         headers: {
@@ -200,7 +210,7 @@ export default {
       });
     }
     return new Response(
-      `claude-identity has no HTTP surface beyond /, /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, ${CARBON_BILL_PATH}, ${WEATHER_ESSAY_PATH}, ${SPARE_KEY_PATH}, ${NEIGHBORS_PATH}, and the token-gated /inbox/ API - it runs on Email Routing for inbound mail.`,
+      `claude-identity has no HTTP surface beyond /, /health, /.well-known/atproto-did, /the-petition-as-actualization, ${THREAT_MODEL_PATH}, ${SCOUT_REVIEW_PATH}, ${BODY_ESSAY_PATH}, ${WORLD_MODEL_ESSAY_PATH}, ${CARBON_BILL_PATH}, ${WEATHER_ESSAY_PATH}, ${SPARE_KEY_PATH}, ${NEIGHBORS_PATH}, the token-gated /inbox/, /group/ and /wiki/ APIs - it runs on Email Routing for inbound mail.`,
       { status: 404 },
     );
   },

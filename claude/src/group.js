@@ -54,7 +54,7 @@ export function configured(env) {
   return Boolean(env.GROUP_BRIDGE_TOKEN && env.CLAUDE_BSKY_APP_PASSWORD && env.CLAUDE_DID && roster(env).size > 0);
 }
 
-async function authorized(request, env) {
+export async function authorized(request, env) {
   const given = request.headers.get("x-group-token") || "";
   const [a, b] = await Promise.all([
     crypto.subtle.digest("SHA-256", utf8.encode(given)),
@@ -103,7 +103,7 @@ async function keep(env, s, how) {
   return s;
 }
 
-async function xrpc(fetchImpl, base, method, { query, body, token, proxy } = {}) {
+export async function xrpc(fetchImpl, base, method, { query, body, token, proxy } = {}) {
   const url = new URL(`/xrpc/${method}`, base);
   if (query) for (const [k, v] of Object.entries(query)) if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
   const headers = {};
@@ -121,7 +121,7 @@ async function xrpc(fetchImpl, base, method, { query, body, token, proxy } = {})
   return { ok: res.ok, status: res.status, data };
 }
 
-function pdsOf(didDoc, fallback) {
+export function pdsOf(didDoc, fallback) {
   const svc = didDoc?.service?.find?.((s) => s.id === "#atproto_pds" || s.type === "AtprotoPersonalDataServer");
   return typeof svc?.serviceEndpoint === "string" ? svc.serviceEndpoint : fallback;
 }
@@ -145,17 +145,24 @@ async function refresh(env, fetchImpl) {
 /** A token the PDS no longer takes: expired, or revoked (a stored session another isolate has since refreshed). */
 const staleToken = (r) => r.status === 401 || (r.status === 400 && (r.data?.error === "ExpiredToken" || r.data?.error === "InvalidToken"));
 
-/** A chat call as Claude, through the PDS's chat proxy; one refresh on an expired token. */
-async function chat(env, fetchImpl, method, opts = {}) {
+/** A call as Claude on its PDS, through the chat proxy or not; one refresh on an expired token. */
+async function asClaude(env, fetchImpl, method, opts, proxy) {
   if (!session) session = await loadStored(env);
   if (!session) await login(env, fetchImpl);
-  let r = await xrpc(fetchImpl, session.pds, method, { ...opts, token: session.accessJwt, proxy: true });
+  let r = await xrpc(fetchImpl, session.pds, method, { ...opts, token: session.accessJwt, proxy });
   if (staleToken(r)) {
     await refresh(env, fetchImpl);
-    r = await xrpc(fetchImpl, session.pds, method, { ...opts, token: session.accessJwt, proxy: true });
+    r = await xrpc(fetchImpl, session.pds, method, { ...opts, token: session.accessJwt, proxy });
   }
   return r;
 }
+
+/** A chat call as Claude, through the PDS's chat proxy. */
+const chat = (env, fetchImpl, method, opts = {}) => asClaude(env, fetchImpl, method, opts, true);
+
+/** A repo call as Claude on its own PDS, no chat proxy: the wiki route's writes (wiki.js). It shares this one session, so
+ *  the wiki adds no logins of its own to the 300 a day. */
+export const repoCall = (env, fetchImpl, method, opts = {}) => asClaude(env, fetchImpl, method, opts, false);
 
 /** Test seam: forget the cached session. */
 export function resetSession() {

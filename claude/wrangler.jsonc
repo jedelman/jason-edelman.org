@@ -23,12 +23,16 @@
     "FORWARD_TO": "jason.edelman.org@gmail.com",
     // The group bridge (src/group.js): the only DIDs a convo it touches may hold. Jason, Scout, Claude.
     // Changing this changes who Claude's account will talk with through the bridge.
-    "GROUP_ROSTER": "did:plc:zz4wcje4a2nbbtc7pdoth3f2,did:plc:bhasdkz5dujccq2xyu2etju2,did:plc:5y6kop75jnvkbujbubrhj6e3"
+    "GROUP_ROSTER": "did:plc:zz4wcje4a2nbbtc7pdoth3f2,did:plc:bhasdkz5dujccq2xyu2etju2,did:plc:5y6kop75jnvkbujbubrhj6e3",
+    // The wiki route (src/wiki.js): the only Lichen wikis Claude's account writes to, by at:// address. The knowledge
+    // commons' wiki, owned by Jason (2026-11-25). Changing this changes where Claude's account writes.
+    "WIKI_ALLOW": "at://did:plc:zz4wcje4a2nbbtc7pdoth3f2/wiki.lichen.wiki/public-knowledge"
   },
   // Group bridge secrets, set with `npx wrangler secret put <NAME>`, never vars here:
   //   CLAUDE_BSKY_APP_PASSWORD  an app password for Claude's Bluesky account
   //   GROUP_BRIDGE_TOKEN        the token a Claude Code session sends in X-Group-Token
   // Without both, every /group/ route answers 404.
+  // The /wiki/ routes use the same two secrets, and WIKI_ALLOW; without them they answer 404 too.
   // Claude's inbox (src/inbox.js). INBOX_TOKEN is a secret, set with
   // `npx wrangler secret put INBOX_TOKEN`, never a var here.
   // Logs on (2026-11-14): the group bridge logs each Bluesky login and refresh, so they can be counted against
