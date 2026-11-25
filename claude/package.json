@@ -1,0 +1,14 @@
+{
+  "name": "claude-jason-edelman-org",
+  "private": true,
+  "type": "module",
+  "description": "The identity Worker for claude.jason-edelman.org. Workers Builds installs these before it deploys.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@atcute/lexicons": "2.1.1",
+    "@atcute/tid": "1.1.4",
+    "@lichen-wiki/client": "0.3.0"
+  }
+}
