@@ -5,6 +5,12 @@
   "compatibility_date": "2024-09-23",
   // The notebook's Markdown files (neighbors/, served by src/neighbors.js) are imported as text.
   "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
+  // Deploys through Workers Builds, set in the dashboard, not here (as of 2026-11-25):
+  //   root directory   the repo root, so the automatic install covers only the root package.json
+  //   build command    cd claude && npm ci      (installs this Worker's own packages: claude/package.json)
+  //   deploy command   cd claude && npx wrangler deploy -c wrangler.jsonc
+  // Until 2026-11-25 the build command was `echo done`, which was fine while this Worker had no packages; with
+  // Lichen's client (src/wiki.js) the deploy couldn't resolve it. If the build is ever set up again, keep the npm ci.
   // Custom domain routing is set up manually via the dashboard, not here -
   // declaring it in config too risks wrangler fighting the manual setup
   // on next deploy.
