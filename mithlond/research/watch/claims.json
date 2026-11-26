@@ -262,6 +262,24 @@
           "verified": "2026-11-24T10:25:31.436Z"
         }
       ]
+    },
+    {
+      "id": "dominion-nextera-offer-reroute-large-load-credits",
+      "statement": "Dominion Energy and NextEra Energy offered, in the SCC merger case, to reroute the bill credits proposed for large load customers (data centers) back to smaller rate classes so that residential customers are the chief beneficiaries, as reported by Virginia Mercury.",
+      "topic": "merger credits",
+      "first_seen": "2026-11-26",
+      "sources": [
+        {
+          "url": "https://virginiamercury.com/2026/11/25/dominion-nextera-merger-hearings-wrap-up-at-the-scc-decision-expected-by-jan-11/",
+          "publisher": "Virginia Mercury",
+          "origin": "Dominion Energy and NextEra Energy",
+          "date": "2026-11-25",
+          "seen": "2026-11-26",
+          "stance": "asserts",
+          "quote": "The companies offered to change it so that residential customers were chief beneficiaries, by rerouting the potential credits for large load customers back to the smaller rate classes.",
+          "verified": "2026-11-26T10:25:56.564Z"
+        }
+      ]
     }
   ]
 }

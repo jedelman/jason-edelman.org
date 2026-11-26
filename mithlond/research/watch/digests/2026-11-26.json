@@ -1,0 +1,29 @@
+{
+  "date": "2026-11-26",
+  "project": "mithlond",
+  "run": "https://claude.ai/code/session_01Sqvwr6HuEYVfN7dz4LQffe",
+  "summary": "Virginia Mercury reports that the SCC's evidentiary hearings on the Dominion-NextEra merger ended Tuesday, with a decision due by Jan. 11. In the Mercury's account, Dominion and NextEra offered to send the bill credits first proposed for large load customers, namely data centers, back to residential and other smaller rate classes, and intervenors including the Spanberger administration said the credits were not enough.",
+  "checked": [
+    "virginia-mercury",
+    "cardinal-news",
+    "whro-local-government",
+    "datacenterdynamics"
+  ],
+  "items": [
+    {
+      "title": "Virginia Mercury: Dominion and NextEra offered to reroute data center bill credits to smaller rate classes",
+      "url": "https://virginiamercury.com/2026/11/25/dominion-nextera-merger-hearings-wrap-up-at-the-scc-decision-expected-by-jan-11/",
+      "publisher": "Virginia Mercury",
+      "origin": "Dominion Energy and NextEra Energy",
+      "kind": "news",
+      "published": "2026-11-25",
+      "quote": "The companies offered to change it so that residential customers were chief beneficiaries, by rerouting the potential credits for large load customers back to the smaller rate classes.",
+      "note": "Large load customers, which the article names as data centers, are the class whose credit the companies say they would redirect; the quote is the Mercury's account of the offer, not a filing.",
+      "claims": [
+        "dominion-nextera-offer-reroute-large-load-credits"
+      ],
+      "verified": "2026-11-26T10:25:56.564Z"
+    }
+  ],
+  "unreachable": []
+}
