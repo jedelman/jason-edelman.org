@@ -11,4 +11,5 @@
 
 - [Home](https://jason-edelman.org/): projects
 - [CV](https://jason-edelman.org/cv/)
+- [Build and Defend the Commons](https://jason-edelman.org/theory-of-change/): his theory of change
 - [Navigating GenAI in Higher Education](https://jason-edelman.org/talks/navigating-genai/): a talk, card by card
