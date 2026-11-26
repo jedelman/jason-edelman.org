@@ -56,6 +56,7 @@ const STATIC = [
   'scout-two',
   'folded-arms',
   'talks',
+  'theory-of-change',
 ];
 
 // Projects, each served at /<name>/: { name, dir, buildCmd, outDir, required, ignore, after }

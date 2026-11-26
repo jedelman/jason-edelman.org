@@ -91,6 +91,15 @@ email address and References section out of `cv.md`, because the repo and the pa
 also drops any phone or email line and any References section, as a guard. Don't edit his wording: that's his
 pass to make.
 
+## Theory of change (`/theory-of-change/`)
+Added 2026-11-26 at Jason's ask ("page of its own"), while he's still writing it. The source of truth is his Google
+Doc "Theory of Change" (Drive id `1sOwgKCvaKrcUf4XiwcVNi1Zc58dT3OXaoTuNCfaeLvo`). To re-sync: read the Doc with the
+Drive connector and copy its paragraphs into `theory-of-change/index.html` **verbatim** (bold stays bold; only quotes
+go typographic), then open a PR. Don't edit his wording, and never edit the Doc. Planned with him: the IPCC's path
+dependency as the framing metaphor, and the evidence from `claude-memory/research/theory-of-change/lit-review.md`,
+where every source is verified; a claim on the page needs a source there. The homepage links it under the vision,
+"Build and Defend the Commons →".
+
 ## Project links
 - power-explained: https://power-explained.jason-edelman.org/ — repo: https://github.com/jedelman/power-explained
 - mithlond: https://jason-edelman.org/mithlond/ — source: `mithlond/` in this repo (was jedelman/mithlond)
