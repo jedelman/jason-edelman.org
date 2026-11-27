@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The Agency (Jason, 2026-11-27): its own atproto account, agency.jason-edelman.org, on a PDS this Worker runs.
+  // Laid out as autonomist's (jedelman/autonomist wrangler.toml), which runs the same pds.js. src/site.js says why
+  // nothing reaches pds.js until both secrets below are set.
+  "name": "agency",
+  "main": "src/main.js",
+  "compatibility_date": "2026-09-01",
+  "account_id": "543fde7feabd0af945bfae926ceea7ad",
+  // Keep variables set in the dashboard that this file doesn't list, so a deploy never wipes one entered there.
+  "keep_vars": true,
+  // Reachable only at its own domains: no workers.dev address and no preview URLs.
+  "workers_dev": false,
+  "preview_urls": false,
+  // Custom domains are added in the dashboard (Jason), not here, as with claude/: agency.jason-edelman.org and
+  // pds.agency.jason-edelman.org. Declaring them in config too risks wrangler fighting the manual setup.
+  "vars": {
+    // pds.js reads these names.
+    "HOSTNAME": "pds.agency.jason-edelman.org",
+    "RELAY_URL": "https://bsky.network",
+    "APPVIEW_URL": "https://api.bsky.app",
+    "APPVIEW_DID": "did:web:api.bsky.app"
+  },
+  // Secrets, never in this file. Both must be set before pds.js answers anything (src/site.js):
+  //   PDS_PASSWORD  the account's password; until the account exists it is what gates /init
+  //   JWT_SECRET    signs the PDS's session tokens
+  "durable_objects": {
+    "bindings": [{ "name": "PDS", "class_name": "PDSDurableObject" }]
+  },
+  "migrations": [{ "tag": "pds-v1", "new_sqlite_classes": ["PDSDurableObject"] }],
+  // Blobs, and the scheduled backups pds.js writes. Separate buckets: the backup retention policy deletes freely
+  // inside its own.
+  "r2_buckets": [
+    { "binding": "BLOBS", "bucket_name": "agency-pds-blobs" },
+    { "binding": "BACKUPS", "bucket_name": "agency-pds-backups" }
+  ],
+  // @pdsjs/account-ui isn't on npm (pds.js 2.5.2); this stub stands in for it. See the file.
+  "alias": { "@pdsjs/account-ui": "./src/account-ui-stub.js" },
+  // Console output only: no invocation logs (they would carry request URLs and headers).
+  "observability": { "enabled": true, "logs": { "invocation_logs": false } }
+}
