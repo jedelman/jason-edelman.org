@@ -1,0 +1,13 @@
+{
+  "name": "agency-jason-edelman-org",
+  "private": true,
+  "type": "module",
+  "description": "The Agency's Worker: its own atproto PDS (pds.js) at pds.agency.jason-edelman.org, and agency.jason-edelman.org.",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@pdsjs/cloudflare": "2.5.2",
+    "@pdsjs/core": "2.5.2"
+  }
+}
