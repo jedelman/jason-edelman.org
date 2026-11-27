@@ -4,9 +4,13 @@
   "type": "module",
   "description": "The Agency's Worker: its own atproto PDS (pds.js) at pds.agency.jason-edelman.org, and agency.jason-edelman.org.",
   "scripts": {
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "briefing:dry": "node scripts/briefing.mjs"
   },
   "dependencies": {
+    "@atcute/lexicons": "2.1.1",
+    "@atcute/tid": "1.1.4",
+    "@lichen-wiki/client": "0.3.0",
     "@pdsjs/cloudflare": "2.5.2",
     "@pdsjs/core": "2.5.2"
   }

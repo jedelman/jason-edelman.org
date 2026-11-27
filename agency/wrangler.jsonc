@@ -19,8 +19,12 @@
     "HOSTNAME": "pds.agency.jason-edelman.org",
     "RELAY_URL": "https://bsky.network",
     "APPVIEW_URL": "https://api.bsky.app",
-    "APPVIEW_DID": "did:web:api.bsky.app"
+    "APPVIEW_DID": "did:web:api.bsky.app",
+    // The morning briefing (src/briefing.js): "on" writes it once a day; anything else leaves the cron doing nothing.
+    "BRIEFING": "on"
   },
+  // The morning briefing, at 06:17 UTC: before autonomist's daily dream (07:00 UTC), which reads its section.
+  "triggers": { "crons": ["17 6 * * *"] },
   // Secrets, never in this file. Both must be set before pds.js answers anything (src/site.js):
   //   PDS_PASSWORD  the account's password; until the account exists it is what gates /init
   //   JWT_SECRET    signs the PDS's session tokens
