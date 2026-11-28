@@ -35,6 +35,24 @@
           "verified": "2026-11-18T16:57:06.088Z"
         }
       ]
+    },
+    {
+      "id": "fungicides-turf-non-target-effects",
+      "statement": "Futurum Careers says fungicides used on turfgrass can have non-target effects, including on the wider microbial community.",
+      "topic": "pesticides",
+      "first_seen": "2026-11-28",
+      "sources": [
+        {
+          "url": "https://futurumcareers.com/tending-to-turfgrass-better-understanding-the-effects-of-fungicide-use",
+          "publisher": "Futurum Careers",
+          "origin": "Futurum Careers (its profile of Paul Koch's research)",
+          "date": "2026-11-25",
+          "seen": "2026-11-28",
+          "stance": "asserts",
+          "quote": "While fungicides can do a lot of good, they can also have negative side-effects, known as non-target effects.",
+          "verified": "2026-11-28T10:26:09.182Z"
+        }
+      ]
     }
   ]
 }

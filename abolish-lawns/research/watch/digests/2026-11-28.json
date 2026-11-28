@@ -1,0 +1,43 @@
+{
+  "date": "2026-11-28",
+  "project": "abolish-lawns",
+  "run": "https://claude.ai/code/session_01Sqvwr4YfBULZuDkQL4hLeZ",
+  "summary": "Futurum Careers, a science-education publication, profiles research by Dr Paul Koch of the University of Wisconsin–Madison on how fungicides used on turfgrass affect soil and plant microbes. In Futurum's account, fungicides can have side-effects beyond the disease they target.",
+  "checked": [
+    "crossref-new-papers",
+    "xerces-blog",
+    "audubon-news",
+    "wild-ones",
+    "epa-watersense"
+  ],
+  "items": [
+    {
+      "title": "Futurum Careers on Paul Koch's research: fungicides on turfgrass can have non-target effects",
+      "url": "https://futurumcareers.com/tending-to-turfgrass-better-understanding-the-effects-of-fungicide-use",
+      "publisher": "Futurum Careers",
+      "origin": "Futurum Careers (its profile of Paul Koch's research)",
+      "kind": "academic",
+      "published": "2026-11-25",
+      "quote": "While fungicides can do a lot of good, they can also have negative side-effects, known as non-target effects.",
+      "note": "Lawn chemicals are one of the costs the site counts; this is a profile's statement about fungicide side-effects generally, and says nothing about residential lawns specifically.",
+      "claims": [
+        "fungicides-turf-non-target-effects"
+      ],
+      "verified": "2026-11-28T10:26:09.182Z"
+    }
+  ],
+  "unreachable": [
+    {
+      "url": "https://www.chesapeakebay.net/news/blog",
+      "why": "403"
+    },
+    {
+      "url": "https://homegrownnationalpark.org/",
+      "why": "a security challenge refuses automated access"
+    },
+    {
+      "url": "https://legiscan.com/",
+      "why": "a security challenge refuses automated access"
+    }
+  ]
+}
