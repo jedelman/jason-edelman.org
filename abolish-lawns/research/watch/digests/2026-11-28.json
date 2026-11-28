@@ -2,7 +2,7 @@
   "date": "2026-11-28",
   "project": "abolish-lawns",
   "run": "https://claude.ai/code/session_01Sqvwr4YfBULZuDkQL4hLeZ",
-  "summary": "Futurum Careers, a science-education publication, profiles research by Dr Paul Koch of the University of Wisconsin–Madison on how fungicides used on turfgrass affect soil and plant microbes. In Futurum's account, fungicides can have side-effects beyond the disease they target.",
+  "summary": "Futurum Careers, a science-education publication, profiles research by Dr Paul Koch of the University of Wisconsin–Madison on fungicides used on turfgrass. In Futurum's account, fungicides can have negative side-effects, known as non-target effects.",
   "checked": [
     "crossref-new-papers",
     "xerces-blog",
